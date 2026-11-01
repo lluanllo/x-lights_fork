@@ -59,6 +59,7 @@ const wxWindowID OtherSettingsPanel::ID_CHECKBOX11 = wxNewId();
 const wxWindowID OtherSettingsPanel::ID_CHECKBOX_CustomColorPicker = wxNewId();
 const wxWindowID OtherSettingsPanel::ID_STATICTEXT_LAYOUTDOUBLECLICKACTION = wxNewId();
 const wxWindowID OtherSettingsPanel::ID_CHOICE_LAYOUTDOUBLECLICKACTION = wxNewId();
+const wxWindowID OtherSettingsPanel::ID_CHOICE_LANGUAGE = wxNewId();
 //*)
 const wxWindowID OtherSettingsPanel::ID_CHOICE_GfxBackend = wxNewId();
 
@@ -226,6 +227,17 @@ OtherSettingsPanel::OtherSettingsPanel(wxWindow* parent, xLightsFrame* f, wxWind
     Choice_LayoutDoubleClickAction->Append(_("Unassigned"));
     FlexGridSizer10->Add(Choice_LayoutDoubleClickAction, 1, wxALL|wxEXPAND, 5);
     GridBagSizer1->Add(FlexGridSizer10, wxGBPosition(11, 1), wxDefaultSpan, wxALL|wxEXPAND, 0);
+    {
+        wxFlexGridSizer* languageSizer = new wxFlexGridSizer(0, 2, 0, 0);
+        wxStaticText* languageLabel = new wxStaticText(this, wxID_ANY, _("Interface language (restart required):"));
+        languageSizer->Add(languageLabel, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+        Choice_Language = new wxChoice(this, ID_CHOICE_LANGUAGE);
+        Choice_Language->Append(_("Spanish"));
+        Choice_Language->Append(_("English"));
+        languageSizer->Add(Choice_Language, 1, wxALL | wxEXPAND, 5);
+        GridBagSizer1->Add(languageSizer, wxGBPosition(12, 1), wxDefaultSpan, wxALL | wxEXPAND, 0);
+        Connect(ID_CHOICE_LANGUAGE, wxEVT_COMMAND_CHOICE_SELECTED, (wxObjectEventFunction)&OtherSettingsPanel::OnControlChanged);
+    }
     SetSizer(GridBagSizer1);
 
     Connect(ID_CHECKBOX1, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&OtherSettingsPanel::OnControlChanged);
@@ -307,6 +319,14 @@ OtherSettingsPanel::~OtherSettingsPanel()
 }
 
 bool OtherSettingsPanel::TransferDataFromWindow() {
+    auto* config = GetXLightsConfig();
+    wxString selectedLanguage = Choice_Language->GetSelection() == 1 ? "en" : "es";
+    wxString currentLanguage = config->Read("InterfaceLanguage", "es");
+    if (selectedLanguage != currentLanguage) {
+        config->Write("InterfaceLanguage", selectedLanguage);
+        config->Flush();
+        wxMessageBox(_("Restart xLights to apply the interface language change."), _("Restart required"), wxOK | wxICON_INFORMATION, this);
+    }
     frame->SetExcludeAudioFromPackagedSequences(ExcludeAudioCheckBox->IsChecked());
     frame->SetExcludeVideosFromPackagedSequences(ExcludeVideosCheckBox->IsChecked());
     frame->SetHardwareVideoAccelerated(HardwareVideoDecodingCheckBox->IsChecked());
@@ -342,6 +362,8 @@ bool OtherSettingsPanel::TransferDataFromWindow() {
 }
 
 bool OtherSettingsPanel::TransferDataToWindow() {
+    wxString language = GetXLightsConfig()->Read("InterfaceLanguage", "es");
+    Choice_Language->SetSelection(language == "en" ? 1 : 0);
     ExcludeAudioCheckBox->SetValue(frame->ExcludeAudioFromPackagedSequences());
     ExcludeVideosCheckBox->SetValue(frame->ExcludeVideosFromPackagedSequences());
     HardwareVideoDecodingCheckBox->SetValue(frame->HardwareVideoAccelerated());

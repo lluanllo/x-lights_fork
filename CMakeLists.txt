@@ -602,6 +602,19 @@ add_executable(xLights WIN32 MACOSX_BUNDLE
     ${WIN32_RC}
 )
 
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_custom_command(TARGET xLights POST_BUILD
+        COMMAND ${Python3_EXECUTABLE}
+            "${CMAKE_SOURCE_DIR}/ci_scripts/localization/build_catalog.py"
+            --compile
+            "${CMAKE_SOURCE_DIR}/resources/locale/es.po"
+            "$<TARGET_FILE_DIR:xLights>/locale/es/LC_MESSAGES/xLights.mo"
+        COMMENT "Compiling Spanish translation catalog"
+        VERBATIM
+    )
+endif()
+
 # Add ISPC-generated object files to the link step.
 if(ISPC_OBJECTS)
     target_sources(xLights PRIVATE ${ISPC_OBJECTS})

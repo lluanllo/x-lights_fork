@@ -87,3 +87,6 @@ include/onnxruntime/
 # committed (ci_scripts/fetch_onnxruntime_linux.sh).
 lib/linux/libonnxruntime.so*
 lib/linux/.onnxruntime_version
+# Generated translation catalogs and Python bytecode
+resources/locale/**/*.mo
+__pycache__/

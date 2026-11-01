@@ -23,6 +23,7 @@
 #include "render/GPURenderUtils.h"
 #include "media/VideoReader.h"
 #include <wx/config.h>
+#include <wx/translation.h>
 
 #ifdef __APPLE__
 void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (no Dock/focus)
@@ -1131,6 +1132,18 @@ bool xLightsApp::OnInit()
     SetIsxLights(true);
     GetResourcesDirectory(); // bootstrap GetResourcesDir() with wx-dependent path lookup
     InitializeXLightsConfig();
+    wxString interfaceLanguage;
+    GetXLightsConfig()->Read("InterfaceLanguage", &interfaceLanguage, "es");
+    const bool useSpanish = interfaceLanguage != "en";
+    const wxLanguage language = useSpanish ? wxLANGUAGE_SPANISH : wxLANGUAGE_ENGLISH_US;
+    auto* translations = new wxTranslations;
+    translations->SetLanguage(language);
+    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(wxString::FromUTF8((GetResourcesDirectory() + "/locale").c_str()));
+    wxTranslations::Set(translations);
+    if (useSpanish && !translations->AddCatalog("xLights", wxLANGUAGE_ENGLISH_US)) {
+        spdlog::warn("Spanish translation catalog could not be loaded from {}",
+                     (GetResourcesDirectory() + "/locale").c_str());
+    }
     DumpConfig();
 
     // Point VAMP_PATH at the per-user plugin dir + standard location before any

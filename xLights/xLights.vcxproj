@@ -2204,6 +2204,9 @@ findstr /v ".ispc.h" "..\src-core\effects\ispc\%(Filename).ispc.h" &gt; temp.txt
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CompileSpanishTranslationCatalog" AfterTargets="Link">
+    <Exec Command="py -3 &quot;$(MSBuildProjectDirectory)\..\ci_scripts\localization\build_catalog.py&quot; --compile &quot;$(MSBuildProjectDirectory)\..\resources\locale\es.po&quot; &quot;$(TargetDir)locale\es\LC_MESSAGES\xLights.mo&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

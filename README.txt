@@ -12,6 +12,8 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Added a Spanish desktop interface option under Preferences > Other, including effect-panel metadata and the main UI catalog.
+
     -bug (derwin12)              Floating Effect Assist window no longer stays open when switching
                                  to the Layout tab (#7241)
     -bug (derwin12)              Ctrl+Left/Right on multiple selected effects slides them as a group
