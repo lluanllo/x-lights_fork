@@ -72,6 +72,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include <fstream>
 #include <sstream>
 #include "shared/utils/BitmapCache.h"
+#include "composer/WriterTest.h"
 #include "utils/CurlManager.h"
 #include "render/SequencePackage.h"
 #include "utils/AppCallbacks.h"
@@ -1076,7 +1077,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test") {
             headlessArg = true;
             break;
         }
@@ -1191,6 +1192,8 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "r", "render", "render files and exit"},
         { wxCMD_LINE_SWITCH, "hl", "headless", "render sequence(s) to fseq with no window and exit" },
         { wxCMD_LINE_SWITCH, "fc", "fseqcmp", "compare two .fseq files channel-for-channel and exit (0=identical)" },
+        { wxCMD_LINE_SWITCH, "cwt", "composer-writer-test", "internal test: write a synthetic sequence to a copy of a show (-s) with all controllers inactive, as --out, verify it and exit" },
+        { wxCMD_LINE_OPTION, "", "out", "file name of the sequence written by --composer-writer-test" },
         { wxCMD_LINE_SWITCH, "st", "shadertranslate", "assemble every .fs shader in the show dir to GLSL (spike) and exit" },
         { wxCMD_LINE_SWITCH, "cs", "checksequence", "run check sequence and exit" },
         { wxCMD_LINE_OPTION, "m", "media", "specify media directory"},
@@ -1379,7 +1382,7 @@ bool xLightsApp::OnInit()
             sequenceFiles.Clear();
         }
 
-        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
+        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
         {
             if (parser.Found("q")) {
                 spdlog::info("Command line notices (dialog suppressed by -q):\n{}", (const char*)info.c_str());
@@ -1861,6 +1864,17 @@ bool xLightsApp::OnInit()
             }
         }
         std::exit(diffSamples == 0 ? 0 : 1);
+    }
+
+    if (parser.Found("cwt")) {
+        wxString outName;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-writer-test requires a show directory (-s <dir>) and --out <name>.xsq");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(composer::RunWriterTest(showDir.ToStdString(), outName.ToStdString()));
     }
 
     // ---- Headless render: no window at all. Load the show + sequence(s),

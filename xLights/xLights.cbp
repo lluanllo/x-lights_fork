@@ -528,6 +528,11 @@
 		<Unit filename="../src-ui-wx/sequencer/PerspectivesPanel.h" />
 		<Unit filename="../src-core/lyrics/LRCParser.cpp" />
 		<Unit filename="../src-core/lyrics/LRCParser.h" />
+		<Unit filename="../src-core/composer/ComposerTypes.h" />
+		<Unit filename="../src-core/composer/SequenceWriter.cpp" />
+		<Unit filename="../src-core/composer/SequenceWriter.h" />
+		<Unit filename="../src-core/composer/WriterTest.cpp" />
+		<Unit filename="../src-core/composer/WriterTest.h" />
 		<Unit filename="../src-core/lyrics/PhonemeDictionary.cpp" />
 		<Unit filename="../src-core/lyrics/PhonemeDictionary.h" />
 		<Unit filename="../src-core/render/IRenderJobStatus.h" />

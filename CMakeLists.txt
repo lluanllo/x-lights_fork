@@ -297,6 +297,7 @@ file(GLOB_RECURSE SRC_CORE
     src-core/XmlSerializer/*.cpp
     src-core/ai/*.cpp
     src-core/cad/*.cpp
+    src-core/composer/*.cpp
     src-core/controllers/*.cpp
 	src-core/diagnostics/*.cpp
     src-core/discovery/*.cpp
