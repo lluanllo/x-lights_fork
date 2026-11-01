@@ -682,14 +682,18 @@ void DrawLabel(TextDrawingContext *dc,
                 if (colors.size() != 1) {
                     std::vector<double> d;
                     dc->GetTextExtents(curLine, d);
-                    for (int x1 = 0; x1 < (int)curLine.size(); x1++) {
-                        std::string c(1, curLine[x1]);
+                    // The extents hold one entry per character, and a character may be
+                    // several bytes: drawn one byte at a time, n-tilde is two broken glyphs.
+                    int charIndex = 0;
+                    for (size_t x1 = 0; x1 < curLine.size(); ++charIndex) {
+                        const size_t charLen = Utf8CharLength(curLine, x1);
+                        std::string c = curLine.substr(x1, charLen);
                         if (c != " ") {
                             SetFont(dc, fontString, colors[curPos % colors.size()]);
                             double loc = xRealStart;
-                            if (x1 != 0) {
-                                if (x1 - 1 < (int)d.size()) {
-                                    loc += d[x1 - 1];
+                            if (charIndex != 0) {
+                                if (charIndex - 1 < (int)d.size()) {
+                                    loc += d[charIndex - 1];
                                 }
                                 else {
                                     assert(false); // this seems to happen when fonts are not good
@@ -697,7 +701,8 @@ void DrawLabel(TextDrawingContext *dc,
                             }
                             dc->DrawText(c, loc, y);
                         }
-                        if ((perWord && c == " " && x1 + 1 < (int)curLine.size() && curLine[x1 + 1] != ' ') ||
+                        x1 += charLen;
+                        if ((perWord && c == " " && x1 < curLine.size() && curLine[x1] != ' ') ||
                             (!perWord && c != " ")) {
                             curPos++;
                         }
@@ -800,18 +805,22 @@ std::shared_ptr<const CachedRGBAImage> TextEffect::RenderTextLine(RenderBuffer &
             // vertical text up
             tempmsg=msg;
             msg.clear();
-            for(i=0; i<(int)tempmsg.length(); i++)
+            for(size_t pos = 0; pos < tempmsg.length(); )
             {
-                msg = msg + tempmsg[tempmsg.length()-i-1] + "\n";
+                const size_t charLen = Utf8CharLength(tempmsg, pos);
+                msg.insert(0, tempmsg.substr(pos, charLen) + "\n");
+                pos += charLen;
             }
             break;
         case 2:
             // vertical text down
             tempmsg=msg;
             msg.clear();
-            for(i=0; i<(int)tempmsg.length(); i++)
+            for(size_t pos = 0; pos < tempmsg.length(); )
             {
-                msg = msg + tempmsg[i] + "\n";
+                const size_t charLen = Utf8CharLength(tempmsg, pos);
+                msg += tempmsg.substr(pos, charLen) + "\n";
+                pos += charLen;
             }
             break;
         default: break;

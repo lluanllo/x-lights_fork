@@ -4,6 +4,7 @@
 
 #include "composer/WriterTest.h"
 
+#include "composer/GenerationValidator.h"
 #include "composer/SequenceWriter.h"
 #include "utils/ExternalHooks.h"
 
@@ -82,10 +83,12 @@ SequenceSpec BuildWriterTestSpec() {
                              PALETTE, 20000, 32000 });
     spec.effects.push_back({ "COPOS DE NIEVE IZQUIERDA", "", 0, "Color Wash",
                              { { "E_TEXTCTRL_ColorWash_Cycles", "1.0" }, { "B_CHOICE_BufferStyle", "Per Model Default" }, { "T_CHOICE_LayerMethod", "Normal" } },
-                             PALETTE, 35000, 45000 });
+                             PALETTE, 35000, 45000, TargetKind::Group });
     spec.effects.push_back({ "Copo de Nieve 1", "Arm 1", 0, "Color Wash",
                              { { "E_TEXTCTRL_ColorWash_Cycles", "1.0" } },
                              PALETTE, 45000, 55000 });
+    spec.markers.push_back({ "C001", "HD Matrix", 56000, 58000 });
+    spec.markers.push_back({ "C002", "HD Matrix", 58000, 59000 });
     return spec;
 }
 
@@ -112,6 +115,16 @@ bool ControllersAreInactive(const std::string& showDir, std::string& error) {
     return true;
 }
 
+void PrintValidationSummary(const char* tool, const ValidationReport& report) {
+    for (const ValidationIssue& issue : report.issues) {
+        if (issue.severity != IssueSeverity::Error) {
+            printf("%s: %s %s [%s] %d-%d ms: %s\n", tool, issue.severity == IssueSeverity::Warning ? "WARNING" : "INFO", issue.code.c_str(), issue.model.c_str(), issue.startMS, issue.endMS, DescribeIssue(issue).c_str());
+        }
+    }
+    printf("%s: errors=%d warnings=%d structural=%s configuration=%s render=%s visual=%s\n", tool, report.ErrorCount(), report.WarningCount(), StatusName(report.Status(IssueCategory::Structural)),
+           StatusName(report.Status(IssueCategory::Configuration)), StatusName(report.Status(IssueCategory::Render)), StatusName(report.VisualStatus()));
+}
+
 int RunWriterTest(const std::string& showDir, const std::string& destinationName) {
     std::string refused;
     if (!ControllersAreInactive(showDir, refused)) {
@@ -127,6 +140,7 @@ int RunWriterTest(const std::string& showDir, const std::string& destinationName
     for (const std::string& leftover : result.leftoverFiles) {
         printf("composer-writer-test: NO SE PUDO LIMPIAR: %s\n", leftover.c_str());
     }
+    PrintValidationSummary("composer-writer-test", result.validation);
     if (!result.ok) {
         printf("composer-writer-test: FALLO\n");
         return 1;

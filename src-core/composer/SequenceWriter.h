@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-class HeadlessRenderContext;
 class xLightsShowContext;
 
 namespace composer {
@@ -18,11 +17,12 @@ namespace composer {
 // Compares the sequence open in `ctx` with the spec and returns every mismatch.
 // xLights loads and renders broken references without reporting them, so a
 // successful open proves nothing on its own.
-[[nodiscard]] std::vector<std::string> VerifySequence(HeadlessRenderContext& ctx, const SequenceSpec& spec);
+[[nodiscard]] std::vector<std::string> VerifySequence(xLightsShowContext& ctx, const SequenceSpec& spec);
 
-// Writes to <showDir>/ShowComposer/tmp, reopens with new instances, verifies and
-// only then publishes as <showDir>/<destinationName>. Never overwrites a
-// sequence or its .xbkp, and removes only the files this call created.
+// Validates the plan, writes to <showDir>/ShowComposer/tmp, reopens with new
+// instances, validates again and only then publishes as <showDir>/<destinationName>.
+// Never overwrites a sequence or its .xbkp, and removes only the files this call
+// created. Anything GenerationValidator calls an error stops the publication.
 [[nodiscard]] WriteResult WriteSequenceSafely(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName);
 
 } // namespace composer

@@ -15,6 +15,8 @@ namespace composer {
 // away from a real show folder, whose controllers are active.
 [[nodiscard]] bool ControllersAreInactive(const std::string& showDir, std::string& error);
 
+void PrintValidationSummary(const char* tool, const ValidationReport& report);
+
 // Returns the process exit code: 0 written and verified, 1 failed, 2 refused.
 [[nodiscard]] int RunWriterTest(const std::string& showDir, const std::string& destinationName);
 

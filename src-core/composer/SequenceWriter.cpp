@@ -1,5 +1,6 @@
 #include "composer/SequenceWriter.h"
 
+#include "composer/GenerationValidator.h"
 #include "effects/EffectManager.h"
 #include "effects/RenderableEffect.h"
 #include "models/Model.h"
@@ -193,7 +194,7 @@ void VerifyFacesReferences(xLightsShowContext& ctx, const EffectSpec& effect, co
     }
 }
 
-void VerifyEffects(HeadlessRenderContext& ctx, const SequenceSpec& spec, std::vector<std::string>& problems) {
+void VerifyEffects(xLightsShowContext& ctx, const SequenceSpec& spec, std::vector<std::string>& problems) {
     SequenceElements& elements = ctx.GetSequenceElements();
     EffectManager& manager = ctx.GetEffectManager();
 
@@ -356,6 +357,14 @@ private:
     std::vector<fs::path> _createdDirs; // deepest first
 };
 
+void AddValidationProblems(WriteResult& result) {
+    for (const ValidationIssue& issue : result.validation.issues) {
+        if (issue.severity == IssueSeverity::Error) {
+            result.problems.push_back(fmt::format("{}: {}", issue.code, DescribeIssue(issue)));
+        }
+    }
+}
+
 void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName, TemporaryFiles& temporaries, WriteResult& result) {
     const fs::path name(destinationName);
     if (name.has_parent_path() || name.extension() != ".xsq") {
@@ -405,11 +414,17 @@ void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec,
             result.problems.push_back(fmt::format("no se pudo cargar el show '{}'", showDir));
             return;
         }
+        result.validation.Merge(ValidatePlan(builder, spec));
+        if (!result.validation.Ok()) {
+            AddValidationProblems(result);
+            return;
+        }
         std::string error;
         if (!BuildAndSave(builder, spec, temporary.string(), error)) {
             result.problems.push_back(std::move(error));
             return;
         }
+        result.validation.Merge(ValidateBuilt(builder, spec));
         if (!builder.CloseSequence()) {
             result.problems.push_back("no se pudo cerrar la secuencia construida");
             return;
@@ -426,7 +441,8 @@ void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec,
             result.problems.push_back("no se pudo reabrir el archivo temporal");
             return;
         }
-        result.problems = VerifySequence(checker, spec);
+        result.validation.Merge(ValidateSequenceFile(checker, temporary.string(), &spec, Strictness::Generated));
+        AddValidationProblems(result);
         if (!checker.CloseSequence()) {
             result.problems.push_back("no se pudo cerrar la secuencia reabierta");
         }
@@ -466,6 +482,7 @@ bool BuildAndSave(xLightsShowContext& ctx, const SequenceSpec& spec, const std::
     elements.SetFrequency(1000.0 / spec.frameMS);
     elements.SetViewsManager(&ctx._sequenceViewManager);
     elements.SetSequenceEnd(spec.durationMS);
+    elements.SetSupportsModelBlending(spec.modelBlending);
 
     if (!AddTimingTracks(elements, spec, error) || !AddEffects(ctx, spec, error)) {
         return false;
@@ -482,7 +499,7 @@ bool BuildAndSave(xLightsShowContext& ctx, const SequenceSpec& spec, const std::
     return true;
 }
 
-std::vector<std::string> VerifySequence(HeadlessRenderContext& ctx, const SequenceSpec& spec) {
+std::vector<std::string> VerifySequence(xLightsShowContext& ctx, const SequenceSpec& spec) {
     std::vector<std::string> problems;
     SequenceElements& elements = ctx.GetSequenceElements();
     VerifyTimingTracks(elements, spec, problems);
