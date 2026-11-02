@@ -8400,3 +8400,228 @@ msgstr ""
 
 msgid "{Show Directory not set}"
 msgstr ""
+
+msgid "Sync Lyrics"
+msgstr ""
+
+msgid "Sync Lyrics..."
+msgstr ""
+
+msgid "Import Lyrics Text..."
+msgstr ""
+
+msgid "Open Lyrics File..."
+msgstr ""
+
+msgid "Phrase"
+msgstr ""
+
+msgid "Start (m:ss)"
+msgstr ""
+
+msgid "End (m:ss)"
+msgstr ""
+
+msgid "Play / Pause"
+msgstr ""
+
+msgid "Play Phrase"
+msgstr ""
+
+msgid "Play From Here"
+msgstr ""
+
+msgid "Mark Start"
+msgstr ""
+
+msgid "Mark End"
+msgstr ""
+
+msgid "Confirm Phrase"
+msgstr ""
+
+msgid "Adjust Time:"
+msgstr ""
+
+msgid "Start -50 ms"
+msgstr ""
+
+msgid "Start +50 ms"
+msgstr ""
+
+msgid "End -50 ms"
+msgstr ""
+
+msgid "End +50 ms"
+msgstr ""
+
+msgid "Keys: Space plays or pauses, Z marks the start, X marks the end, C confirms the phrase."
+msgstr ""
+
+msgid "Generate Words and Phonemes"
+msgstr ""
+
+msgid "The saved marks could not be read and have been left untouched:\n%s"
+msgstr ""
+
+msgid "The marks could not be saved:\n%s"
+msgstr ""
+
+msgid "approximate"
+msgstr ""
+
+msgid "not marked"
+msgstr ""
+
+msgid "confirmed"
+msgstr ""
+
+msgid "adjusted"
+msgstr ""
+
+msgid "marked"
+msgstr ""
+
+msgid "start marked"
+msgstr ""
+
+msgid "No lyrics yet: import or write them first."
+msgstr ""
+
+msgid "Manual sync"
+msgstr ""
+
+msgid "Approximate sync"
+msgstr ""
+
+msgid "Not synchronized"
+msgstr ""
+
+msgid "%s: %d of %d phrases marked by hand"
+msgstr ""
+
+msgid "Paste or write the lyrics. Optional tags such as [Chorus], and blank lines between verses, are kept."
+msgstr ""
+
+msgid "Lyrics files (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt"
+msgstr ""
+
+msgid "Mark the start and end of this phrase first."
+msgstr ""
+
+msgid "Mark the start of this phrase first."
+msgstr ""
+
+msgid "Mark the start and end of at least one phrase first."
+msgstr ""
+
+msgid "Replace the words and phonemes of \"%s\" with %d phrases, %d words and %d mouth shapes?"
+msgstr ""
+
+msgid "%d phrases have only their start marked and will be left out."
+msgstr ""
+
+msgid "This sequence has no audio, so phrases cannot be marked by ear. Lyrics can still be imported, and phrases with times can be generated."
+msgstr ""
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which does not exist, so the mouth will not move."
+msgstr ""
+
+msgid "Choose an existing lyrics track."
+msgstr ""
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which only has {layers} layers. Three layers are needed to move the mouth, so it will stay still."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no phonemes while the face on \"{model}\" is active, so the mouth will not move."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no words layer."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" contains \"{label}\", which is not a mouth shape."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" moves the mouth with \"{label}\" outside any word, where it should be resting."
+msgstr ""
+
+msgid "Write a text or choose a lyrics track."
+msgstr ""
+
+msgid "The text effect on \"{model}\" refers to the lyrics \"{value}\", which will show nothing (reason: {reason})."
+msgstr ""
+
+msgid "Choose the phrases or the words of an existing lyrics track."
+msgstr ""
+
+msgid "Check the lyrics track and the face definition."
+msgstr ""
+
+msgid "Check the lyrics track around that pause."
+msgstr ""
+
+msgid "The word \"{word}\" in the lyrics track \"{track}\" has no mouth shapes, so the mouth will rest while it is sung."
+msgstr ""
+
+msgid "Write the word in letters, or add its pronunciation as an exception."
+msgstr ""
+
+msgid "The lyrics of \"{track}\" look like language \"{language}\", but mouth shapes are only generated for Spanish."
+msgstr ""
+
+msgid "Check the mouth movements, or use a lyrics track made for that language."
+msgstr ""
+
+msgid "{count} phrases of the lyrics track \"{track}\" have no times yet, so the mouth will not move during them."
+msgstr ""
+
+msgid "Mark when those phrases start and end while listening to the song."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no {missing} ({layers} layers), so the mouth cannot follow it."
+msgstr ""
+
+msgid "Generate the words and phonemes of that track again."
+msgstr ""
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" has invalid times or overlaps the previous one."
+msgstr ""
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" falls outside the phrase or word it belongs to."
+msgstr ""
+
+msgid "Adjust the times so that every word stays inside its phrase and every mouth shape inside its word."
+msgstr ""
+
+msgid "In the lyrics track \"{track}\" the mouth does not rest in the pause at {at} ms."
+msgstr ""
+
+msgid "Put a rest in that pause."
+msgstr ""
+
+msgid "The layers of the lyrics track \"{track}\" are in the wrong order: the face would read words as mouth shapes."
+msgstr ""
+
+msgid "The layers must be phrases, words and phonemes, in that order."
+msgstr ""
+
+msgid "{count} phrases of the lyrics track \"{track}\" have uncertain times ({quality})."
+msgstr ""
+
+msgid "Listen to them and confirm or correct their start and end."
+msgstr ""
+
+msgid "A {level} correction made by hand on \"{target}\" was not kept in the lyrics track \"{track}\"."
+msgstr ""
+
+msgid "Generate the track again; if it repeats, report the problem."
+msgstr ""
+
+msgid "A correction made by hand on \"{target}\" could not be applied to the lyrics track \"{track}\" ({reason}). It has been kept, not deleted."
+msgstr ""
+
+msgid "Check whether that part of the lyrics was changed, and mark it again."
+msgstr ""
+
+msgid "Generate the phrases, words and phonemes of that track."
+msgstr ""

@@ -11,7 +11,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CALL = re.compile(r'_\(\s*((?:"(?:\\.|[^"\\])*"\s*)+)\)', re.DOTALL)
+# `_("...")` in the wx UI, and `COMPOSER_TEXT("...")` for msgids the wx-free core only
+# marks, so that its messages can be translated where they are shown.
+CALL = re.compile(r'(?:COMPOSER_TEXT|_)\(\s*((?:"(?:\\.|[^"\\])*"\s*)+)\)', re.DOTALL)
 STRING = re.compile(r'"(?:\\.|[^"\\])*"', re.DOTALL)
 
 

@@ -12,6 +12,9 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Sync Lyrics on lyrics timing tracks: mark phrases while the song plays and
+                                 generate words and Spanish mouth shapes for singing faces
+    -bug (lluanllo)              Importing an .srt subtitle file as a timing track no longer drops the last subtitle
     -bug (lluanllo)              Text effect with several colours or vertical text no longer breaks accented
                                  letters and signs such as n-tilde and inverted punctuation
     -enh (lluanllo)              Added a Spanish desktop interface option under Preferences > Other, including effect-panel metadata and the main UI catalog.

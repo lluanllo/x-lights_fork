@@ -1,6 +1,6 @@
 # Modelo de datos — Juajilandia Show Composer
 
-Esta es una **propuesta de contratos**. Solo la sección 2, el análisis musical, está implementada; el resto no existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
+Esta es una **propuesta de contratos**. Las secciones 2 (análisis musical) y 3 (letras) están implementadas; el resto no existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
 
 ## 1. Reglas comunes
 
@@ -86,64 +86,60 @@ Si el audio cambia, las correcciones se conservan y se añade el aviso `correcti
 
 ## 3. Letras
 
-### LyricDocument
+**Implementado en la Fase 4.** La fuente de verdad son `LyricDocument.h`, `SpanishPhonemizer.h` y `LyricAligner.h` en `src-core/composer/`. Los tres módulos son independientes: el texto no depende de los tiempos, la pronunciación no depende de los tiempos y los tiempos no dependen de cómo se escribió la letra.
 
-Lo que escribió el usuario, estructurado y **sin tiempos**.
+### LyricDocument: el texto tal como se escribió
 
-```cpp
-enum class LyricBlockKind { Verse, Chorus, Bridge, Narration, Instrumental, Unknown };
+| Tipo | Contenido |
+|---|---|
+| `LyricDocument` | `format` (`text`, `lrc`, `srt`, `track`), `language` (`es`, `en`, `und`) con su confianza, bloques y avisos |
+| `LyricBlock` | `kind` (`unlabeled`, `intro`, `verse`, `pre-chorus`, `chorus`, `bridge`, `instrumental`, `outro`, `other`), la etiqueta escrita y su número |
+| `LyricLine` | `id` estable, el texto literal, palabras, voz, `instrumental`, y `startMS` y `endMS` solo si la fuente los traía |
+| `LyricWord` | `text` literal y `key` (minúsculas, sin puntuación alrededor) |
 
-struct LyricWord   { std::string text; int syllables; };
-struct LyricPhrase { std::string text; std::vector<LyricWord> words; };
-struct LyricBlock {
-    LyricBlockKind kind;
-    std::string voice;        // "lead" por defecto
-    std::string languageTag;  // "es", "en"
-    std::vector<LyricPhrase> phrases;
-    bool userConfirmed;       // false si el tipo es solo una suposición
-};
-struct LyricDocument {
-    int schemaVersion = 1;
-    std::string title, artist, sourceFile;
-    std::vector<LyricBlock> blocks;
-};
-```
+- Las etiquetas (`[Estrofa 1]`, `[Estribillo]`, `[Voz: Ana]`) son opcionales. Sin ellas, cada párrafo es un bloque `unlabeled`. Un bloque es estribillo solo si alguien lo etiquetó así.
+- **El `id` de una línea** es su clave más el número de apariciones iguales anteriores (`vuelve la navidad#2`). Insertar una estrofa en otro sitio no lo cambia; editar esa línea sí, y entonces sus correcciones se informan como conflicto.
+- LRC y SRT se leen con los lectores de xLights (`lrc::ParseLRC`, `srt::ParseSRT`). El texto nunca se modifica: la normalización fonética trabaja sobre una copia.
 
-### LyricAlignment
+### SpanishPhonemizer: letras → fonemas → formas de boca
 
-Lo que se cree saber sobre **cuándo** suena. Separado para poder sustituir el proveedor sin tocar el texto.
+| Etapa | Qué hace |
+|---|---|
+| Letras | UTF-8 por punto de código. Tres letras iguales o más seguidas son una nota sostenida (`Navidaaad`). Las cifras no se inventan como palabras |
+| Grafemas | Tabla de dígrafos con contexto: `ch`, `ll`, `rr`, `qu` y `gu` (estos dos solo ante `e`, `i`). `ü` es su propio grafema |
+| Fonemas | Tabla de reglas por grafema y contexto. Ids ASCII: `a e i o u`, deslizantes `j w`, `p b t d k g f T s x tS jj L m n J l r rr` |
+| Sílabas | Diptongo, hiato (dos vocales fuertes o `í`/`ú` acentuada), grupos inseparables (`pr`, `bl`…), reparto de consonantes entre vocales |
+| Acento | La tilde manda; si no, llana si termina en vocal, `n` o `s`; aguda en otro caso |
+| Peso | Peso relativo de cada sílaba, por su vocal, sus consonantes, el acento y la nota sostenida. **Es una estimación, nunca una duración** |
+| Visemas | `VisemeOf`: `AI E FV L MBP O U WQ etc`, agrupados como agrupa xLights las vocales inglesas en `phoneme_mapping` |
 
-```cpp
-enum class AlignmentSource { ExistingTrack, Manual, WhisperAnchors, VocalActivity, Uniform };
+Opciones de dialecto: `Distinction` (por defecto, /θ/) o `Seseo`, y `yeismo` (por defecto) o distinción de `ll` (/ʎ/). Lo que la ortografía no decide, como la /x/ de «México», está en una tabla de excepciones versionada (`SPANISH_EXCEPTIONS_VERSION`) y ampliable con `AddSpanishException`.
 
-struct TimedWord {
-    int blockIndex, phraseIndex, wordIndex;
-    int startMS, endMS;
-    float confidence;
-    AlignmentSource source;
-    std::vector<std::string> phonemes;   // Preston Blair
-    bool phonemesFromRules;              // true si salen de SpanishPhonemizer
-};
-struct TimedPhrase {
-    int blockIndex, phraseIndex;
-    int startMS, endMS;
-    float confidence;
-    AlignmentSource source;
-    bool userEdited;
-};
-struct LyricAlignment {
-    int schemaVersion = 1;
-    std::string voice;
-    AlignmentSource primarySource;
-    float overallConfidence;
-    std::vector<TimedPhrase> phrases;
-    std::vector<TimedWord> words;
-    std::vector<std::string> wordsWithoutPhonemes;
-    std::vector<std::string> warnings;
-};
-```
+### LyricAligner: cuándo suena cada cosa
 
-**Escritura:** pista de 3 capas. Capa 0, frases; capa 1, palabras; capa 2, fonemas. Lo exigen `FacesEffect` y `TextEffect`.
+| Proveedor | Fuente | Confianza de la frase |
+|---|---|---|
+| A, `existing-track` | Una pista de xLights ya sincronizada. Sus tiempos y sus fonemas se conservan | 1,0 |
+| B, `manual-phrases` | Marcas de frase hechas por una persona (correcciones de nivel frase) | 1,0 |
+| C, `line-times` | SRT (inicio y final) o LRC (solo inicios: el final se estima) | 0,7 y 0,4 |
+| D, `experimental` | Indicio de voz y sílabas. **Solo si se pide** (`allowExperimental`) | 0,1 |
+| Ninguno | Texto sin tiempos: queda `unsynchronized` y no se mueve la boca | — |
+
+Dentro de una frase, las palabras se reparten por peso silábico (confianza 0,5 × la frase) y las formas de boca por sílaba: consonantes breves y la vocal el resto (0,4 × la frase). Formas iguales seguidas dentro de una palabra se unen, nada dura menos de un fotograma y cada pausa es un `rest` explícito.
+
+### Correcciones manuales
+
+`LyricCorrection { level (phrase, word, phoneme), targetId, state, startMS, endMS, shape, originalStartMS, originalEndMS }`. El estado es `corrected`, `locked` o `confirmed`; una corrección nunca es `detected`.
+
+- Se guardan aparte y se aplican después de cada alineación. **Siempre ganan** a lo detectado: las palabras detectadas se reparten alrededor de las fijadas.
+- Si su destino ya no existe (la letra cambió), se informa en `conflicts` y la corrección **se conserva**.
+- El diálogo «Sincronizar letra» guarda la letra y las correcciones en `<secuencia>.<pista>.composer-lyrics.json` (`LyricSession`). Marcar con el oído da `confirmed`; ajustar ±50 ms, `corrected`; «Confirmar frase», `locked`.
+
+### Pista nativa
+
+`BuildLyricTrack`: capa 0, frases; capa 1, palabras; capa 2, formas de boca con `rest` en las pausas. Es el orden que lee `FacesEffect`. Las frases sin tiempos se dejan fuera en vez de inventarles uno. `WriteTimingTracks` escribe el `.xtiming` de varias capas que importa «Import Timing Track».
+
+**Límite de xLights:** «Import Timing Track» pasa el nombre de la pista por `RemoveUnsafeXmlChars`, que quita los caracteres no ASCII («española» → «espaola»). Las marcas conservan los acentos. `SequenceWriter` y el diálogo escriben el nombre completo.
 
 ## 4. Modelos
 

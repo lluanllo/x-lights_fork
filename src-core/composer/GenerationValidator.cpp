@@ -1,5 +1,6 @@
 #include "composer/GenerationValidator.h"
 
+#include "composer/LyricAligner.h"
 #include "composer/SequenceWriter.h"
 #include "effects/EffectManager.h"
 #include "effects/RenderableEffect.h"
@@ -1207,6 +1208,170 @@ struct UnexpectedRange {
 
 } // namespace
 
+namespace {
+
+double PhonemeShare(const std::vector<TimingMark>& layer) {
+    if (layer.empty()) {
+        return 0;
+    }
+    const auto known = std::count_if(layer.begin(), layer.end(), [](const TimingMark& m) { return IsKnownPhoneme(m.label); });
+    return static_cast<double>(known) / static_cast<double>(layer.size());
+}
+
+bool Contains(const std::vector<TimingMark>& outer, const TimingMark& inner) {
+    return std::any_of(outer.begin(), outer.end(), [&](const TimingMark& o) { return inner.startMS >= o.startMS && inner.endMS <= o.endMS; });
+}
+
+} // namespace
+
+ValidationReport ValidateLyricTrack(const TimingTrackSpec& track, int durationMS, int frameMS) {
+    ValidationReport report;
+    report.configurationRan = true;
+    const auto raise = [&](const char* code, IssueSeverity severity, int start, int end, Args args) {
+        args.insert(args.begin(), { "track", track.name });
+        Raise(report, code, severity, IssueCategory::Configuration, "", "", start, end, std::move(args));
+    };
+    if (track.layers.size() < 3) {
+        raise(issue::LyricsTrackIncomplete, IssueSeverity::Error, -1, -1, { { "missing", track.layers.size() < 2 ? "words" : "phonemes" }, { "layers", std::to_string(track.layers.size()) } });
+        return report;
+    }
+    static const char* const LAYER_NAMES[] = { "phrases", "words", "phonemes" };
+    for (size_t l = 0; l < 3; ++l) {
+        int previousEnd = 0;
+        for (const TimingMark& mark : track.layers[l]) {
+            if (mark.startMS < 0 || mark.endMS <= mark.startMS || (durationMS > 0 && mark.endMS > durationMS) || mark.startMS < previousEnd) {
+                raise(issue::LyricsTimeInvalid, IssueSeverity::Error, mark.startMS, mark.endMS, { { "layer", LAYER_NAMES[l] }, { "label", mark.label } });
+            }
+            previousEnd = std::max(previousEnd, mark.endMS);
+        }
+    }
+    const auto& phrases = track.layers[0];
+    const auto& words = track.layers[1];
+    const auto& phonemes = track.layers[2];
+    // A track built in the wrong order still loads, and the face then reads words as
+    // mouth shapes and stays at rest.
+    if (!phonemes.empty() && PhonemeShare(phonemes) < 0.5 && (PhonemeShare(words) >= 0.5 || PhonemeShare(phrases) >= 0.5)) {
+        raise(issue::LyricsLayerOrder, IssueSeverity::Error, -1, -1, {});
+        return report;
+    }
+    if (!phrases.empty() && words.empty()) {
+        raise(issue::LyricsTrackIncomplete, IssueSeverity::Error, -1, -1, { { "missing", "words" }, { "layers", "3" } });
+    }
+    if (!words.empty() && phonemes.empty()) {
+        raise(issue::LyricsTrackIncomplete, IssueSeverity::Error, -1, -1, { { "missing", "phonemes" }, { "layers", "3" } });
+    }
+    for (const TimingMark& mark : phonemes) {
+        if (!IsKnownPhoneme(mark.label)) {
+            raise(issue::FacePhonemeUnknown, IssueSeverity::Error, mark.startMS, mark.endMS, { { "label", mark.label } });
+        }
+    }
+    for (const TimingMark& word : words) {
+        if (!Contains(phrases, word)) {
+            raise(issue::LyricsOverlap, IssueSeverity::Error, word.startMS, word.endMS, { { "layer", "words" }, { "label", word.label } });
+        }
+    }
+    for (const TimingMark& phoneme : phonemes) {
+        if (PhonemeOf(phoneme.label) != "rest" && !Contains(words, phoneme)) {
+            raise(issue::LyricsOverlap, IssueSeverity::Error, phoneme.startMS, phoneme.endMS, { { "layer", "phonemes" }, { "label", phoneme.label } });
+        }
+    }
+    // Between two words the mouth must rest: a shape across the gap keeps it moving in
+    // the silence, and a gap with no mark at all relies on the renderer's default.
+    for (size_t w = 0; w + 1 < words.size(); ++w) {
+        const int gapStart = words[w].endMS;
+        const int gapEnd = words[w + 1].startMS;
+        if (gapEnd - gapStart < std::max(1, frameMS)) {
+            continue;
+        }
+        bool moving = false;
+        bool rested = false;
+        for (const TimingMark& phoneme : phonemes) {
+            if (phoneme.startMS < gapEnd && phoneme.endMS > gapStart) {
+                (PhonemeOf(phoneme.label) == "rest" ? rested : moving) = true;
+            }
+        }
+        if (moving || !rested) {
+            raise(issue::LyricsRestMissing, moving ? IssueSeverity::Error : IssueSeverity::Info, gapStart, gapEnd, { { "at", std::to_string(gapStart) } });
+        }
+    }
+    return report;
+}
+
+ValidationReport ValidateLyrics(const LyricAlignment& alignment, const TimingTrackSpec& track, int durationMS, int frameMS) {
+    ValidationReport report = ValidateLyricTrack(track, durationMS, frameMS);
+    const auto raise = [&](const char* code, IssueSeverity severity, int start, int end, Args args) {
+        args.insert(args.begin(), { "track", track.name });
+        Raise(report, code, severity, IssueCategory::Configuration, "", "", start, end, std::move(args));
+    };
+    if (alignment.language != "es") {
+        raise(issue::LyricsLanguageUnsupported, alignment.language == "en" ? IssueSeverity::Warning : IssueSeverity::Info, -1, -1, { { "language", alignment.language.empty() ? "und" : alignment.language } });
+    }
+    int unsynchronized = 0;
+    int uncertain = 0;
+    for (const AlignedPhrase& phrase : alignment.phrases) {
+        if (phrase.instrumental) {
+            continue;
+        }
+        if (phrase.startMS < 0) {
+            ++unsynchronized;
+            continue;
+        }
+        uncertain += phrase.confidence < 0.5 ? 1 : 0;
+        const bool hasWords = std::any_of(alignment.words.begin(), alignment.words.end(), [&](const AlignedWord& w) { return w.phraseId == phrase.id; });
+        if (!hasWords) {
+            raise(issue::LyricsTrackIncomplete, IssueSeverity::Error, phrase.startMS, phrase.endMS, { { "missing", "words" }, { "layers", std::to_string(track.layers.size()) } });
+        }
+    }
+    if (unsynchronized > 0) {
+        raise(issue::LyricsNotSynchronized, IssueSeverity::Warning, -1, -1, { { "count", std::to_string(unsynchronized) } });
+    }
+    if (uncertain > 0) {
+        raise(issue::LyricsLowConfidence, IssueSeverity::Warning, -1, -1, { { "count", std::to_string(uncertain) }, { "quality", alignment.quality } });
+    }
+    for (const AlignedWord& word : alignment.words) {
+        const bool shaped = std::any_of(alignment.phonemes.begin(), alignment.phonemes.end(), [&](const AlignedPhoneme& p) { return p.wordId == word.id; });
+        if (!shaped) {
+            raise(issue::LyricsWordNoPhonemes, IssueSeverity::Warning, word.startMS, word.endMS, { { "word", word.text } });
+        }
+    }
+
+    // A person's correction is honoured only if the result still says what they said,
+    // to the frame.
+    const int tolerance = std::max(1, frameMS) / 2;
+    const auto near = [&](int value, int wanted) { return wanted < 0 || std::abs(value - wanted) <= tolerance; };
+    for (const LyricCorrection& c : alignment.corrections) {
+        const auto conflict = std::find_if(alignment.conflicts.begin(), alignment.conflicts.end(), [&](const AlignmentConflict& k) { return k.targetId == c.targetId; });
+        if (conflict != alignment.conflicts.end()) {
+            raise(issue::LyricsCorrectionConflict, IssueSeverity::Warning, c.startMS, c.endMS, { { "target", c.targetId }, { "reason", conflict->reason } });
+            continue;
+        }
+        bool kept = false;
+        if (c.level == LyricCorrection::Level::Phrase) {
+            for (const AlignedPhrase& p : alignment.phrases) {
+                if (p.id == c.targetId) {
+                    kept = p.state == c.state && (c.startMS < 0 || (near(p.startMS, c.startMS) && near(p.endMS, c.endMS) && Contains(track.layers.empty() ? std::vector<TimingMark>() : track.layers[0], { "", p.startMS, p.endMS })));
+                }
+            }
+        } else if (c.level == LyricCorrection::Level::Word) {
+            for (const AlignedWord& w : alignment.words) {
+                if (w.id == c.targetId) {
+                    kept = w.state == c.state && (c.startMS < 0 || (near(w.startMS, c.startMS) && near(w.endMS, c.endMS)));
+                }
+            }
+        } else {
+            for (const AlignedPhoneme& p : alignment.phonemes) {
+                if (p.id == c.targetId) {
+                    kept = p.state == c.state && (c.shape.empty() || p.shape == c.shape) && (c.startMS < 0 || (near(p.startMS, c.startMS) && near(p.endMS, c.endMS)));
+                }
+            }
+        }
+        if (!kept) {
+            raise(issue::LyricsCorrectionLost, IssueSeverity::Error, c.startMS, c.endMS, { { "target", c.targetId }, { "level", CorrectionLevelId(c.level) } });
+        }
+    }
+    return report;
+}
+
 ValidationReport ValidatePlan(xLightsShowContext& ctx, const SequenceSpec& spec, const CancelCheck& cancel) {
     ValidationReport report;
     report.structuralRan = true;
@@ -1539,57 +1704,71 @@ struct IssueText {
     const char* suggestion;
 };
 
+// Marks a msgid for ci_scripts/localization/build_catalog.py; the core never translates.
+#define COMPOSER_TEXT(text) text
+
 // Worded for someone who does not know xLights' internals. These are the msgids a
 // translated UI will look up, so a change of wording here is a change of msgid.
 const IssueText ISSUE_TEXTS[] = {
-    { issue::ModelNotFound, "The model \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\".", "Open the sequence with the show folder it was created for, or restore this model in the layout." },
-    { issue::GroupNotFound, "The group \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\".", "Choose an existing group or create this one in the layout." },
-    { issue::SubModelNotFound, "The model \"{parent}\" has no submodel called \"{subModel}\".", "Choose an existing submodel or create this one on the model." },
-    { issue::TargetKindMismatch, "\"{model}\" exists, but it is not a {expected} as the plan expected.", "Check that the layout is the one the plan was made for." },
-    { issue::GroupMemberInvalid, "The group \"{model}\" refers to members that do not exist: {members}.", "Remove those members from the group or restore the models." },
-    { issue::GroupEmpty, "The group \"{model}\" has no valid members, so nothing can light up.", "Add at least one existing model to the group." },
-    { issue::LayoutIncompatible, "This sequence does not match the layout of the show folder \"{showFolder}\" (reason: {reason}). Missing {missing} of {total} targets: {names}.", "Select the show folder this sequence was generated for before opening it." },
-    { issue::ShowFolderMismatch, "The sequence belongs to the show folder \"{sequenceFolder}\", but the selected show folder is \"{showFolder}\".", "Select \"{sequenceFolder}\" as the show folder and open the sequence again." },
-    { issue::SequenceFileUnreadable, "The sequence file \"{file}\" cannot be read.", "Generate the sequence again." },
-    { issue::SequenceMismatch, "The saved sequence differs from what was planned: {detail}.", "Generate the sequence again and report the problem if it repeats." },
-    { issue::EffectUnknown, "The effect \"{effect}\" on \"{model}\" does not exist in this version of xLights, and would be dropped.", "Choose another effect." },
-    { issue::EffectIntervalInvalid, "The effect \"{effect}\" on \"{model}\" has invalid times for a sequence of {duration} ms.", "Correct its start and end so that they fall inside the song." },
-    { issue::EffectOverlapInLayer, "Two effects overlap on layer {layer} of \"{model}\".", "Move one of them to another layer or shorten it." },
-    { issue::TimingInvalid, "The mark \"{label}\" of the track \"{track}\" has invalid times or overlaps the previous one.", "Correct the times of that mark." },
-    { issue::TimingOffGrid, "\"{label}\" does not start or end on a frame, so xLights will move it slightly.", "Align it with the sequence's frames." },
-    { issue::EffectSettingsInvalid, "The effect \"{effect}\" on \"{model}\" has an invalid setting {key}={value}: {reason}.", "Correct that setting in the effect." },
-    { issue::EffectSettingUnknown, "The effect \"{effect}\" on \"{model}\" has a setting xLights does not know: {key}.", "Remove that setting." },
-    { issue::EffectSettingsWarning, "xLights warns about the effect \"{effect}\" on \"{model}\": {reason}.", "Check that it looks as you expect." },
-    { issue::PaletteInvalid, "Colour {slot} of the effect \"{effect}\" on \"{model}\" is not valid: {value}.", "Choose the colour again." },
-    { issue::PaletteEmpty, "The effect \"{effect}\" on \"{model}\" has no visible colour selected, so it may stay dark.", "Select at least one colour other than black." },
-    { issue::BufferStyleInvalid, "The model \"{model}\" does not support the render style \"{style}\".", "Choose one of the styles the model offers." },
-    { issue::MediaFileMissing, "The effect \"{effect}\" on \"{model}\" needs a file that cannot be found: \"{file}\".", "Add the file to the show folder, or remove the effect until you have it." },
-    { issue::FaceTrackMissing, "The face on \"{model}\" uses the lyrics track \"{track}\", which does not exist, so the mouth will not move.", "Choose an existing lyrics track." },
-    { issue::FaceInsufficientLayers, "The face on \"{model}\" uses the lyrics track \"{track}\", which only has {layers} layers. Three layers are needed to move the mouth, so it will stay still.", "Generate the phrases, words and phonemes of that track." },
-    { issue::FaceNoPhonemes, "The lyrics track \"{track}\" has no phonemes while the face on \"{model}\" is active, so the mouth will not move.", "Generate the phonemes for that part of the song." },
-    { issue::FaceNoWords, "The lyrics track \"{track}\" has no words layer.", "Add the words so that the mouth movements can be reviewed." },
-    { issue::FacePhonemeUnknown, "The lyrics track \"{track}\" contains \"{label}\", which is not a mouth shape.", "Replace it with a valid phoneme." },
-    { issue::FacePhonemeOutsideWord, "The lyrics track \"{track}\" moves the mouth with \"{label}\" outside any word, where it should be resting.", "Remove that phoneme or adjust the word's times." },
-    { issue::FaceDefinitionNotFound, "The model \"{model}\" has no face called \"{definition}\", and xLights would silently use \"{substitute}\".", "Choose one of the model's faces." },
-    { issue::FaceDefinitionIncompatible, "The face \"{definition}\" of type {type} cannot be drawn on the group \"{model}\", so it will not light up.", "Apply the face to the model itself, or use an image face on the group." },
-    { issue::FaceDefinitionEmpty, "The face \"{definition}\" on \"{model}\" defines no mouth, so nothing will move.", "Define the mouth shapes of that face." },
-    { issue::FaceImageMissing, "The face \"{definition}\" on \"{model}\" needs {count} images that cannot be found, and xLights would fill the model with red: {files}.", "Add the images to the show folder or choose a face that does not need them." },
-    { issue::TextEmpty, "The text effect on \"{model}\" has nothing to show.", "Write a text or choose a lyrics track." },
-    { issue::TextUtf8Issue, "The text effect on \"{model}\" cannot show its text correctly with the font \"{font}\" (reason: {reason}).", "Use an operating system font, which can draw accented letters." },
-    { issue::TextLyricTrackInvalid, "The text effect on \"{model}\" refers to the lyrics \"{value}\", which will show nothing (reason: {reason}).", "Choose the phrases or the words of an existing lyrics track." },
-    { issue::GroupMemberConflict, "\"{model}\" and \"{over}\" are active at the same time on the same lights ({classification}).", "Check that the result is what you want; if \"{model}\" must be seen, move it or change how they mix." },
-    { issue::MarkerInvalid, "The pending resource {id} has invalid times or refers to \"{model}\", which does not exist.", "Correct the marker." },
-    { issue::MarkerProducesLight, "The pending resource {id} on \"{model}\" should stay dark, but it is lit by {by}.", "Remove what lights it, or supply the resource." },
-    { issue::RenderFileUnreadable, "The rendered file \"{file}\" cannot be read.", "Render the sequence again." },
-    { issue::RenderTimingMismatch, "The render has {frames} frames of {step} ms, and {expectedFrames} of {expectedStep} ms were expected.", "Render the sequence again." },
-    { issue::RenderChannelsUnavailable, "Part of \"{model}\" is beyond the {fileChannels} channels of the rendered file and could not be checked.", "Check that the render includes all models." },
-    { issue::RenderTargetSilent, "\"{model}\" stayed dark while its effect \"{effect}\" should have been lighting it.", "Review the effect's settings and colours, and whether another model covers it." },
-    { issue::RenderMemberSilent, "Some members of \"{model}\" stayed dark during \"{effect}\": {members}.", "Check the group's render style and those models." },
-    { issue::RenderPlaceholderOutput, "\"{model}\" is filled with one pure colour during \"{effect}\", which is what xLights does when an image is missing.", "Check the effect's images." },
-    { issue::UnexpectedOutput, "\"{model}\" lit up for {frames} frames when no effect should have been lighting it.", "Find the effect that reaches those lights." },
-    { issue::FaceMouthStatic, "The mouth on \"{model}\" does not change across {phonemes} different phonemes.", "Check the lyrics track and the face definition." },
-    { issue::FaceMouthMismatch, "The mouth on \"{model}\" does not show \"{phoneme}\" as defined: {lit} lights on instead of {expected}.", "Check the face definition, and whether another effect covers it." },
-    { issue::FaceRestMismatch, "The mouth on \"{model}\" is not at rest during a pause: {lit} lights on instead of {expected}.", "Check the lyrics track around that pause." },
+    { issue::ModelNotFound, COMPOSER_TEXT("The model \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."), COMPOSER_TEXT("Open the sequence with the show folder it was created for, or restore this model in the layout.") },
+    { issue::GroupNotFound, COMPOSER_TEXT("The group \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."), COMPOSER_TEXT("Choose an existing group or create this one in the layout.") },
+    { issue::SubModelNotFound, COMPOSER_TEXT("The model \"{parent}\" has no submodel called \"{subModel}\"."), COMPOSER_TEXT("Choose an existing submodel or create this one on the model.") },
+    { issue::TargetKindMismatch, COMPOSER_TEXT("\"{model}\" exists, but it is not a {expected} as the plan expected."), COMPOSER_TEXT("Check that the layout is the one the plan was made for.") },
+    { issue::GroupMemberInvalid, COMPOSER_TEXT("The group \"{model}\" refers to members that do not exist: {members}."), COMPOSER_TEXT("Remove those members from the group or restore the models.") },
+    { issue::GroupEmpty, COMPOSER_TEXT("The group \"{model}\" has no valid members, so nothing can light up."), COMPOSER_TEXT("Add at least one existing model to the group.") },
+    { issue::LayoutIncompatible, COMPOSER_TEXT("This sequence does not match the layout of the show folder \"{showFolder}\" (reason: {reason}). Missing {missing} of {total} targets: {names}."), COMPOSER_TEXT("Select the show folder this sequence was generated for before opening it.") },
+    { issue::ShowFolderMismatch, COMPOSER_TEXT("The sequence belongs to the show folder \"{sequenceFolder}\", but the selected show folder is \"{showFolder}\"."), COMPOSER_TEXT("Select \"{sequenceFolder}\" as the show folder and open the sequence again.") },
+    { issue::SequenceFileUnreadable, COMPOSER_TEXT("The sequence file \"{file}\" cannot be read."), COMPOSER_TEXT("Generate the sequence again.") },
+    { issue::SequenceMismatch, COMPOSER_TEXT("The saved sequence differs from what was planned: {detail}."), COMPOSER_TEXT("Generate the sequence again and report the problem if it repeats.") },
+    { issue::EffectUnknown, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" does not exist in this version of xLights, and would be dropped."), COMPOSER_TEXT("Choose another effect.") },
+    { issue::EffectIntervalInvalid, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" has invalid times for a sequence of {duration} ms."), COMPOSER_TEXT("Correct its start and end so that they fall inside the song.") },
+    { issue::EffectOverlapInLayer, COMPOSER_TEXT("Two effects overlap on layer {layer} of \"{model}\"."), COMPOSER_TEXT("Move one of them to another layer or shorten it.") },
+    { issue::TimingInvalid, COMPOSER_TEXT("The mark \"{label}\" of the track \"{track}\" has invalid times or overlaps the previous one."), COMPOSER_TEXT("Correct the times of that mark.") },
+    { issue::TimingOffGrid, COMPOSER_TEXT("\"{label}\" does not start or end on a frame, so xLights will move it slightly."), COMPOSER_TEXT("Align it with the sequence's frames.") },
+    { issue::EffectSettingsInvalid, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" has an invalid setting {key}={value}: {reason}."), COMPOSER_TEXT("Correct that setting in the effect.") },
+    { issue::EffectSettingUnknown, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" has a setting xLights does not know: {key}."), COMPOSER_TEXT("Remove that setting.") },
+    { issue::EffectSettingsWarning, COMPOSER_TEXT("xLights warns about the effect \"{effect}\" on \"{model}\": {reason}."), COMPOSER_TEXT("Check that it looks as you expect.") },
+    { issue::PaletteInvalid, COMPOSER_TEXT("Colour {slot} of the effect \"{effect}\" on \"{model}\" is not valid: {value}."), COMPOSER_TEXT("Choose the colour again.") },
+    { issue::PaletteEmpty, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" has no visible colour selected, so it may stay dark."), COMPOSER_TEXT("Select at least one colour other than black.") },
+    { issue::BufferStyleInvalid, COMPOSER_TEXT("The model \"{model}\" does not support the render style \"{style}\"."), COMPOSER_TEXT("Choose one of the styles the model offers.") },
+    { issue::MediaFileMissing, COMPOSER_TEXT("The effect \"{effect}\" on \"{model}\" needs a file that cannot be found: \"{file}\"."), COMPOSER_TEXT("Add the file to the show folder, or remove the effect until you have it.") },
+    { issue::FaceTrackMissing, COMPOSER_TEXT("The face on \"{model}\" uses the lyrics track \"{track}\", which does not exist, so the mouth will not move."), COMPOSER_TEXT("Choose an existing lyrics track.") },
+    { issue::FaceInsufficientLayers, COMPOSER_TEXT("The face on \"{model}\" uses the lyrics track \"{track}\", which only has {layers} layers. Three layers are needed to move the mouth, so it will stay still."), COMPOSER_TEXT("Generate the phrases, words and phonemes of that track.") },
+    { issue::FaceNoPhonemes, COMPOSER_TEXT("The lyrics track \"{track}\" has no phonemes while the face on \"{model}\" is active, so the mouth will not move."), COMPOSER_TEXT("Generate the phonemes for that part of the song.") },
+    { issue::FaceNoWords, COMPOSER_TEXT("The lyrics track \"{track}\" has no words layer."), COMPOSER_TEXT("Add the words so that the mouth movements can be reviewed.") },
+    { issue::FacePhonemeUnknown, COMPOSER_TEXT("The lyrics track \"{track}\" contains \"{label}\", which is not a mouth shape."), COMPOSER_TEXT("Replace it with a valid phoneme.") },
+    { issue::FacePhonemeOutsideWord, COMPOSER_TEXT("The lyrics track \"{track}\" moves the mouth with \"{label}\" outside any word, where it should be resting."), COMPOSER_TEXT("Remove that phoneme or adjust the word's times.") },
+    { issue::FaceDefinitionNotFound, COMPOSER_TEXT("The model \"{model}\" has no face called \"{definition}\", and xLights would silently use \"{substitute}\"."), COMPOSER_TEXT("Choose one of the model's faces.") },
+    { issue::FaceDefinitionIncompatible, COMPOSER_TEXT("The face \"{definition}\" of type {type} cannot be drawn on the group \"{model}\", so it will not light up."), COMPOSER_TEXT("Apply the face to the model itself, or use an image face on the group.") },
+    { issue::FaceDefinitionEmpty, COMPOSER_TEXT("The face \"{definition}\" on \"{model}\" defines no mouth, so nothing will move."), COMPOSER_TEXT("Define the mouth shapes of that face.") },
+    { issue::FaceImageMissing, COMPOSER_TEXT("The face \"{definition}\" on \"{model}\" needs {count} images that cannot be found, and xLights would fill the model with red: {files}."), COMPOSER_TEXT("Add the images to the show folder or choose a face that does not need them.") },
+    { issue::TextEmpty, COMPOSER_TEXT("The text effect on \"{model}\" has nothing to show."), COMPOSER_TEXT("Write a text or choose a lyrics track.") },
+    { issue::TextUtf8Issue, COMPOSER_TEXT("The text effect on \"{model}\" cannot show its text correctly with the font \"{font}\" (reason: {reason})."), COMPOSER_TEXT("Use an operating system font, which can draw accented letters.") },
+    { issue::TextLyricTrackInvalid, COMPOSER_TEXT("The text effect on \"{model}\" refers to the lyrics \"{value}\", which will show nothing (reason: {reason})."), COMPOSER_TEXT("Choose the phrases or the words of an existing lyrics track.") },
+    { issue::GroupMemberConflict, COMPOSER_TEXT("\"{model}\" and \"{over}\" are active at the same time on the same lights ({classification})."), COMPOSER_TEXT("Check that the result is what you want; if \"{model}\" must be seen, move it or change how they mix.") },
+    { issue::MarkerInvalid, COMPOSER_TEXT("The pending resource {id} has invalid times or refers to \"{model}\", which does not exist."), COMPOSER_TEXT("Correct the marker.") },
+    { issue::MarkerProducesLight, COMPOSER_TEXT("The pending resource {id} on \"{model}\" should stay dark, but it is lit by {by}."), COMPOSER_TEXT("Remove what lights it, or supply the resource.") },
+    { issue::RenderFileUnreadable, COMPOSER_TEXT("The rendered file \"{file}\" cannot be read."), COMPOSER_TEXT("Render the sequence again.") },
+    { issue::RenderTimingMismatch, COMPOSER_TEXT("The render has {frames} frames of {step} ms, and {expectedFrames} of {expectedStep} ms were expected."), COMPOSER_TEXT("Render the sequence again.") },
+    { issue::RenderChannelsUnavailable, COMPOSER_TEXT("Part of \"{model}\" is beyond the {fileChannels} channels of the rendered file and could not be checked."), COMPOSER_TEXT("Check that the render includes all models.") },
+    { issue::RenderTargetSilent, COMPOSER_TEXT("\"{model}\" stayed dark while its effect \"{effect}\" should have been lighting it."), COMPOSER_TEXT("Review the effect's settings and colours, and whether another model covers it.") },
+    { issue::RenderMemberSilent, COMPOSER_TEXT("Some members of \"{model}\" stayed dark during \"{effect}\": {members}."), COMPOSER_TEXT("Check the group's render style and those models.") },
+    { issue::RenderPlaceholderOutput, COMPOSER_TEXT("\"{model}\" is filled with one pure colour during \"{effect}\", which is what xLights does when an image is missing."), COMPOSER_TEXT("Check the effect's images.") },
+    { issue::UnexpectedOutput, COMPOSER_TEXT("\"{model}\" lit up for {frames} frames when no effect should have been lighting it."), COMPOSER_TEXT("Find the effect that reaches those lights.") },
+    { issue::FaceMouthStatic, COMPOSER_TEXT("The mouth on \"{model}\" does not change across {phonemes} different phonemes."), COMPOSER_TEXT("Check the lyrics track and the face definition.") },
+    { issue::FaceMouthMismatch, COMPOSER_TEXT("The mouth on \"{model}\" does not show \"{phoneme}\" as defined: {lit} lights on instead of {expected}."), COMPOSER_TEXT("Check the face definition, and whether another effect covers it.") },
+    { issue::FaceRestMismatch, COMPOSER_TEXT("The mouth on \"{model}\" is not at rest during a pause: {lit} lights on instead of {expected}."), COMPOSER_TEXT("Check the lyrics track around that pause.") },
+    { issue::LyricsWordNoPhonemes, COMPOSER_TEXT("The word \"{word}\" in the lyrics track \"{track}\" has no mouth shapes, so the mouth will rest while it is sung."), COMPOSER_TEXT("Write the word in letters, or add its pronunciation as an exception.") },
+    { issue::LyricsLanguageUnsupported, COMPOSER_TEXT("The lyrics of \"{track}\" look like language \"{language}\", but mouth shapes are only generated for Spanish."), COMPOSER_TEXT("Check the mouth movements, or use a lyrics track made for that language.") },
+    { issue::LyricsNotSynchronized, COMPOSER_TEXT("{count} phrases of the lyrics track \"{track}\" have no times yet, so the mouth will not move during them."), COMPOSER_TEXT("Mark when those phrases start and end while listening to the song.") },
+    { issue::LyricsTrackIncomplete, COMPOSER_TEXT("The lyrics track \"{track}\" has no {missing} ({layers} layers), so the mouth cannot follow it."), COMPOSER_TEXT("Generate the words and phonemes of that track again.") },
+    { issue::LyricsTimeInvalid, COMPOSER_TEXT("The {layer} mark \"{label}\" of the lyrics track \"{track}\" has invalid times or overlaps the previous one."), COMPOSER_TEXT("Correct the times of that mark.") },
+    { issue::LyricsOverlap, COMPOSER_TEXT("The {layer} mark \"{label}\" of the lyrics track \"{track}\" falls outside the phrase or word it belongs to."), COMPOSER_TEXT("Adjust the times so that every word stays inside its phrase and every mouth shape inside its word.") },
+    { issue::LyricsRestMissing, COMPOSER_TEXT("In the lyrics track \"{track}\" the mouth does not rest in the pause at {at} ms."), COMPOSER_TEXT("Put a rest in that pause.") },
+    { issue::LyricsLayerOrder, COMPOSER_TEXT("The layers of the lyrics track \"{track}\" are in the wrong order: the face would read words as mouth shapes."), COMPOSER_TEXT("The layers must be phrases, words and phonemes, in that order.") },
+    { issue::LyricsLowConfidence, COMPOSER_TEXT("{count} phrases of the lyrics track \"{track}\" have uncertain times ({quality})."), COMPOSER_TEXT("Listen to them and confirm or correct their start and end.") },
+    { issue::LyricsCorrectionLost, COMPOSER_TEXT("A {level} correction made by hand on \"{target}\" was not kept in the lyrics track \"{track}\"."), COMPOSER_TEXT("Generate the track again; if it repeats, report the problem.") },
+    { issue::LyricsCorrectionConflict, COMPOSER_TEXT("A correction made by hand on \"{target}\" could not be applied to the lyrics track \"{track}\" ({reason}). It has been kept, not deleted."), COMPOSER_TEXT("Check whether that part of the lyrics was changed, and mark it again.") },
 };
 
 const IssueText* FindIssueText(const std::string& code) {
@@ -1620,6 +1799,16 @@ std::string DescribeIssue(const ValidationIssue& issue) {
 std::string DescribeSuggestion(const ValidationIssue& issue) {
     const IssueText* text = FindIssueText(issue.code);
     return text == nullptr ? std::string() : FillTemplate(text->suggestion, issue);
+}
+
+std::string DescribeIssue(const ValidationIssue& issue, const TranslateText& translate) {
+    const IssueText* text = FindIssueText(issue.code);
+    return text == nullptr ? issue.code : FillTemplate(translate ? translate(text->message) : std::string(text->message), issue);
+}
+
+std::string DescribeSuggestion(const ValidationIssue& issue, const TranslateText& translate) {
+    const IssueText* text = FindIssueText(issue.code);
+    return text == nullptr ? std::string() : FillTemplate(translate ? translate(text->suggestion) : std::string(text->suggestion), issue);
 }
 
 const char* StatusName(CheckStatus status) {

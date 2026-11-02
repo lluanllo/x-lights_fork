@@ -78,6 +78,7 @@
     <ClCompile Include="..\src-ui-wx\import_export\LMSImportChannelMapDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\import_export\LorConvertDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\LyricsDialog.cpp" />
+    <ClCompile Include="..\src-ui-wx\sequencer\LyricSyncDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
     <ClCompile Include="..\src-ui-wx\import_export\MusicXML.cpp" />
@@ -90,8 +91,14 @@
     <ClCompile Include="..\src-core\outputs\TestPreset.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\PerspectivesPanel.cpp" />
     <ClCompile Include="..\src-core\lyrics\LRCParser.cpp" />
+    <ClCompile Include="..\src-core\lyrics\SRTParser.cpp" />
     <ClCompile Include="..\src-core\composer\GenerationValidator.cpp" />
     <ClCompile Include="..\src-core\composer\AnalyzerTest.cpp" />
+    <ClCompile Include="..\src-core\composer\ComposerText.cpp" />
+    <ClCompile Include="..\src-core\composer\SpanishPhonemizer.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricDocument.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricAligner.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricTest.cpp" />
     <ClCompile Include="..\src-core\composer\SequenceWriter.cpp" />
     <ClCompile Include="..\src-core\composer\SongAnalysis.cpp" />
     <ClCompile Include="..\src-core\composer\ValidatorTest.cpp" />
@@ -1652,6 +1659,7 @@
     <ClInclude Include="..\src-ui-wx\import_export\LMSImportChannelMapDialog.h" />
     <ClInclude Include="..\src-ui-wx\import_export\LorConvertDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\LyricsDialog.h" />
+    <ClInclude Include="..\src-ui-wx\sequencer\LyricSyncDialog.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />
     <ClInclude Include="..\src-core\models\Shapes.h" />
@@ -1666,9 +1674,15 @@
     <ClInclude Include="..\src-core\outputs\TestPreset.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\PerspectivesPanel.h" />
     <ClInclude Include="..\src-core\lyrics\LRCParser.h" />
+    <ClInclude Include="..\src-core\lyrics\SRTParser.h" />
     <ClInclude Include="..\src-core\composer\ComposerTypes.h" />
     <ClInclude Include="..\src-core\composer\GenerationValidator.h" />
     <ClInclude Include="..\src-core\composer\AnalyzerTest.h" />
+    <ClInclude Include="..\src-core\composer\ComposerText.h" />
+    <ClInclude Include="..\src-core\composer\SpanishPhonemizer.h" />
+    <ClInclude Include="..\src-core\composer\LyricDocument.h" />
+    <ClInclude Include="..\src-core\composer\LyricAligner.h" />
+    <ClInclude Include="..\src-core\composer\LyricTest.h" />
     <ClInclude Include="..\src-core\composer\SequenceWriter.h" />
     <ClInclude Include="..\src-core\composer\SongAnalysis.h" />
     <ClInclude Include="..\src-core\composer\ValidatorTest.h" />

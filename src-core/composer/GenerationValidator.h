@@ -8,6 +8,10 @@
 class HeadlessRenderContext;
 class xLightsShowContext;
 
+namespace composer {
+struct LyricAlignment;
+}
+
 // Decides whether a sequence does what the Composer meant, which xLights itself
 // never checks: a render exits 0 with missing models, faces that never move and
 // models filled with red. Nothing here modifies a sequence, a layout or any file.
@@ -65,6 +69,18 @@ inline constexpr const char* UnexpectedOutput = "COMPOSER_UNEXPECTED_OUTPUT";
 inline constexpr const char* FaceMouthStatic = "COMPOSER_FACE_MOUTH_STATIC";
 inline constexpr const char* FaceMouthMismatch = "COMPOSER_FACE_MOUTH_MISMATCH";
 inline constexpr const char* FaceRestMismatch = "COMPOSER_FACE_REST_MISMATCH";
+// Lyrics
+inline constexpr const char* LyricsWordNoPhonemes = "COMPOSER_LYRICS_WORD_NO_PHONEMES";
+inline constexpr const char* LyricsLanguageUnsupported = "COMPOSER_LYRICS_LANGUAGE_UNSUPPORTED";
+inline constexpr const char* LyricsNotSynchronized = "COMPOSER_LYRICS_NOT_SYNCHRONIZED";
+inline constexpr const char* LyricsTrackIncomplete = "COMPOSER_LYRICS_TRACK_INCOMPLETE";
+inline constexpr const char* LyricsTimeInvalid = "COMPOSER_LYRICS_TIME_INVALID";
+inline constexpr const char* LyricsOverlap = "COMPOSER_LYRICS_OVERLAP";
+inline constexpr const char* LyricsRestMissing = "COMPOSER_LYRICS_REST_MISSING";
+inline constexpr const char* LyricsLayerOrder = "COMPOSER_LYRICS_LAYER_ORDER";
+inline constexpr const char* LyricsLowConfidence = "COMPOSER_LYRICS_LOW_CONFIDENCE";
+inline constexpr const char* LyricsCorrectionLost = "COMPOSER_LYRICS_CORRECTION_LOST";
+inline constexpr const char* LyricsCorrectionConflict = "COMPOSER_LYRICS_CORRECTION_CONFLICT";
 } // namespace issue
 
 // Values of the "classification" argument of GroupMemberConflict.
@@ -101,6 +117,16 @@ enum class Strictness {
 // Stage 4: a rendered .fseq against the intervals and targets `spec` expects.
 [[nodiscard]] ValidationReport ValidateRender(xLightsShowContext& ctx, const std::string& fseqPath, const SequenceSpec& spec, Strictness strictness, const CancelCheck& cancel = {});
 
+// A lyrics track on its own, before any face uses it: three layers in the order
+// FacesEffect reads them, times that nest and never overlap, a rest in every pause and
+// only shapes the renderer knows. `durationMS` 0 skips the check against the song.
+[[nodiscard]] ValidationReport ValidateLyricTrack(const TimingTrackSpec& track, int durationMS, int frameMS);
+
+// An alignment against the track built from it: what could not be pronounced or
+// synchronized, what is too uncertain to trust unseen, and whether every correction a
+// person made is still where they put it.
+[[nodiscard]] ValidationReport ValidateLyrics(const LyricAlignment& alignment, const TimingTrackSpec& track, int durationMS, int frameMS);
+
 // The sequence open in `ctx` as plain data, leaving out disabled effects and
 // strand or node effects, which have no target name of their own.
 [[nodiscard]] SequenceSpec SpecFromSequence(xLightsShowContext& ctx);
@@ -113,6 +139,12 @@ enum class Strictness {
 // msgid for the UI layer; the core never translates it.
 [[nodiscard]] std::string DescribeIssue(const ValidationIssue& issue);
 [[nodiscard]] std::string DescribeSuggestion(const ValidationIssue& issue);
+
+// The same, with the template translated before its arguments are filled in, so a UI
+// can pass its own gettext lookup.
+using TranslateText = std::function<std::string(const char* msgid)>;
+[[nodiscard]] std::string DescribeIssue(const ValidationIssue& issue, const TranslateText& translate);
+[[nodiscard]] std::string DescribeSuggestion(const ValidationIssue& issue, const TranslateText& translate);
 [[nodiscard]] const char* StatusName(CheckStatus status);
 
 } // namespace composer

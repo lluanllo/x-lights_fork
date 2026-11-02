@@ -1248,7 +1248,7 @@ msgid "Clone"
 msgstr "Clon"
 
 msgid "Close"
-msgstr "Cerca"
+msgstr "Cerrar"
 
 msgid "Close Sequence"
 msgstr "Cerrar secuencia"
@@ -8402,3 +8402,228 @@ msgstr "xLuces/FPP, *.fseq"
 msgid "{Show Directory not set}"
 msgstr "{Mostrar directorio no configurado}"
 
+
+msgid "Sync Lyrics"
+msgstr "Sincronizar letra"
+
+msgid "Sync Lyrics..."
+msgstr "Sincronizar letra..."
+
+msgid "Import Lyrics Text..."
+msgstr "Importar texto de la letra..."
+
+msgid "Open Lyrics File..."
+msgstr "Abrir archivo de letra..."
+
+msgid "Phrase"
+msgstr "Frase"
+
+msgid "Start (m:ss)"
+msgstr "Comienzo (m:ss)"
+
+msgid "End (m:ss)"
+msgstr "Final (m:ss)"
+
+msgid "Play / Pause"
+msgstr "Reproducir / Pausa"
+
+msgid "Play Phrase"
+msgstr "Reproducir frase"
+
+msgid "Play From Here"
+msgstr "Repetir desde aquí"
+
+msgid "Mark Start"
+msgstr "Marcar comienzo"
+
+msgid "Mark End"
+msgstr "Marcar final"
+
+msgid "Confirm Phrase"
+msgstr "Confirmar frase"
+
+msgid "Adjust Time:"
+msgstr "Ajustar tiempo:"
+
+msgid "Start -50 ms"
+msgstr "Comienzo -50 ms"
+
+msgid "Start +50 ms"
+msgstr "Comienzo +50 ms"
+
+msgid "End -50 ms"
+msgstr "Final -50 ms"
+
+msgid "End +50 ms"
+msgstr "Final +50 ms"
+
+msgid "Keys: Space plays or pauses, Z marks the start, X marks the end, C confirms the phrase."
+msgstr "Teclas: Espacio reproduce o pausa, Z marca el comienzo, X marca el final, C confirma la frase."
+
+msgid "Generate Words and Phonemes"
+msgstr "Generar palabras y fonemas"
+
+msgid "The saved marks could not be read and have been left untouched:\n%s"
+msgstr "No se han podido leer las marcas guardadas y se han dejado como estaban:\n%s"
+
+msgid "The marks could not be saved:\n%s"
+msgstr "No se han podido guardar las marcas:\n%s"
+
+msgid "approximate"
+msgstr "aproximada"
+
+msgid "not marked"
+msgstr "sin marcar"
+
+msgid "confirmed"
+msgstr "confirmada"
+
+msgid "adjusted"
+msgstr "ajustada"
+
+msgid "marked"
+msgstr "marcada"
+
+msgid "start marked"
+msgstr "comienzo marcado"
+
+msgid "No lyrics yet: import or write them first."
+msgstr "Todavía no hay letra: impórtala o escríbela primero."
+
+msgid "Manual sync"
+msgstr "Sincronización manual"
+
+msgid "Approximate sync"
+msgstr "Sincronización aproximada"
+
+msgid "Not synchronized"
+msgstr "Sin sincronizar"
+
+msgid "%s: %d of %d phrases marked by hand"
+msgstr "%s: %d de %d frases marcadas a mano"
+
+msgid "Paste or write the lyrics. Optional tags such as [Chorus], and blank lines between verses, are kept."
+msgstr "Pega o escribe la letra. Se conservan las etiquetas opcionales como [Estribillo] y las líneas en blanco entre estrofas."
+
+msgid "Lyrics files (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt"
+msgstr "Archivos de letra (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt"
+
+msgid "Mark the start and end of this phrase first."
+msgstr "Marca primero el comienzo y el final de esta frase."
+
+msgid "Mark the start of this phrase first."
+msgstr "Marca primero el comienzo de esta frase."
+
+msgid "Mark the start and end of at least one phrase first."
+msgstr "Marca primero el comienzo y el final de al menos una frase."
+
+msgid "Replace the words and phonemes of \"%s\" with %d phrases, %d words and %d mouth shapes?"
+msgstr "¿Sustituir las palabras y fonemas de «%s» por %d frases, %d palabras y %d formas de boca?"
+
+msgid "%d phrases have only their start marked and will be left out."
+msgstr "%d frases solo tienen marcado el comienzo y se dejarán fuera."
+
+msgid "This sequence has no audio, so phrases cannot be marked by ear. Lyrics can still be imported, and phrases with times can be generated."
+msgstr "Esta secuencia no tiene audio, así que no se pueden marcar las frases escuchando. Se puede importar la letra y generar las frases que ya tengan tiempos."
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which does not exist, so the mouth will not move."
+msgstr "La cara de «{model}» usa la pista de letra «{track}», que no existe, así que la boca no se moverá."
+
+msgid "Choose an existing lyrics track."
+msgstr "Elige una pista de letra que exista."
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which only has {layers} layers. Three layers are needed to move the mouth, so it will stay still."
+msgstr "La cara de «{model}» usa la pista de letra «{track}», que solo tiene {layers} capas. Hacen falta tres capas para mover la boca, así que se quedará quieta."
+
+msgid "The lyrics track \"{track}\" has no phonemes while the face on \"{model}\" is active, so the mouth will not move."
+msgstr "La pista de letra «{track}» no tiene fonemas mientras la cara de «{model}» está activa, así que la boca no se moverá."
+
+msgid "The lyrics track \"{track}\" has no words layer."
+msgstr "La pista de letra «{track}» no tiene capa de palabras."
+
+msgid "The lyrics track \"{track}\" contains \"{label}\", which is not a mouth shape."
+msgstr "La pista de letra «{track}» contiene «{label}», que no es una forma de boca."
+
+msgid "The lyrics track \"{track}\" moves the mouth with \"{label}\" outside any word, where it should be resting."
+msgstr "La pista de letra «{track}» mueve la boca con «{label}» fuera de cualquier palabra, donde debería estar en reposo."
+
+msgid "Write a text or choose a lyrics track."
+msgstr "Escribe un texto o elige una pista de letra."
+
+msgid "The text effect on \"{model}\" refers to the lyrics \"{value}\", which will show nothing (reason: {reason})."
+msgstr "El efecto de texto de «{model}» usa la letra «{value}», que no mostrará nada (motivo: {reason})."
+
+msgid "Choose the phrases or the words of an existing lyrics track."
+msgstr "Elige las frases o las palabras de una pista de letra que exista."
+
+msgid "Check the lyrics track and the face definition."
+msgstr "Revisa la pista de letra y la definición de la cara."
+
+msgid "Check the lyrics track around that pause."
+msgstr "Revisa la pista de letra alrededor de esa pausa."
+
+msgid "The word \"{word}\" in the lyrics track \"{track}\" has no mouth shapes, so the mouth will rest while it is sung."
+msgstr "La palabra «{word}» de la pista de letra «{track}» no tiene formas de boca, así que la boca descansará mientras se canta."
+
+msgid "Write the word in letters, or add its pronunciation as an exception."
+msgstr "Escribe la palabra con letras o añade su pronunciación como excepción."
+
+msgid "The lyrics of \"{track}\" look like language \"{language}\", but mouth shapes are only generated for Spanish."
+msgstr "La letra de «{track}» parece estar en el idioma «{language}», pero las formas de boca solo se generan para español."
+
+msgid "Check the mouth movements, or use a lyrics track made for that language."
+msgstr "Revisa los movimientos de boca o usa una pista de letra hecha para ese idioma."
+
+msgid "{count} phrases of the lyrics track \"{track}\" have no times yet, so the mouth will not move during them."
+msgstr "{count} frases de la pista de letra «{track}» todavía no tienen tiempos, así que la boca no se moverá durante ellas."
+
+msgid "Mark when those phrases start and end while listening to the song."
+msgstr "Marca dónde empiezan y terminan esas frases mientras escuchas la canción."
+
+msgid "The lyrics track \"{track}\" has no {missing} ({layers} layers), so the mouth cannot follow it."
+msgstr "A la pista de letra «{track}» le falta la capa {missing} ({layers} capas), así que la boca no puede seguirla."
+
+msgid "Generate the words and phonemes of that track again."
+msgstr "Vuelve a generar las palabras y los fonemas de esa pista."
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" has invalid times or overlaps the previous one."
+msgstr "La marca «{label}» ({layer}) de la pista de letra «{track}» tiene tiempos no válidos o se solapa con la anterior."
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" falls outside the phrase or word it belongs to."
+msgstr "La marca «{label}» ({layer}) de la pista de letra «{track}» queda fuera de la frase o la palabra a la que pertenece."
+
+msgid "Adjust the times so that every word stays inside its phrase and every mouth shape inside its word."
+msgstr "Ajusta los tiempos para que cada palabra quede dentro de su frase y cada forma de boca dentro de su palabra."
+
+msgid "In the lyrics track \"{track}\" the mouth does not rest in the pause at {at} ms."
+msgstr "En la pista de letra «{track}» la boca no descansa en la pausa de {at} ms."
+
+msgid "Put a rest in that pause."
+msgstr "Pon un reposo en esa pausa."
+
+msgid "The layers of the lyrics track \"{track}\" are in the wrong order: the face would read words as mouth shapes."
+msgstr "Las capas de la pista de letra «{track}» están en un orden incorrecto: la cara leería palabras como formas de boca."
+
+msgid "The layers must be phrases, words and phonemes, in that order."
+msgstr "Las capas deben ser frases, palabras y fonemas, en ese orden."
+
+msgid "{count} phrases of the lyrics track \"{track}\" have uncertain times ({quality})."
+msgstr "{count} frases de la pista de letra «{track}» tienen tiempos inciertos ({quality})."
+
+msgid "Listen to them and confirm or correct their start and end."
+msgstr "Escúchalas y confirma o corrige su comienzo y su final."
+
+msgid "A {level} correction made by hand on \"{target}\" was not kept in the lyrics track \"{track}\"."
+msgstr "Una corrección manual ({level}) sobre «{target}» no se ha conservado en la pista de letra «{track}»."
+
+msgid "Generate the track again; if it repeats, report the problem."
+msgstr "Vuelve a generar la pista; si se repite, informa del problema."
+
+msgid "A correction made by hand on \"{target}\" could not be applied to the lyrics track \"{track}\" ({reason}). It has been kept, not deleted."
+msgstr "Una corrección manual sobre «{target}» no se ha podido aplicar a la pista de letra «{track}» ({reason}). Se ha conservado; no se ha borrado."
+
+msgid "Check whether that part of the lyrics was changed, and mark it again."
+msgstr "Comprueba si esa parte de la letra ha cambiado y vuelve a marcarla."
+
+msgid "Generate the phrases, words and phonemes of that track."
+msgstr "Genera las frases, las palabras y los fonemas de esa pista."
