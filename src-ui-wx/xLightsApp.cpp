@@ -72,6 +72,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include <fstream>
 #include <sstream>
 #include "shared/utils/BitmapCache.h"
+#include "composer/AnalyzerTest.h"
 #include "composer/ValidatorTest.h"
 #include "composer/WriterTest.h"
 #include "utils/CurlManager.h"
@@ -1078,7 +1079,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench") {
             headlessArg = true;
             break;
         }
@@ -1198,6 +1199,15 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "cvd", "composer-validate", "internal test: check a sequence (and --fseq) against a show (-s) with all controllers inactive, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-writer-spec", "with --composer-validate: expect the sequence --composer-writer-test writes" },
         { wxCMD_LINE_OPTION, "", "fseq", "rendered file checked by --composer-validate" },
+        { wxCMD_LINE_OPTION, "cas", "composer-analyze-song", "internal tool: analyze this audio file with no window, writing --out (default: next to the audio), and exit" },
+        { wxCMD_LINE_OPTION, "", "xtiming", "with --composer-analyze-song: also write the timing tracks to this .xtiming file" },
+        { wxCMD_LINE_OPTION, "", "report", "with --composer-analyze-song: also write the summary to this file" },
+        { wxCMD_LINE_OPTION, "", "analysis-interval", "with --composer-analyze-song: milliseconds between energy points (default 100)" },
+        { wxCMD_LINE_OPTION, "", "onset-sensitivity", "with --composer-analyze-song: higher finds fewer onsets (default 1.5)" },
+        { wxCMD_LINE_OPTION, "", "cancel-file", "with --composer-analyze-song: stop without writing anything if this file appears" },
+        { wxCMD_LINE_OPTION, "", "reference", "with --composer-analyze-song: score against this reviewed reference file" },
+        { wxCMD_LINE_SWITCH, "cat", "composer-analyzer-test", "internal test: run the analyzer cases on synthetic audio written under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cvt", "composer-validator-test", "internal test: run the validator cases on a synthetic show written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "st", "shadertranslate", "assemble every .fs shader in the show dir to GLSL (spike) and exit" },
         { wxCMD_LINE_SWITCH, "cs", "checksequence", "run check sequence and exit" },
@@ -1387,7 +1397,7 @@ bool xLightsApp::OnInit()
             sequenceFiles.Clear();
         }
 
-        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
+        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
         {
             if (parser.Found("q")) {
                 spdlog::info("Command line notices (dialog suppressed by -q):\n{}", (const char*)info.c_str());
@@ -1893,6 +1903,46 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunValidateCommand(showDir.ToStdString(), sequenceFiles[0].ToStdString(), fseqName.ToStdString(), parser.Found("composer-writer-spec")));
+    }
+
+    wxString analyzeSong;
+    if (parser.Found("cas", &analyzeSong)) {
+        composer::AnalyzeCommandOptions command;
+        command.audioPath = analyzeSong.ToStdString();
+        wxString value;
+        if (parser.Found("out", &value)) {
+            command.outPath = value.ToStdString();
+        }
+        if (parser.Found("xtiming", &value)) {
+            command.xtimingPath = value.ToStdString();
+        }
+        if (parser.Found("report", &value)) {
+            command.reportPath = value.ToStdString();
+        }
+        if (parser.Found("cancel-file", &value)) {
+            command.cancelFile = value.ToStdString();
+        }
+        if (parser.Found("reference", &value)) {
+            command.referencePath = value.ToStdString();
+        }
+        if (parser.Found("analysis-interval", &value)) {
+            command.energyIntervalMS = (int)std::strtol(value.ToStdString().c_str(), nullptr, 10);
+        }
+        if (parser.Found("onset-sensitivity", &value)) {
+            command.onsetSensitivity = std::strtod(value.ToStdString().c_str(), nullptr);
+        }
+        std::exit(composer::RunAnalyzeCommand(command));
+    }
+
+    if (parser.Found("cat") || parser.Found("cab")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-analyzer-test and --composer-analyzer-bench require --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(parser.Found("cat") ? composer::RunAnalyzerTest(outName.ToStdString()) : composer::RunAnalyzerBench(outName.ToStdString()));
     }
 
     if (parser.Found("cvt")) {

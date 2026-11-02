@@ -91,7 +91,9 @@
     <ClCompile Include="..\src-ui-wx\sequencer\PerspectivesPanel.cpp" />
     <ClCompile Include="..\src-core\lyrics\LRCParser.cpp" />
     <ClCompile Include="..\src-core\composer\GenerationValidator.cpp" />
+    <ClCompile Include="..\src-core\composer\AnalyzerTest.cpp" />
     <ClCompile Include="..\src-core\composer\SequenceWriter.cpp" />
+    <ClCompile Include="..\src-core\composer\SongAnalysis.cpp" />
     <ClCompile Include="..\src-core\composer\ValidatorTest.cpp" />
     <ClCompile Include="..\src-core\composer\WriterTest.cpp" />
     <ClCompile Include="..\src-core\lyrics\PhonemeDictionary.cpp" />
@@ -1666,7 +1668,9 @@
     <ClInclude Include="..\src-core\lyrics\LRCParser.h" />
     <ClInclude Include="..\src-core\composer\ComposerTypes.h" />
     <ClInclude Include="..\src-core\composer\GenerationValidator.h" />
+    <ClInclude Include="..\src-core\composer\AnalyzerTest.h" />
     <ClInclude Include="..\src-core\composer\SequenceWriter.h" />
+    <ClInclude Include="..\src-core\composer\SongAnalysis.h" />
     <ClInclude Include="..\src-core\composer\ValidatorTest.h" />
     <ClInclude Include="..\src-core\composer\WriterTest.h" />
     <ClInclude Include="..\src-core\lyrics\PhonemeDictionary.h" />

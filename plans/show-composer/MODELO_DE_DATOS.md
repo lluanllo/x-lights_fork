@@ -1,6 +1,6 @@
 # Modelo de datos — Juajilandia Show Composer
 
-Esta es una **propuesta de contratos**: ninguno de estos tipos existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
+Esta es una **propuesta de contratos**. Solo la sección 2, el análisis musical, está implementada; el resto no existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
 
 ## 1. Reglas comunes
 
@@ -17,73 +17,72 @@ Esta es una **propuesta de contratos**: ninguno de estos tipos existe todavía. 
 
 ## 2. Análisis musical
 
-### MusicalEvent
+**Implementado en la Fase 3.** La fuente de verdad es `src-core/composer/SongAnalysis.h`. Esta sección resume el contrato y añade lo que el código no explica por sí mismo: cómo se guardan las correcciones y qué podrá hacer con ellas la interfaz futura.
 
-```cpp
-enum class MusicalEventType {
-    Beat,        // pulso estimado
-    Downbeat,    // primer pulso de compás estimado
-    Onset,       // ataque
-    VocalStart,  // empieza un tramo con voz
-    VocalEnd,    // termina un tramo con voz
-    SectionStart,// cambio de sección
-    Climax,      // máximo local de intensidad
-    Silence,     // tramo sin señal útil
-    Ending       // inicio del final musical
-};
-struct MusicalEvent {
-    int timeMS;
-    int durationMS;       // 0 si es puntual
-    MusicalEventType type;
-    float intensity;      // 0-1, normalizada a la canción
-    float confidence;     // 0-1
-    int sectionIndex;     // -1 si no aplica
-    std::string source;
-};
-```
+### Tipos
 
-Estribillo, estrofa o instrumental **no** son eventos, sino el `kind` de una sección: así una sección tiene un solo significado.
-
-### SongAnalysis
-
-```cpp
-enum class SectionKind { Intro, Verse, Chorus, Bridge, Instrumental, Outro, Unknown };
-
-struct SongSection {
-    int startMS, endMS;
-    SectionKind kind;
-    int repeatGroup;     // misma música o letra = mismo grupo; -1 si no se repite
-    float energy;        // media 0-1
-    float confidence;
-    std::vector<std::string> evidence; // "text-repeat", "self-similarity", "energy-rise"
-};
-
-struct SongAnalysis {
-    int schemaVersion = 1;
-    std::string analyzerVersion;
-    std::string audioHash;        // SHA-256 de los datos del archivo
-    int durationMS, sampleRate;
-    float globalBpm, bpmConfidence;
-    bool tempoIsStable;
-    std::vector<MusicalEvent> events;
-    std::vector<SongSection> sections;
-    std::vector<VocalSegment> vocalSegments;
-    std::vector<EnergyPoint> energy;   // {timeMS, total, low, mid, high}, por ejemplo cada 100 ms
-    std::string key;                   // de DetectChords; vacío si es desconocida
-    std::vector<std::string> warnings; // códigos, por ejemplo "no-vocal-stem"
-};
-```
-
-**Consulta "qué ocurre en este instante":** función libre `SnapshotAt(const SongAnalysis&, int ms)`, que devuelve sección, energía, voz sí/no y el evento más cercano. No hace falta una estructura extra.
-
-**Pistas nativas generadas:**
-
-| Pista | Fuente |
+| Tipo | Contenido |
 |---|---|
-| Pulsos | `Beat` |
-| Compases | `Downbeat` |
-| Ataques | `Onset`, filtrados por intensidad para no saturar |
-| Secciones | `sections`, con etiquetas `Intro`, `Estrofa 1`, `Estribillo 1`… |
+| `MusicalEvent` | `timeMS`, `durationMS`, `type`, `intensity` y `confidence` (0–1), `sectionIndex`, `source`, `beatIndex` (pulsos y compases), `barPosition` (0 en el primer pulso, -1 si el compás no se conoce), `provenance` |
+| `MusicalEventType` | `beat`, `downbeat`, `onset`, `section-start`, `section-end`, `climax`, `silence`, `vocal-start`, `vocal-end`, `ending` |
+| `SongSection` | `startMS`, `endMS`, `kind`, `repeatGroup` (-1 si no se repite), `energy`, `confidence`, `evidence` (códigos), `provenance` |
+| `SectionKind` | `intro`, `verse`, `chorus`, `bridge`, `instrumental`, `outro`, `unknown` |
+| `EnergyPoint` | `timeMS`, `rms` (absoluto), `total`, `low`, `mid`, `high`, `variation` e `intensity` (relativos a la canción) |
+| `TempoPoint` | Tempo local cada segundo, con su confianza |
+| `VocalSegment` | Tramo con voz probable, con `confidence` ≤ 0,3 y `method` |
+| `AnalysisOptions` | Intervalo de energía, sensibilidad y mínimo de ataques, rango de BPM, umbral y duración de silencio, sección mínima, compás forzado y estimación de voz |
+| `AnalysisResult` | `status` (`Ok`, `Cancelled`, `Failed`), `errorCode` estable (`ANALYZER_*`), `reusedCache`, el análisis y el coste de cada etapa |
+
+Estribillo, estrofa o instrumental **no** son eventos, sino el `kind` de una sección: así una sección tiene un solo significado. Las etiquetas internas son identificadores ingleses estables y la interfaz las traduce.
+
+### Persistencia
+
+`<audio>.composer-analysis.json`, junto al audio o donde indique `--out`. Contiene `schemaVersion`, `analyzerVersion`, `musicQuality`, `audioHash` (SHA-256 de los bytes), `optionsKey`, los datos básicos, los arrays ordenados de forma estable, `warnings` y `corrections`.
+
+- **Reutilización:** solo si coinciden hash, versión del analizador y opciones.
+- **Escritura:** primero en `.composer-tmp` y después se renombra. Un análisis cancelado no deja nada.
+- **Archivo dañado:** se informa con `ANALYZER_CACHE_UNREADABLE` y no se sustituye, porque puede ser la única copia de las correcciones.
+- **Estabilidad:** los mismos bytes con el mismo binario y la misma máquina. No se promete igualdad entre plataformas, porque Apple decodifica con AudioToolbox y el resto con FFmpeg.
+
+### Correcciones manuales
+
+Lo que corrige una persona se guarda **aparte** de lo detectado, en `corrections`. Se vuelve a aplicar después de cada análisis (`ApplyCorrections`), de modo que un análisis nuevo sustituye las detecciones y nunca las correcciones.
+
+| Corrección | Campos | Efecto |
+|---|---|---|
+| `EventCorrection` | `action` (`add`, `move`, `remove`, `confirm`), `type`, `originalMS`, `timeMS`, `durationMS`, `locked` | Busca el evento detectado a ±50 ms de `originalMS` y lo quita, lo mueve o lo marca |
+| `SectionCorrection` | `startMS`, `endMS`, `kind`, `locked` | Recorta las secciones que pisa y coloca la suya. Sirve para mover límites y marcar un estribillo o una parte instrumental |
+| `BarCorrection` | `firstDownbeatMS`, `beatsPerBar`, `locked` | Vuelve a contar los compases desde el pulso más cercano a ese instante |
+
+`provenance` distingue los cuatro estados que pide la interfaz:
+
+| Valor | Significado |
+|---|---|
+| `detected` | Lo encontró el analizador. Un análisis nuevo puede cambiarlo |
+| `corrected` | Lo cambió una persona sin bloquearlo |
+| `locked` | Lo cambió o lo fijó una persona. Ninguna regeneración lo toca |
+| `confirmed` | Una persona dio por bueno lo detectado |
+
+Si el audio cambia, las correcciones se conservan y se añade el aviso `corrections-from-other-audio`, porque pueden haber quedado desplazadas.
+
+### Consulta de un instante
+
+`SnapshotAt(const SongAnalysis&, int timeMS)` devuelve la sección y su tipo, la energía, el pulso y el ataque más cercanos, si es silencio, la voz (`present`, `absent` o `unknown` cuando no existe estimación), una confianza y los eventos que empiezan a menos de 250 ms.
+
+### Pistas nativas
+
+`BuildTimingTracks` y `WriteXTiming` generan un `.xtiming` con las marcas en fotogramas. Cada pista tiene un `id` estable y un nombre visible traducible.
+
+| `id` | Nombre por defecto | Fuente |
+|---|---|---|
+| `composer.beats` | `Composer Beats` | `beat`, con la posición en el compás como etiqueta |
+| `composer.downbeats` | `Composer Downbeats` | `downbeat`, numerados |
+| `composer.onsets` | `Composer Onsets` | `onset` |
+| `composer.climax` | `Composer Climax` | `climax` |
+| `composer.silence` | `Composer Silence` | `silence` |
+| `composer.sections` | `Composer Sections` | `sections`, con `kind` y grupo de repetición |
+
+`BuildSongStructure` convierte las secciones en regiones del `SongStructureManager` de xLights. Nada de esto se escribe todavía sobre una secuencia existente.
 
 ## 3. Letras
 
