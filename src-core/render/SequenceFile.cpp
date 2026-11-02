@@ -36,6 +36,7 @@
 #include "UtilFunctions.h"
 #include "../utils/AppCallbacks.h"
 #include "../utils/string_utils.h"
+#include "../lyrics/SRTParser.h"
 #include "../utils/FileUtils.h"
 #include "RenderUtils.h"
 #include "utils/ExternalHooks.h"
@@ -1183,73 +1184,6 @@ void SequenceFile::ProcessPapagayo(const std::vector<std::string>& filenames, Re
     }
 }
 
-static std::vector<std::string> SplitString(const std::string& s, char delim)
-{
-    std::vector<std::string> result;
-    size_t start = 0;
-    while (start <= s.size()) {
-        auto pos = s.find(delim, start);
-        result.push_back(s.substr(start, pos - start));
-        if (pos == std::string::npos) break;
-        start = pos + 1;
-    }
-    return result;
-}
-
-static std::string ReadSRTLine(const std::vector<std::string>& lines, size_t& idx, int linenum, long& startMS, long& endMS)
-{
-    startMS = 0;
-    endMS = 0;
-
-    if (idx >= lines.size()) return "";
-
-    int l = std::strtol(lines[idx++].c_str(), nullptr, 10);
-    while (idx < lines.size() && l < linenum) {
-        l = std::strtol(lines[idx++].c_str(), nullptr, 10);
-    }
-    if (l > linenum) return "";
-    if (idx >= lines.size()) return "";
-
-    //00:00:06,580 --> 00:00:08,580
-    std::string times = lines[idx++];
-    if (times.find("-->") != std::string::npos)
-    {
-        auto c1 = SplitString(times, ':');
-        if (c1.size() == 5) {
-            int sH = std::strtol(c1[0].c_str(), nullptr, 10);
-            int sM = std::strtol(c1[1].c_str(), nullptr, 10);
-            auto c2 = SplitString(c1[2], ',');
-            if (c2.size() == 2) {
-                int sS = std::strtol(c2[0].c_str(), nullptr, 10);
-                auto c3 = SplitString(c2[1], ' ');
-                if (c3.size() == 3) {
-                    int sMS = std::strtol(c3[0].c_str(), nullptr, 10);
-                    int eH = std::strtol(c3[2].c_str(), nullptr, 10);
-                    int eM = std::strtol(c1[3].c_str(), nullptr, 10);
-                    auto c4 = SplitString(c1[4], ',');
-                    if (c4.size() == 2) {
-                        int eS = std::strtol(c4[0].c_str(), nullptr, 10);
-                        int eMS_val = std::strtol(c4[1].c_str(), nullptr, 10);
-                        startMS = sH * 3600000 + sM * 60000 + sS * 1000 + sMS;
-                        endMS = eH * 3600000 + eM * 60000 + eS * 1000 + eMS_val;
-                    }
-                }
-            }
-        }
-    }
-
-    if (idx >= lines.size()) return "";
-
-    std::string result;
-    while (idx < lines.size() && !lines[idx].empty()) {
-        if (!result.empty()) result += " ";
-        result += Trim(lines[idx]);
-        idx++;
-    }
-    if (idx < lines.size()) idx++; // skip blank line
-    return result;
-}
-
 void SequenceFile::ProcessSRT(const std::vector<std::string>& filenames, RenderContext* xLightsParent)
 {
     for (size_t i = 0; i < filenames.size(); ++i)
@@ -1275,19 +1209,11 @@ void SequenceFile::ProcessSRT(const std::vector<std::string>& filenames, RenderC
         Element* element = xLightsParent->AddTimingElement(name);
         EffectLayer* el1 = element->GetEffectLayer(0);
 
-        long startMS;
-        long endMS;
-        int linenum = 1;
-        size_t idx = 0;
-
-        std::string line = ReadSRTLine(lines, idx, linenum++, startMS, endMS);
-
-        do {
-            if (!line.empty() && endMS > startMS) {
-                el1->AddEffect(0, line, "", "", startMS, endMS, EFFECT_NOT_SELECTED, false);
+        for (const auto& entry : srt::ParseSRT(lines)) {
+            if (!entry.text.empty() && entry.endMS > entry.startMS) {
+                el1->AddEffect(0, entry.text, "", "", entry.startMS, entry.endMS, EFFECT_NOT_SELECTED, false);
             }
-            line = ReadSRTLine(lines, idx, linenum++, startMS, endMS);
-        } while (idx < lines.size());
+        }
     }
 }
 

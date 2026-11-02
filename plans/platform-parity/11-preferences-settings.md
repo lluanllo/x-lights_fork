@@ -118,6 +118,8 @@ All seven flags round-trip through `xLightsFrame::SetCheckSequenceOptionDisable`
 
 ### Page: Other (`src-ui-wx/preferences/OtherSettingsPanel.cpp`)
 
+| 85 | Interface language (Spanish / English) | `OtherSettingsPanel.cpp:??`; `xLightsApp.cpp:1136-1145`; catalog `resources/locale/es.po` | ? | iPad has no Spanish localization catalog or `.lproj`/`.xcstrings` resources under `src-iPad/`; SwiftUI interface remains English. Desktop catalog is partial and needs further translation review. |
+
 | # | Page / Setting | Desktop evidence | iPad status | iPad evidence / gap |
 |---|---|---|---|---|
 | 65 | eMail Address | `OtherSettingsPanel.cpp:190`; `:337`/`:303` → `xLightsMain.cpp:2148` | ✅ | `FolderConfigView.swift:64` key `xLightsEmail`, TextField `:309`; consumed `XLDiagnosticUploader.swift:240` |

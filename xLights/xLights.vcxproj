@@ -897,6 +897,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-ui-wx\import_export\LorConvertDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\LRCLIBSearchDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\LyricsDialog.cpp" />
+    <ClCompile Include="..\src-ui-wx\sequencer\LyricSyncDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ManageMediaPanel.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ShaderPreviewGenerator.cpp" />
     <ClCompile Include="..\dependencies\midifile\src\Binasc.cpp" />
@@ -975,6 +976,18 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-ui-wx\model\PathGenerationDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\PerspectivesPanel.cpp" />
     <ClCompile Include="..\src-core\lyrics\LRCParser.cpp" />
+    <ClCompile Include="..\src-core\lyrics\SRTParser.cpp" />
+    <ClCompile Include="..\src-core\composer\GenerationValidator.cpp" />
+    <ClCompile Include="..\src-core\composer\AnalyzerTest.cpp" />
+    <ClCompile Include="..\src-core\composer\ComposerText.cpp" />
+    <ClCompile Include="..\src-core\composer\SpanishPhonemizer.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricDocument.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricAligner.cpp" />
+    <ClCompile Include="..\src-core\composer\LyricTest.cpp" />
+    <ClCompile Include="..\src-core\composer\SequenceWriter.cpp" />
+    <ClCompile Include="..\src-core\composer\SongAnalysis.cpp" />
+    <ClCompile Include="..\src-core\composer\ValidatorTest.cpp" />
+    <ClCompile Include="..\src-core\composer\WriterTest.cpp" />
     <ClCompile Include="..\src-core\lyrics\PhonemeDictionary.cpp" />
     <ClCompile Include="..\src-core\render\PixelBuffer.cpp" />
     <ClCompile Include="..\src-core\models\Pixels.cpp" />
@@ -1576,6 +1589,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-ui-wx\import_export\LorConvertDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\LRCLIBSearchDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\LyricsDialog.h" />
+    <ClInclude Include="..\src-ui-wx\sequencer\LyricSyncDialog.h" />
     <ClInclude Include="..\src-ui-wx\media\ManageMediaPanel.h" />
     <ClInclude Include="..\src-ui-wx\media\ShaderPreviewGenerator.h" />
     <ClInclude Include="..\src-ui-wx\model\ModelDefinitionsDialog.h" />
@@ -1654,6 +1668,19 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-ui-wx\model\PathGenerationDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\PerspectivesPanel.h" />
     <ClInclude Include="..\src-core\lyrics\LRCParser.h" />
+    <ClInclude Include="..\src-core\lyrics\SRTParser.h" />
+    <ClInclude Include="..\src-core\composer\ComposerTypes.h" />
+    <ClInclude Include="..\src-core\composer\GenerationValidator.h" />
+    <ClInclude Include="..\src-core\composer\AnalyzerTest.h" />
+    <ClInclude Include="..\src-core\composer\ComposerText.h" />
+    <ClInclude Include="..\src-core\composer\SpanishPhonemizer.h" />
+    <ClInclude Include="..\src-core\composer\LyricDocument.h" />
+    <ClInclude Include="..\src-core\composer\LyricAligner.h" />
+    <ClInclude Include="..\src-core\composer\LyricTest.h" />
+    <ClInclude Include="..\src-core\composer\SequenceWriter.h" />
+    <ClInclude Include="..\src-core\composer\SongAnalysis.h" />
+    <ClInclude Include="..\src-core\composer\ValidatorTest.h" />
+    <ClInclude Include="..\src-core\composer\WriterTest.h" />
     <ClInclude Include="..\src-core\lyrics\PhonemeDictionary.h" />
     <ClInclude Include="..\src-core\render\PixelBuffer.h" />
     <ClInclude Include="..\src-core\models\Pixels.h" />
@@ -2204,6 +2231,9 @@ findstr /v ".ispc.h" "..\src-core\effects\ispc\%(Filename).ispc.h" &gt; temp.txt
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CompileSpanishTranslationCatalog" AfterTargets="Link">
+    <Exec Command="py -3 &quot;$(MSBuildProjectDirectory)\..\ci_scripts\localization\build_catalog.py&quot; --compile &quot;$(MSBuildProjectDirectory)\..\resources\locale\es.po&quot; &quot;$(TargetDir)locale\es\LC_MESSAGES\xLights.mo&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

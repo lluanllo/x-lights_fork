@@ -24,6 +24,7 @@
 #include <wx/tglbtn.h>
 #include <wx/statline.h>
 #include <wx/tokenzr.h>
+#include <wx/intl.h>
 #include <wx/wfstream.h>
 
 #include "shared/controls/BulkEditControls.h"
@@ -41,6 +42,12 @@
 
 #include <fstream>
 #include <spdlog/spdlog.h>
+
+namespace {
+wxString TranslateMetadata(const std::string& value) {
+    return wxGetTranslation(wxString::FromUTF8(value));
+}
+}
 
 nlohmann::json JsonEffectPanel::LoadMetadata(const std::string& jsonPath) {
     std::ifstream f(jsonPath);
@@ -224,7 +231,7 @@ void JsonEffectPanel::BuildFromJson(const nlohmann::json& metadata) {
     outerSizer->AddGrowableCol(0);
 
     if (!descText.empty()) {
-        auto* descLabel = new wxStaticText(contentParent_, wxID_ANY, wxString(descText));
+        auto* descLabel = new wxStaticText(contentParent_, wxID_ANY, TranslateMetadata(descText));
         descLabel->Wrap(300);
         outerSizer->Add(descLabel, 0, wxALL | wxEXPAND, 5);
     }
@@ -618,7 +625,7 @@ void JsonEffectPanel::BuildTabGroup(wxSizer* parentSizer, const nlohmann::json& 
             }
         }
 
-        notebook->AddPage(page, wxString(tabLabel));
+        notebook->AddPage(page, TranslateMetadata(tabLabel));
     }
 
     parentSizer->Add(notebook, 1, wxALL | wxEXPAND, 0);
@@ -668,7 +675,7 @@ void JsonEffectPanel::BuildXYCenter(wxWindow* parentWin, wxSizer* parentSizer,
     xSizer->AddGrowableCol(0);
 
     // X label
-    auto* xLabel = new wxStaticText(parentWin, wxID_ANY, wxString(xProp.value("label", "X-axis Center")));
+    auto* xLabel = new wxStaticText(parentWin, wxID_ANY, TranslateMetadata(xProp.value("label", "X-axis Center")));
     xSizer->Add(xLabel, 0, wxALL | wxALIGN_LEFT, 5);
 
     // X slider row
@@ -723,7 +730,7 @@ void JsonEffectPanel::BuildXYCenter(wxWindow* parentWin, wxSizer* parentSizer,
             std::string wrapXName = "ID_CHECKBOX_" + wrapXId;
             wxWindowID wrapXCtrlId = wxNewId();
             std::string wrapLabel = wrapXProp.value("label", "Wrap X");
-            auto* wrapXCb = new BulkEditCheckBox(parentWin, wrapXCtrlId, wxString(wrapLabel),
+            auto* wrapXCb = new BulkEditCheckBox(parentWin, wrapXCtrlId, TranslateMetadata(wrapLabel),
                                                    wxDefaultPosition, wxDefaultSize, 0,
                                                    wxDefaultValidator, wxString(wrapXName));
             wrapXCb->SetValue(wrapXProp.value("default", false));
@@ -748,7 +755,7 @@ void JsonEffectPanel::BuildXYCenter(wxWindow* parentWin, wxSizer* parentSizer,
     // Y label + VC + text (stacked vertically in left sub-column)
     auto* yInfoSizer = new wxFlexGridSizer(0, 1, 0, 0);
 
-    auto* yLabel = new wxStaticText(parentWin, wxID_ANY, wxString(yProp.value("label", "Y-axis Center")));
+    auto* yLabel = new wxStaticText(parentWin, wxID_ANY, TranslateMetadata(yProp.value("label", "Y-axis Center")));
     yInfoSizer->Add(yLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
     auto* yVCTextSizer = new wxFlexGridSizer(0, 2, 0, 0);
@@ -793,7 +800,7 @@ void JsonEffectPanel::BuildXYCenter(wxWindow* parentWin, wxSizer* parentSizer,
             std::string wrapYName = "ID_CHECKBOX_" + wrapYId;
             wxWindowID wrapYCtrlId = wxNewId();
             std::string wrapLabel = wrapYProp.value("label", "Wrap Y");
-            auto* wrapYCb = new BulkEditCheckBox(parentWin, wrapYCtrlId, wxString(wrapLabel),
+            auto* wrapYCb = new BulkEditCheckBox(parentWin, wrapYCtrlId, TranslateMetadata(wrapLabel),
                                                    wxDefaultPosition, wxDefaultSize, 0,
                                                    wxDefaultValidator, wxString(wrapYName));
             wrapYCb->SetValue(wrapYProp.value("default", false));
@@ -855,7 +862,7 @@ void JsonEffectPanel::BuildSection(wxSizer* parentSizer, const nlohmann::json& g
     if (!label.empty()) {
         // Parent the static box to contentParent_ (the scroll window when
         // the panel is scrollable) so the frame scrolls with its contents.
-        auto* boxSizer = new wxStaticBoxSizer(wxVERTICAL, parentWin, wxString(label));
+        auto* boxSizer = new wxStaticBoxSizer(wxVERTICAL, parentWin, TranslateMetadata(label));
         boxSizer->Add(innerGrid, 1, wxALL | wxEXPAND, 2);
         parentSizer->Add(boxSizer, 0, wxALL | wxEXPAND, 5);
     } else {
@@ -947,7 +954,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1137,7 +1144,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         std::string ctrlName = "ID_CHECKBOX_" + id;
         wxWindowID ctrlId = wxNewId();
         // If there's a separate checkboxLabel, use it on the control and put the main label in col 1
-        wxString cbText = checkboxLabel.empty() ? wxString(label) : wxString(checkboxLabel);
+        wxString cbText = checkboxLabel.empty() ? TranslateMetadata(label) : TranslateMetadata(checkboxLabel);
         auto* cb = new BulkEditCheckBox(parentWin, ctrlId, cbText, wxDefaultPosition, wxDefaultSize,
                                          0, wxDefaultValidator, wxString(ctrlName));
         cb->SetValue(defaultVal);
@@ -1147,7 +1154,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
             // Has separate label: col 1 = label, col 2 = checkbox
             wxWindowID labelId = wxNewId();
             std::string labelName = "ID_STATICTEXT_" + id;
-            auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+            auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                                  wxDefaultSize, 0, wxString(labelName));
             sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
         } else {
@@ -1177,7 +1184,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1240,7 +1247,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1266,7 +1273,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1327,7 +1334,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -1376,7 +1383,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1414,7 +1421,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
         // Column 1: Label
         wxWindowID labelId = wxNewId();
         std::string labelName = "ID_STATICTEXT_" + id;
-        auto* staticText = new wxStaticText(parentWin, labelId, wxString(label), wxDefaultPosition,
+        auto* staticText = new wxStaticText(parentWin, labelId, TranslateMetadata(label), wxDefaultPosition,
                                              wxDefaultSize, 0, wxString(labelName));
         sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
 
@@ -1485,7 +1492,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
             // Col 1: label
             std::string labelName = "ID_STATICTEXT_" + axId;
             auto* staticText = new wxStaticText(parentWin, wxNewId(),
-                                                wxString(label) + " " + axis,
+                                                TranslateMetadata(label) + " " + axis,
                                                 wxDefaultPosition, wxDefaultSize, 0,
                                                 wxString(labelName));
             sizer->Add(staticText, 1, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 2);
@@ -1617,7 +1624,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
             spdlog::warn("JsonEffectPanel: property '{}' has controlType 'custom' but CreateCustomControl returned null. "
                           "If this is a subclass with a custom override, ensure the subclass passes deferBuild=true to JsonEffectPanel.", id);
         } else if (!tooltip.empty()) {
-            customCtrl->SetToolTip(wxString(tooltip));
+            customCtrl->SetToolTip(TranslateMetadata(tooltip));
         }
         // Don't store in properties_ - the subclass manages custom controls
         return;
@@ -1629,7 +1636,7 @@ void JsonEffectPanel::BuildPropertyRow(wxWindow* parentWin, wxSizer* sizer, cons
     if (!tooltip.empty()) {
         wxWindow* primary = FindControlForProperty(id);
         if (primary != nullptr) {
-            primary->SetToolTip(wxString(tooltip));
+            primary->SetToolTip(TranslateMetadata(tooltip));
         }
     }
 }

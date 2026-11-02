@@ -34,6 +34,7 @@ fi
 
 CORE_DIRS=(
     "src-core/ai"
+    "src-core/composer"
     "src-core/diagnostics"
     "src-core/discovery"
     "src-core/graphics"

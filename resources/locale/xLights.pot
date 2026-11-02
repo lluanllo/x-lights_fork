@@ -1,0 +1,8627 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+
+msgid "\n%d could not be added (overlap with locked effects?)."
+msgstr ""
+
+msgid "\nSkipped (no valid fixture number 1-8): "
+msgstr ""
+
+msgid " (in Set '%s')"
+msgstr ""
+
+msgid " - about %s left"
+msgstr ""
+
+msgid " - left as is"
+msgstr ""
+
+msgid " - total time %s"
+msgstr ""
+
+msgid " - will be uploaded"
+msgstr ""
+
+msgid " ... Rendering."
+msgstr ""
+
+msgid " ... Saving xsq."
+msgstr ""
+
+msgid " ... Writing fseq."
+msgstr ""
+
+msgid " and %d more"
+msgstr ""
+
+msgid "# Blades"
+msgstr ""
+
+msgid "# Elements"
+msgstr ""
+
+msgid "# Models:"
+msgstr ""
+
+msgid "#Arms"
+msgstr ""
+
+msgid "%d distinct labels found:"
+msgstr ""
+
+msgid "%d groups are added to this screen and mapped. They will not be committed until you press Ok in the import window."
+msgstr ""
+
+msgid "%d of %d done - elapsed %s"
+msgstr ""
+
+msgid "%d of %u nodes mapped into a %dx%d grid.\n\nThe selected model is not a Custom model so it cannot be updated in place - save the result as a .xmodel file?"
+msgstr ""
+
+msgid "%d of %u nodes mapped into a %dx%d grid.\n\nUpdate the model '%s' with this layout, or save it as a new .xmodel file?"
+msgstr ""
+
+msgid "%d uploaded, %d already up to date, %d failed"
+msgstr ""
+
+msgid "%s     Updated in %7.3f seconds"
+msgstr ""
+
+msgid "%s: %d rendered, %d failed"
+msgstr ""
+
+msgid "&Apply Preset"
+msgstr ""
+
+msgid "&Audio"
+msgstr ""
+
+msgid "&Batch Render"
+msgstr ""
+
+msgid "&Cancel"
+msgstr ""
+
+msgid "&Convert"
+msgstr ""
+
+msgid "&Delete"
+msgstr ""
+
+msgid "&Discard Changes"
+msgstr ""
+
+msgid "&Edit"
+msgstr ""
+
+msgid "&FPP Connect"
+msgstr ""
+
+msgid "&File"
+msgstr ""
+
+msgid "&Generate Custom Model"
+msgstr ""
+
+msgid "&Help"
+msgstr ""
+
+msgid "&Import"
+msgstr ""
+
+msgid "&New Preset"
+msgstr ""
+
+msgid "&Package Log Files"
+msgstr ""
+
+msgid "&Rename"
+msgstr ""
+
+msgid "&Save Changes"
+msgstr ""
+
+msgid "&Test"
+msgstr ""
+
+msgid "&Tools"
+msgstr ""
+
+msgid "&Update Preset"
+msgstr ""
+
+msgid "&View"
+msgstr ""
+
+msgid "&View Log"
+msgstr ""
+
+msgid "'%s' is already in Set '%s'. Move it to Set '%s'?"
+msgstr ""
+
+msgid "'%s' is also already in use."
+msgstr ""
+
+msgid "'%s' loaded in %4.3f sec."
+msgstr ""
+
+msgid "(Main Track)"
+msgstr ""
+
+msgid "(blank)"
+msgstr ""
+
+msgid "(enter URL manually below)"
+msgstr ""
+
+msgid "(no camera found)"
+msgstr ""
+
+msgid "(none)"
+msgstr ""
+
+msgid "(not found)"
+msgstr ""
+
+msgid "*** The sequence you are closing has unsaved changes. ***"
+msgstr ""
+
+msgid "+"
+msgstr ""
+
+msgid ", %d not started"
+msgstr ""
+
+msgid ", %d not uploaded"
+msgstr ""
+
+msgid ", left as is"
+msgstr ""
+
+msgid ", will be uploaded"
+msgstr ""
+
+msgid "-"
+msgstr ""
+
+msgid "."
+msgstr ""
+
+msgid "..."
+msgstr ""
+
+msgid "0"
+msgstr ""
+
+msgid "0.000"
+msgstr ""
+
+msgid "00:00.000"
+msgstr ""
+
+msgid "1"
+msgstr ""
+
+msgid "1 GB"
+msgstr ""
+
+msgid "1's"
+msgstr ""
+
+msgid "1.0"
+msgstr ""
+
+msgid "1.00"
+msgstr ""
+
+msgid "10"
+msgstr ""
+
+msgid "10 GB"
+msgstr ""
+
+msgid "10 Minutes"
+msgstr ""
+
+msgid "10 Pixel Blocks"
+msgstr ""
+
+msgid "10's"
+msgstr ""
+
+msgid "100"
+msgstr ""
+
+msgid "100 GB"
+msgstr ""
+
+msgid "100 MB"
+msgstr ""
+
+msgid "100 ms"
+msgstr ""
+
+msgid "100%"
+msgstr ""
+
+msgid "100's"
+msgstr ""
+
+msgid "1000's"
+msgstr ""
+
+msgid "100ms"
+msgstr ""
+
+msgid "12"
+msgstr ""
+
+msgid "127"
+msgstr ""
+
+msgid "15 Minutes"
+msgstr ""
+
+msgid "16 Bits"
+msgstr ""
+
+msgid "16 bit"
+msgstr ""
+
+msgid "2"
+msgstr ""
+
+msgid "2 reveals 1"
+msgstr ""
+
+msgid "20"
+msgstr ""
+
+msgid "20 GB"
+msgstr ""
+
+msgid "200 GB"
+msgstr ""
+
+msgid "200 MB"
+msgstr ""
+
+msgid "2020.15"
+msgstr ""
+
+msgid "25 ms"
+msgstr ""
+
+msgid "255"
+msgstr ""
+
+msgid "25ms"
+msgstr ""
+
+msgid "2D Path Generator"
+msgstr ""
+
+msgid "3"
+msgstr ""
+
+msgid "3 GB"
+msgstr ""
+
+msgid "3 Minutes"
+msgstr ""
+
+msgid "30 Minutes"
+msgstr ""
+
+msgid "33.30 fps"
+msgstr ""
+
+msgid "3D"
+msgstr ""
+
+msgid "3D (drag to rotate)"
+msgstr ""
+
+msgid "3D Objects"
+msgstr ""
+
+msgid "4"
+msgstr ""
+
+msgid "40"
+msgstr ""
+
+msgid "45"
+msgstr ""
+
+msgid "5"
+msgstr ""
+
+msgid "5 GB"
+msgstr ""
+
+msgid "5 Minutes"
+msgstr ""
+
+msgid "50"
+msgstr ""
+
+msgid "50 GB"
+msgstr ""
+
+msgid "50 ms"
+msgstr ""
+
+msgid "500 MB"
+msgstr ""
+
+msgid "50ms"
+msgstr ""
+
+msgid "6"
+msgstr ""
+
+msgid "7"
+msgstr ""
+
+msgid "7 Segment Display"
+msgstr ""
+
+msgid "8"
+msgstr ""
+
+msgid "90"
+msgstr ""
+
+msgid "<"
+msgstr ""
+
+msgid "<group name>"
+msgstr ""
+
+msgid "<html><body><p>Loading...</p></body></html>"
+msgstr ""
+
+msgid "<use variables in xLightsMain.h>"
+msgstr ""
+
+msgid ">"
+msgstr ""
+
+msgid "A Set named '%s' already exists. Choose another name."
+msgstr ""
+
+msgid "A Set named '%s' already exists. Choose another name:"
+msgstr ""
+
+msgid "A Set named '%s' already exists. Name unchanged."
+msgstr ""
+
+msgid "A Set needs at least 2 members. Delete Set '%s' instead?"
+msgstr ""
+
+msgid "A backup file (.bkp) will be created of the current open sequence at this interval. No render created."
+msgstr ""
+
+msgid "A batch render is already running."
+msgstr ""
+
+msgid "A default duration must be greater than zero."
+msgstr ""
+
+msgid "A default timing must be greater than zero."
+msgstr ""
+
+msgid "A group cannot be added at the currently selected location"
+msgstr ""
+
+msgid "A group or model named '%s' already exists."
+msgstr ""
+
+msgid "A preset cannot be added at the currently selected location"
+msgstr ""
+
+msgid "A preset name cannot be empty"
+msgstr ""
+
+msgid "A-B-C"
+msgstr ""
+
+msgid "A-B-C-All"
+msgstr ""
+
+msgid "A-B-C-All-None"
+msgstr ""
+
+msgid "AC Toolbar"
+msgstr ""
+
+msgid "AI"
+msgstr ""
+
+msgid "AI Map"
+msgstr ""
+
+msgid "API Port"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "About xLights"
+msgstr ""
+
+msgid "Abs Sine"
+msgstr ""
+
+msgid "Acceleration"
+msgstr ""
+
+msgid "Access the free Zoom Room for Help"
+msgstr ""
+
+msgid "Action"
+msgstr ""
+
+msgid "Action..."
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Add %d Groups to Layout and Map"
+msgstr ""
+
+msgid "Add &Group"
+msgstr ""
+
+msgid "Add Apply Setting"
+msgstr ""
+
+msgid "Add Current"
+msgstr ""
+
+msgid "Add Effect"
+msgstr ""
+
+msgid "Add FPP"
+msgstr ""
+
+msgid "Add Favorite"
+msgstr ""
+
+msgid "Add Group to Layout and Map"
+msgstr ""
+
+msgid "Add Model For Import"
+msgstr ""
+
+msgid "Add New SubModel"
+msgstr ""
+
+msgid "Add Perspective"
+msgstr ""
+
+msgid "Add Preset"
+msgstr ""
+
+msgid "Add Row"
+msgstr ""
+
+msgid "Add Selected to Set"
+msgstr ""
+
+msgid "Add Twist to Effect"
+msgstr ""
+
+msgid "Add Word"
+msgstr ""
+
+msgid "Add Zone"
+msgstr ""
+
+msgid "Add effect preset group."
+msgstr ""
+
+msgid "Add moving head effects driven by bars and sections timing tracks"
+msgstr ""
+
+msgid "Add to Group:"
+msgstr ""
+
+msgid "Add to Set"
+msgstr ""
+
+msgid "Added %d Moving Head effects to %d models."
+msgstr ""
+
+msgid "Added:"
+msgstr ""
+
+msgid "Adding models to groups from different previews can make them appear in other views with no obvious reason why they do."
+msgstr ""
+
+msgid "Adds a bright white highlight line at the leading edge of each bar to make the boundaries between colors more visible."
+msgstr ""
+
+msgid "Adds a random sideways wobble to each meteor as it moves. Higher values create more pronounced swirling motion."
+msgstr ""
+
+msgid "Adds sparse white Moving Head effects (sweeps on section changes, ping-pong on chorus beats, an outro) driven by your bars and sections timing tracks. Existing effects on the selected heads are removed."
+msgstr ""
+
+msgid "Adjust Milliseconds"
+msgstr ""
+
+msgid "Adjust count based on music"
+msgstr ""
+
+msgid "Adjustment"
+msgstr ""
+
+msgid "Adjusts the animation speed curve. Positive values accelerate toward the end, negative values decelerate."
+msgstr ""
+
+msgid "Adjusts the expansion speed curve. Positive values make the ring expand slowly then accelerate; negative values make it start fast then decelerate."
+msgstr ""
+
+msgid "Adjusts the rotation speed curve. Positive values accelerate toward the end, negative values decelerate."
+msgstr ""
+
+msgid "Advanced"
+msgstr ""
+
+msgid "Advanced Controls"
+msgstr ""
+
+msgid "Album:"
+msgstr ""
+
+msgid "Aliases"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+msgid "All %u nodes of '%s' on. Aim and focus the camera so the whole prop is in frame, then Start Mapping."
+msgstr ""
+
+msgid "All Colors"
+msgstr ""
+
+msgid "All Models"
+msgstr ""
+
+msgid "All channels off at end:"
+msgstr ""
+
+msgid "Allow Blending Between Models"
+msgstr ""
+
+msgid "Allows for basic regex values ^\\?.*$"
+msgstr ""
+
+msgid "Already up to date"
+msgstr ""
+
+msgid "Also add alias to model (auto-remap future sequences)"
+msgstr ""
+
+msgid "Alternate"
+msgstr ""
+
+msgid "Alternate Backup\tF11"
+msgstr ""
+
+msgid "Alternate odd / even heads"
+msgstr ""
+
+msgid "Alternates between the current wash color and black on every other frame, creating a rapid strobe-like flicker."
+msgstr ""
+
+msgid "Alternative Backup Directory"
+msgstr ""
+
+msgid "Always No"
+msgstr ""
+
+msgid "Always Off"
+msgstr ""
+
+msgid "Always On"
+msgstr ""
+
+msgid "Always Prompt"
+msgstr ""
+
+msgid "Always Yes"
+msgstr ""
+
+msgid "Amplifies or attenuates the audio signal level before it drives the visualization. Positive values boost the signal, negative values reduce it."
+msgstr ""
+
+msgid "An effect group can not be applied."
+msgstr ""
+
+msgid "Angle"
+msgstr ""
+
+msgid "Angle in degrees at which particles are emitted from source 1. 0 is right, 90 is up, 180 is left, 270 is down."
+msgstr ""
+
+msgid "Angle in degrees at which particles are emitted from source 2. 0 is right, 90 is up, 180 is left, 270 is down."
+msgstr ""
+
+msgid "Angle in degrees at which particles are emitted from source 3. 0 is right, 90 is up, 180 is left, 270 is down."
+msgstr ""
+
+msgid "Angle in degrees at which particles are emitted from source 4. 0 is right, 90 is up, 180 is left, 270 is down."
+msgstr ""
+
+msgid "Angle in degrees that shapes travel when velocity is non-zero. 0 is right, 90 is up, 180 is left, 270 is down."
+msgstr ""
+
+msgid "Angle in degrees that the ripple center travels when velocity is non-zero. 0 is right, 90 is up, etc."
+msgstr ""
+
+msgid "Angular width of each blade as a percentage of the space between blades. Higher values make wider blades with less gap."
+msgstr ""
+
+msgid "Animation"
+msgstr ""
+
+msgid "Animation style for each bar. Morph sweeps color upward, Bounce alternates direction per event, Collide moves colors inward from both edges, Separate moves them outward, and On fills the entire bar height."
+msgstr ""
+
+msgid "Any"
+msgstr ""
+
+msgid "AppData-shared"
+msgstr ""
+
+msgid "Applies a brightness fade to the chase segment. 'From Head' fades from the leading edge, 'From Tail' from the trailing edge, 'Head and Tail' fades both ends, and 'Middle' fades from the center outward."
+msgstr ""
+
+msgid "Applies a brightness or alpha gradient across each arm to simulate depth. 3D fades edges, 3D Inverted fades the center, and Sweep applies a directional gradient from one edge to the other."
+msgstr ""
+
+msgid "Applies a brightness or alpha gradient within each bar so it fades from full brightness at one edge to dark at the other, giving a three-dimensional appearance."
+msgstr ""
+
+msgid "Applies acceleration or deceleration to the morph movement. Positive values speed up toward the end, negative values slow down."
+msgstr ""
+
+msgid "Applies increasing rotation to each successive ripple ring, creating a spiral twist effect. Positive and negative values twist in opposite directions."
+msgstr ""
+
+msgid "Applies to direct group membership only. Groups inherited through a subgroup, and groups from the base show folder, are left unchanged."
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Apply preset as:"
+msgstr ""
+
+msgid "Apply the adjustment to every Nth channel. A value of 1 adjusts every channel, 2 adjusts every other channel, 3 every third, etc."
+msgstr ""
+
+msgid "Apply the selected effect Preset."
+msgstr ""
+
+msgid "Are you sure you want to cancel?"
+msgstr ""
+
+msgid "Are you sure you want to exit?"
+msgstr ""
+
+msgid "Are you sure you want to save the current view as perpective \""
+msgstr ""
+
+msgid "Artist:"
+msgstr ""
+
+msgid "Assign VSA Tracks to xLights Models/Layers"
+msgstr ""
+
+msgid "Audacity Timing File"
+msgstr ""
+
+msgid "Audio Files|*.mp3;*.ogg;*.flac;*.wav;*.m4a;*.aac;*.wma;*.aiff;*.aif|All Files|*.*"
+msgstr ""
+
+msgid "Audio Track"
+msgstr ""
+
+msgid "Audio Track:"
+msgstr ""
+
+msgid "Audio Tracks"
+msgstr ""
+
+msgid "Audio level threshold that must be exceeded to trigger the VU meter response. Lower values make it more responsive to quiet sounds."
+msgstr ""
+
+msgid "Audio volume threshold for triggering explosions when Fire with music is enabled. Lower values trigger more easily."
+msgstr ""
+
+msgid "Audio volume threshold for triggering new shapes when Fire with music is enabled. Lower values trigger on quieter sounds."
+msgstr ""
+
+msgid "Author:"
+msgstr ""
+
+msgid "Auto"
+msgstr ""
+
+msgid "Auto Increment"
+msgstr ""
+
+msgid "Auto Label Timing Track"
+msgstr ""
+
+msgid "Auto Map"
+msgstr ""
+
+msgid "Auto Numbering"
+msgstr ""
+
+msgid "Auto Repeat"
+msgstr ""
+
+msgid "Auto Save"
+msgstr ""
+
+msgid "Auto Save Interval"
+msgstr ""
+
+msgid "Auto Show House Preview"
+msgstr ""
+
+msgid "Auto Shutter"
+msgstr ""
+
+msgid "Auto Toggle"
+msgstr ""
+
+msgid "Auto Update On Load"
+msgstr ""
+
+msgid "Auto brightness: node visible from level %d - brightness set to %d."
+msgstr ""
+
+msgid "Auto brightness: testing level %d..."
+msgstr ""
+
+msgid "Automatically calculates the repeat count needed to fill the entire model based on the morph size and skip spacing."
+msgstr ""
+
+msgid "Available choices for enum/choice types"
+msgstr ""
+
+msgid "Available:"
+msgstr ""
+
+msgid "Average"
+msgstr ""
+
+msgid "B:"
+msgstr ""
+
+msgid "BGR"
+msgstr ""
+
+msgid "BGRW"
+msgstr ""
+
+msgid "BRG"
+msgstr ""
+
+msgid "BRGW"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Back 1 Bulb"
+msgstr ""
+
+msgid "Background"
+msgstr ""
+
+msgid "Background\nIntensity"
+msgstr ""
+
+msgid "Background - B"
+msgstr ""
+
+msgid "Background Color"
+msgstr ""
+
+msgid "Background Image"
+msgstr ""
+
+msgid "Background Only"
+msgstr ""
+
+msgid "Background image used as a tracing reference inside the Effect Assist panel. The image itself is not rendered into the effect output."
+msgstr ""
+
+msgid "Backup\tF10"
+msgstr ""
+
+msgid "Backup Directory"
+msgstr ""
+
+msgid "Backup On Launch"
+msgstr ""
+
+msgid "Backup On Save"
+msgstr ""
+
+msgid "Backup Subfolders"
+msgstr ""
+
+msgid "Backups:"
+msgstr ""
+
+msgid "Band Size"
+msgstr ""
+
+msgid "Band size"
+msgstr ""
+
+msgid "Bars"
+msgstr ""
+
+msgid "Bars timing track:"
+msgstr ""
+
+msgid "Base Channel"
+msgstr ""
+
+msgid "Base Name"
+msgstr ""
+
+msgid "Base Show Directory:"
+msgstr ""
+
+msgid "Base Wavelength"
+msgstr ""
+
+msgid "Base wavelength multiplier for the wave string appearance. Higher values produce longer, smoother waves."
+msgstr ""
+
+msgid "Batch Check Sequence Cancelled."
+msgstr ""
+
+msgid "Batch Render"
+msgstr ""
+
+msgid "Batch Render Cancelled."
+msgstr ""
+
+msgid "Batch Render Done."
+msgstr ""
+
+msgid "Beginner"
+msgstr ""
+
+msgid "Beginning"
+msgstr ""
+
+msgid "Bell on render completion or error"
+msgstr ""
+
+msgid "Bicubic"
+msgstr ""
+
+msgid "Bilinear"
+msgstr ""
+
+msgid "Bitrate(KB/s,0=Auto):"
+msgstr ""
+
+msgid "Bkgrd Chunks"
+msgstr ""
+
+msgid "Bkgrd Skip"
+msgstr ""
+
+msgid "Blades"
+msgstr ""
+
+msgid "Blend"
+msgstr ""
+
+msgid "Blend Edges"
+msgstr ""
+
+msgid "Blend Mode"
+msgstr ""
+
+msgid "Blink Duration"
+msgstr ""
+
+msgid "Blink Frequency"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Blur"
+msgstr ""
+
+msgid "Bot"
+msgstr ""
+
+msgid "Bottom"
+msgstr ""
+
+msgid "Bottom Barrier"
+msgstr ""
+
+msgid "Bounce"
+msgstr ""
+
+msgid "Box Average"
+msgstr ""
+
+msgid "Box Size"
+msgstr ""
+
+msgid "Box Size:"
+msgstr ""
+
+msgid "Brightness"
+msgstr ""
+
+msgid "Brightness:"
+msgstr ""
+
+msgid "Bubbles"
+msgstr ""
+
+msgid "Buffer Size"
+msgstr ""
+
+msgid "Buffer Style:"
+msgstr ""
+
+msgid "Bulb Identify"
+msgstr ""
+
+msgid "Bulk Controller Upload"
+msgstr ""
+
+msgid "Bulk Edit Colour"
+msgstr ""
+
+msgid "Bulk Edit Rotate"
+msgstr ""
+
+msgid "Bump <"
+msgstr ""
+
+msgid "Bump >"
+msgstr ""
+
+msgid "Button:"
+msgstr ""
+
+msgid "C&heck Sequence"
+msgstr ""
+
+msgid "CCW"
+msgstr ""
+
+msgid "Camera scan (KLightMapper, automatic)"
+msgstr ""
+
+msgid "Camera:"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Cancelled"
+msgstr ""
+
+msgid "Canvas"
+msgstr ""
+
+msgid "Cascade"
+msgstr ""
+
+msgid "Cascade - H"
+msgstr ""
+
+msgid "Causes the entire bolt to drift horizontally over time. Positive values move right, negative values move left."
+msgstr ""
+
+msgid "Caution:  All timings/labels on this track will be replaced."
+msgstr ""
+
+msgid "Cells to start"
+msgstr ""
+
+msgid "Center Offset:"
+msgstr ""
+
+msgid "Center Point"
+msgstr ""
+
+msgid "Center X"
+msgstr ""
+
+msgid "Center Y"
+msgstr ""
+
+msgid "Centered"
+msgstr ""
+
+msgid "Chain after model:"
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "Change Color based on Time"
+msgstr ""
+
+msgid "Change File"
+msgstr ""
+
+msgid "Change Permanently"
+msgstr ""
+
+msgid "Change Temporarily"
+msgstr ""
+
+msgid "Change Temporarily Again"
+msgstr ""
+
+msgid "Change Temporary"
+msgstr ""
+
+msgid "Change color after each word if checked"
+msgstr ""
+
+msgid "Change the name shown in the File menu"
+msgstr ""
+
+msgid "Channel"
+msgstr ""
+
+msgid "Character"
+msgstr ""
+
+msgid "Character Code"
+msgstr ""
+
+msgid "Character Map"
+msgstr ""
+
+msgid "Chase"
+msgstr ""
+
+msgid "Chase 1/3"
+msgstr ""
+
+msgid "Chase 1/4"
+msgstr ""
+
+msgid "Chase 1/5"
+msgstr ""
+
+msgid "Chase Size"
+msgstr ""
+
+msgid "Chase Types"
+msgstr ""
+
+msgid "Check Sequence"
+msgstr ""
+
+msgid "Check for Updates"
+msgstr ""
+
+msgid "Check for newer xLights updates"
+msgstr ""
+
+msgid "Checked models are members of this Set.\nCheck to add, uncheck to remove."
+msgstr ""
+
+msgid "Checking FSEQ file for %s"
+msgstr ""
+
+msgid "Checking media (%s) and FSEQ file for %s"
+msgstr ""
+
+msgid "Checking models"
+msgstr ""
+
+msgid "Checking sequence "
+msgstr ""
+
+msgid "Choose Audio File"
+msgstr ""
+
+msgid "Choose CSV file"
+msgstr ""
+
+msgid "Choose Files"
+msgstr ""
+
+msgid "Choose Items..."
+msgstr ""
+
+msgid "Choose LOR S5 Preview File to Import"
+msgstr ""
+
+msgid "Choose Media"
+msgstr ""
+
+msgid "Choose Model file"
+msgstr ""
+
+msgid "Choose Output File"
+msgstr ""
+
+msgid "Choose RGB Effects file to import from"
+msgstr ""
+
+msgid "Choose SVG File"
+msgstr ""
+
+msgid "Choose Sequence File to Open"
+msgstr ""
+
+msgid "Choose a specific Preview to print, or \"All Models\" for the whole layout."
+msgstr ""
+
+msgid "Choose between selecting a named state directly or driving states from a timing track. Each timing mark's label is matched to a state name."
+msgstr ""
+
+msgid "Choose canvas layers ..."
+msgstr ""
+
+msgid "Choose color curve file"
+msgstr ""
+
+msgid "Choose output file"
+msgstr ""
+
+msgid "Choose value curve file"
+msgstr ""
+
+msgid "Choose which effects appear in the toolbar, and their order:"
+msgstr ""
+
+msgid "Choose xLights Sketch File"
+msgstr ""
+
+msgid "Chorus"
+msgstr ""
+
+msgid "Chorus flash pattern:"
+msgstr ""
+
+msgid "Chorus flash rhythm:"
+msgstr ""
+
+msgid "Circle"
+msgstr ""
+
+msgid "Circular Palette"
+msgstr ""
+
+msgid "Classic flow (record video, decode manually)"
+msgstr ""
+
+msgid "Cleanup File Locations"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Clear All"
+msgstr ""
+
+msgid "Clear Mapping"
+msgstr ""
+
+msgid "Clear all mapped node positions? You will need to scan again."
+msgstr ""
+
+msgid "Click on the image to identify the location of the current bulb.\n\nOnce happy click next bulb to move to the next lit bulb.\nUse bump > and bump < to jump forward back video frames if you think the video has lost its place. This can happen in long videos.\n\nPress next when you are done identifying bulbs."
+msgstr ""
+
+msgid "Clone"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Close Sequence"
+msgstr ""
+
+msgid "Closed"
+msgstr ""
+
+msgid "Collapse"
+msgstr ""
+
+msgid "Collapse All"
+msgstr ""
+
+msgid "Colon"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Color Channels"
+msgstr ""
+
+msgid "Color Choice"
+msgstr ""
+
+msgid "Color Curve"
+msgstr ""
+
+msgid "Color Dropper"
+msgstr ""
+
+msgid "Color Palette Size"
+msgstr ""
+
+msgid "Color Per Word"
+msgstr ""
+
+msgid "Color Replace"
+msgstr ""
+
+msgid "Color scheme for the meteors. Rainbow uses random hues, Range picks random colors from the palette range, and Palette cycles through the defined palette colors."
+msgstr ""
+
+msgid "Color scheme for the plasma pattern. Normal uses the effect's palette colors; the preset options use built-in color combinations with different hue ranges."
+msgstr ""
+
+msgid "Color:"
+msgstr ""
+
+msgid "ColorWheel"
+msgstr ""
+
+msgid "Colors"
+msgstr ""
+
+msgid "Comment:"
+msgstr ""
+
+msgid "Comparing the models on each FPP with the layout"
+msgstr ""
+
+msgid "Completed"
+msgstr ""
+
+msgid "Completed (%d of %d sequences)"
+msgstr ""
+
+msgid "Compressed Video, *.mp4"
+msgstr ""
+
+msgid "Conditional enable/disable/show/hide rules"
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Confirm Delete"
+msgstr ""
+
+msgid "Confirm Move"
+msgstr ""
+
+msgid "Container for per-shader dynamic uniform controls. ShaderPanel reserves the sizer here; ShaderConfig::GetDynamicPropertiesJson emits a schema-shaped JSON array for every visible uniform, and the JsonEffectPanel builder renders the rows so iPad and desktop share the same layout logic. The sizer is wiped (and its PropertyInfo entries purged via RemovePropertiesWithPrefix) whenever the shader file changes."
+msgstr ""
+
+msgid "Content\tF1"
+msgstr ""
+
+msgid "Continue"
+msgstr ""
+
+msgid "Contrast"
+msgstr ""
+
+msgid "Control"
+msgstr ""
+
+msgid "Control the size of the crosshair for group centering"
+msgstr ""
+
+msgid "Controller"
+msgstr ""
+
+msgid "Controller Visualiser"
+msgstr ""
+
+msgid "Controller messages"
+msgstr ""
+
+msgid "Controller ping interval in seconds (0=Off):"
+msgstr ""
+
+msgid "Controller settings"
+msgstr ""
+
+msgid "Controllers"
+msgstr ""
+
+msgid "Controllers/Layout"
+msgstr ""
+
+msgid "Controlling sibling property id"
+msgstr ""
+
+msgid "Controlling value -> label text"
+msgstr ""
+
+msgid "Controls how fast each particle moves and how quickly trails grow and decay. Higher values produce more energetic, rapid movement."
+msgstr ""
+
+msgid "Controls how fast generations advance. Higher values evolve the cell population more rapidly."
+msgstr ""
+
+msgid "Controls how fast snowflakes move. In Driving mode this affects horizontal and vertical scroll speed; in Falling modes it controls the rate of downward movement."
+msgstr ""
+
+msgid "Controls how fast the circles move across the model. In radial mode, controls the speed of the outward ring expansion."
+msgstr ""
+
+msgid "Controls how fast the curtain opens or closes. Values above 1 make the curtain complete its motion before the effect ends; values below 1 slow it down."
+msgstr ""
+
+msgid "Controls how fast the pattern animates. For styles 1-5 this sets the scroll rate; for plasma styles 6-10 higher values produce slower, smoother animation."
+msgstr ""
+
+msgid "Controls how fast the spirograph pattern rotates over time. Higher values make the drawing point orbit more quickly."
+msgstr ""
+
+msgid "Controls how often random wind gusts occur. Higher values produce more frequent gusts that disturb the flame."
+msgstr ""
+
+msgid "Controls how palette colors are assigned to active states. 'Graduate' blends through the palette over time. 'Cycle' assigns a different palette color to each timing interval. 'Allocate' assigns a fixed palette color based on the state's index number."
+msgstr ""
+
+msgid "Controls how pixels are turned off. Black sets all pixels to black, Transparent leaves pixels unchanged, and the conversion modes swap black pixels to transparent or vice versa."
+msgstr ""
+
+msgid "Controls how quickly node velocity decays. Lower values allow nodes to move more freely, while higher values make the tendril more sluggish."
+msgstr ""
+
+msgid "Controls how quickly the flame responds to changes. Higher values make the flame snap to new brightness levels faster, creating a more erratic flicker."
+msgstr ""
+
+msgid "Controls how quickly the spring force decays along the tendril chain. Higher values keep the tail tighter to the head; lower values let it wave more freely."
+msgstr ""
+
+msgid "Controls how tall the flames reach. Higher values produce taller flames that extend further across the buffer."
+msgstr ""
+
+msgid "Controls how the sensitivity threshold is scaled. None uses a fixed threshold, Individual Notes scales per bar based on each bar's peak, and All Notes scales based on the overall peak volume."
+msgstr ""
+
+msgid "Controls how the warp intensity changes over the effect duration. Constant maintains full distortion, In ramps from none to full, and Out ramps from full to none."
+msgstr ""
+
+msgid "Controls how tightly packed the plasma wave lines are. Higher values produce finer, more detailed patterns with more color transitions across the model."
+msgstr ""
+
+msgid "Controls how timing track labels are interpreted. 'Default' uses labels as state names directly. 'Countdown' treats labels as numbers and counts down. 'Time Countdown' counts down from a time value (MM:SS). 'Number' displays digits for numeric values. 'Iterate' cycles through the listed states over the timing interval."
+msgstr ""
+
+msgid "Controls the curtain motion. Open reveals the model by pulling the curtain away; close covers it. Combined modes perform both actions in sequence within the effect duration."
+msgstr ""
+
+msgid "Controls the eye state. Open keeps eyes always open, Closed keeps them shut, Auto adds periodic random blinking, and (off) disables eye rendering."
+msgstr ""
+
+msgid "Controls the horizontal deviation of each zigzag segment. Higher values make the bolt spread wider side-to-side."
+msgstr ""
+
+msgid "Controls the intensity parameter of the selected FX animation. Its exact meaning varies by effect (e.g., brightness, size, or density)."
+msgstr ""
+
+msgid "Controls the magnitude of the tendril head movement. Higher values produce larger, more dramatic movements across the buffer."
+msgstr ""
+
+msgid "Controls the radius of each circle. In radial mode, this sets the thickness of the concentric rings."
+msgstr ""
+
+msgid "Controls the rate at which the warp distortion animates. Higher values produce faster-moving distortion patterns."
+msgstr ""
+
+msgid "Controls the size of the base tile that gets reflected to fill the model. Smaller values create more repetitions; larger values create fewer, bigger reflections."
+msgstr ""
+
+msgid "Controls the spacing interval used when sampling the pattern. Higher values skip more of the pattern, creating a coarser or more spread-out appearance."
+msgstr ""
+
+msgid "Controls the spatial frequency of the distortion pattern. Higher values create tighter, more closely spaced ripples or waves."
+msgstr ""
+
+msgid "Controls the speed of the selected FX animation. Higher values produce faster transitions and movement."
+msgstr ""
+
+msgid "Controls the width of the decorative draped curve at the curtain edge. Higher values create a wider parabolic swag that hangs down from the top."
+msgstr ""
+
+msgid "Controls whether ripple waves expand outward (Explode), contract inward (Implode), or remain stationary (None) over the effect duration."
+msgstr ""
+
+msgid "Conversion Log"
+msgstr ""
+
+msgid "Conversion Messages:"
+msgstr ""
+
+msgid "Convert All Symbols to Effects"
+msgstr ""
+
+msgid "Convert Render Style"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Copy\tCTRL-c"
+msgstr ""
+
+msgid "Copy From"
+msgstr ""
+
+msgid "Copy Results"
+msgstr ""
+
+msgid "Copy Selected SubModel"
+msgstr ""
+
+msgid "Copy To Master"
+msgstr ""
+
+msgid "Copy elements and ordering to your master render view"
+msgstr ""
+
+msgid "Copying layers/submodels from: "
+msgstr ""
+
+msgid "Could not locate the xLights application bundle. A new instance can only be launched when xLights is run from a .app bundle."
+msgstr ""
+
+msgid "Could not read the camera's streams.\nCheck the username / password."
+msgstr ""
+
+msgid "Count"
+msgstr ""
+
+msgid "Count down"
+msgstr ""
+
+msgid "Count:"
+msgstr ""
+
+msgid "Crash xLights"
+msgstr ""
+
+msgid "Create New Effect Preset from current settings."
+msgstr ""
+
+msgid "Create View"
+msgstr ""
+
+msgid "Create display elements by clicking on the Models buttons. You can drag your cursor across the preview area to move the element. Don't forget to click the Save button to save your preview!\n\nClick the Open button to select an xLights sequence to be previewed. Note that any xLights sequence can be previewed, not just those created on the Sequencer tab. Click Play to start preview playback. Use the Pause button to stop play, and then the Play button to resume. You can drag the slider that appears across the top of the preview area to move playback to any spot in your sequence. The Stop Now button in the upper left will also stop playback."
+msgstr ""
+
+msgid "Create images using AI - if configured."
+msgstr ""
+
+msgid "Crop Bottom"
+msgstr ""
+
+msgid "Crop Left"
+msgstr ""
+
+msgid "Crop Right"
+msgstr ""
+
+msgid "Crop Top"
+msgstr ""
+
+msgid "Crop/Border"
+msgstr ""
+
+msgid "Cross-platform description of an effect's configurable properties and UI layout"
+msgstr ""
+
+msgid "Current Bulb:"
+msgstr ""
+
+msgid "Current House Preview Size (%d x %d)"
+msgstr ""
+
+msgid "Current Image:"
+msgstr ""
+
+msgid "Current Layout Tab Size (%d x %d)"
+msgstr ""
+
+msgid "Curtain Edge"
+msgstr ""
+
+msgid "Custom"
+msgstr ""
+
+msgid "Custom Model"
+msgstr ""
+
+msgid "Custom Model Builder"
+msgstr ""
+
+msgid "Custom Model Wiring"
+msgstr ""
+
+msgid "Custom Time Speed slider row. Built as a BulkEditSliderF2 with the slider as the serialized control (E_SLIDER_Shader_Speed, divisor 100) and a buddy text control, matching the legacy naming so old sequences continue to deserialize."
+msgstr ""
+
+msgid "Custom block with Select/Clear/Download buttons, animated shader preview, and filename label. The shader file path is serialized as E_0FILEPICKERCTRL_IFS via a hidden file picker; the leading 0 forces it to be processed first at load time so the shader config is known before dynamic uniform settings are applied."
+msgstr ""
+
+msgid "Custom row with three buttons: Remap Channels (opens the remap dialog, with a right-click menu for bulk-editing selected effects), Save As State (saves the current channel values as a SingleNode CustomColors state on the target model), and Load From State (reads channel values from an existing SingleNode state). The Save button is disabled when any channel has an active value curve."
+msgstr ""
+
+msgid "Custom xModel File With the faces/states/submodels:"
+msgstr ""
+
+msgid "Custom xModel File with the correct wiring layout:"
+msgstr ""
+
+msgid "Cut"
+msgstr ""
+
+msgid "Cut\tCTRL-x"
+msgstr ""
+
+msgid "Cycle Cnt"
+msgstr ""
+
+msgid "Cycle Count"
+msgstr ""
+
+msgid "Cycles"
+msgstr ""
+
+msgid "Cycles:"
+msgstr ""
+
+msgid "Dampening"
+msgstr ""
+
+msgid "Dampens the wind's effect on the flame. Higher values make the flame more resistant to being blown down, producing a calmer, steadier flicker."
+msgstr ""
+
+msgid "Dark time before each beam for the head to reach its position. When the gap is shorter, the end of the previous beam is trimmed (never below 40% of its length) to make room."
+msgstr ""
+
+msgid "Data Layers"
+msgstr ""
+
+msgid "Dbl-Clk to load"
+msgstr ""
+
+msgid "Decaying Sine"
+msgstr ""
+
+msgid "Decimal Point"
+msgstr ""
+
+msgid "Default Camera:"
+msgstr ""
+
+msgid "Default Layout Mode:"
+msgstr ""
+
+msgid "Default Model As A Pixel"
+msgstr ""
+
+msgid "Default Model Blending for New Sequences"
+msgstr ""
+
+msgid "Default View for New Sequences"
+msgstr ""
+
+msgid "Default value (type depends on 'type' field)"
+msgstr ""
+
+msgid "Define zones that trigger a DMX channel output when the moving head enters that pan/tilt range.\n  %s  Label: optional word or two to describe this zone\n  %s  Pan Min/Max: pan channel value range (0-255) that defines this zone\n  %s  Tilt Min/Max: tilt channel value range (0-255) that defines this zone\n  %s  Channel: DMX channel number to set when the head is inside this zone\n  %s  Value: DMX value (0-255) to send on that channel"
+msgstr ""
+
+msgid "Degrees of curvature applied along each arm from center to tip. Positive values twist clockwise, negative values twist counter-clockwise, creating spiral arms."
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Delete Buffer Preset"
+msgstr ""
+
+msgid "Delete Perspective"
+msgstr ""
+
+msgid "Delete Preset"
+msgstr ""
+
+msgid "Delete Row"
+msgstr ""
+
+msgid "Delete Selected SubModel"
+msgstr ""
+
+msgid "Delete Set '%s'? Member models will not be affected."
+msgstr ""
+
+msgid "Delete Zone"
+msgstr ""
+
+msgid "Delete curently selected effect preset."
+msgstr ""
+
+msgid "Delete preset file\n%s ?"
+msgstr ""
+
+msgid "Delete this device"
+msgstr ""
+
+msgid "Delete this element from the sequence"
+msgstr ""
+
+msgid "Depth"
+msgstr ""
+
+msgid "Description:"
+msgstr ""
+
+msgid "Despeckle"
+msgstr ""
+
+msgid "Despeckle Threshold"
+msgstr ""
+
+msgid "Dialog title for file picker controls"
+msgstr ""
+
+msgid "Diamond"
+msgstr ""
+
+msgid "Dimmer"
+msgstr ""
+
+msgid "Dimmer (Linked)"
+msgstr ""
+
+msgid "DirectX11"
+msgstr ""
+
+msgid "Direction"
+msgstr ""
+
+msgid "Direction and movement pattern of the chase. Bounce types reverse at edges, Dual runs two chases simultaneously, Static types display without motion, and Middle types expand or contract from the center."
+msgstr ""
+
+msgid "Direction in degrees the bars travel when Direction is Custom. 0 is right, 90 is up, -90 is down, 180 or -180 is left."
+msgstr ""
+
+msgid "Direction in which the skip pattern is drawn. 'From Middle' and 'To Middle' mirror the pattern from the center of the strand."
+msgstr ""
+
+msgid "Direction of gravity in degrees. 0 pulls downward, 90 pulls to the left, 180 pulls upward, and 270 pulls to the right."
+msgstr ""
+
+msgid "Direction of meteor movement. Down/Up/Left/Right move linearly, Implode moves toward center, Explode moves outward from center, and Icicles create random-length dripping streaks."
+msgstr ""
+
+msgid "Direction the bars travel. Expand/compress radiate from or collapse toward a center point. Alternate modes snap bars one step at a time. Custom Horz/Vert place static bars with an adjustable center offset. Custom moves the bars at any angle set by the Angle slider."
+msgstr ""
+
+msgid "Direction the face image moves across the model. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Direction the fill progresses across the buffer."
+msgstr ""
+
+msgid "Direction the garlands stack and move. The 'then' options reverse direction at the midpoint of the effect."
+msgstr ""
+
+msgid "Direction the image moves across the model. Includes scrolling, peekaboo pop-in effects, wiggle, zoom, flag wave, single-pass movements, and tiling modes."
+msgstr ""
+
+msgid "Direction the lightning bolt extends. 'Up' draws from bottom to top, 'Down' draws from top to bottom."
+msgstr ""
+
+msgid "Direction the text moves across the model. Options include scrolling left/right/up/down, diagonal, wavey motion, word-flip, and vector-based movement between start and end positions."
+msgstr ""
+
+msgid "Directories"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Disable checks for duplicate nodes in model groups."
+msgstr ""
+
+msgid "Disable checks for groups containing models from different previews."
+msgstr ""
+
+msgid "Disable checks for non-contiguous channels on controller ports."
+msgstr ""
+
+msgid "Disable checks on duplicate use of universe/id across controllers."
+msgstr ""
+
+msgid "Disable custom model size checking."
+msgstr ""
+
+msgid "Disable key acceleration when held down"
+msgstr ""
+
+msgid "Disable sketch image file checking."
+msgstr ""
+
+msgid "Disable transition time checking."
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Disabling check sequence checks can reduce clutter in your check sequence results\nbut can also mask causes of issues such as incorrect pixels lighting up or slow rendering.\n\nPlease ensure you understand what the check sequence options do before deciding\nto disable them on someone's advice."
+msgstr ""
+
+msgid "Discover"
+msgstr ""
+
+msgid "Discover Cameras"
+msgstr ""
+
+msgid "Discovered:"
+msgstr ""
+
+msgid "Display Elements"
+msgstr ""
+
+msgid "Display Transition Marks"
+msgstr ""
+
+msgid "Distance between consecutive ripple rings. Larger values spread the rings farther apart."
+msgstr ""
+
+msgid "Distance between garland rows as a percentage of the buffer size. Higher values spread the rows further apart."
+msgstr ""
+
+msgid "Distance of the drawing point from the center of the inner circle as a percentage of the buffer width. Controls how far the lobes extend outward."
+msgstr ""
+
+msgid "Divides the pattern into repeated segments, increasing the frequency of the mathematical function to create more detailed or tiled patterns."
+msgstr ""
+
+msgid "Do not change destination models' groups"
+msgstr ""
+
+msgid "Do not cycle the text."
+msgstr ""
+
+msgid "Do not repeat"
+msgstr ""
+
+msgid "Dock All"
+msgstr ""
+
+msgid "Don't Create Sequence"
+msgstr ""
+
+msgid "Don't Set"
+msgstr ""
+
+msgid "Don't download this vendors list of models"
+msgstr ""
+
+msgid "Don't send data to unused outputs"
+msgstr ""
+
+msgid "Donate"
+msgstr ""
+
+msgid "Donate to the xLights project."
+msgstr ""
+
+msgid "Done"
+msgstr ""
+
+msgid "Done >>"
+msgstr ""
+
+msgid "Double Click Mode"
+msgstr ""
+
+msgid "Double-click on layout opens:"
+msgstr ""
+
+msgid "Double-click to open in file manager"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Download Images"
+msgstr ""
+
+msgid "Download Sequence and Lyrics"
+msgstr ""
+
+msgid "Download Sequences/Lyrics"
+msgstr ""
+
+msgid "Download new release"
+msgstr ""
+
+msgid "Draw Model"
+msgstr ""
+
+msgid "Draw Percentage"
+msgstr ""
+
+msgid "Draw Style"
+msgstr ""
+
+msgid "Draws expanding concentric rings radiating outward from the center point, using palette colors in alternating bands."
+msgstr ""
+
+msgid "Draws expanding concentric rings with a continuously cycling rainbow hue based on distance from center, creating a 3D-like depth effect."
+msgstr ""
+
+msgid "Draws hollow circle outlines instead of filled circles, and launches them upward at slightly random angles to simulate rising bubbles."
+msgstr ""
+
+msgid "Drives Pan/Tilt from a parametric shape generator instead of (or on top of) the waypoint path."
+msgstr ""
+
+msgid "Drives the mouth phonemes. Pick a Phoneme for a single fixed mouth shape, or pick a Timing Track with phoneme labels for automatic lip-sync."
+msgstr ""
+
+msgid "Duplicate Effect"
+msgstr ""
+
+msgid "Duplicate Frames to Suppress"
+msgstr ""
+
+msgid "Duplicate nodes in model groups can lead to pixels lighting during effects at unexpected times."
+msgstr ""
+
+msgid "Duration"
+msgstr ""
+
+msgid "Duration (MS):"
+msgstr ""
+
+msgid "Duration (ms)"
+msgstr ""
+
+msgid "Duration Treatment"
+msgstr ""
+
+msgid "Duration in milliseconds for states to fade in and out at the start and end of each timing interval. Set to 0 for instant on/off switching."
+msgstr ""
+
+msgid "Duty Factor"
+msgstr ""
+
+msgid "E"
+msgstr ""
+
+msgid "E&xport Models"
+msgstr ""
+
+msgid "ERROR"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Edit Keybindings"
+msgstr ""
+
+msgid "Edit Metadata"
+msgstr ""
+
+msgid "Edit Name"
+msgstr ""
+
+msgid "Edit Text"
+msgstr ""
+
+msgid "Edit Track Name"
+msgstr ""
+
+msgid "Edit User Lyric Dictionary"
+msgstr ""
+
+msgid "Edit Word"
+msgstr ""
+
+msgid "Edit/Load"
+msgstr ""
+
+msgid "Effect"
+msgstr ""
+
+msgid "Effect Assist"
+msgstr ""
+
+msgid "Effect Assist Window"
+msgstr ""
+
+msgid "Effect Backgrounds"
+msgstr ""
+
+msgid "Effect Colors"
+msgstr ""
+
+msgid "Effect Description"
+msgstr ""
+
+msgid "Effect Dropper"
+msgstr ""
+
+msgid "Effect Grid"
+msgstr ""
+
+msgid "Effect Icon Size"
+msgstr ""
+
+msgid "Effect Name,Occurences,TotalTime\n"
+msgstr ""
+
+msgid "Effect Name,StartTime,EndTime,Duration,Description,Element,ElementType,Files\n"
+msgstr ""
+
+msgid "Effect Presets"
+msgstr ""
+
+msgid "Effect Settings"
+msgstr ""
+
+msgid "Effect Symbol Library..."
+msgstr ""
+
+msgid "Effect Timing"
+msgstr ""
+
+msgid "Effect Type:"
+msgstr ""
+
+msgid "Effect Usage Summary\n"
+msgstr ""
+
+msgid "Effect name as registered in EffectManager (e.g. 'Fire')"
+msgstr ""
+
+msgid "Effects"
+msgstr ""
+
+msgid "Effects\nby Time:"
+msgstr ""
+
+msgid "Effects Assistant"
+msgstr ""
+
+msgid "Effects Toolbar"
+msgstr ""
+
+msgid "Eight"
+msgstr ""
+
+msgid "Elapsed %s"
+msgstr ""
+
+msgid "Email Address:"
+msgstr ""
+
+msgid "Email:"
+msgstr ""
+
+msgid "Empty"
+msgstr ""
+
+msgid "Enable Base Show Folder Settings"
+msgstr ""
+
+msgid "Enable Pattern"
+msgstr ""
+
+msgid "Enable Position Zones"
+msgstr ""
+
+msgid "Enable Shutter"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Enables countdown mode. The text field value is used as the target, and the displayed text shows the remaining time in the selected format."
+msgstr ""
+
+msgid "Enables particle source 1. When disabled, no particles are emitted from this source."
+msgstr ""
+
+msgid "Enables particle source 2. When disabled, no particles are emitted from this source."
+msgstr ""
+
+msgid "Enables particle source 3. When disabled, no particles are emitted from this source."
+msgstr ""
+
+msgid "Enables particle source 4. When disabled, no particles are emitted from this source."
+msgstr ""
+
+msgid "Encoded definition string for the movement path. Defines waypoints and curves that the moving head beam follows over time."
+msgstr ""
+
+msgid "End"
+msgstr ""
+
+msgid "End Hour"
+msgstr ""
+
+msgid "End Intensity"
+msgstr ""
+
+msgid "End Label:"
+msgstr ""
+
+msgid "End MIDI Channel"
+msgstr ""
+
+msgid "End Min"
+msgstr ""
+
+msgid "End Note"
+msgstr ""
+
+msgid "End Position"
+msgstr ""
+
+msgid "End Scale"
+msgstr ""
+
+msgid "End Time (MS):"
+msgstr ""
+
+msgid "End Time (sec):"
+msgstr ""
+
+msgid "End of Model"
+msgstr ""
+
+msgid "End:"
+msgstr ""
+
+msgid "Ending radius of the expanding ring at the end of each cycle."
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Enter IP Address"
+msgstr ""
+
+msgid "Enter Metronome Timing and Repeating Tag"
+msgstr ""
+
+msgid "Enter Name for View"
+msgstr ""
+
+msgid "Enter a different name for the new group:"
+msgstr ""
+
+msgid "Enter a name for this test configuration"
+msgstr ""
+
+msgid "Enter a short name for this track (leave empty for auto-name):"
+msgstr ""
+
+msgid "Enter new name"
+msgstr ""
+
+msgid "Entries on the Setup tab will guide the conversion. Make sure you have your lighting networks defined accurately before you start a conversion."
+msgstr ""
+
+msgid "Equal"
+msgstr ""
+
+msgid "Erase"
+msgstr ""
+
+msgid "Erase existing effects on imported models"
+msgstr ""
+
+msgid "Error capturing preview image"
+msgstr ""
+
+msgid "Error opening clipboard."
+msgstr ""
+
+msgid "Evens"
+msgstr ""
+
+msgid "Every 2 beats"
+msgstr ""
+
+msgid "Every bar (sparse)"
+msgstr ""
+
+msgid "Every beat (busy)"
+msgstr ""
+
+msgid "Exact Height"
+msgstr ""
+
+msgid "Exact Width"
+msgstr ""
+
+msgid "Exact Width or Height"
+msgstr ""
+
+msgid "Exclude Audio"
+msgstr ""
+
+msgid "Exclude Videos"
+msgstr ""
+
+msgid "Expert"
+msgstr ""
+
+msgid "Explanatory text describing the Sketch effect plus links to demo videos. Display only — not part of the saved effect."
+msgstr ""
+
+msgid "Exponential Down"
+msgstr ""
+
+msgid "Exponential Up"
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "Export &Effects"
+msgstr ""
+
+msgid "Export Controller Connections"
+msgstr ""
+
+msgid "Export House Preview Video"
+msgstr ""
+
+msgid "Export Layout As DXF"
+msgstr ""
+
+msgid "Export Model Video"
+msgstr ""
+
+msgid "Export Sequence"
+msgstr ""
+
+msgid "Export SubModel as File"
+msgstr ""
+
+msgid "Export Zones..."
+msgstr ""
+
+msgid "Export progress"
+msgstr ""
+
+msgid "Export to SD Card"
+msgstr ""
+
+msgid "Export..."
+msgstr ""
+
+msgid "Exporting model video..."
+msgstr ""
+
+msgid "Exporting video..."
+msgstr ""
+
+msgid "Extra Large"
+msgstr ""
+
+msgid "Extra Small"
+msgstr ""
+
+msgid "Eye Left/Right Servo"
+msgstr ""
+
+msgid "Eye Up/Down Servo"
+msgstr ""
+
+msgid "Eyes"
+msgstr ""
+
+msgid "Eyes - Closed"
+msgstr ""
+
+msgid "Eyes - Closed 2"
+msgstr ""
+
+msgid "Eyes - Closed 3"
+msgstr ""
+
+msgid "Eyes - Open"
+msgstr ""
+
+msgid "Eyes - Open 2"
+msgstr ""
+
+msgid "Eyes - Open 3"
+msgstr ""
+
+msgid "Eyes Closed"
+msgstr ""
+
+msgid "Eyes Open"
+msgstr ""
+
+msgid "Eyes:"
+msgstr ""
+
+msgid "FFmpeg AMF"
+msgstr ""
+
+msgid "FFmpeg Auto"
+msgstr ""
+
+msgid "FFmpeg CUDA"
+msgstr ""
+
+msgid "FFmpeg DirectX11"
+msgstr ""
+
+msgid "FFmpeg QSV"
+msgstr ""
+
+msgid "FFmpeg Vulkan"
+msgstr ""
+
+msgid "FPP Commands"
+msgstr ""
+
+msgid "FPP Compressed Sub sequence. *.eseq"
+msgstr ""
+
+msgid "FPP Connect"
+msgstr ""
+
+msgid "FPP Effects"
+msgstr ""
+
+msgid "FPP Sub sequence. *.eseq"
+msgstr ""
+
+msgid "FPP Upload"
+msgstr ""
+
+msgid "FSEQ Directory"
+msgstr ""
+
+msgid "FSEQ Version"
+msgstr ""
+
+msgid "FV"
+msgstr ""
+
+msgid "FX"
+msgstr ""
+
+msgid "FX-14: compound AND — list of sub-conditions (each a 'when'-shaped object). Met iff every sub-condition is met."
+msgstr ""
+
+msgid "FX-4b: value-driven label override. The row label is chosen by the live value of the controlling sibling 'property' via 'map', falling back to 'defaultLabel'. Mirrors desktop custom-panel SetLabel calls."
+msgstr ""
+
+msgid "Face Definition"
+msgstr ""
+
+msgid "Face Outline"
+msgstr ""
+
+msgid "Face Outline 2"
+msgstr ""
+
+msgid "Face:"
+msgstr ""
+
+msgid "Facebook"
+msgstr ""
+
+msgid "Facebook:"
+msgstr ""
+
+msgid "Faces"
+msgstr ""
+
+msgid "Faces(s) with the Same Name Already Exist.\n Would you Like to Override Them ALL?"
+msgstr ""
+
+msgid "Faces/States/Submodels"
+msgstr ""
+
+msgid "Fade"
+msgstr ""
+
+msgid "Fade Away"
+msgstr ""
+
+msgid "Fade Trails"
+msgstr ""
+
+msgid "Fade during lead in/out"
+msgstr ""
+
+msgid "Fade notes"
+msgstr ""
+
+msgid "Fade(ms)"
+msgstr ""
+
+msgid "Fades the wash color from full brightness at the horizontal center to black at the left and right edges."
+msgstr ""
+
+msgid "Fades the wash color from full brightness at the vertical center to black at the top and bottom edges."
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Failed: %s"
+msgstr ""
+
+msgid "Failed: no usable connection"
+msgstr ""
+
+msgid "Falling"
+msgstr ""
+
+msgid "Fan Pan"
+msgstr ""
+
+msgid "Fan Pan:  "
+msgstr ""
+
+msgid "Fan Tilt"
+msgstr ""
+
+msgid "Fan Tilt:   "
+msgstr ""
+
+msgid "Favorite Show Folders"
+msgstr ""
+
+msgid "File"
+msgstr ""
+
+msgid "File filter/wildcard for file picker controls"
+msgstr ""
+
+msgid "Filename:"
+msgstr ""
+
+msgid "Fill"
+msgstr ""
+
+msgid "Fill - F"
+msgstr ""
+
+msgid "Fill Colors"
+msgstr ""
+
+msgid "Fills in isolated black pixels surrounded by colored particles. The value is the maximum number of neighboring black pixels allowed before a gap is filled with the average surrounding color."
+msgstr ""
+
+msgid "Filter"
+msgstr ""
+
+msgid "Filter Label"
+msgstr ""
+
+msgid "Filter Label:"
+msgstr ""
+
+msgid "Filter Unsuitable Faces"
+msgstr ""
+
+msgid "Filter by name..."
+msgstr ""
+
+msgid "Filter models"
+msgstr ""
+
+msgid "Filter models and viewpoints"
+msgstr ""
+
+msgid "Filter models..."
+msgstr ""
+
+msgid "Filter sources"
+msgstr ""
+
+msgid "Filter:"
+msgstr ""
+
+msgid "Filters the model pool and dims non-matching models on the controller visualizer. Empty filter = normal view.\n%s"
+msgstr ""
+
+msgid "Find"
+msgstr ""
+
+msgid "Find Color:"
+msgstr ""
+
+msgid "Find Effect Data"
+msgstr ""
+
+msgid "Find Show Folder Dialog"
+msgstr ""
+
+msgid "Find model..."
+msgstr ""
+
+msgid "Finish..."
+msgstr ""
+
+msgid "Fire with music"
+msgstr ""
+
+msgid "Fire with timing track"
+msgstr ""
+
+msgid "First Channel (absolute):"
+msgstr ""
+
+msgid "First Frame"
+msgstr ""
+
+msgid "Fit"
+msgstr ""
+
+msgid "Fit the complete node layout in the window."
+msgstr ""
+
+msgid "Fixed horizontal position for explosions as a percentage of buffer width. Set to -1 for random placement."
+msgstr ""
+
+msgid "Fixed vertical position for explosions as a percentage of buffer height. Set to -1 for random placement."
+msgstr ""
+
+msgid "Fixtures"
+msgstr ""
+
+msgid "Flame Agility"
+msgstr ""
+
+msgid "Flat"
+msgstr ""
+
+msgid "Flip"
+msgstr ""
+
+msgid "Flip Colours"
+msgstr ""
+
+msgid "Flip X"
+msgstr ""
+
+msgid "Flip Y"
+msgstr ""
+
+msgid "Float divisor. Slider stores value*divisor as int, text shows float. 1=int, 10=F1, 100=F2, 360=F360"
+msgstr ""
+
+msgid "Flow"
+msgstr ""
+
+msgid "Flow Matches Music"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "Folder:"
+msgstr ""
+
+msgid "Font"
+msgstr ""
+
+msgid "Font Size"
+msgstr ""
+
+msgid "Font Size:"
+msgstr ""
+
+msgid "Font used for rendering emoji characters when Object to Draw is set to Emoji."
+msgstr ""
+
+msgid "For Implode/Explode modes, meteors fade in brightness based on their distance from center, creating a 3D starfield depth illusion."
+msgstr ""
+
+msgid "For LMS imports, LOR networks should be first followed by DMX starting at universe 1."
+msgstr ""
+
+msgid "Force Custom Colors"
+msgstr ""
+
+msgid "Force High Definition"
+msgstr ""
+
+msgid "Force Local IP"
+msgstr ""
+
+msgid "Foreground"
+msgstr ""
+
+msgid "Foreground - G"
+msgstr ""
+
+msgid "Forked Lightning"
+msgstr ""
+
+msgid "Forum"
+msgstr ""
+
+msgid "Forward"
+msgstr ""
+
+msgid "Found"
+msgstr ""
+
+msgid "Frame Rate Adj"
+msgstr ""
+
+msgid "Frame interval (msec):"
+msgstr ""
+
+msgid "Frequency"
+msgstr ""
+
+msgid "Fret Count"
+msgstr ""
+
+msgid "Friction"
+msgstr ""
+
+msgid "From File"
+msgstr ""
+
+msgid "From Head - Brightest at the start, From Tail - Brightest and the end, Head and Tail - Brightest at both ends, Middle - Brightest in the middle"
+msgstr ""
+
+msgid "From Lyrics"
+msgstr ""
+
+msgid "From Model"
+msgstr ""
+
+msgid "From this preview only"
+msgstr ""
+
+msgid "From time to time xLights has been known to crash and sometimes we need more information from users when that happens to fix the problem.\nTo facilitate this, we would like you to set your email address here.\n\nOur policy regarding this is:\n\n1. Your email address will be stored on your machine ... not ours.\n2. Your email address will be written to the log file each time xLights starts.\n3. If you submit a crash report it will include the logs which will contain your email address.\n4. When xLights crashes and you click the OK button your email address will be included in the upload to our secure crash server.\n5. We won't use your email address for any other reason than contacting you about crashes and that won't be often.\n\nThank you for helping us improve xLights."
+msgstr ""
+
+msgid "Function"
+msgstr ""
+
+msgid "G:"
+msgstr ""
+
+msgid "GBR"
+msgstr ""
+
+msgid "GBRW"
+msgstr ""
+
+msgid "GIF Image, *.gif"
+msgstr ""
+
+msgid "GPU Rendering"
+msgstr ""
+
+msgid "GRB"
+msgstr ""
+
+msgid "GRBW"
+msgstr ""
+
+msgid "Gain"
+msgstr ""
+
+msgid "Gamma"
+msgstr ""
+
+msgid "Gap:"
+msgstr ""
+
+msgid "Garland Type"
+msgstr ""
+
+msgid "Generate"
+msgstr ""
+
+msgid "Generate &Lyrics From Data"
+msgstr ""
+
+msgid "Generate &Moving Head Effects"
+msgstr ""
+
+msgid "Generate 2D Path"
+msgstr ""
+
+msgid "Generate AI Image"
+msgstr ""
+
+msgid "Generate Custom Model"
+msgstr ""
+
+msgid "Generate Custom Models"
+msgstr ""
+
+msgid "Generate Lyrics From Data"
+msgstr ""
+
+msgid "Generate Moving Head Effects"
+msgstr ""
+
+msgid "Generate Node Names"
+msgstr ""
+
+msgid "Generate lyric phenomes from data"
+msgstr ""
+
+msgid "Generate xModel"
+msgstr ""
+
+msgid "Getting ready to upload"
+msgstr ""
+
+msgid "Give me another one"
+msgstr ""
+
+msgid "Glediator File"
+msgstr ""
+
+msgid "Glediator Record File *.gled"
+msgstr ""
+
+msgid "Glediators"
+msgstr ""
+
+msgid "Gradient"
+msgstr ""
+
+msgid "Gradually changes the distance parameter (d) over time, causing the spirograph pattern to morph and evolve as it draws."
+msgstr ""
+
+msgid "Gravity"
+msgstr ""
+
+msgid "Gravity Angle"
+msgstr ""
+
+msgid "Green"
+msgstr ""
+
+msgid "Grid as per preview"
+msgstr ""
+
+msgid "Group All Strands"
+msgstr ""
+
+msgid "Group Already Exists"
+msgstr ""
+
+msgid "Group Center Crosshair Size"
+msgstr ""
+
+msgid "Group Count"
+msgstr ""
+
+msgid "Group Effect Indicator"
+msgstr ""
+
+msgid "Groupings"
+msgstr ""
+
+msgid "Groupings:"
+msgstr ""
+
+msgid "Groups"
+msgstr ""
+
+msgid "Grow"
+msgstr ""
+
+msgid "Grow with music"
+msgstr ""
+
+msgid "Growth"
+msgstr ""
+
+msgid "Growth Cycles"
+msgstr ""
+
+msgid "Guess Missing"
+msgstr ""
+
+msgid "Guess location of missing nodes"
+msgstr ""
+
+msgid "Guessed"
+msgstr ""
+
+msgid "Guessed positions for %d nodes (shown orange). Drag any that look wrong."
+msgstr ""
+
+msgid "H.264"
+msgstr ""
+
+msgid "H.265"
+msgstr ""
+
+msgid "H:"
+msgstr ""
+
+msgid "HD ProRes Video, *.mov"
+msgstr ""
+
+msgid "HLS *.hlsnc"
+msgstr ""
+
+msgid "HLS, Hinkle Lighte Sequencer *.hlsnc"
+msgstr ""
+
+msgid "Half-height of the pattern in tilt degrees."
+msgstr ""
+
+msgid "Half-width of the pattern in pan degrees."
+msgstr ""
+
+msgid "Hardware Video Decoding"
+msgstr ""
+
+msgid "Hash:"
+msgstr ""
+
+msgid "Head Duration"
+msgstr ""
+
+msgid "Head Length"
+msgstr ""
+
+msgid "Head Spread"
+msgstr ""
+
+msgid "Head Spread:"
+msgstr ""
+
+msgid "Height"
+msgstr ""
+
+msgid "Height:"
+msgstr ""
+
+msgid "Hide Color Update Warning"
+msgstr ""
+
+msgid "Hide Preset Previews"
+msgstr ""
+
+msgid "Hide Unmapped"
+msgstr ""
+
+msgid "Hide models assigned to other controllers"
+msgstr ""
+
+msgid "High Note:"
+msgstr ""
+
+msgid "High Quality Compressed Video, *.mp4"
+msgstr ""
+
+msgid "Highest MIDI note number to include in the visualization. Notes above this are ignored."
+msgstr ""
+
+msgid "Highlight"
+msgstr ""
+
+msgid "Highlight\nIntensity"
+msgstr ""
+
+msgid "Highlight Color"
+msgstr ""
+
+msgid "HinksPix Export"
+msgstr ""
+
+msgid "Hold Color"
+msgstr ""
+
+msgid "Hold Particle Color"
+msgstr ""
+
+msgid "Hold color"
+msgstr ""
+
+msgid "Holds the fixture shutter open at the model's Shutter On value for the whole effect. Auto Shutter still takes over when it is active."
+msgstr ""
+
+msgid "Horiz: %.2f"
+msgstr ""
+
+msgid "Horizontal Fade"
+msgstr ""
+
+msgid "Horizontal Offset"
+msgstr ""
+
+msgid "Horizontal Per Model"
+msgstr ""
+
+msgid "Horizontal Per Model/Strand"
+msgstr ""
+
+msgid "Horizontal Slices"
+msgstr ""
+
+msgid "Horizontal Stack"
+msgstr ""
+
+msgid "Horizontal Stack - Scaled"
+msgstr ""
+
+msgid "Horizontal center of the shockwave ring as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal drift applied to all particles. Positive values push particles to the right, negative to the left."
+msgstr ""
+
+msgid "Horizontal ending position for vector movement mode. The text moves from the start position to this position over the effect duration."
+msgstr ""
+
+msgid "Horizontal offset for the ending position of the face image when using the vector movement mode. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Horizontal offset for the ending position of the image when using the vector movement mode."
+msgstr ""
+
+msgid "Horizontal offset for the starting position of the face image, as a percentage of the model width. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Horizontal offset for the starting position of the image, as a percentage of the model width."
+msgstr ""
+
+msgid "Horizontal offset of the bolt's starting point relative to center. Negative values shift left, positive shift right."
+msgstr ""
+
+msgid "Horizontal offset of the marquee center. Shifts the entire marquee rectangle left or right."
+msgstr ""
+
+msgid "Horizontal offset of the shader viewport as a percentage. Only active for shaders that consume iResolution / coordinate uniforms."
+msgstr ""
+
+msgid "Horizontal pixel offset applied to the entire bar display, shifting the visualization left or right on the model."
+msgstr ""
+
+msgid "Horizontal position of particle source 1 as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of particle source 2 as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of particle source 3 as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of particle source 4 as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of the fan center as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of the galaxy center as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of the kaleidoscope center point as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal position of the pinwheel center as a percentage offset from the model center."
+msgstr ""
+
+msgid "Horizontal position of the ripple center as a percentage offset from the model center."
+msgstr ""
+
+msgid "Horizontal position of the warp center point or focal area, as a percentage of the buffer width."
+msgstr ""
+
+msgid "Horizontal spawn position for shapes as a percentage of the model width, when random location is disabled."
+msgstr ""
+
+msgid "Horizontal starting position of the text. Used as the origin for vector movement or as a static offset when movement is none."
+msgstr ""
+
+msgid "House Preview"
+msgstr ""
+
+msgid "How active strings are drawn. On fills a solid band for each string; Wave draws a sine wave oscillation simulating a vibrating string."
+msgstr ""
+
+msgid "How colors from the palette are applied. Distinct assigns color bands by position within each bar, Blend smoothly interpolates between palette colors, and Cycle rotates through colors for each successive music event."
+msgstr ""
+
+msgid "How do you want to build this model?"
+msgstr ""
+
+msgid "How far the fill extends across the buffer as a percentage. Typically animated with a value curve to create a filling or emptying motion."
+msgstr ""
+
+msgid "How fast the face image moves in the chosen direction. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "How fast the garland lights sweep across each branch row. Higher values make the animation cycle faster."
+msgstr ""
+
+msgid "How fast the image moves in the chosen direction. Higher values make the image scroll or animate more quickly."
+msgstr ""
+
+msgid "How fast the line points move across the model. Points bounce off the edges when they reach the boundary."
+msgstr ""
+
+msgid "How fast the marquee pattern moves around the perimeter. Zero freezes the animation."
+msgstr ""
+
+msgid "How fast the meteors travel across the model. Higher values make meteors move more pixels per frame."
+msgstr ""
+
+msgid "How fast the plasma pattern animates and flows. Higher values make the waves move more quickly."
+msgstr ""
+
+msgid "How fast the tendril head moves along its chosen path. Higher values make the tendril traverse its pattern more quickly."
+msgstr ""
+
+msgid "How fast the text scrolls across the model. Higher values produce faster movement."
+msgstr ""
+
+msgid "How fast the wave scrolls horizontally across the model. Higher values create faster-moving waves."
+msgstr ""
+
+msgid "How long each automatic eye blink lasts when Eyes is set to Auto. Longer durations keep the eyes closed for more frames per blink."
+msgstr ""
+
+msgid "How long each particle lives before disappearing, in hundredths of seconds. A value of 1000 means particles last about 10 seconds. Zero means particles live for the entire effect duration."
+msgstr ""
+
+msgid "How long each ripple cycle lasts in milliseconds after a timing mark fires. Only active when a Timing Track is selected."
+msgstr ""
+
+msgid "How long each shape lives as a percentage of the total effect duration. After this time the shape is removed and a new one may be spawned."
+msgstr ""
+
+msgid "How long each shockwave ring expansion lasts in milliseconds after a timing mark fires. Only active when a Timing Track is selected."
+msgstr ""
+
+msgid "How long particles remain visible before fading out. Higher values make particles last longer."
+msgstr ""
+
+msgid "How long to run the simulation before the first visible frame, in hundredths of seconds (e.g. 100 = 1 second, 500 = 5 seconds). This lets particles settle into a natural state before the effect begins. Frame-rate independent."
+msgstr ""
+
+msgid "How many frames each strobe flash remains visible before fading out. Higher values make flashes linger longer."
+msgstr ""
+
+msgid "How many strobe flashes are active at the same time. Higher values create a denser strobe field."
+msgstr ""
+
+msgid "How much each node is influenced by the velocity of its predecessor. Higher values make the tendril body follow the head more closely."
+msgstr ""
+
+msgid "How much of the spirograph curve is drawn each frame, measured in degrees. Higher values draw more of the pattern, creating a longer visible trail."
+msgstr ""
+
+msgid "How much the wavelength varies between strings. Higher values make lower-pitched strings wave more slowly than higher strings."
+msgstr ""
+
+msgid "How often automatic eye blinks occur when Eyes is set to Auto. Faster settings produce more frequent blinking."
+msgstr ""
+
+msgid "How often the blink happens."
+msgstr ""
+
+msgid "How the area below the wave is filled. None leaves it empty, Rainbow fills with a hue gradient, and Palette fills using the effect color palette."
+msgstr ""
+
+msgid "How the face image is resized to fit the model when the face type is Matrix. Default (from face) uses the scaling mode defined on the face definition itself."
+msgstr ""
+
+msgid "How the image is resized to fit the model. No Scaling uses the original pixel size, Scale To Fit stretches to fill, and the aspect ratio options preserve proportions with or without cropping."
+msgstr ""
+
+msgid "How the video duration maps to the effect duration. Normal plays at native speed, Loop repeats the video, Slow/Accelerate stretches or compresses playback to fit, and Manual allows explicit speed control."
+msgstr ""
+
+msgid "How to handle timing when the file length differs from the effect duration. Normal stops at the end, Loop restarts from the beginning, Slow/Accelerate stretches or compresses playback to fit."
+msgstr ""
+
+msgid "Hue Shift"
+msgstr ""
+
+msgid "Human-readable label"
+msgstr ""
+
+msgid "IP Address:"
+msgstr ""
+
+msgid "IPM_TREE"
+msgstr ""
+
+msgid "If entered, these labels will be used to populate the timing track"
+msgstr ""
+
+msgid "If you are using unicast and not using #universe:startchannel addressing then this check can be disabled."
+msgstr ""
+
+msgid "If you only use controllers that support virtual strings then this check can be safely disabled."
+msgstr ""
+
+msgid "Ignore Pan"
+msgstr ""
+
+msgid "Ignore Tilt"
+msgstr ""
+
+msgid "Ignore this version"
+msgstr ""
+
+msgid "Ignore vendor model recommendations"
+msgstr ""
+
+msgid "Illegal combination of files. Load of zip file will take priority.\n"
+msgstr ""
+
+msgid "Image Capture Error"
+msgstr ""
+
+msgid "Image Placement:"
+msgstr ""
+
+msgid "Image Resizing:"
+msgstr ""
+
+msgid "Image Size:"
+msgstr ""
+
+msgid "Image file selection: Select / AI Generate / Clear buttons, animated preview thumbnail, filename label, and a hidden text control that holds the actual path so the saved E_TEXTCTRL_Pictures_Filename round-trips."
+msgstr ""
+
+msgid "Image offset (cells):"
+msgstr ""
+
+msgid "Images"
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Import Data (Optional):"
+msgstr ""
+
+msgid "Import Effects"
+msgstr ""
+
+msgid "Import From Controller"
+msgstr ""
+
+msgid "Import LOR S5 Models/Groups"
+msgstr ""
+
+msgid "Import Media"
+msgstr ""
+
+msgid "Import Model Blend Mode"
+msgstr ""
+
+msgid "Import Previews, Models and Viewpoints"
+msgstr ""
+
+msgid "Import Previews/Models/Groups/Viewpoints"
+msgstr ""
+
+msgid "Import SubModels"
+msgstr ""
+
+msgid "Import Timings"
+msgstr ""
+
+msgid "Import Zones..."
+msgstr ""
+
+msgid "Import from Model"
+msgstr ""
+
+msgid "Import matrix face definitions into the sequence (embedded)"
+msgstr ""
+
+msgid "Import presets from another file."
+msgstr ""
+
+msgid "Import..."
+msgstr ""
+
+msgid "Imported From:"
+msgstr ""
+
+msgid "In Model Set"
+msgstr ""
+
+msgid "In sections with Peak ticked, the all-heads burst plays on the bar after the section starts (which opens with a sweep) and then every N bars. 1 = every bar."
+msgstr ""
+
+msgid "Include Submodels"
+msgstr ""
+
+msgid "Include empty model groups"
+msgstr ""
+
+msgid "Info / Media"
+msgstr ""
+
+msgid "Initial offset position for the marquee pattern along the perimeter, allowing the starting point to be adjusted."
+msgstr ""
+
+msgid "Initial rotation angle of the spiral arm in degrees."
+msgstr ""
+
+msgid "Initial size of each shape when it first appears. The shape then grows or shrinks according to the Growth setting over its lifetime."
+msgstr ""
+
+msgid "Initial speed of particles emitted from source 1. Higher values launch particles faster in the emission direction."
+msgstr ""
+
+msgid "Initial speed of particles emitted from source 2. Higher values launch particles faster in the emission direction."
+msgstr ""
+
+msgid "Initial speed of particles emitted from source 3. Higher values launch particles faster in the emission direction."
+msgstr ""
+
+msgid "Initial speed of particles emitted from source 4. Higher values launch particles faster in the emission direction."
+msgstr ""
+
+msgid "Inner radius of the fan blades. Pixels closer to the center than this are not drawn."
+msgstr ""
+
+msgid "Inner radius of the spiral arm at the center of the galaxy."
+msgstr ""
+
+msgid "Inputs and Outputs"
+msgstr ""
+
+msgid "Insert Face"
+msgstr ""
+
+msgid "Insert Model"
+msgstr ""
+
+msgid "Insert text here"
+msgstr ""
+
+msgid "Intensity"
+msgstr ""
+
+msgid "Intensity - I"
+msgstr ""
+
+msgid "Interface language (restart required):"
+msgstr ""
+
+msgid "Intermediate"
+msgstr ""
+
+msgid "Interpolates a position for each still-missing node from its nearest found neighbours on the string."
+msgstr ""
+
+msgid "Inv"
+msgstr ""
+
+msgid "Invalid Name"
+msgstr ""
+
+msgid "Invert"
+msgstr ""
+
+msgid "Invert Colors For Printing"
+msgstr ""
+
+msgid "Inverted Music"
+msgstr ""
+
+msgid "Inward"
+msgstr ""
+
+msgid "Issue Tracker"
+msgstr ""
+
+msgid "Item"
+msgstr ""
+
+msgid "Item label"
+msgstr ""
+
+msgid "Jaw Servo"
+msgstr ""
+
+msgid "Jukebox"
+msgstr ""
+
+msgid "Kaleidoscope Type"
+msgstr ""
+
+msgid "Keep Open"
+msgstr ""
+
+msgid "Key Bindings"
+msgstr ""
+
+msgid "Key bindings"
+msgstr ""
+
+msgid "L"
+msgstr ""
+
+msgid "LOR Import Options"
+msgstr ""
+
+msgid "LOR Sequence *.las or *.lms"
+msgstr ""
+
+msgid "LOR. *.lms or *.las"
+msgstr ""
+
+msgid "LSP, Light Show Pro "
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Label Color:"
+msgstr ""
+
+msgid "Label Size:"
+msgstr ""
+
+msgid "Label when no map entry matches"
+msgstr ""
+
+msgid "Label:"
+msgstr ""
+
+msgid "Large"
+msgstr ""
+
+msgid "Large custom models with largely empty cells generate significant rendering overhead. You may want to consider shrinking the custom model dimensions if this can done without too significantly adversely affecting appearance."
+msgstr ""
+
+msgid "Last Frame"
+msgstr ""
+
+msgid "Layer"
+msgstr ""
+
+msgid "Layer Blend:"
+msgstr ""
+
+msgid "Layer Blending"
+msgstr ""
+
+msgid "Layer Settings"
+msgstr ""
+
+msgid "Layer:"
+msgstr ""
+
+msgid "Layers"
+msgstr ""
+
+msgid "Layout"
+msgstr ""
+
+msgid "Layout Tab"
+msgstr ""
+
+msgid "Lcb, LOR Clipboard *.lcb"
+msgstr ""
+
+msgid "Lcb, LOR S5 Clipboard *.lcb"
+msgstr ""
+
+msgid "Lcb, LOR clipboard *.lcb"
+msgstr ""
+
+msgid "Lead In/Out Frames"
+msgstr ""
+
+msgid "Lead in frames"
+msgstr ""
+
+msgid "Leaf"
+msgstr ""
+
+msgid "LedBlinky Animation *.lwax"
+msgstr ""
+
+msgid "Lef"
+msgstr ""
+
+msgid "Left"
+msgstr ""
+
+msgid "Left Barrier"
+msgstr ""
+
+msgid "Left half, then right half"
+msgstr ""
+
+msgid "LegalText"
+msgstr ""
+
+msgid "Length"
+msgstr ""
+
+msgid "Length of each arm as a percentage of the maximum radius. Values above 100 extend the arms beyond the model edges."
+msgstr ""
+
+msgid "Length of each lit chase segment as a percentage of the total strand length."
+msgstr ""
+
+msgid "Length of the colored head at the end of the morph. The head length transitions from the start value to this value as the morph progresses."
+msgstr ""
+
+msgid "Length of the colored head at the start of the morph. This value blends with the end head length as the morph progresses."
+msgstr ""
+
+msgid "Length of the fading trail behind each meteor. Higher values create longer tails that fade more gradually."
+msgstr ""
+
+msgid "Lifetime"
+msgstr ""
+
+msgid "Light All (aim camera)"
+msgstr ""
+
+msgid "Lighting node %u"
+msgstr ""
+
+msgid "Lights node 1 at increasing levels and picks the lowest brightness the camera can reliably see, plus a safety margin."
+msgstr ""
+
+msgid "Line"
+msgstr ""
+
+msgid "Line Count"
+msgstr ""
+
+msgid "Line Density"
+msgstr ""
+
+msgid "Line thickness in pixels used when drawing the sketch."
+msgstr ""
+
+msgid "Line thickness used to draw the outline of each shape. Higher values produce bolder outlines."
+msgstr ""
+
+msgid "Line2"
+msgstr ""
+
+msgid "Linear Fade"
+msgstr ""
+
+msgid "Lines"
+msgstr ""
+
+msgid "Link"
+msgstr ""
+
+msgid "Link Points"
+msgstr ""
+
+msgid "Link as Set"
+msgstr ""
+
+msgid "Link as Set..."
+msgstr ""
+
+msgid "Link controller upload:"
+msgstr ""
+
+msgid "Link effect"
+msgstr ""
+
+msgid "Link end position to next Moving Head effect"
+msgstr ""
+
+msgid "Link end position to next Moving Head effect\n(forces Dimmer to 0 at end)"
+msgstr ""
+
+msgid "Lissajous"
+msgstr ""
+
+msgid "Lissajous only: pan-axis frequency multiplier."
+msgstr ""
+
+msgid "Lissajous only: pan-axis phase in degrees."
+msgstr ""
+
+msgid "Lissajous only: tilt-axis frequency multiplier."
+msgstr ""
+
+msgid "Lissajous only: tilt-axis phase in degrees."
+msgstr ""
+
+msgid "List of property ids; rule triggers if ANY are true/checked"
+msgstr ""
+
+msgid "List of values, any of which matches"
+msgstr ""
+
+msgid "List of values; matches when the property value is NOT among them"
+msgstr ""
+
+msgid "Load"
+msgstr ""
+
+msgid "Load\nImage"
+msgstr ""
+
+msgid "Load From State"
+msgstr ""
+
+msgid "Load Map"
+msgstr ""
+
+msgid "Load Mapping"
+msgstr ""
+
+msgid "Load Test Settings"
+msgstr ""
+
+msgid "Loading dictionaries ..."
+msgstr ""
+
+msgid "Loading read only sequence "
+msgstr ""
+
+msgid "Loading sequence "
+msgstr ""
+
+msgid "Loading show..."
+msgstr ""
+
+msgid "Local"
+msgstr ""
+
+msgid "Location"
+msgstr ""
+
+msgid "Lock effects on import"
+msgstr ""
+
+msgid "Lock/Unlock. If Locked then a \"Create Random Effects\" will NOT change this value."
+msgstr ""
+
+msgid "Locked Effects Only"
+msgstr ""
+
+msgid "Locked Only"
+msgstr ""
+
+msgid "Log Render State"
+msgstr ""
+
+msgid "Logarithmic Down"
+msgstr ""
+
+msgid "Logarithmic Up"
+msgstr ""
+
+msgid "Logarithmic X axis"
+msgstr ""
+
+msgid "Loop Animated GIF"
+msgstr ""
+
+msgid "Loop effect playback"
+msgstr ""
+
+msgid "Lossless RGB Video, *.mov"
+msgstr ""
+
+msgid "Loud"
+msgstr ""
+
+msgid "Low Definition Render"
+msgstr ""
+
+msgid "LowNote:"
+msgstr ""
+
+msgid "Lowest MIDI note number to include in the visualization. Notes below this are ignored."
+msgstr ""
+
+msgid "Lynx Conductor, *.seq"
+msgstr ""
+
+msgid "MBP"
+msgstr ""
+
+msgid "MH Preset file to save"
+msgstr ""
+
+msgid "MH1_Settings"
+msgstr ""
+
+msgid "MH2_Settings"
+msgstr ""
+
+msgid "MH3_Settings"
+msgstr ""
+
+msgid "MH4_Settings"
+msgstr ""
+
+msgid "MH5_Settings"
+msgstr ""
+
+msgid "MH6_Settings"
+msgstr ""
+
+msgid "MH7_Settings"
+msgstr ""
+
+msgid "MH8_Settings"
+msgstr ""
+
+msgid "MHPathDef"
+msgstr ""
+
+msgid "MIDI File"
+msgstr ""
+
+msgid "MISSED"
+msgstr ""
+
+msgid "MPEG-4"
+msgstr ""
+
+msgid "Main"
+msgstr ""
+
+msgid "Main Sequencer"
+msgstr ""
+
+msgid "Main Tool Bar"
+msgstr ""
+
+msgid "Maintain Aspect Ratio"
+msgstr ""
+
+msgid "Makes each circle fade from full brightness at the center to dark at the edge, creating a soft glow effect instead of a solid fill."
+msgstr ""
+
+msgid "Makes the palette wrap around by blending the last color back into the first, creating a seamless continuous color loop instead of stopping at the last color."
+msgstr ""
+
+msgid "Manage Set"
+msgstr ""
+
+msgid "Manage reusable effect symbols"
+msgstr ""
+
+msgid "Manage..."
+msgstr ""
+
+msgid "Manual"
+msgstr ""
+
+msgid "Manual Identify"
+msgstr ""
+
+msgid "Manual X"
+msgstr ""
+
+msgid "Manual Y"
+msgstr ""
+
+msgid "Manually sets the horizontal target position for the tendril head when movement is set to Manual. Use with a value curve to animate the path."
+msgstr ""
+
+msgid "Manually sets the vertical target position for the tendril head when movement is set to Manual. Use with a value curve to animate the path."
+msgstr ""
+
+msgid "Map CCR/Strand"
+msgstr ""
+
+msgid "Map Channels"
+msgstr ""
+
+msgid "Map Empty LMS Channels:"
+msgstr ""
+
+msgid "Map From"
+msgstr ""
+
+msgid "Map LMS Channels with no network"
+msgstr ""
+
+msgid "Map LMS Channels with no network:"
+msgstr ""
+
+msgid "Map To"
+msgstr ""
+
+msgid "Map by Strand/CCR"
+msgstr ""
+
+msgid "Map effects to other elements"
+msgstr ""
+
+msgid "Mapping '%s' - measuring baseline (all lights off)..."
+msgstr ""
+
+msgid "Mapping complete: %d of %u nodes located, %d missing. Retry or click the video to place missing nodes, drag dots to fix, then Finish."
+msgstr ""
+
+msgid "Mapping node %u of %u..."
+msgstr ""
+
+msgid "Mapping node %u of %u... (last node %s)"
+msgstr ""
+
+msgid "Mapping stopped: %d nodes located so far."
+msgstr ""
+
+msgid "Master"
+msgstr ""
+
+msgid "Matches when the property value begins with this prefix"
+msgstr ""
+
+msgid "Matrix"
+msgstr ""
+
+msgid "Max Grid Size:"
+msgstr ""
+
+msgid "Max flakes"
+msgstr ""
+
+msgid "Maximum Render Cache Size:"
+msgstr ""
+
+msgid "Maximum length of the fading trail behind each particle. Longer trails create streaky, wind-blown looks."
+msgstr ""
+
+msgid "Maximum number of channels to adjust. A value of 0 means adjust all matching channels with no limit."
+msgstr ""
+
+msgid "Maximum number of frets on the instrument neck. Higher fret notes are drawn shorter across the buffer width."
+msgstr ""
+
+msgid "Maximum number of snowflakes visible on the buffer at the same time."
+msgstr ""
+
+msgid "Maximum speed of particles as they fly outward from the explosion center. Higher values create larger bursts."
+msgstr ""
+
+msgid "Maximum value for numeric types"
+msgstr ""
+
+msgid "Media"
+msgstr ""
+
+msgid "Media File"
+msgstr ""
+
+msgid "Media File must be selected or change to animation!"
+msgstr ""
+
+msgid "Media Import Options"
+msgstr ""
+
+msgid "Media/Resource Directories"
+msgstr ""
+
+msgid "Media:"
+msgstr ""
+
+msgid "Medium"
+msgstr ""
+
+msgid "Merge source's groups into destination's groups"
+msgstr ""
+
+msgid "Message"
+msgstr ""
+
+msgid "Meta Data"
+msgstr ""
+
+msgid "Metronome"
+msgstr ""
+
+msgid "Metronome Timing(ms)"
+msgstr ""
+
+msgid "Metronome w/ Tags"
+msgstr ""
+
+msgid "Midi Note Range"
+msgstr ""
+
+msgid "Milliseconds to add to the beginning of the sequence"
+msgstr ""
+
+msgid "Milliseconds to add to the ending of the sequence"
+msgstr ""
+
+msgid "Min Timing (ms)"
+msgstr ""
+
+msgid "Minimal Grid"
+msgstr ""
+
+msgid "Minimum Separation"
+msgstr ""
+
+msgid "Minimum Tip Level"
+msgstr ""
+
+msgid "Minimum milliseconds per timing mark"
+msgstr ""
+
+msgid "Minimum value for numeric types"
+msgstr ""
+
+msgid "Minleon Network Effects Controller, *.bin"
+msgstr ""
+
+msgid "Mirror Wave"
+msgstr ""
+
+msgid "Missing"
+msgstr ""
+
+msgid "Mix Colors"
+msgstr ""
+
+msgid "Mixed Colors"
+msgstr ""
+
+msgid "Mode"
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "Model Aliases"
+msgstr ""
+
+msgid "Model Definitions"
+msgstr ""
+
+msgid "Model Definitions - %s"
+msgstr ""
+
+msgid "Model Display:"
+msgstr ""
+
+msgid "Model Group Name:"
+msgstr ""
+
+msgid "Model Groups"
+msgstr ""
+
+msgid "Model Handle Size"
+msgstr ""
+
+msgid "Model Preview"
+msgstr ""
+
+msgid "Model Scale"
+msgstr ""
+
+msgid "Model Set contains a locked or base show model - unlock it (or remove the base model from the Set) to move the Set (Alt-drag moves a single model)."
+msgstr ""
+
+msgid "Model Size:"
+msgstr ""
+
+msgid "Model Type"
+msgstr ""
+
+msgid "Model details:"
+msgstr ""
+
+msgid "Model renaming alias behavior:"
+msgstr ""
+
+msgid "Model to Export"
+msgstr ""
+
+msgid "Model/Layer/Time"
+msgstr ""
+
+msgid "Model:"
+msgstr ""
+
+msgid "Models"
+msgstr ""
+
+msgid "Models from the base show folder can't be in a Set with this show's own models - the base folder can move its models without moving the rest of the Set."
+msgstr ""
+
+msgid "Models in Group:"
+msgstr ""
+
+msgid "Models will be uploaded"
+msgstr ""
+
+msgid "Modify Text then hit OK"
+msgstr ""
+
+msgid "More Options >>"
+msgstr ""
+
+msgid "Motion"
+msgstr ""
+
+msgid "Motion Percentage"
+msgstr ""
+
+msgid "Mouse Marker Position"
+msgstr ""
+
+msgid "Mouth - AI"
+msgstr ""
+
+msgid "Mouth - AI 2"
+msgstr ""
+
+msgid "Mouth - E"
+msgstr ""
+
+msgid "Mouth - E 2"
+msgstr ""
+
+msgid "Mouth - FV"
+msgstr ""
+
+msgid "Mouth - FV 2"
+msgstr ""
+
+msgid "Mouth - L"
+msgstr ""
+
+msgid "Mouth - L 2"
+msgstr ""
+
+msgid "Mouth - MBP"
+msgstr ""
+
+msgid "Mouth - MBP 2"
+msgstr ""
+
+msgid "Mouth - O"
+msgstr ""
+
+msgid "Mouth - O 2"
+msgstr ""
+
+msgid "Mouth - U"
+msgstr ""
+
+msgid "Mouth - U 2"
+msgstr ""
+
+msgid "Mouth - WQ"
+msgstr ""
+
+msgid "Mouth - WQ 2"
+msgstr ""
+
+msgid "Mouth - etc"
+msgstr ""
+
+msgid "Mouth - etc 2"
+msgstr ""
+
+msgid "Mouth - rest"
+msgstr ""
+
+msgid "Mouth - rest 2"
+msgstr ""
+
+msgid "Mouth Movements"
+msgstr ""
+
+msgid "Mouth:"
+msgstr ""
+
+msgid "Move Down"
+msgstr ""
+
+msgid "Move Up"
+msgstr ""
+
+msgid "Move image down"
+msgstr ""
+
+msgid "Move image left"
+msgstr ""
+
+msgid "Move image right"
+msgstr ""
+
+msgid "Move image up"
+msgstr ""
+
+msgid "Move to Top of List"
+msgstr ""
+
+msgid "Move to center"
+msgstr ""
+
+msgid "Move to center and stop"
+msgstr ""
+
+msgid "Move-into-position time (ms):"
+msgstr ""
+
+msgid "Movement"
+msgstr ""
+
+msgid "Movement Speed"
+msgstr ""
+
+msgid "Moves all files into or under the show folder."
+msgstr ""
+
+msgid "Moving Head Adv - Position Zones"
+msgstr ""
+
+msgid "Moving head models (ordered left to right by layout position):"
+msgstr ""
+
+msgid "Multiplier for the playback speed of animated GIF face images. Values above 1.0 speed up the animation. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Multiplier for the playback speed of animated GIF frames. Values above 1.0 speed up the animation, values below 1.0 slow it down."
+msgstr ""
+
+msgid "Music"
+msgstr ""
+
+msgid "Music Link:"
+msgstr ""
+
+msgid "Music Trigger Fade"
+msgstr ""
+
+msgid "Music URL:"
+msgstr ""
+
+msgid "Music XML File"
+msgstr ""
+
+msgid "N/A"
+msgstr ""
+
+msgid "NOTE: Models are provided by the vendors, not by xLights. They are free to use in your layout, but the designs are copyrighted and not licensed for recreation or public distribution."
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Name already exists. Do you want to overwrite it?"
+msgstr ""
+
+msgid "Name for the new Set:"
+msgstr ""
+
+msgid "Name for this show folder:"
+msgstr ""
+
+msgid "Name:"
+msgstr ""
+
+msgid "Never"
+msgstr ""
+
+msgid "New"
+msgstr ""
+
+msgid "New\nImage"
+msgstr ""
+
+msgid "New Sequence"
+msgstr ""
+
+msgid "New Sequence\tCtrl-n"
+msgstr ""
+
+msgid "New Set name:"
+msgstr ""
+
+msgid "New Timing"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid "Next effect is not a Moving Head effect"
+msgstr ""
+
+msgid "Next match"
+msgstr ""
+
+msgid "No Base Show Directory"
+msgstr ""
+
+msgid "No ONVIF cameras were found on the network.\nYou can still enter a stream URL manually."
+msgstr ""
+
+msgid "No Thanks"
+msgstr ""
+
+msgid "No active heads"
+msgstr ""
+
+msgid "No base show directory"
+msgstr ""
+
+msgid "No camera image"
+msgstr ""
+
+msgid "No effect selected."
+msgstr ""
+
+msgid "No effects could be generated from the selected timing tracks. Nothing was changed."
+msgstr ""
+
+msgid "No files matched pattern "
+msgstr ""
+
+msgid "No following Moving Head effect on this row"
+msgstr ""
+
+msgid "No marks found in that track."
+msgstr ""
+
+msgid "No moving head models are in this sequence."
+msgstr ""
+
+msgid "No moving head models selected. Only moving heads that are in the sequence (Master View) can be used."
+msgstr ""
+
+msgid "No sections track selected - every bar will be treated as a verse bar."
+msgstr ""
+
+msgid "Nod Servo"
+msgstr ""
+
+msgid "Node"
+msgstr ""
+
+msgid "Node %d placed manually."
+msgstr ""
+
+msgid "Node Animation"
+msgstr ""
+
+msgid "Node Count"
+msgstr ""
+
+msgid "Node Layout"
+msgstr ""
+
+msgid "Node Names"
+msgstr ""
+
+msgid "Node Offsets From First Channel"
+msgstr ""
+
+msgid "Node Ranges"
+msgstr ""
+
+msgid "Node Values"
+msgstr ""
+
+msgid "Node/Channel Count"
+msgstr ""
+
+msgid "Nodes"
+msgstr ""
+
+msgid "Nodes - Automatic"
+msgstr ""
+
+msgid "Nodes - Manual"
+msgstr ""
+
+msgid "Non-Text data in clipboard."
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "None (Absolute)"
+msgstr ""
+
+msgid "None of the selected models can take moving head effects (check each model's fixture number is 1-8)."
+msgstr ""
+
+msgid "Normal"
+msgstr ""
+
+msgid "Not added: "
+msgstr ""
+
+msgid "Not listed because they are not in this sequence (add them in the sequence's Display Elements / Master View): %s"
+msgstr ""
+
+msgid "Not sent"
+msgstr ""
+
+msgid "Not started"
+msgstr ""
+
+msgid "Not uploaded"
+msgstr ""
+
+msgid "Note: r should be <= R"
+msgstr ""
+
+msgid "Notebook with three tabs (Channels 1-16, 17-32, 33-48). Each tab contains 16 rows of: channel label + slider + value curve + text buddy + invert checkbox. Channel values are serialized as E_SLIDER_DMX<N> (0-255), value curves as E_VALUECURVE_DMX<N>, and invert flags as E_CHECKBOX_INVDMX<N>. Channel labels are driven by the target model's node names via SetPanelStatus, and out-of-range channels are disabled based on the model's channel count."
+msgstr ""
+
+msgid "Notes"
+msgstr ""
+
+msgid "Notes Scaling"
+msgstr ""
+
+msgid "Notes Source"
+msgstr ""
+
+msgid "Nothing to send"
+msgstr ""
+
+msgid "Nth Channel"
+msgstr ""
+
+msgid "Number Branches"
+msgstr ""
+
+msgid "Number Chases"
+msgstr ""
+
+msgid "Number Strobes"
+msgstr ""
+
+msgid "Number of Advances"
+msgstr ""
+
+msgid "Number of Circles"
+msgstr ""
+
+msgid "Number of Explosions"
+msgstr ""
+
+msgid "Number of Motion Meshs"
+msgstr ""
+
+msgid "Number of Segments"
+msgstr ""
+
+msgid "Number of Servos"
+msgstr ""
+
+msgid "Number of Static Meshs"
+msgstr ""
+
+msgid "Number of Waves"
+msgstr ""
+
+msgid "Number of bars or segments displayed in bar-based VU meter types. Controls the resolution of the frequency or level display."
+msgstr ""
+
+msgid "Number of blades evenly spaced around the fan."
+msgstr ""
+
+msgid "Number of blank (black) pixels between each colored band. Only applies when Band Size is greater than zero."
+msgstr ""
+
+msgid "Number of chases within the string, may overlap if chase size is greater than can fit."
+msgstr ""
+
+msgid "Number of colored arms radiating from the center of the pinwheel. Each arm uses the next color from the palette."
+msgstr ""
+
+msgid "Number of colored sub-elements within each blade. Each element uses the next palette color."
+msgstr ""
+
+msgid "Number of complete chase traversals over the effect duration. Higher values make the chase move faster."
+msgstr ""
+
+msgid "Number of complete ripple animation cycles over the effect duration. Higher values repeat the expand/contract motion more times."
+msgstr ""
+
+msgid "Number of concentric marquee rings drawn inward from the outer edge. Each ring is offset by one pixel toward the center."
+msgstr ""
+
+msgid "Number of concentric ripple rings displayed simultaneously. More ripples create a denser wave pattern."
+msgstr ""
+
+msgid "Number of consecutive lit pixels in each color band of the marquee pattern."
+msgstr ""
+
+msgid "Number of consecutive lit pixels in each colored band of the skip pattern."
+msgstr ""
+
+msgid "Number of control points per line. Lines are drawn between consecutive points, so more points create multi-segment polylines."
+msgstr ""
+
+msgid "Number of fixture groupings for fan offset distribution. Fixtures within the same group share the same pan/tilt, with fan offsets applied between groups."
+msgstr ""
+
+msgid "Number of frames for a complete twinkle cycle (fade up then fade down). Lower values create faster, snappier twinkles; higher values create slow, gentle fades."
+msgstr ""
+
+msgid "Number of frames to fade in before the first phoneme and fade out after the last phoneme on the timing track. Creates smoother transitions at the start and end of singing."
+msgstr ""
+
+msgid "Number of frames to pre-render before the effect starts, allowing time-based shaders to reach a desired visual state at the beginning of the effect."
+msgstr ""
+
+msgid "Number of full movement cycles to complete over the effect duration. Controls how many times a pathing animation repeats."
+msgstr ""
+
+msgid "Number of full revolutions the spiral arm wraps around the center. More revolutions create a tighter spiral. settingPrefix:SLIDER because GalaxyEffect::Render calls GetValueCurveInt which reads SLIDER_<id> as a raw pre-divisor int and divides inside ValueCurve."
+msgstr ""
+
+msgid "Number of horizontal branch rows on the tree. The buffer height is divided evenly among branches, with garland lights sweeping across each row."
+msgstr ""
+
+msgid "Number of independent line objects drawn on the model. Each line uses the next color from the palette."
+msgstr ""
+
+msgid "Number of new meteors spawned per frame. Higher values create a denser shower of meteors."
+msgstr ""
+
+msgid "Number of new particles created per frame from source 1. Higher values produce a denser stream of particles."
+msgstr ""
+
+msgid "Number of new particles created per frame from source 2. Higher values produce a denser stream of particles."
+msgstr ""
+
+msgid "Number of new particles created per frame from source 3. Higher values produce a denser stream of particles."
+msgstr ""
+
+msgid "Number of new particles created per frame from source 4. Higher values produce a denser stream of particles."
+msgstr ""
+
+msgid "Number of nodes in the tendril chain. More nodes create a longer, more flowing tendril."
+msgstr ""
+
+msgid "Number of on/off shimmer cycles over the duration of the effect. Higher values produce faster flickering."
+msgstr ""
+
+msgid "Number of parallel copies of the morph drawn alongside the original. Creates multiple evenly-spaced morph lines across the model."
+msgstr ""
+
+msgid "Number of parallel tendril strands drawn. Each trail has a slightly different spring constant, creating a ribbon-like appearance."
+msgstr ""
+
+msgid "Number of particles created in each explosion. More particles create denser, more dramatic bursts."
+msgstr ""
+
+msgid "Number of points for star, polygon, and snowflake shapes. Only applies when one of those shapes is selected."
+msgstr ""
+
+msgid "Number of points on star shapes. Only applies when the Object to Draw is set to Star."
+msgstr ""
+
+msgid "Number of shape instances spawned simultaneously on the model."
+msgstr ""
+
+msgid "Number of simulation frames to run before the effect starts rendering. This pre-fills the buffer so falling snowflakes appear mid-flight from the first visible frame."
+msgstr ""
+
+msgid "Number of simulation frames to run before the first visible frame, so the effect starts with meteors already in flight rather than an empty screen."
+msgstr ""
+
+msgid "Number of simultaneous chase segments running across the strand."
+msgstr ""
+
+msgid "Number of snowstorm particles wandering across the buffer. Each particle leaves a fading trail behind it."
+msgstr ""
+
+msgid "Number of times a band wraps around the matrix"
+msgstr ""
+
+msgid "Number of times each spiral arm wraps around the model from bottom to top. Negative values reverse the wrap direction. Larger absolute values produce tighter spirals."
+msgstr ""
+
+msgid "Number of times the bars scroll completely across the model during the effect. Higher values make the bars move faster."
+msgstr ""
+
+msgid "Number of times the fire height oscillates (grows and shrinks) over the effect duration. Zero means no oscillation."
+msgstr ""
+
+msgid "Number of times the full color palette is repeated across the spirals. Higher values create more spiral arms by duplicating the palette pattern."
+msgstr ""
+
+msgid "Number of times the full palette color sequence cycles during the effect. Higher values make the color transitions happen faster."
+msgstr ""
+
+msgid "Number of times the full palette color sequence repeats across the model. Higher values produce more, thinner bars."
+msgstr ""
+
+msgid "Number of times the garland animation cycles over the effect duration. Controls the speed of garland movement."
+msgstr ""
+
+msgid "Number of times the shockwave ring expands from Radius1 to Radius2 over the effect duration. In timing track mode, this many rings fire per timing mark."
+msgstr ""
+
+msgid "Number of times the skip pattern shifts position over the effect duration. Higher values make the pattern appear to march along the strand."
+msgstr ""
+
+msgid "Number of times the start-to-end intensity ramp repeats over the effect duration. Values greater than 1 create a pulsing look."
+msgstr ""
+
+msgid "Number of times the warp animation repeats over the effect duration. Higher values make the distortion cycle faster."
+msgstr ""
+
+msgid "Number of trailing afterimages left behind each line, creating a motion trail effect. Zero means no trails."
+msgstr ""
+
+msgid "Number of unlit (dark) pixels between each color band. Zero means bands are placed back-to-back with no gap."
+msgstr ""
+
+msgid "Number of unlit (dark) pixels between each colored band. Set to 0 for no gaps."
+msgstr ""
+
+msgid "Number of vertical bars spread across the model width, each representing a range of notes from the audio spectrum."
+msgstr ""
+
+msgid "Number of wave cycles drawn across the buffer width. 1.0 is one full wave; fractional values draw partial waves. Higher values fit more wave cycles onto the model."
+msgstr ""
+
+msgid "Number of zigzag segments that make up the lightning bolt. More segments create a longer, more detailed bolt."
+msgstr ""
+
+msgid "Numeric threshold; matches when the property value is greater"
+msgstr ""
+
+msgid "O"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Object"
+msgstr ""
+
+msgid "Object to Draw"
+msgstr ""
+
+msgid "Odds"
+msgstr ""
+
+msgid "Off"
+msgstr ""
+
+msgid "Off - DELETE"
+msgstr ""
+
+msgid "Offset"
+msgstr ""
+
+msgid "Offset From"
+msgstr ""
+
+msgid "Offset X"
+msgstr ""
+
+msgid "Offset Y"
+msgstr ""
+
+msgid "Offset by the percentage of the string, will loop > +/- 100"
+msgstr ""
+
+msgid "Offset in Pixels"
+msgstr ""
+
+msgid "Offsets In Pixels"
+msgstr ""
+
+msgid "Offsets the starting position of each concentric ring so inner rings appear shifted relative to outer rings, creating a spiral-like look."
+msgstr ""
+
+msgid "Ok"
+msgstr ""
+
+msgid "Older than 30 days"
+msgstr ""
+
+msgid "Older than 360 days"
+msgstr ""
+
+msgid "Older than 7 days"
+msgstr ""
+
+msgid "Older than 90 days"
+msgstr ""
+
+msgid "Omit this property from the effect string when it has its default value"
+msgstr ""
+
+msgid "On"
+msgstr ""
+
+msgid "On - O"
+msgstr ""
+
+msgid "One mark per bar, e.g. QM Bar and Beat Tracker (Bars output)."
+msgstr ""
+
+msgid "One or more of the values were not pasted because they did not contain a number"
+msgstr ""
+
+msgid "Only Current Directory"
+msgstr ""
+
+msgid "Only Show Directory"
+msgstr ""
+
+msgid "Only timing marks whose label matches this text will trigger new shapes. Leave empty to match all marks."
+msgstr ""
+
+msgid "Opacity"
+msgstr ""
+
+msgid "Opacity (0-255) of the background tracing image when shown inside the Effect Assist panel. Has no effect on rendering — just controls how prominent the reference image is when sketching."
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Open New xLights Instance"
+msgstr ""
+
+msgid "Open Original File"
+msgstr ""
+
+msgid "Open Recent Sequence"
+msgstr ""
+
+msgid "Open Sequence"
+msgstr ""
+
+msgid "Open Sequence\tCTRL-o"
+msgstr ""
+
+msgid "Open Show Directory"
+msgstr ""
+
+msgid "Open a sequence first."
+msgstr ""
+
+msgid "Open in Browser"
+msgstr ""
+
+msgid "Open in Explorer"
+msgstr ""
+
+msgid "Open the base show folder"
+msgstr ""
+
+msgid "OpenGL"
+msgstr ""
+
+msgid "Optional. Section boundaries with labels, e.g. QM Segmenter. Without it every bar is treated as a verse bar."
+msgstr ""
+
+msgid "Optionally enter a list of text labels to use. "
+msgstr ""
+
+msgid "Options"
+msgstr ""
+
+msgid "Ordered Selection"
+msgstr ""
+
+msgid "Other Optional Tasks:"
+msgstr ""
+
+msgid "Out of date: "
+msgstr ""
+
+msgid "Outer radius of the fan blades. Pixels farther from the center than this are not drawn."
+msgstr ""
+
+msgid "Outer radius of the spiral arm at the edge of the galaxy."
+msgstr ""
+
+msgid "Outline"
+msgstr ""
+
+msgid "Outline2"
+msgstr ""
+
+msgid "Outline:"
+msgstr ""
+
+msgid "Output Format:"
+msgstr ""
+
+msgid "Output To Lights"
+msgstr ""
+
+msgid "Output intensity used when lighting nodes. If detection misses nodes, try raising this; if the camera image blooms/washes out, lower it."
+msgstr ""
+
+msgid "Output to Lights"
+msgstr ""
+
+msgid "Output to lights"
+msgstr ""
+
+msgid "Outputs"
+msgstr ""
+
+msgid "Overall size of the ripple pattern as a percentage. Values above 100 expand the ripples beyond the model boundaries."
+msgstr ""
+
+msgid "Overlap checks enabled"
+msgstr ""
+
+msgid "Overlay - Centered"
+msgstr ""
+
+msgid "Overlay - Scaled"
+msgstr ""
+
+msgid "Override Faces"
+msgstr ""
+
+msgid "Override States"
+msgstr ""
+
+msgid "Override SubModels"
+msgstr ""
+
+msgid "Override duplicated Color settings"
+msgstr ""
+
+msgid "Override duplicated Layer Blending settings"
+msgstr ""
+
+msgid "Override duplicated Layer settings"
+msgstr ""
+
+msgid "Override duplicated Palette"
+msgstr ""
+
+msgid "Overwrite Existing Labels"
+msgstr ""
+
+msgid "Overwrite Media Tags"
+msgstr ""
+
+msgid "Package &Sequence"
+msgstr ""
+
+msgid "Package Sequence"
+msgstr ""
+
+msgid "Packages up current configuration, logs and sequence for reporting a problem to development team."
+msgstr ""
+
+msgid "Packaging Sequences"
+msgstr ""
+
+msgid "Page:"
+msgstr ""
+
+msgid "Palette"
+msgstr ""
+
+msgid "Palette Rep"
+msgstr ""
+
+msgid "Pan (deg)"
+msgstr ""
+
+msgid "Pan (deg):"
+msgstr ""
+
+msgid "Pan Center:"
+msgstr ""
+
+msgid "Pan Max"
+msgstr ""
+
+msgid "Pan Min"
+msgstr ""
+
+msgid "Pan Servo"
+msgstr ""
+
+msgid "Pan Size:"
+msgstr ""
+
+msgid "Pan offset in degrees applied incrementally across grouped fixtures, fanning them apart horizontally. Creates a spread effect when multiple heads are grouped."
+msgstr ""
+
+msgid "Pan-axis centre of the pattern in degrees."
+msgstr ""
+
+msgid "Pane caption"
+msgstr ""
+
+msgid "Parabolic Down"
+msgstr ""
+
+msgid "Parabolic Up"
+msgstr ""
+
+msgid "Parameter 2"
+msgstr ""
+
+msgid "Parameter 3"
+msgstr ""
+
+msgid "Parametric shape the beam traces over the effect duration. Modelled on QLC+ EFX shapes."
+msgstr ""
+
+msgid "Parm1"
+msgstr ""
+
+msgid "Parm2"
+msgstr ""
+
+msgid "Particle Fade"
+msgstr ""
+
+msgid "Particles in Explosion"
+msgstr ""
+
+msgid "Password:"
+msgstr ""
+
+msgid "Paste"
+msgstr ""
+
+msgid "Paste\tCTRL-v"
+msgstr ""
+
+msgid "Paste As"
+msgstr ""
+
+msgid "Paste By Cell"
+msgstr ""
+
+msgid "Paste By Time"
+msgstr ""
+
+msgid "Paste Toolbar"
+msgstr ""
+
+msgid "Paste by Cell will retain the duration of the original effect"
+msgstr ""
+
+msgid "Paste effects at the drop row, ignoring layer structure."
+msgstr ""
+
+msgid "Paste effects preserving layer structure."
+msgstr ""
+
+msgid "Path to a Glediator (.gled), Jinx (.out), or CSV file containing pre-rendered pixel data to play back on the model."
+msgstr ""
+
+msgid "Path to a simple SVG file whose outline is used as the ripple shape when Object is set to SVG."
+msgstr ""
+
+msgid "Path to a text file whose contents are displayed instead of the text field. Each line in the file is treated as a separate text line. Disabled when the Text field above is non-empty."
+msgstr ""
+
+msgid "Path to an SVG file to use as the shape when Object to Draw is set to SVG."
+msgstr ""
+
+msgid "Path to an SVG file used as the shape when Shape is set to SVG. The SVG is rendered at a size driven by the audio level."
+msgstr ""
+
+msgid "Pathing"
+msgstr ""
+
+msgid "Pathing (Linked)"
+msgstr ""
+
+msgid "Pattern"
+msgstr ""
+
+msgid "Pattern (Linked)"
+msgstr ""
+
+msgid "Pause"
+msgstr ""
+
+msgid "Peak"
+msgstr ""
+
+msgid "Peak burst every N bars:"
+msgstr ""
+
+msgid "Per Model Default"
+msgstr ""
+
+msgid "Per node"
+msgstr ""
+
+msgid "Per-axis default for point2d controls (X axis). Falls back to 'default' if omitted."
+msgstr ""
+
+msgid "Per-axis default for point2d controls (Y axis). Falls back to 'default' if omitted."
+msgstr ""
+
+msgid "Per-axis maximum for point2d controls (X axis). Falls back to 'max' if omitted."
+msgstr ""
+
+msgid "Per-axis maximum for point2d controls (Y axis). Falls back to 'max' if omitted."
+msgstr ""
+
+msgid "Per-axis minimum for point2d controls (X axis). Falls back to 'min' if omitted."
+msgstr ""
+
+msgid "Per-axis minimum for point2d controls (Y axis). Falls back to 'min' if omitted."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 1. Stores individual pan, tilt, and other parameters that differ from the group defaults."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 2."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 3."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 4."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 5."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 6."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 7."
+msgstr ""
+
+msgid "Per-fixture override settings for moving head fixture 8."
+msgstr ""
+
+msgid "Percent of Lights"
+msgstr ""
+
+msgid "Percentage of each cycle the color is visible before going black. Lower values produce shorter on-flashes with longer dark gaps."
+msgstr ""
+
+msgid "Percentage of pixels that are actively twinkling at any given time. Higher values create a denser twinkling field."
+msgstr ""
+
+msgid "Percentage of the buffer cells that are initially alive. Higher values create a denser starting population."
+msgstr ""
+
+msgid "Percentage of the effect duration during which the head is visible and moving. The remaining time shows only the fading tail."
+msgstr ""
+
+msgid "Percentage of the effect duration over which the sketch progressively draws on. The remaining duration shows the fully drawn sketch. Disabled when Motion is enabled."
+msgstr ""
+
+msgid "Percentage of the effect time that the blades are fully visible. Lower values cause the blades to grow in and shrink out."
+msgstr ""
+
+msgid "Percentage of the effect time that the leading head of the spiral is visible. Controls how quickly the spiral appears and disappears."
+msgstr ""
+
+msgid "Percentage of the video frame to crop from the bottom edge. Use to remove unwanted lower portions of the video."
+msgstr ""
+
+msgid "Percentage of the video frame to crop from the left edge. Use to remove unwanted portions of the video."
+msgstr ""
+
+msgid "Percentage of the video frame visible from the bottom edge. Values less than 100 crop the top of the video."
+msgstr ""
+
+msgid "Percentage of the video frame visible from the left edge. Values less than 100 crop the right side of the video."
+msgstr ""
+
+msgid "Perform Actions on the SubModels"
+msgstr ""
+
+msgid "Perspectives"
+msgstr ""
+
+msgid "Phoneme"
+msgstr ""
+
+msgid "Phonemes"
+msgstr ""
+
+msgid "Pick a model, aim the camera at the prop, then Start Mapping. Click the video to place a node by hand, drag any dot to fix it, and scroll to zoom in for pixel-level checks."
+msgstr ""
+
+msgid "Pin the current show folder as a favorite"
+msgstr ""
+
+msgid "Pixel offset where the first band begins on the strand."
+msgstr ""
+
+msgid "Pixel spacing between each repeated morph copy. Higher values spread the repeated morphs farther apart."
+msgstr ""
+
+msgid "Pixel spacing used when sampling the video frame onto the model. A value of 0 uses default sampling; higher values skip pixels for a coarser look."
+msgstr ""
+
+msgid "Pixel thickness of each bolt segment line. Higher values draw a wider, more visible bolt."
+msgstr ""
+
+msgid "Pixel width of each drawn line. Higher values produce thicker, bolder lines."
+msgstr ""
+
+msgid "Places a solid wall along the bottom edge of the model that prevents particles from falling through."
+msgstr ""
+
+msgid "Places a solid wall along the left edge of the model that prevents particles from escaping to the left."
+msgstr ""
+
+msgid "Places a solid wall along the right edge of the model that prevents particles from escaping to the right."
+msgstr ""
+
+msgid "Places a solid wall along the top edge of the model that prevents particles from escaping upward."
+msgstr ""
+
+msgid "Plasma"
+msgstr ""
+
+msgid "Platform gate for the entry. 'ipad' = iPad-only (desktop JsonEffectPanel::BuildPropertyRow skips it, so settings round-trip cleanly and no spdlog warning fires). 'desktop' = desktop-only (iPad skips in its layout walk). Absent = both. Used for custom touch-canvas controls like Morph_LineEditor and Sketch_PathEditor that only make sense on one platform."
+msgstr ""
+
+msgid "Play"
+msgstr ""
+
+msgid "Play 1.5x Speed"
+msgstr ""
+
+msgid "Play 1/2 Speed"
+msgstr ""
+
+msgid "Play 1/4 Speed"
+msgstr ""
+
+msgid "Play 2x Speed"
+msgstr ""
+
+msgid "Play 3/4 Speed"
+msgstr ""
+
+msgid "Play 3x Speed"
+msgstr ""
+
+msgid "Play 4x Speed"
+msgstr ""
+
+msgid "Play Full Speed"
+msgstr ""
+
+msgid "Play Marker Position"
+msgstr ""
+
+msgid "Play Timing"
+msgstr ""
+
+msgid "Play Tool Bar"
+msgstr ""
+
+msgid "PlayList"
+msgstr ""
+
+msgid "Playback speed multiplier used in Manual duration treatment mode. Negative values play the video in reverse. Use a value curve for acceleration effects."
+msgstr ""
+
+msgid "Playlist:"
+msgstr ""
+
+msgid "Playlists"
+msgstr ""
+
+msgid "Please Select an script before trying to Run it"
+msgstr ""
+
+msgid "Please choose whether you would like to Save or Discard the changes \nor hit Cancel to return to the sequence."
+msgstr ""
+
+msgid "Plugin Settings"
+msgstr ""
+
+msgid "Points"
+msgstr ""
+
+msgid "Polyphonic Transcription"
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+msgid "Port A (49913)"
+msgstr ""
+
+msgid "Port B (49914)"
+msgstr ""
+
+msgid "Port Cycle"
+msgstr ""
+
+msgid "Position"
+msgstr ""
+
+msgid "Position Zones"
+msgstr ""
+
+msgid "Post:"
+msgstr ""
+
+msgid "Pre v2017.7 Shimmer"
+msgstr ""
+
+msgid "Pre:"
+msgstr ""
+
+msgid "Preferences"
+msgstr ""
+
+msgid "Preferences...\tCTRL-,"
+msgstr ""
+
+msgid "Prepare"
+msgstr ""
+
+msgid "Prepare Audio"
+msgstr ""
+
+msgid "Preparing FSEQ file for %s"
+msgstr ""
+
+msgid "Preset start/end point configurations (Full or Single Sweep in each direction) that write predefined values into all eight X/Y coordinate fields at once. Selection resets to blank after the preset is applied."
+msgstr ""
+
+msgid "Presets List"
+msgstr ""
+
+msgid "Preview graphics (restart required):"
+msgstr ""
+
+msgid "Preview layout saved"
+msgstr ""
+
+msgid "Preview video during scan (slower)"
+msgstr ""
+
+msgid "Preview:"
+msgstr ""
+
+msgid "Previews"
+msgstr ""
+
+msgid "Previous match"
+msgstr ""
+
+msgid "Primary adjustment value. Its meaning depends on the action: offset amount for Adjust By Value, percentage for Adjust By Percentage, minimum for Set Minimum, or lower bound for Set Range."
+msgstr ""
+
+msgid "Print"
+msgstr ""
+
+msgid "Print Layout"
+msgstr ""
+
+msgid "Print Layout Image..."
+msgstr ""
+
+msgid "Print..."
+msgstr ""
+
+msgid "Privacy Policy"
+msgstr ""
+
+msgid "ProRes 4444 Video, *.mov"
+msgstr ""
+
+msgid "Process"
+msgstr ""
+
+msgid "Prompt issues during batch render"
+msgstr ""
+
+msgid "Property id for Wrap X checkbox (xyCenter type, optional)"
+msgstr ""
+
+msgid "Property id for Wrap Y checkbox (xyCenter type, optional)"
+msgstr ""
+
+msgid "Property id for horizontal (X) slider (xyCenter type)"
+msgstr ""
+
+msgid "Property id for vertical (Y) slider (xyCenter type)"
+msgstr ""
+
+msgid "Property id to check"
+msgstr ""
+
+msgid "Property identifier (e.g. 'Fire_Height'). Setting key is derived from id + controlType."
+msgstr ""
+
+msgid "Property ids in this section (for 'section' type)"
+msgstr ""
+
+msgid "Property ids in this tab"
+msgstr ""
+
+msgid "Property ids to disable when condition is met"
+msgstr ""
+
+msgid "Property ids to enable when condition is met"
+msgstr ""
+
+msgid "Property ids to hide when condition is met"
+msgstr ""
+
+msgid "Property ids to show when condition is met"
+msgstr ""
+
+msgid "Protocol"
+msgstr ""
+
+msgid "Proxied"
+msgstr ""
+
+msgid "Purge Backups"
+msgstr ""
+
+msgid "Purge Download Cache"
+msgstr ""
+
+msgid "Purge Render Cache"
+msgstr ""
+
+msgid "Purge download cache at startup"
+msgstr ""
+
+msgid "Quick Set"
+msgstr ""
+
+msgid "Quiet"
+msgstr ""
+
+msgid "Quit\tAlt-F4"
+msgstr ""
+
+msgid "Quit the application"
+msgstr ""
+
+msgid "R - Radius of outer circle"
+msgstr ""
+
+msgid "R-G-B-W"
+msgstr ""
+
+msgid "R:"
+msgstr ""
+
+msgid "RBG"
+msgstr ""
+
+msgid "RBGW"
+msgstr ""
+
+msgid "RECENT1"
+msgstr ""
+
+msgid "RECENTFOLDER1"
+msgstr ""
+
+msgid "RGB"
+msgstr ""
+
+msgid "RGB Brightness/Gamma"
+msgstr ""
+
+msgid "RGB Cycle"
+msgstr ""
+
+msgid "RGB From File"
+msgstr ""
+
+msgid "RGBW"
+msgstr ""
+
+msgid "Radial"
+msgstr ""
+
+msgid "Radial 3D"
+msgstr ""
+
+msgid "Radius"
+msgstr ""
+
+msgid "Radius of each particle in thousandths of a pixel. Larger values create bigger, blobby particles; smaller values create fine granular particles. Values above 1000 can slow rendering."
+msgstr ""
+
+msgid "Radius of the fixed outer circle as a percentage of the buffer width. This sets the overall size of the spirograph pattern."
+msgstr ""
+
+msgid "Radius of the rolling inner circle as a percentage of the buffer width. The ratio of R to r determines the number of lobes in the pattern. Must be less than or equal to R."
+msgstr ""
+
+msgid "Radius1"
+msgstr ""
+
+msgid "Radius2"
+msgstr ""
+
+msgid "Ramp"
+msgstr ""
+
+msgid "Ramp Down"
+msgstr ""
+
+msgid "Ramp Down - D"
+msgstr ""
+
+msgid "Ramp Up"
+msgstr ""
+
+msgid "Ramp Up - U"
+msgstr ""
+
+msgid "Ramp Up/Down"
+msgstr ""
+
+msgid "Ramp Up/Down - A"
+msgstr ""
+
+msgid "Ramp Up/Down Hold"
+msgstr ""
+
+msgid "Random"
+msgstr ""
+
+msgid "Random Location"
+msgstr ""
+
+msgid "Random Tags"
+msgstr ""
+
+msgid "Random Timing"
+msgstr ""
+
+msgid "Random initial shape sizes"
+msgstr ""
+
+msgid "Random movement"
+msgstr ""
+
+msgid "Randomize color and effect settings without a Lock"
+msgstr ""
+
+msgid "Rate at which each shape changes size over its lifetime. Positive values make shapes grow larger, negative values make them shrink."
+msgstr ""
+
+msgid "Re-Discover"
+msgstr ""
+
+msgid "Re-Import"
+msgstr ""
+
+msgid "Re-Randomize after twinkle"
+msgstr ""
+
+msgid "Re-lights the selected node(s) and re-detects them live. Ctrl/Shift-click the list to select several."
+msgstr ""
+
+msgid "Reacts to music"
+msgstr ""
+
+msgid "Read-only display of the active sketch definition string. The actual sketch is drawn / edited via the Effect Assist panel; this control just shows the resulting definition."
+msgstr ""
+
+msgid "Read-only display of the picked video's total duration plus a 'Match Effect To Video Duration' button that resizes the effect on the timeline to match."
+msgstr ""
+
+msgid "Recent Show Folders"
+msgstr ""
+
+msgid "Record donor sequence in this sequence's metadata"
+msgstr ""
+
+msgid "Recursive Search"
+msgstr ""
+
+msgid "Recycle tips once all seen"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Redo\tCtrl-y"
+msgstr ""
+
+msgid "Reduce the vertical size of the waveform"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Refresh USB Drives"
+msgstr ""
+
+msgid "Reg"
+msgstr ""
+
+msgid "Regex"
+msgstr ""
+
+msgid "Relative"
+msgstr ""
+
+msgid "Relative: paste effects at the selected position. As Layers: paste preserving layer structure from copied effects."
+msgstr ""
+
+msgid "Release Notes"
+msgstr ""
+
+msgid "Remap Channels"
+msgstr ""
+
+msgid "Remap Custom Model"
+msgstr ""
+
+msgid "Remap DMX Channels"
+msgstr ""
+
+msgid "Remember which sequence these effects were imported from, so it shows in Sequence Settings and can be re-opened from Import > Open Original File."
+msgstr ""
+
+msgid "Remote"
+msgstr ""
+
+msgid "Remote Camera"
+msgstr ""
+
+msgid "Remote camera (RTSP / IP camera)"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Remove from Set"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Rename Favorite"
+msgstr ""
+
+msgid "Rename Perspective"
+msgstr ""
+
+msgid "Rename Preset"
+msgstr ""
+
+msgid "Rename Set"
+msgstr ""
+
+msgid "Rename currently selected effect preset."
+msgstr ""
+
+msgid "Rename this element to:"
+msgstr ""
+
+msgid "Rename..."
+msgstr ""
+
+msgid "Render All"
+msgstr ""
+
+msgid "Render All and Save"
+msgstr ""
+
+msgid "Render All and Save As"
+msgstr ""
+
+msgid "Render Cache"
+msgstr ""
+
+msgid "Render Cache Directory"
+msgstr ""
+
+msgid "Render Mode:"
+msgstr ""
+
+msgid "Render Style:"
+msgstr ""
+
+msgid "Render and Save"
+msgstr ""
+
+msgid "Render and Save As"
+msgstr ""
+
+msgid "Render on Save"
+msgstr ""
+
+msgid "Rendered"
+msgstr ""
+
+msgid "Rendered (%s)"
+msgstr ""
+
+msgid "Rendered in %7.3f seconds"
+msgstr ""
+
+msgid "Rendering %s"
+msgstr ""
+
+msgid "Rendering Progress"
+msgstr ""
+
+msgid "Rendering algorithm to use. The new method uses ISPC-accelerated rendering for better performance and fills the entire buffer; the old method draws arms by stepping along radial lines. Existing sequences are migrated to preserve 'Old Render Method' so their look doesn't change."
+msgstr ""
+
+msgid "Rendering all layers"
+msgstr ""
+
+msgid "Rendering all layers for time slice"
+msgstr ""
+
+msgid "Rendering style and direction for the ripple waves. Lines draw outlines only, Solid fills the shapes, and Highlight emphasizes edges. Inward/Outward/Both controls the wave direction, and Ripple variants add repeated wave pulses."
+msgstr ""
+
+msgid "Rendering..."
+msgstr ""
+
+msgid "Repeat"
+msgstr ""
+
+msgid "Repeat Count"
+msgstr ""
+
+msgid "Repeat Skip"
+msgstr ""
+
+msgid "Repeating Tag Count"
+msgstr ""
+
+msgid "Replace"
+msgstr ""
+
+msgid "Replace Color"
+msgstr ""
+
+msgid "Replace Color:"
+msgstr ""
+
+msgid "Replace destination's direct groups with source's groups"
+msgstr ""
+
+msgid "Replay Section"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Reset Defaults"
+msgstr ""
+
+msgid "Reset Toolbars"
+msgstr ""
+
+msgid "Reset image offset to zero"
+msgstr ""
+
+msgid "Reset to Default"
+msgstr ""
+
+msgid "Reset to Defaults"
+msgstr ""
+
+msgid "Resize\nImage"
+msgstr ""
+
+msgid "Resolution controls the preview render only -- the printed page still fits\nto whatever paper size/orientation you choose in the print dialog."
+msgstr ""
+
+msgid "Resolution:"
+msgstr ""
+
+msgid "Restart required"
+msgstr ""
+
+msgid "Restart xLights to apply the interface language change."
+msgstr ""
+
+msgid "Restore Backup"
+msgstr ""
+
+msgid "Restore Default"
+msgstr ""
+
+msgid "Restore Default ViewPoint"
+msgstr ""
+
+msgid "Restore Defaults"
+msgstr ""
+
+msgid "Restore Dialog"
+msgstr ""
+
+msgid "Restore Files"
+msgstr ""
+
+msgid "Restore to Permanent"
+msgstr ""
+
+msgid "Retain Duration:"
+msgstr ""
+
+msgid "Retry All Missing"
+msgstr ""
+
+msgid "Retry Selected Nodes"
+msgstr ""
+
+msgid "Rev's"
+msgstr ""
+
+msgid "Reverse"
+msgstr ""
+
+msgid "Reverse Fades"
+msgstr ""
+
+msgid "Reverse Nodes"
+msgstr ""
+
+msgid "Reverse Row"
+msgstr ""
+
+msgid "Reverse Rows"
+msgstr ""
+
+msgid "Reverses the direction of fan rotation."
+msgstr ""
+
+msgid "Reverses the direction of the vertical and horizontal fades so brightness is at the edges and fades to black at the center."
+msgstr ""
+
+msgid "Reverses the direction the spiral arm rotates."
+msgstr ""
+
+msgid "Revert To..."
+msgstr ""
+
+msgid "Rig"
+msgstr ""
+
+msgid "Right"
+msgstr ""
+
+msgid "Right Barrier"
+msgstr ""
+
+msgid "Ripples"
+msgstr ""
+
+msgid "Rotate"
+msgstr ""
+
+msgid "Rotates the entire kaleidoscope pattern around the center point in degrees."
+msgstr ""
+
+msgid "Rotates the ripple shape by this many degrees. Useful for orienting non-circular shapes like triangles or stars."
+msgstr ""
+
+msgid "Rotates the whole pattern about its centre, in degrees. Animate it with a value curve to spin the shape over the effect."
+msgstr ""
+
+msgid "Rotation"
+msgstr ""
+
+msgid "Rotation angle in degrees applied to each shape. Use a value curve to animate the shapes spinning over time."
+msgstr ""
+
+msgid "Rotation speed of the pinwheel. Higher values make the arms spin faster."
+msgstr ""
+
+msgid "Rotation:"
+msgstr ""
+
+msgid "Run"
+msgstr ""
+
+msgid "Run Capture Pattern"
+msgstr ""
+
+msgid "Run Scripts"
+msgstr ""
+
+msgid "S:"
+msgstr ""
+
+msgid "SVG"
+msgstr ""
+
+msgid "SVG File"
+msgstr ""
+
+msgid "Sample spacing"
+msgstr ""
+
+msgid "Saturation"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save\tCTRL-S"
+msgstr ""
+
+msgid "Save\nImage"
+msgstr ""
+
+msgid "Save As"
+msgstr ""
+
+msgid "Save As\nImage"
+msgstr ""
+
+msgid "Save As New"
+msgstr ""
+
+msgid "Save As State"
+msgstr ""
+
+msgid "Save Buffer Preset"
+msgstr ""
+
+msgid "Save CSV File"
+msgstr ""
+
+msgid "Save Controller Spreadsheet"
+msgstr ""
+
+msgid "Save Current"
+msgstr ""
+
+msgid "Save Current ViewPoint"
+msgstr ""
+
+msgid "Save Custom xModel File"
+msgstr ""
+
+msgid "Save FSEQ File On Save"
+msgstr ""
+
+msgid "Save Image"
+msgstr ""
+
+msgid "Save Layout Image"
+msgstr ""
+
+msgid "Save Map"
+msgstr ""
+
+msgid "Save Mapping"
+msgstr ""
+
+msgid "Save Password"
+msgstr ""
+
+msgid "Save Perspective"
+msgstr ""
+
+msgid "Save Preset"
+msgstr ""
+
+msgid "Save Sequence As"
+msgstr ""
+
+msgid "Save Sequence Changes\\?"
+msgstr ""
+
+msgid "Save Test Settings"
+msgstr ""
+
+msgid "Save as .xmodel..."
+msgstr ""
+
+msgid "Save current duration as the default for new sequences"
+msgstr ""
+
+msgid "Save current timing as the default for new sequences"
+msgstr ""
+
+msgid "Save custom model"
+msgstr ""
+
+msgid "Save the current perspective between sessions independent of the show directory."
+msgstr ""
+
+msgid "Save xLights Sketch File"
+msgstr ""
+
+msgid "Saved!"
+msgstr ""
+
+msgid "Saving "
+msgstr ""
+
+msgid "Saw Tooth"
+msgstr ""
+
+msgid "Scale"
+msgstr ""
+
+msgid "Scale Bars"
+msgstr ""
+
+msgid "Scale End"
+msgstr ""
+
+msgid "Scale Height of Wave"
+msgstr ""
+
+msgid "Scale Keep Aspect Ratio"
+msgstr ""
+
+msgid "Scale Keep Aspect Ratio Crop"
+msgstr ""
+
+msgid "Scale Start"
+msgstr ""
+
+msgid "Scale To Buffer"
+msgstr ""
+
+msgid "Scale X"
+msgstr ""
+
+msgid "Scale Y"
+msgstr ""
+
+msgid "Scale factor for the face image at the end of the effect. The image smoothly transitions from the start scale to this value over the effect duration. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Scale factor for the face image at the start of the effect, as a percentage. 100 is the original size. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Scale factor for the image at the end of the effect. The image smoothly transitions from the start scale to this value over the effect duration."
+msgstr ""
+
+msgid "Scale factor for the image at the start of the effect, as a percentage. 100 is the original size."
+msgstr ""
+
+msgid "Scale to Buffer"
+msgstr ""
+
+msgid "Scale:"
+msgstr ""
+
+msgid "Scaled"
+msgstr ""
+
+msgid "Scales the marquee rectangle height as a percentage. Values below 100 shrink the marquee vertically."
+msgstr ""
+
+msgid "Scales the marquee rectangle width as a percentage. Values below 100 shrink the marquee horizontally."
+msgstr ""
+
+msgid "Scales the size of the movement path. Positive values enlarge the path, negative values shrink it, and zero uses the default size."
+msgstr ""
+
+msgid "Scales the vertical amplitude of the wave as a percentage. Lower values flatten the wave; higher values make it reach closer to the buffer edges."
+msgstr ""
+
+msgid "Scales the vertical size of the piano keys or bars as a percentage. Lower values shrink the display; 100 uses the full buffer height."
+msgstr ""
+
+msgid "Scaling"
+msgstr ""
+
+msgid "Scaling Type"
+msgstr ""
+
+msgid "Schedule"
+msgstr ""
+
+msgid "Scope:"
+msgstr ""
+
+msgid "Scroll wheel: zoom. Middle/right drag: pan while zoomed. Left click: place the target node. Drag a dot to fix it."
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "Search Effects"
+msgstr ""
+
+msgid "Search Found No Results."
+msgstr ""
+
+msgid "Search for Show Folders"
+msgstr ""
+
+msgid "Search:"
+msgstr ""
+
+msgid "Secondary adjustment value used by actions that require a range, such as Set Range and Prevent Range, where it defines the upper bound."
+msgstr ""
+
+msgid "Section label (for 'section' type)"
+msgstr ""
+
+msgid "Section labels - tick Chorus for the chorus sections, Peak for the ones that should get a flash burst:"
+msgstr ""
+
+msgid "Sections timing track:"
+msgstr ""
+
+msgid "Segments 2 High"
+msgstr ""
+
+msgid "Segments 2 Wide"
+msgstr ""
+
+msgid "Segments 3 High"
+msgstr ""
+
+msgid "Segments 3 Wide"
+msgstr ""
+
+msgid "Select"
+msgstr ""
+
+msgid "Select - SHIFT L"
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "Select All "
+msgstr ""
+
+msgid "Select Base Show Directory"
+msgstr ""
+
+msgid "Select Effect"
+msgstr ""
+
+msgid "Select Effects"
+msgstr ""
+
+msgid "Select Effects for Generate Random"
+msgstr ""
+
+msgid "Select Labels to Include:"
+msgstr ""
+
+msgid "Select Model"
+msgstr ""
+
+msgid "Select Model:"
+msgstr ""
+
+msgid "Select New Timing Interval:"
+msgstr ""
+
+msgid "Select Nodes"
+msgstr ""
+
+msgid "Select None"
+msgstr ""
+
+msgid "Select Options:"
+msgstr ""
+
+msgid "Select Polyphonic Transcription file"
+msgstr ""
+
+msgid "Select Service"
+msgstr ""
+
+msgid "Select Show Directory"
+msgstr ""
+
+msgid "Select Show Folder"
+msgstr ""
+
+msgid "Select State"
+msgstr ""
+
+msgid "Select States"
+msgstr ""
+
+msgid "Select Sub-state(s)"
+msgstr ""
+
+msgid "Select SubModel"
+msgstr ""
+
+msgid "Select Timings"
+msgstr ""
+
+msgid "Select a View:"
+msgstr ""
+
+msgid "Select a file"
+msgstr ""
+
+msgid "Select a model."
+msgstr ""
+
+msgid "Select alignment point"
+msgstr ""
+
+msgid "Select all the controllers you want to upload to."
+msgstr ""
+
+msgid "Select alternate backup directory"
+msgstr ""
+
+msgid "Select an image file"
+msgstr ""
+
+msgid "Select an item before clicking the Delete button"
+msgstr ""
+
+msgid "Select an item before clicking the Rename button"
+msgstr ""
+
+msgid "Select existing groups to add selections to"
+msgstr ""
+
+msgid "Select export format:"
+msgstr ""
+
+msgid "Select face elements"
+msgstr ""
+
+msgid "Select file"
+msgstr ""
+
+msgid "Select font"
+msgstr ""
+
+msgid "Select groups to remove model from"
+msgstr ""
+
+msgid "Select test configuration"
+msgstr ""
+
+msgid "Select the Lua Script to Run."
+msgstr ""
+
+msgid "Select the target directories for each media type where available files will be imported into.\n\nNOTE:  Only media files from mapped effects which actually exist in the sequence package \nyou are mapping from will be imported."
+msgstr ""
+
+msgid "Select xModel files."
+msgstr ""
+
+msgid "Selected Effects Only"
+msgstr ""
+
+msgid "Selected:"
+msgstr ""
+
+msgid "Selected: 0"
+msgstr ""
+
+msgid "Selection"
+msgstr ""
+
+msgid "Selects a lyric timing track to use as the text source. The current lyric phrase or word is displayed at each point in time. Disabled when Text or From File is set."
+msgstr ""
+
+msgid "Selects a state definition to use as the face outline instead of the default outline. Allows combining state effects with face rendering."
+msgstr ""
+
+msgid "Selects an xLights bitmap font (under fonts/) to use instead of the OS font. 'Use OS Fonts' falls back to the Font picker above."
+msgstr ""
+
+msgid "Selects the cellular automaton ruleset: 0=B3/S23 (classic Conway), 1=B35/S236, 2=B357/S1358, 3=B378/S235678, 4=B25678/S5678. Each produces different patterns of growth and decay."
+msgstr ""
+
+msgid "Selects the color palette mode used by the chosen FX animation, controlling how colors are applied to the effect."
+msgstr ""
+
+msgid "Selects the color source for the chase. Palette uses the user-defined palette colors; Rainbow cycles through all hues automatically."
+msgstr ""
+
+msgid "Selects the color source. Rainbow uses a full HSV rainbow cycle, while Palette uses the user-defined palette colors."
+msgstr ""
+
+msgid "Selects the garland droop pattern. Type 0 is flat, types 1-4 create increasingly deep U-shaped sags between attachment points."
+msgstr ""
+
+msgid "Selects the instrument type, which determines the number of strings and tuning used to map MIDI notes to fret positions."
+msgstr ""
+
+msgid "Selects the mathematical formula used to generate the plasma pattern. Higher values produce more complex, twisted interference patterns."
+msgstr ""
+
+msgid "Selects the mathematical pattern formula. Styles 1-5 produce geometric butterfly-like patterns; styles 6-10 generate animated plasma effects."
+msgstr ""
+
+msgid "Selects the physics behavior of the particles. Each type has different properties: Water flows freely, Elastic particles bounce, Viscous particles stick together, Powder behaves like sand, etc."
+msgstr ""
+
+msgid "Selects the rendering algorithm. Old Render Method rebuilds the whole flame every frame, so it flickers in place. New Render Method carries the flame from frame to frame so it rises and drifts like real fire, and renders far faster because the whole grid updates at once (on the GPU where available)."
+msgstr ""
+
+msgid "Selects the rendering algorithm. Old Render Method uses the original per-frame logic; New Render Method uses an updated approach with smoother transitions."
+msgstr ""
+
+msgid "Selects the snowflake movement mode. 'Driving' scrolls flakes diagonally across the buffer. 'Falling' drops flakes from top to bottom. 'Falling & Accumulating' drops flakes that pile up at the bottom."
+msgstr ""
+
+msgid "Selects the snowflake shape. 0 uses a random mix of all types each frame. Types 1-9 are specific shapes ranging from single pixels to multi-node crosses, diamonds, and squares."
+msgstr ""
+
+msgid "Selects the symmetry pattern used for the kaleidoscope reflection. Triangle and Square use edge-based mirroring, while 6/8/12-Fold use triangular tiling for higher-order symmetry, and Radial creates rotational segment repetition."
+msgstr ""
+
+msgid "Selects which WS2812FX-style animation to run, such as Blink, Breath, Color Wipe, Rainbow, Fire Flicker, and many more."
+msgstr ""
+
+msgid "Selects which audio track drives this VU Meter. 'Main' uses the sequence's primary audio; additional tracks are listed if alternate audio tracks have been added in Sequence Settings."
+msgstr ""
+
+msgid "Selects which channel on the DMX model to control. The channel list is populated from the model's node names."
+msgstr ""
+
+msgid "Selects which face definition from the model to use. Face definitions map phonemes to specific nodes or image files on the model."
+msgstr ""
+
+msgid "Selects which state definition to use from the model's configured state maps (e.g., SingleNode, NodeRange, or custom state definitions)."
+msgstr ""
+
+msgid "Selects which timing track to use for phoneme-driven servo positioning when Use Timing Track is enabled."
+msgstr ""
+
+msgid "Selects which timing track to use for triggering new shapes when Fire with timing track is enabled."
+msgstr ""
+
+msgid "Semantic data type"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Sending %s to controllers"
+msgstr ""
+
+msgid "Sending controller settings"
+msgstr ""
+
+msgid "Sending settings to %s - %s"
+msgstr ""
+
+msgid "Sensitivity"
+msgstr ""
+
+msgid "Sensitivity of Color Match"
+msgstr ""
+
+msgid "Sent "
+msgstr ""
+
+msgid "Sequence"
+msgstr ""
+
+msgid "Sequence %d of %d - elapsed %s"
+msgstr ""
+
+msgid "Sequence Duration:"
+msgstr ""
+
+msgid "Sequence Element Mismatch"
+msgstr ""
+
+msgid "Sequence Outside Show Directory"
+msgstr ""
+
+msgid "Sequence Settings"
+msgstr ""
+
+msgid "Sequence Timing:"
+msgstr ""
+
+msgid "Sequence Type:"
+msgstr ""
+
+msgid "Sequence files to convert:"
+msgstr ""
+
+msgid "Sequencer"
+msgstr ""
+
+msgid "Sequencer Tab"
+msgstr ""
+
+msgid "Sequencer timing will be displayed in seconds and milliseconds"
+msgstr ""
+
+msgid "Sequences"
+msgstr ""
+
+msgid "Sequences effects were imported from, most recent first"
+msgstr ""
+
+msgid "Set"
+msgstr ""
+
+msgid "Set %s was not moved because it contains a locked or base show model."
+msgstr ""
+
+msgid "Set %s was not rotated because it contains a locked or base show model."
+msgstr ""
+
+msgid "Set '%s' contains a locked or base show model - unlock it (or remove the base model from the Set) to move the Set."
+msgstr ""
+
+msgid "Set All Models:"
+msgstr ""
+
+msgid "Set Brightness"
+msgstr ""
+
+msgid "Set Center Offset Here"
+msgstr ""
+
+msgid "Set Color Order"
+msgstr ""
+
+msgid "Set Current ViewPoint as Default"
+msgstr ""
+
+msgid "Set Default"
+msgstr ""
+
+msgid "Set Direction"
+msgstr ""
+
+msgid "Set End Null Nodes"
+msgstr ""
+
+msgid "Set Gamma"
+msgstr ""
+
+msgid "Set Start Null Nodes"
+msgstr ""
+
+msgid "Set in code"
+msgstr ""
+
+msgid "Sets %s were not moved because they contain a locked or base show model."
+msgstr ""
+
+msgid "Sets the alpha transparency of the effect. At 0 the color is fully opaque; at 100 it is fully transparent, allowing effects on lower layers to show through."
+msgstr ""
+
+msgid "Sets the animation direction. Reverse inverts the pattern movement so it scrolls in the opposite direction."
+msgstr ""
+
+msgid "Sets the brightness level at the beginning of the effect as a percentage of the palette color's full value."
+msgstr ""
+
+msgid "Sets the brightness level at the end of the effect as a percentage. The intensity ramps linearly from Start to End over the effect duration."
+msgstr ""
+
+msgid "Sets the number of circles drawn on the model. In radial mode, controls the number of color rings."
+msgstr ""
+
+msgid "Sets the resting wind strength that the simulated wind constantly settles toward. Higher values increase the chance of the wind knocking down the flame."
+msgstr ""
+
+msgid "Sets the rotation direction. When checked, the pinwheel spins counter-clockwise; when unchecked, it spins clockwise."
+msgstr ""
+
+msgid "Sets which edge or pair of edges the curtain opens/closes from. Center and middle split the curtain into two halves that move symmetrically."
+msgstr ""
+
+msgid "Setting key for tab selection (e.g. 'E_NOTEBOOK_Fan')"
+msgstr ""
+
+msgid "Setting media directory to "
+msgstr ""
+
+msgid "Setting show directory to "
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Shader sites"
+msgstr ""
+
+msgid "Shaders"
+msgstr ""
+
+msgid "Shaders on Background Threads"
+msgstr ""
+
+msgid "Shape"
+msgstr ""
+
+msgid "Shape of each strobe flash. Type 1 is a single pixel, type 2 adds a random cross arm, type 3 is a full plus shape, and type 4 alternates between plus and X shapes."
+msgstr ""
+
+msgid "Shape of the ripple waves expanding from the center. Choose from geometric shapes, holiday objects, or load a custom SVG outline."
+msgstr ""
+
+msgid "Shape:"
+msgstr ""
+
+msgid "Shift Effects"
+msgstr ""
+
+msgid "Shift Effects And Timing"
+msgstr ""
+
+msgid "Shift Selected Effects"
+msgstr ""
+
+msgid "Shifts the VU meter display left or right as a percentage of the buffer width."
+msgstr ""
+
+msgid "Shifts the VU meter display up or down as a percentage of the buffer height."
+msgstr ""
+
+msgid "Shifts the center point horizontally for Implode and Explode modes. Negative values move the center left, positive values move it right."
+msgstr ""
+
+msgid "Shifts the center point of radial rings horizontally. Only active when Radial or Radial 3D is enabled."
+msgstr ""
+
+msgid "Shifts the center point of radial rings vertically. Only active when Radial or Radial 3D is enabled."
+msgstr ""
+
+msgid "Shifts the center point vertically for Implode and Explode modes. Negative values move the center down, positive values move it up."
+msgstr ""
+
+msgid "Shifts the entire tendril pattern left or right as a percentage of the buffer width."
+msgstr ""
+
+msgid "Shifts the entire tendril pattern up or down as a percentage of the buffer height."
+msgstr ""
+
+msgid "Shifts the expansion/compression origin or the static bar offset. 0 is the model center; negative values shift left/down, positive values shift right/up."
+msgstr ""
+
+msgid "Shifts the fire color palette hue. At zero the fire is red/yellow; increasing values shift toward other colors like blue or green."
+msgstr ""
+
+msgid "Shifts the piano display left or right within the buffer. Use to position the keyboard when the note range does not fill the full width."
+msgstr ""
+
+msgid "Shifts the starting point in time along the movement path. Use to stagger multiple fixtures following the same path at different phases."
+msgstr ""
+
+msgid "Shifts the starting position of the chase pattern along the strand. Useful for staggering chases across multiple models."
+msgstr ""
+
+msgid "Shifts the starting position of the fill. Interpretation depends on the Offset in Pixels setting."
+msgstr ""
+
+msgid "Shifts the wave centerline up or down from the middle of the buffer. Positive values move the wave up, negative values move it down."
+msgstr ""
+
+msgid "Shifts where along the shape the beam starts, in degrees."
+msgstr ""
+
+msgid "Shimmer"
+msgstr ""
+
+msgid "Shimmer - S"
+msgstr ""
+
+msgid "Show AC Ramps"
+msgstr ""
+
+msgid "Show All"
+msgstr ""
+
+msgid "Show Alternate Timing Format"
+msgstr ""
+
+msgid "Show Directory:"
+msgstr ""
+
+msgid "Show Duplicate Nodes"
+msgstr ""
+
+msgid "Show Folder"
+msgstr ""
+
+msgid "Show Head at Start"
+msgstr ""
+
+msgid "Show Inactive Models to Add"
+msgstr ""
+
+msgid "Show Info Here"
+msgstr ""
+
+msgid "Show Model Groups to Add"
+msgstr ""
+
+msgid "Show Models Not On Controller"
+msgstr ""
+
+msgid "Show Names"
+msgstr ""
+
+msgid "Show Only Models In Current View"
+msgstr ""
+
+msgid "Show Play Controls on Preview"
+msgstr ""
+
+msgid "Show Sharps and Flats"
+msgstr ""
+
+msgid "Show Start Channel"
+msgstr ""
+
+msgid "Show Strings"
+msgstr ""
+
+msgid "Show SubModels to Add"
+msgstr ""
+
+msgid "Show Timeline"
+msgstr ""
+
+msgid "Show Tips on Startup"
+msgstr ""
+
+msgid "Show Tree Lights"
+msgstr ""
+
+msgid "Show Verbose Channel Map:"
+msgstr ""
+
+msgid "Show Warning Here"
+msgstr ""
+
+msgid "Show Zone Indicator in Preview"
+msgstr ""
+
+msgid "Show a horizontal separator line above this property"
+msgstr ""
+
+msgid "Show bar on model box to indicate presence of an effect"
+msgstr ""
+
+msgid "Show gif backgrounds for most effects"
+msgstr ""
+
+msgid "Show info about this application"
+msgstr ""
+
+msgid "Show on effects and twinkle effects as ramps."
+msgstr ""
+
+msgid "Show outline"
+msgstr ""
+
+msgid "Show sequencer prop filter"
+msgstr ""
+
+msgid "Show wiring in model preview"
+msgstr ""
+
+msgid "Showing %d of %d"
+msgstr ""
+
+msgid "Shows only matching models. Every action -- Ok, Save Map, Auto Map, Clear All -- still covers the hidden rows.\n%s"
+msgstr ""
+
+msgid "Shows only matching sources. Mappings to hidden sources are kept, and Auto Map and Load Map still see every source.\n%s"
+msgstr ""
+
+msgid "Shrink"
+msgstr ""
+
+msgid "Silent"
+msgstr ""
+
+msgid "Sine"
+msgstr ""
+
+msgid "Single Brightness/Gamma"
+msgstr ""
+
+msgid "Single Channel"
+msgstr ""
+
+msgid "Single Curve From File"
+msgstr ""
+
+msgid "Single Line"
+msgstr ""
+
+msgid "Single Line Model As A Pixel"
+msgstr ""
+
+msgid "Single Nodes"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Size of the effect in percentage of the string, will overlap if the number of chases are larger than can fit.  3 chases + > 33.3 percent = overlap"
+msgstr ""
+
+msgid "Size the move time from each head's tilt slew limit"
+msgstr ""
+
+msgid "Sketch effect image files are not essential to rendering."
+msgstr ""
+
+msgid "Skin Tone"
+msgstr ""
+
+msgid "Skin tone modifier applied to emoji characters that support it. Only affects emoji rendering."
+msgstr ""
+
+msgid "Skip >>"
+msgstr ""
+
+msgid "Skip Size"
+msgstr ""
+
+msgid "Skip size"
+msgstr ""
+
+msgid "Skip this time"
+msgstr ""
+
+msgid "Skips"
+msgstr ""
+
+msgid "Skulltronix"
+msgstr ""
+
+msgid "Slow Down Falls"
+msgstr ""
+
+msgid "Small"
+msgstr ""
+
+msgid "Small Waveform"
+msgstr ""
+
+msgid "Smart Remote"
+msgstr ""
+
+msgid "Smoothly blends colors between adjacent bars instead of using hard edges, creating a continuous gradient across the palette."
+msgstr ""
+
+msgid "Snap to Timing Marks"
+msgstr ""
+
+msgid "Snaps every active head's Pan/Tilt to where the next Moving Head effect on this row starts, and forces the Dimmer to 0 so the head moves into position dark."
+msgstr ""
+
+msgid "Some effects can be rendered on the GPU if this is enabled."
+msgstr ""
+
+msgid "Song:"
+msgstr ""
+
+msgid "Sort Row"
+msgstr ""
+
+msgid "Source Size"
+msgstr ""
+
+msgid "Source for dynamically populated options (e.g. 'faces', 'states', 'timingTracks', 'lyricTimingTracks', 'audioTracks')"
+msgstr ""
+
+msgid "Spacing"
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "Speed"
+msgstr ""
+
+msgid "Speed %"
+msgstr ""
+
+msgid "Speed (ms):"
+msgstr ""
+
+msgid "Speed Adjust %"
+msgstr ""
+
+msgid "Speed and direction of the spiral rotation. Positive values rotate in one direction, negative in the other. Zero keeps the spirals stationary."
+msgstr ""
+
+msgid "Speed at which each shape moves across the model in the specified direction. Zero keeps shapes stationary."
+msgstr ""
+
+msgid "Speed at which the ripple center moves across the model in the specified direction. Zero keeps the center stationary."
+msgstr ""
+
+msgid "Speed:"
+msgstr ""
+
+msgid "Spiral Wraps"
+msgstr ""
+
+msgid "Square"
+msgstr ""
+
+msgid "SquareChoppy"
+msgstr ""
+
+msgid "SquareTrue"
+msgstr ""
+
+msgid "Stack Direction"
+msgstr ""
+
+msgid "Stagger"
+msgstr ""
+
+msgid "Staggers grouped fixtures along the shape so they chase each other around it. Only meaningful for a model group."
+msgstr ""
+
+msgid "Standard"
+msgstr ""
+
+msgid "Starfield simulation"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Start Channel"
+msgstr ""
+
+msgid "Start Conversion"
+msgstr ""
+
+msgid "Start Frame"
+msgstr ""
+
+msgid "Start Hour"
+msgstr ""
+
+msgid "Start Intensity"
+msgstr ""
+
+msgid "Start Label:"
+msgstr ""
+
+msgid "Start MIDI Channel [0-127]"
+msgstr ""
+
+msgid "Start Mapping"
+msgstr ""
+
+msgid "Start Min"
+msgstr ""
+
+msgid "Start Note"
+msgstr ""
+
+msgid "Start Offset"
+msgstr ""
+
+msgid "Start Offset:"
+msgstr ""
+
+msgid "Start Pos"
+msgstr ""
+
+msgid "Start Position"
+msgstr ""
+
+msgid "Start Scale"
+msgstr ""
+
+msgid "Start Size"
+msgstr ""
+
+msgid "Start Time"
+msgstr ""
+
+msgid "Start Time (MS):"
+msgstr ""
+
+msgid "Start Time (sec):"
+msgstr ""
+
+msgid "Start Time Adjust (s)"
+msgstr ""
+
+msgid "Start channel %u, %u nodes, %u channels/node"
+msgstr ""
+
+msgid "Start of Model"
+msgstr ""
+
+msgid "Start/End servo position sliders (0-100% as a float with 0.1 precision) with optional value-curve and per-effect link toggles."
+msgstr ""
+
+msgid "Start:"
+msgstr ""
+
+msgid "Starting At"
+msgstr ""
+
+msgid "Starting Position"
+msgstr ""
+
+msgid "Starting angular offset in degrees for the pinwheel arms. Rotates the initial position of the entire pinwheel without affecting the spin animation."
+msgstr ""
+
+msgid "Starting radius of the expanding ring at the beginning of each cycle."
+msgstr ""
+
+msgid "Starting rotation angle of the fan blades in degrees."
+msgstr ""
+
+msgid "State"
+msgstr ""
+
+msgid "State Definition"
+msgstr ""
+
+msgid "State(s) with the Same Name Already Exist.\n Would you Like to Override Them ALL?"
+msgstr ""
+
+msgid "States"
+msgstr ""
+
+msgid "Static Lights"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Status bar"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "Stop now. The sequence being rendered is abandoned and its fseq is not saved."
+msgstr ""
+
+msgid "Stopped"
+msgstr ""
+
+msgid "Stopped - not rendered"
+msgstr ""
+
+msgid "Stopping..."
+msgstr ""
+
+msgid "Strand"
+msgstr ""
+
+msgid "Strand   1"
+msgstr ""
+
+msgid "Strand Names"
+msgstr ""
+
+msgid "Strength of the gravitational force applied to particles. Positive values pull in the direction set by Gravity Angle. Negative values push in the opposite direction."
+msgstr ""
+
+msgid "String Appearance"
+msgstr ""
+
+msgid "Strobe"
+msgstr ""
+
+msgid "Strobe Duration"
+msgstr ""
+
+msgid "Strobe Type"
+msgstr ""
+
+msgid "Style"
+msgstr ""
+
+msgid "SubBuffer"
+msgstr ""
+
+msgid "SubModel"
+msgstr ""
+
+msgid "SubModel Aliases"
+msgstr ""
+
+msgid "SubModel Name"
+msgstr ""
+
+msgid "SubModel(s) with the Same Name Already Exist.\n Would you Like to Override Them ALL?"
+msgstr ""
+
+msgid "SubModels:"
+msgstr ""
+
+msgid "Summary of files used\n"
+msgstr ""
+
+msgid "SuperStar Import"
+msgstr ""
+
+msgid "SuperStar: This is currently designed to work with SuperStar sequences\nfor CCR ribbon trees.  X/Y Size and Offset only apply to SuperStar. \nX/Y Size is ignored unless the sequence type is a Visualization.\n"
+msgstr ""
+
+msgid "Suppress Dark Mode"
+msgstr ""
+
+msgid "Suppress Dock"
+msgstr ""
+
+msgid "Suppress GIF Background"
+msgstr ""
+
+msgid "Suppress shimmer"
+msgstr ""
+
+msgid "Suppress when not singing"
+msgstr ""
+
+msgid "Suspend Render"
+msgstr ""
+
+msgid "Swag Speed"
+msgstr ""
+
+msgid "Swag Width"
+msgstr ""
+
+msgid "Swap"
+msgstr ""
+
+msgid "Swap the start and end X/Y coordinate values (and any active value curves) so the morph plays in reverse."
+msgstr ""
+
+msgid "Swirl Intensity"
+msgstr ""
+
+msgid "Switch Permanently"
+msgstr ""
+
+msgid "Switch Temporarily"
+msgstr ""
+
+msgid "Sync"
+msgstr ""
+
+msgid "Sync (mirrors Start and End values), Equal (copies Start to End), and Swap (exchanges Start and End) action buttons."
+msgstr ""
+
+msgid "Sync to audio file"
+msgstr ""
+
+msgid "Tab definitions (for 'tabs' type)"
+msgstr ""
+
+msgid "Tab groups or section groups for organizing properties"
+msgstr ""
+
+msgid "Tag Color:"
+msgstr ""
+
+msgid "Tag every 50th node white @ 50%"
+msgstr ""
+
+msgid "Tension"
+msgstr ""
+
+msgid "Test"
+msgstr ""
+
+msgid "Test Lights"
+msgstr ""
+
+msgid "Text"
+msgstr ""
+
+msgid "Text Files|*.txt"
+msgstr ""
+
+msgid "Text Labels (eg up,down,left)"
+msgstr ""
+
+msgid "Text Size:"
+msgstr ""
+
+msgid "Text filter applied to timing track labels. Only timing events whose labels match this filter text will trigger the VU meter response."
+msgstr ""
+
+msgid "Text filter applied to timing track labels. Only timing marks whose labels match this filter text will trigger a ripple."
+msgstr ""
+
+msgid "Text filter applied to timing track labels. Only timing marks whose labels match this filter text will trigger a shockwave."
+msgstr ""
+
+msgid "Text rendering style. Normal draws text horizontally; other options rotate or orient the text vertically."
+msgstr ""
+
+msgid "That name is already in use"
+msgstr ""
+
+msgid "The %d groups you added (%s) will be removed from your layout."
+msgstr ""
+
+msgid "The Kaleidoscope effect distorts the pixels in the layers below it. The Canvas option in Layer Blending must be enabled for it to work."
+msgstr ""
+
+msgid "The Sequencer tab can be used to create RGB sequences. First, create a model of your RGB display element(s) by clicking on the Models button. Then try the different effects and settings until you create something you like. You can save the settings as a preset by clicking the New Preset button. From then on, that preset will be available in the presets drop-down list. You can combine effects by creating a second effect in the Effect 2 area, then choosing a Layering Method. To create a series of effects that will be used in a sequence, click the open file icon to open an xLights sequence. Choose which display elements/models you will use in this sequence. Then click the insert rows icon and type in the start time in seconds when that effect should begin. Rows will automatically sort by start time. To add an effect to the sequence, click on the grid cell in the desired display model column and the desired start time row, then click the Update button. When you are done creating effects for the sequence, click the save icon and the xLights sequence will be updated with the effects you stored in the grid."
+msgstr ""
+
+msgid "The bars timing track needs at least two marks."
+msgstr ""
+
+msgid "The bars track averages only %ld ms per bar. It may be a beats track rather than a bars track, which would create a very large number of effects. Continue anyway?"
+msgstr ""
+
+msgid "The distortion algorithm applied to pixels from lower layers. Options include water drops, dissolve, circle reveal, swirls, ripples, mirroring, copying, and flipping."
+msgstr ""
+
+msgid "The export is rendered at the chosen resolution, independent of the House\nPreview pane's current on-screen size. The House Preview pane will briefly resize on\nscreen while the export runs, then return to its original size."
+msgstr ""
+
+msgid "The file should be a MIDI file ... typically with a .MID extension."
+msgstr ""
+
+msgid "The file should be a Music XML file ... typically with a .MXL extension"
+msgstr ""
+
+msgid "The file should be a Polyphonic Transcription file consisting of 3 floating point numbers per line. #1 is the start time in seconds. #2 the end time. #3 the MIDI channel number."
+msgstr ""
+
+msgid "The first channel number (1-based) to begin applying the adjustment. Channels before this position are left unchanged."
+msgstr ""
+
+msgid "The font face, size, and style used to render the text."
+msgstr ""
+
+msgid "The geometric shape, holiday object, emoji, or SVG to draw. Random selects a different shape for each new instance."
+msgstr ""
+
+msgid "The group is added to this screen and mapped. It will not be committed until you press Ok in the import window."
+msgstr ""
+
+msgid "The group you added, %s, will be removed from your layout."
+msgstr ""
+
+msgid "The highest MIDI note number included in frequency analysis. Together with Start Note, defines the visible pitch range."
+msgstr ""
+
+msgid "The highest MIDI note number to display. Together with Start MIDI, defines the visible note range on the keyboard."
+msgstr ""
+
+msgid "The horizontal direction the wave scrolls. Right to Left moves the pattern leftward, Left to Right moves it rightward."
+msgstr ""
+
+msgid "The horizontal pan angle in degrees for the moving head fixture. Controls left/right beam positioning."
+msgstr ""
+
+msgid "The layer number on the source model to duplicate effects from. Layer 1 is the first (bottom) layer."
+msgstr ""
+
+msgid "The line width of the tendril in pixels. Higher values draw a thicker, more visible tendril strand."
+msgstr ""
+
+msgid "The lowest MIDI note number included in frequency analysis. Used to focus the spectrogram or note display on a specific pitch range."
+msgstr ""
+
+msgid "The lowest MIDI note number to display. Notes below this value are ignored. Middle C is 60."
+msgstr ""
+
+msgid "The main track label cannot be changed."
+msgstr ""
+
+msgid "The name cannot be empty."
+msgstr ""
+
+msgid "The path the tendril head follows. Options include geometric patterns like circle and square, zig-zag paths, music-reactive modes, or fully manual control via value curves."
+msgstr ""
+
+msgid "The red circles on the image show the bulbs we have identify.\nAdjust the sensitivity if there are bulbs missing or phantom bulbs identified.\n\nClick next when you are happy that all bulbs have been detected."
+msgstr ""
+
+msgid "The sequence this was imported from no longer exists:\n%s"
+msgstr ""
+
+msgid "The shape used for level-shape VU meter type. The shape is drawn at a size proportional to the audio level."
+msgstr ""
+
+msgid "The show directory '"
+msgstr ""
+
+msgid "The source model, submodel, or strand whose effects will be duplicated onto the current model."
+msgstr ""
+
+msgid "The test pattern must start within the first 30 seconds of the video."
+msgstr ""
+
+msgid "The text string to display. Supports multiple lines and special tokens for countdown modes. When non-empty, the file picker and lyric track are disabled."
+msgstr ""
+
+msgid "The timestamp in seconds within the video file to begin playback from. Allows skipping an intro or starting mid-video. Maximum updates dynamically once the picked video has been probed."
+msgstr ""
+
+msgid "The timing track containing MIDI note data that drives the guitar visualization."
+msgstr ""
+
+msgid "The timing track containing MIDI note data that drives the piano display. The track must contain note-on/off events."
+msgstr ""
+
+msgid "The timing track used for timing-event-based VU meter types. Events on this track trigger visual responses like spikes, sweeps, and color changes."
+msgstr ""
+
+msgid "The timing track whose marks trigger firework explosions when Fire with timing track is enabled."
+msgstr ""
+
+msgid "The type of channel value adjustment to apply. Options include adding/scaling values, clamping to min/max/range, shifting with wrap, excluding a range, or reversing brightness."
+msgstr ""
+
+msgid "The vertical tilt angle in degrees for the moving head fixture. Controls up/down beam positioning."
+msgstr ""
+
+msgid "The visual style for displaying notes. True Piano renders a piano keyboard with keys lighting up; Bars displays horizontal bars for each active note."
+msgstr ""
+
+msgid "The visualization style for the VU meter. Options include spectrogram, volume bars, waveform, timing event responses, level-based displays, note tracking, and more."
+msgstr ""
+
+msgid "The warp effect distorts the pixels in the layers below it. The Canvas option in Layer Blending must be enabled for it to work."
+msgstr ""
+
+msgid "The waveform shape drawn across the model. Sine produces smooth curves, Triangle creates sharp zigzags, Square makes flat-topped waves, Decaying Sine fades over time, and Fractal/ivy generates random branching patterns."
+msgstr ""
+
+msgid "Thick"
+msgstr ""
+
+msgid "Thickness"
+msgstr ""
+
+msgid "Thickness of Wave"
+msgstr ""
+
+msgid "Thickness of each ripple line. Higher values draw wider ripple bands; lower values produce thinner outlines."
+msgstr ""
+
+msgid "Thickness of the drawn spirograph line in pixels. The line is drawn along the normal to the curve at each point."
+msgstr ""
+
+msgid "Thickness of the ring band at the end of each cycle."
+msgstr ""
+
+msgid "Thickness of the ring band at the start of each cycle."
+msgstr ""
+
+msgid "Thickness of the spiral arm at the inner starting point."
+msgstr ""
+
+msgid "Thickness of the spiral arm at the outer ending point."
+msgstr ""
+
+msgid "This Effect simply turns every pixel off on this model.\n\nIf set to be transparent it does not change any pixels."
+msgstr ""
+
+msgid "This is really only useful if you are testing a single model"
+msgstr ""
+
+msgid "This is the frame the scan has identified as being the most likely to show all your bulbs. \nIt should be a frame showing all the bulbs on."
+msgstr ""
+
+msgid "This is the new custom model. Click save to create a model file that you can then import into your layout."
+msgstr ""
+
+msgid "This model belongs to a Model Set. Dragging any member of the Set moves them all together.\nHold Alt/Option while dragging to move only this model and reposition it within the Set.\nManage Sets via the right-click menu on the Layout tab."
+msgstr ""
+
+msgid "This option is used to select which models will populate the master view when a new sequence is created."
+msgstr ""
+
+msgid "This sequence is located outside the current show directory.\n\nYou will not be able to save changes directly using Save. You must use Save As to save it within the show directory."
+msgstr ""
+
+msgid "This show folder no longer exists:\n%s"
+msgstr ""
+
+msgid "This tool will read data (typically from a data layer) and generate \na lyric phoneme track from that data. Typically this data would come \nfrom an old sequence which had 7 or 8 channel singing faces.\n\nJust as you would when setting up faces select as many nodes as you \nneed to represent the face. If multiple phenomes light up the same \nnodes then only the first one will be used ... so choose wisely.\n\nWARNING: Your sequence must be rendered for this tool to work correctly."
+msgstr ""
+
+msgid "Threshold for triggering a music event. Lower values detect quieter notes; higher values require louder audio to activate a bar."
+msgstr ""
+
+msgid "Throws away every mapped position so you can start over - do this after moving the camera, as old positions no longer line up."
+msgstr ""
+
+msgid "Tilt (deg)"
+msgstr ""
+
+msgid "Tilt (deg): "
+msgstr ""
+
+msgid "Tilt Center:"
+msgstr ""
+
+msgid "Tilt Max"
+msgstr ""
+
+msgid "Tilt Min"
+msgstr ""
+
+msgid "Tilt Servo"
+msgstr ""
+
+msgid "Tilt Size:"
+msgstr ""
+
+msgid "Tilt offset in degrees applied incrementally across grouped fixtures, fanning them apart vertically. Creates a spread effect when multiple heads are grouped."
+msgstr ""
+
+msgid "Tilt-axis centre of the pattern in degrees."
+msgstr ""
+
+msgid "Time"
+msgstr ""
+
+msgid "Time Adjust (ms)"
+msgstr ""
+
+msgid "Time Offset"
+msgstr ""
+
+msgid "Time Offset:"
+msgstr ""
+
+msgid "Time Resolution"
+msgstr ""
+
+msgid "Time offset between repeated morph copies so they start at different times, creating a wave or cascade effect. Negative values reverse the stagger order."
+msgstr ""
+
+msgid "Time:"
+msgstr ""
+
+msgid "Timeline Zooming"
+msgstr ""
+
+msgid "Timing"
+msgstr ""
+
+msgid "Timing Adjustment (ms):"
+msgstr ""
+
+msgid "Timing Name"
+msgstr ""
+
+msgid "Timing Name:"
+msgstr ""
+
+msgid "Timing Track"
+msgstr ""
+
+msgid "Timing Track Fade Fixed"
+msgstr ""
+
+msgid "Timing Track Fade Proportional"
+msgstr ""
+
+msgid "Timing Track Toggle"
+msgstr ""
+
+msgid "Timing Track:"
+msgstr ""
+
+msgid "Timing Tracks"
+msgstr ""
+
+msgid "Timing/Model"
+msgstr ""
+
+msgid "Timings"
+msgstr ""
+
+msgid "Tiny"
+msgstr ""
+
+msgid "Tip Of The Day"
+msgstr ""
+
+msgid "Tip of the Day"
+msgstr ""
+
+msgid "Tip of the day"
+msgstr ""
+
+msgid "Tips: create the timing tracks first with the audio analysis (Vamp) plugins.\nBars: QM Bar and Beat Tracker, Bars output. Check it follows the music - beats are assumed to be 4 per bar.\nSections: QM Segmenter. Its labels (1, 2, 3...) only group similar-sounding sections. Listen, then tick Chorus on the label that repeats as the chorus and Peak on the loudest ones. Lowering its number of segment types (e.g. 4-5) gives fewer labels to choose from."
+msgstr ""
+
+msgid "Toolbars"
+msgstr ""
+
+msgid "Tools Toolbar"
+msgstr ""
+
+msgid "Tooltip text shown on hover for the primary control"
+msgstr ""
+
+msgid "Tooltip:"
+msgstr ""
+
+msgid "Top"
+msgstr ""
+
+msgid "Top Barrier"
+msgstr ""
+
+msgid "Top X Location"
+msgstr ""
+
+msgid "Top Y Location"
+msgstr ""
+
+msgid "Total number of firework explosions randomly distributed across the effect duration. Disabled when using music or timing triggers."
+msgstr ""
+
+msgid "Total number of revolutions the fan rotates over the duration of the effect. settingPrefix:SLIDER because FanEffect::Render calls GetValueCurveInt which reads SLIDER_<id> as a raw pre-divisor int and divides inside ValueCurve."
+msgstr ""
+
+msgid "Total time %s"
+msgstr ""
+
+msgid "Track"
+msgstr ""
+
+msgid "Trail Length"
+msgstr ""
+
+msgid "Trail:"
+msgstr ""
+
+msgid "Trails"
+msgstr ""
+
+msgid "Transition times that overlap or extend beyond the duration of the effect can lead to unexpected amounts of dimming."
+msgstr ""
+
+msgid "Transparency"
+msgstr ""
+
+msgid "Transparent Black"
+msgstr ""
+
+msgid "Transparent Black checkbox with an inline brightness threshold slider (0-300). When enabled, image pixels at or below the threshold are keyed out as transparent."
+msgstr ""
+
+msgid "Transparent Black checkbox with an inline brightness threshold slider (0-300). When enabled, video pixels below the threshold are keyed out as transparent."
+msgstr ""
+
+msgid "Transparent Black enable checkbox with an inline brightness threshold slider (0-300). When enabled, face image pixels below the threshold are keyed out as transparent."
+msgstr ""
+
+msgid "Treatment"
+msgstr ""
+
+msgid "Trigger level"
+msgstr ""
+
+msgid "Triggers"
+msgstr ""
+
+msgid "Tune Movement"
+msgstr ""
+
+msgid "Turns every node on so you can aim and frame the camera before mapping."
+msgstr ""
+
+msgid "Twinkle"
+msgstr ""
+
+msgid "Twinkle - K"
+msgstr ""
+
+msgid "Twinkle 10%"
+msgstr ""
+
+msgid "Twinkle 25%"
+msgstr ""
+
+msgid "Twinkle 5%"
+msgstr ""
+
+msgid "Twinkle 50%"
+msgstr ""
+
+msgid "Twinkle Steps"
+msgstr ""
+
+msgid "Twist"
+msgstr ""
+
+msgid "Twist angle applied to each blade based on distance from center, creating curved or spiral blade shapes."
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Type or Paste Lyrics"
+msgstr ""
+
+msgid "U"
+msgstr ""
+
+msgid "UDP outputs"
+msgstr ""
+
+msgid "UI control type hint. 'point2d' expands into two slider rows suffixed X/Y; use minX/maxX/defaultX and minY/maxY/defaultY for per-axis bounds (falls back to min/max/default if absent)."
+msgstr ""
+
+msgid "Unable to copy data from clipboard."
+msgstr ""
+
+msgid "Unable to copy data to clipboard."
+msgstr ""
+
+msgid "Unable to save network definition file"
+msgstr ""
+
+msgid "Unassigned"
+msgstr ""
+
+msgid "Uncompressed Video, *.avi"
+msgstr ""
+
+msgid "Undo\tCtrl-z"
+msgstr ""
+
+msgid "Unicode code point of the emoji or character to display when Object to Draw is set to Emoji."
+msgstr ""
+
+msgid "Universe Number"
+msgstr ""
+
+msgid "Unlimited"
+msgstr ""
+
+msgid "Unlink"
+msgstr ""
+
+msgid "Unlink all effects from symbols for compatibility with older xLights versions"
+msgstr ""
+
+msgid "Unrecognized command line parameters"
+msgstr ""
+
+msgid "Up to date"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Update '%s'"
+msgstr ""
+
+msgid "Update Aliases Done."
+msgstr ""
+
+msgid "Update Aliases w/ Maps"
+msgstr ""
+
+msgid "Update the selected effect preset to reflect current effect settings."
+msgstr ""
+
+msgid "Upload"
+msgstr ""
+
+msgid "Upload Progress"
+msgstr ""
+
+msgid "Upload cancelled"
+msgstr ""
+
+msgid "Upload complete"
+msgstr ""
+
+msgid "Upload finished with problems"
+msgstr ""
+
+msgid "Upload to Controller"
+msgstr ""
+
+msgid "Uploaded"
+msgstr ""
+
+msgid "Uploaded (%s)"
+msgstr ""
+
+msgid "Uploading %d/%d: %s"
+msgstr ""
+
+msgid "Use 0 to scale image. >0 to sample image."
+msgstr ""
+
+msgid "Use All Colors"
+msgstr ""
+
+msgid "Use First Color for Highlight"
+msgstr ""
+
+msgid "Use Frame Sync"
+msgstr ""
+
+msgid "Use Palette"
+msgstr ""
+
+msgid "Use Show Folder"
+msgstr ""
+
+msgid "Use State as outline"
+msgstr ""
+
+msgid "Use States as Outline:"
+msgstr ""
+
+msgid "Use Timing Track"
+msgstr ""
+
+msgid "Use custom color picker"
+msgstr ""
+
+msgid "Use keybindings from:"
+msgstr ""
+
+msgid "Use sequence audio file as the video source and synchronise to the audio timeline."
+msgstr ""
+
+msgid "Use this options to shift all effects in the sequence."
+msgstr ""
+
+msgid "Use this options to shift all timing and effects in the sequence."
+msgstr ""
+
+msgid "Use this page to generate the lights that you need to video before you can proceed to the processing tab to create your custom model."
+msgstr ""
+
+msgid "User Lyric Dictionary"
+msgstr ""
+
+msgid "User Manual"
+msgstr ""
+
+msgid "Username:"
+msgstr ""
+
+msgid "Uses a metaball algorithm where overlapping circle influence fields blend together, creating smooth organic plasma-like shapes."
+msgstr ""
+
+msgid "Uses degrees-per-second from the model's tilt motor. Heads with no limit set (0) use the time above."
+msgstr ""
+
+msgid "Uses the legacy shimmer rendering algorithm from before version 2017.7 for backward compatibility with older sequences."
+msgstr ""
+
+msgid "Using Layers"
+msgstr ""
+
+msgid "Using a steady video camera to record a clear video showing all the lights running this test pattern."
+msgstr ""
+
+msgid "V1"
+msgstr ""
+
+msgid "V2 Sparse/Uncompressed"
+msgstr ""
+
+msgid "V2 Sparse/zlib"
+msgstr ""
+
+msgid "V2 Sparse/zstd"
+msgstr ""
+
+msgid "V2 Uncompressed"
+msgstr ""
+
+msgid "V2 ZLIB"
+msgstr ""
+
+msgid "V2 ZSTD"
+msgstr ""
+
+msgid "V2 ZSTD/sparse (Default)"
+msgstr ""
+
+msgid "V2 zlib"
+msgstr ""
+
+msgid "V2 zstd"
+msgstr ""
+
+msgid "Value"
+msgstr ""
+
+msgid "Value 1"
+msgstr ""
+
+msgid "Value 2"
+msgstr ""
+
+msgid "Value Curve"
+msgstr ""
+
+msgid "Value Curves"
+msgstr ""
+
+msgid "Value curve file to save"
+msgstr ""
+
+msgid "Value curve maximum (overrides 'max' when VC range differs from slider range)"
+msgstr ""
+
+msgid "Value curve minimum (overrides 'min' when VC range differs from slider range)"
+msgstr ""
+
+msgid "Value that should not match"
+msgstr ""
+
+msgid "Value to compare against"
+msgstr ""
+
+msgid "Value:"
+msgstr ""
+
+msgid "Vary Wavelength By Fret"
+msgstr ""
+
+msgid "Vary Wavelength By String"
+msgstr ""
+
+msgid "Velocity"
+msgstr ""
+
+msgid "Velocity of Particles"
+msgstr ""
+
+msgid "Vendor"
+msgstr ""
+
+msgid "Version:"
+msgstr ""
+
+msgid "Version: %s\n%s"
+msgstr ""
+
+msgid "Vert:  %.2f"
+msgstr ""
+
+msgid "Vertical Buffer Layout"
+msgstr ""
+
+msgid "Vertical Fade"
+msgstr ""
+
+msgid "Vertical Offset"
+msgstr ""
+
+msgid "Vertical Per Model"
+msgstr ""
+
+msgid "Vertical Per Model/Strand"
+msgstr ""
+
+msgid "Vertical Scale"
+msgstr ""
+
+msgid "Vertical Slices"
+msgstr ""
+
+msgid "Vertical Stack"
+msgstr ""
+
+msgid "Vertical Stack - Scaled"
+msgstr ""
+
+msgid "Vertical center of the shockwave ring as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical drift applied to all particles. Positive values push particles upward, negative downward."
+msgstr ""
+
+msgid "Vertical ending position for vector movement mode. The text moves from the start position to this position over the effect duration."
+msgstr ""
+
+msgid "Vertical offset for the ending position of the face image when using the vector movement mode. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Vertical offset for the ending position of the image when using the vector movement mode."
+msgstr ""
+
+msgid "Vertical offset for the starting position of the face image, as a percentage of the model height. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "Vertical offset for the starting position of the image, as a percentage of the model height."
+msgstr ""
+
+msgid "Vertical offset of the bolt's starting point. For 'Up' direction this is from the bottom; for 'Down' it offsets from the top."
+msgstr ""
+
+msgid "Vertical offset of the marquee center. Shifts the entire marquee rectangle up or down."
+msgstr ""
+
+msgid "Vertical offset of the shader viewport as a percentage. Only active for shaders that consume iResolution / coordinate uniforms."
+msgstr ""
+
+msgid "Vertical position of particle source 1 as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of particle source 2 as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of particle source 3 as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of particle source 4 as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of the fan center as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of the galaxy center as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of the kaleidoscope center point as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical position of the pinwheel center as a percentage offset from the model center."
+msgstr ""
+
+msgid "Vertical position of the ripple center as a percentage offset from the model center."
+msgstr ""
+
+msgid "Vertical position of the warp center point or focal area, as a percentage of the buffer height."
+msgstr ""
+
+msgid "Vertical spawn position for shapes as a percentage of the model height, when random location is disabled."
+msgstr ""
+
+msgid "Vertical starting position of the text. Used as the origin for vector movement or as a static offset when movement is none."
+msgstr ""
+
+msgid "Vertical thickness of the wave line as a percentage of the buffer height. Higher values draw a wider band around the wave center."
+msgstr ""
+
+msgid "Very Quiet"
+msgstr ""
+
+msgid "Video Codec:"
+msgstr ""
+
+msgid "Video Export Settings"
+msgstr ""
+
+msgid "Video Preview"
+msgstr ""
+
+msgid "Video Tutorials"
+msgstr ""
+
+msgid "Video file selection: Select / Clear buttons, animated preview thumbnail, filename label, computed video duration, and a 'Match Effect To Video Duration' button."
+msgstr ""
+
+msgid "Video is steady"
+msgstr ""
+
+msgid "Video:"
+msgstr ""
+
+msgid "Videos"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "View Log"
+msgstr ""
+
+msgid "View Toolbar"
+msgstr ""
+
+msgid "View name may only contain letters, numbers, spaces, underscores, and hyphens."
+msgstr ""
+
+msgid "View/Change Options"
+msgstr ""
+
+msgid "View:"
+msgstr ""
+
+msgid "Vir, Vixen 2.1 *.vir routine file"
+msgstr ""
+
+msgid "Vir, Vixen Routine file. *.vir"
+msgstr ""
+
+msgid "Visible"
+msgstr ""
+
+msgid "Vix,Vixen 2.1 *.vix sequence file"
+msgstr ""
+
+msgid "Vixen, Vixen sequence file *.vix"
+msgstr ""
+
+msgid "Vulkan"
+msgstr ""
+
+msgid "WBGR"
+msgstr ""
+
+msgid "WBRG"
+msgstr ""
+
+msgid "WGBR"
+msgstr ""
+
+msgid "WGRB"
+msgstr ""
+
+msgid "WQ"
+msgstr ""
+
+msgid "WRBG"
+msgstr ""
+
+msgid "WRGB"
+msgstr ""
+
+msgid "Waiting"
+msgstr ""
+
+msgid "Warm Up Time"
+msgstr ""
+
+msgid "Warm up frames"
+msgstr ""
+
+msgid "Warning"
+msgstr ""
+
+msgid "Warp Type"
+msgstr ""
+
+msgid "Wave Direction"
+msgstr ""
+
+msgid "Wave Type"
+msgstr ""
+
+msgid "Web Link:"
+msgstr ""
+
+msgid "Webcam node identification (build/fix an existing model's node positions)"
+msgstr ""
+
+msgid "Website:"
+msgstr ""
+
+msgid "What action do you want to take\\?"
+msgstr ""
+
+msgid "When Auto, blink occurs during rest or (off)."
+msgstr ""
+
+msgid "When Highlight is enabled, uses the first palette color for the highlight line instead of white. The first color is then excluded from the bar pattern."
+msgstr ""
+
+msgid "When Motion is enabled, percentage of the sketch to render at any given time. Only used when Motion is enabled."
+msgstr ""
+
+msgid "When enabled, a mirrored copy of the wave is drawn on the opposite side, creating a symmetrical pattern around the center."
+msgstr ""
+
+msgid "When enabled, also duplicates effects from matching submodels of the source model onto the corresponding submodels of the current model (matched by name)."
+msgstr ""
+
+msgid "When enabled, an animated GIF restarts from the first frame after reaching the last frame, looping continuously for the duration of the effect."
+msgstr ""
+
+msgid "When enabled, applies a brightness gradient across each spiral arm to simulate a 3D shading effect, making the arms appear rounded."
+msgstr ""
+
+msgid "When enabled, applies a brightness gradient to the ripple rings to simulate a three-dimensional depth effect."
+msgstr ""
+
+msgid "When enabled, assigns more bars to lower frequencies and fewer to higher frequencies using a logarithmic scale, matching how humans perceive pitch."
+msgstr ""
+
+msgid "When enabled, bars and levels fall gradually after a peak rather than dropping instantly, creating a smoother visual decay."
+msgstr ""
+
+msgid "When enabled, black keys (sharps/flats) are rendered on the piano. When disabled, only white keys are shown."
+msgstr ""
+
+msgid "When enabled, blade edges fade smoothly using alpha or brightness instead of having hard edges."
+msgstr ""
+
+msgid "When enabled, blends all palette colors vertically across each spiral arm instead of using distinct per-arm colors."
+msgstr ""
+
+msgid "When enabled, circles bounce off the edges of the model instead of wrapping around to the opposite side."
+msgstr ""
+
+msgid "When enabled, color is determined by the effect time position. When disabled, color is based on spatial position within the fill."
+msgstr ""
+
+msgid "When enabled, displays additional twinkling Christmas lights on the tree branches alongside the garland sweep animation."
+msgstr ""
+
+msgid "When enabled, displays the face outline nodes in addition to the mouth and eyes, using the defined outline node group."
+msgstr ""
+
+msgid "When enabled, draws a thin line for each string beyond the fret position, showing the unfretted portion of the string."
+msgstr ""
+
+msgid "When enabled, each bar is scaled to fill its proportional share of the model width rather than being a single pixel wide."
+msgstr ""
+
+msgid "When enabled, each particle keeps its initial color as it fades. When disabled, particles cycle through the palette as they age."
+msgstr ""
+
+msgid "When enabled, each pixel gets its own independent flame simulation instead of all pixels showing the same flame color."
+msgstr ""
+
+msgid "When enabled, each pixel is assigned a new random position after its twinkle cycle completes. When disabled, pixels twinkle in the same locations repeatedly."
+msgstr ""
+
+msgid "When enabled, each pixel is assigned a random color from the palette every frame. When disabled, all pixels use the same color which cycles sequentially through the palette."
+msgstr ""
+
+msgid "When enabled, each shape gets a random velocity and direction instead of using the Velocity and Direction settings."
+msgstr ""
+
+msgid "When enabled, each shape keeps the color it was assigned at creation. When disabled, shapes follow the current palette color as it changes."
+msgstr ""
+
+msgid "When enabled, each shape spawns at a random position on the model instead of at the X/Y Center position."
+msgstr ""
+
+msgid "When enabled, each shape starts at a random size and age rather than all beginning at the same start size, creating a more organic initial appearance."
+msgstr ""
+
+msgid "When enabled, each word in the text is drawn using a different color from the palette, cycling through the available colors."
+msgstr ""
+
+msgid "When enabled, explosions are triggered at the start and end marks of a selected timing track."
+msgstr ""
+
+msgid "When enabled, explosions are triggered by audio volume peaks instead of being evenly distributed."
+msgstr ""
+
+msgid "When enabled, flame height is driven by audio volume instead of the Height and Growth Cycles settings."
+msgstr ""
+
+msgid "When enabled, new shapes are spawned at each timing mark in the selected timing track instead of at regular intervals."
+msgstr ""
+
+msgid "When enabled, new shapes are spawned in response to audio peaks in the music rather than at regular intervals."
+msgstr ""
+
+msgid "When enabled, notes fade out over their duration by reducing alpha transparency."
+msgstr ""
+
+msgid "When enabled, notes gradually fade out over their duration instead of staying at full brightness until they end."
+msgstr ""
+
+msgid "When enabled, older trail copies fade out progressively, creating a smooth motion blur. When disabled, all trail copies are drawn at full opacity."
+msgstr ""
+
+msgid "When enabled, outputs a 16-bit value across two channels (coarse and fine) for higher precision servo positioning. When disabled, uses a single 8-bit channel."
+msgstr ""
+
+msgid "When enabled, particles arc downward over time simulating gravity. When disabled, particles fly in straight lines."
+msgstr ""
+
+msgid "When enabled, particles keep the color they were assigned at creation. When disabled, particle colors are not preserved during rendering."
+msgstr ""
+
+msgid "When enabled, particles that touch each other blend their colors together over time using the physics engine's color mixing."
+msgstr ""
+
+msgid "When enabled, pixels that move past the left or right edge wrap around to the opposite side instead of being clipped."
+msgstr ""
+
+msgid "When enabled, pixels that move past the top or bottom edge wrap around to the opposite side instead of being clipped."
+msgstr ""
+
+msgid "When enabled, prevents the shimmer animation on phoneme shapes that are defined with a shimmer suffix in the face definition."
+msgstr ""
+
+msgid "When enabled, radius and width values are treated as percentages of the buffer size rather than absolute pixel values."
+msgstr ""
+
+msgid "When enabled, radius and width values are treated as percentages of the buffer size. When disabled, values are in absolute pixels."
+msgstr ""
+
+msgid "When enabled, radius values are treated as percentages of the buffer size rather than absolute pixel values."
+msgstr ""
+
+msgid "When enabled, shapes gradually become transparent as they age, fading out over their lifetime."
+msgstr ""
+
+msgid "When enabled, the Filter Label is treated as a regular expression for matching timing mark labels instead of a plain text match."
+msgstr ""
+
+msgid "When enabled, the X and Y center offset values are interpreted as absolute pixel counts instead of percentages of the buffer size."
+msgstr ""
+
+msgid "When enabled, the X and Y center offset values are treated as pixel counts rather than percentages of the model dimensions."
+msgstr ""
+
+msgid "When enabled, the X and Y center offset values are treated as pixel counts rather than percentages of the model dimensions. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "When enabled, the X and Y position values are interpreted as pixel offsets rather than percentage-based positions."
+msgstr ""
+
+msgid "When enabled, the background color of an animated GIF is treated as transparent, allowing underlying effects to show through."
+msgstr ""
+
+msgid "When enabled, the bar colors fade in alpha from bottom to top, creating a transparency gradient within each active bar."
+msgstr ""
+
+msgid "When enabled, the bolt splits into a secondary fork partway through, creating a branching lightning appearance."
+msgstr ""
+
+msgid "When enabled, the buffer/layer settings (rotation, zoom, etc.) from this effect override those from the duplicated source."
+msgstr ""
+
+msgid "When enabled, the color palette from this effect is used instead of the palette from the duplicated source effect."
+msgstr ""
+
+msgid "When enabled, the color settings (sparkles, brightness, etc.) from this effect override those from the duplicated source."
+msgstr ""
+
+msgid "When enabled, the curtain motion cycles repeatedly for the duration of the effect instead of playing once and stopping."
+msgstr ""
+
+msgid "When enabled, the effect alternates between the first and second palette colors on each frame, creating a rapid flickering shimmer."
+msgstr ""
+
+msgid "When enabled, the entire face (including outline) is hidden during rest phonemes or when no phoneme is active. Requires a Timing Track."
+msgstr ""
+
+msgid "When enabled, the face brightness gradually fades during the lead in and lead out frames instead of appearing/disappearing abruptly."
+msgstr ""
+
+msgid "When enabled, the face image wraps around horizontally so pixels that scroll off one side reappear on the other. Only applies to Matrix type faces."
+msgstr ""
+
+msgid "When enabled, the fill wraps around to the beginning of the buffer after reaching the end."
+msgstr ""
+
+msgid "When enabled, the filter text is treated as a regular expression pattern instead of a plain text match."
+msgstr ""
+
+msgid "When enabled, the fixture shutter automatically opens when the dimmer is above zero and closes when the dimmer is zero, preventing unwanted light leaks during repositioning."
+msgstr ""
+
+msgid "When enabled, the flame color blends between the first two palette colors based on brightness. When disabled, the flame uses a natural orange/yellow candle color."
+msgstr ""
+
+msgid "When enabled, the frequency axis uses a logarithmic scale that better matches human pitch perception, giving more space to lower frequencies."
+msgstr ""
+
+msgid "When enabled, the full head is visible at the starting position from the first frame, rather than growing in from nothing."
+msgstr ""
+
+msgid "When enabled, the height of each string's visual shrinks over the note duration, simulating a decaying vibration."
+msgstr ""
+
+msgid "When enabled, the image flickers on and off on alternating frames, creating a shimmering visual effect."
+msgstr ""
+
+msgid "When enabled, the image wraps around horizontally so pixels that scroll off one side reappear on the other."
+msgstr ""
+
+msgid "When enabled, the layer blending and transition settings from this effect override those from the duplicated source."
+msgstr ""
+
+msgid "When enabled, the marquee pattern moves in the opposite direction around the perimeter."
+msgstr ""
+
+msgid "When enabled, the meteor count is scaled by the current music volume, producing more meteors during loud passages and fewer during quiet ones."
+msgstr ""
+
+msgid "When enabled, the number of active strobes scales with the current music volume level."
+msgstr ""
+
+msgid "When enabled, the offset value is in pixels. When disabled, it is a percentage of the buffer dimension."
+msgstr ""
+
+msgid "When enabled, the pan component of the path is ignored, keeping the fixture at its current horizontal position while only tilt changes."
+msgstr ""
+
+msgid "When enabled, the particle flow rate from source 1 scales with the current music volume level."
+msgstr ""
+
+msgid "When enabled, the particle flow rate from source 2 scales with the current music volume level."
+msgstr ""
+
+msgid "When enabled, the particle flow rate from source 3 scales with the current music volume level."
+msgstr ""
+
+msgid "When enabled, the particle flow rate from source 4 scales with the current music volume level."
+msgstr ""
+
+msgid "When enabled, the ring edges fade out smoothly based on distance from the ring center, creating a soft glow instead of hard edges."
+msgstr ""
+
+msgid "When enabled, the second end point (X2b/Y2b) is locked to the first end point (X2a/Y2a), making the end a single point instead of a line."
+msgstr ""
+
+msgid "When enabled, the second start point (X1b/Y1b) is locked to the first start point (X1a/Y1a), making the start a single point instead of a line."
+msgstr ""
+
+msgid "When enabled, the servo position is driven by phoneme data from a timing track instead of the start/end value sliders, useful for lip-sync animations."
+msgstr ""
+
+msgid "When enabled, the sketch is fully drawn over the entire effect duration but only a percentage is rendered at any given time, creating simple motion-graphics-like effects."
+msgstr ""
+
+msgid "When enabled, the spiral arm edges fade smoothly using alpha blending instead of having hard edges."
+msgstr ""
+
+msgid "When enabled, the spiral arms gradually decrease in thickness over the effect duration. When both Grow and Shrink are enabled, the arms grow then shrink."
+msgstr ""
+
+msgid "When enabled, the spiral arms gradually increase in thickness over the effect duration."
+msgstr ""
+
+msgid "When enabled, the spiral draws from the outside inward. When disabled, it draws from the center outward."
+msgstr ""
+
+msgid "When enabled, the text movement stops when the text reaches the center of the model rather than continuing off screen. Only meaningful when Movement is not 'none'."
+msgstr ""
+
+msgid "When enabled, the text scrolls through once and then stops instead of repeating in a loop. Only meaningful when Movement is not 'none'."
+msgstr ""
+
+msgid "When enabled, the tilt component of the path is ignored, keeping the fixture at its current vertical position while only pan changes."
+msgstr ""
+
+msgid "When enabled, the video is scaled to fit within the buffer while preserving its original aspect ratio, adding black bars if needed."
+msgstr ""
+
+msgid "When enabled, the wave wavelength varies based on fret position so that higher frets produce shorter, tighter waves."
+msgstr ""
+
+msgid "When enabled, treats all strands of the model as one continuous strand for the chase, so the pattern flows seamlessly across strand boundaries."
+msgstr ""
+
+msgid "When enabled, twinkling pixels snap on and off instantly instead of fading, creating a strobe-like flash effect."
+msgstr ""
+
+msgid "When enabled, uses the sequence audio file as the video source and synchronises video playback to the audio timeline position. The picked video file, Start Time, Duration Treatment, and Speed are all overridden by the audio file's properties when this is on."
+msgstr ""
+
+msgid "When mapping model to group, convert render style to 'Per Model' when applicable"
+msgstr ""
+
+msgid "When on, Matrix (image) face definitions on the imported models are stored in this sequence (with images embedded) instead of being added to the mapped models in your layout. Node/Coro faces are unaffected."
+msgstr ""
+
+msgid "When set, each timing mark triggers a new ripple cycle. Duration controls how long each cycle lasts."
+msgstr ""
+
+msgid "When set, each timing mark triggers a new shockwave ring expansion. Duration controls how long each expansion lasts."
+msgstr ""
+
+msgid "When set, the chase performs the Cycles count between each pair of timing marks on this track instead of over the whole effect duration. No chase is drawn before the first mark or after the last mark."
+msgstr ""
+
+msgid "When true, automatically enable Canvas mode in Layer Blending when this effect is selected"
+msgstr ""
+
+msgid "Whether this property can be locked to prevent random effect changes"
+msgstr ""
+
+msgid "Whether this property supports value curves for animation"
+msgstr ""
+
+msgid "Which edge of the buffer the fire originates from."
+msgstr ""
+
+msgid "White Only"
+msgstr ""
+
+msgid "Width"
+msgstr ""
+
+msgid "Width of Bolt"
+msgstr ""
+
+msgid "Width of each arm as a percentage of the angular space between arms. At 100, adjacent arms touch with no gap between them."
+msgstr ""
+
+msgid "Width of each colored band in pixels. When zero, colors blend smoothly across the fill area."
+msgstr ""
+
+msgid "Width of each element as a percentage of the available element space. Lower values create gaps between elements."
+msgstr ""
+
+msgid "Width of each spiral arm as a percentage of the available space. At 100% the arms fill the entire model with no gaps between them."
+msgstr ""
+
+msgid "Width of the emission area for source 1, spread perpendicular to the emission direction. Zero emits from a point; higher values create a wider spray."
+msgstr ""
+
+msgid "Width of the emission area for source 2, spread perpendicular to the emission direction. Zero emits from a point; higher values create a wider spray."
+msgstr ""
+
+msgid "Width of the emission area for source 3, spread perpendicular to the emission direction. Zero emits from a point; higher values create a wider spray."
+msgstr ""
+
+msgid "Width of the emission area for source 4, spread perpendicular to the emission direction. Zero emits from a point; higher values create a wider spray."
+msgstr ""
+
+msgid "Width1"
+msgstr ""
+
+msgid "Width2"
+msgstr ""
+
+msgid "Width:"
+msgstr ""
+
+msgid "Wind Baseline"
+msgstr ""
+
+msgid "Wind Calmness"
+msgstr ""
+
+msgid "Wind Variability"
+msgstr ""
+
+msgid "Windows"
+msgstr ""
+
+msgid "Windows Tool Bar"
+msgstr ""
+
+msgid "Wiping settings\n"
+msgstr ""
+
+msgid "Wiring View"
+msgstr ""
+
+msgid "Wizard"
+msgstr ""
+
+msgid "Word"
+msgstr ""
+
+msgid "Words may be in any order and separators are optional. * and ? are wildcards. /pattern/ is a regular expression."
+msgstr ""
+
+msgid "Wrap"
+msgstr ""
+
+msgid "Wrap Values"
+msgstr ""
+
+msgid "Wrap X"
+msgstr ""
+
+msgid "Wrap Y"
+msgstr ""
+
+msgid "X"
+msgstr ""
+
+msgid "X Center"
+msgstr ""
+
+msgid "X Frequency"
+msgstr ""
+
+msgid "X Frequency:"
+msgstr ""
+
+msgid "X Location"
+msgstr ""
+
+msgid "X Movement"
+msgstr ""
+
+msgid "X Offset"
+msgstr ""
+
+msgid "X Offset:"
+msgstr ""
+
+msgid "X Phase"
+msgstr ""
+
+msgid "X Phase:"
+msgstr ""
+
+msgid "X Size:"
+msgstr ""
+
+msgid "X Velocity"
+msgstr ""
+
+msgid "X coordinate of the first endpoint of the ending line (side A end). Defines where the morph finishes on one side."
+msgstr ""
+
+msgid "X coordinate of the first endpoint of the starting line (side A start). Defines where the morph begins on one side."
+msgstr ""
+
+msgid "X coordinate of the second endpoint of the ending line (side B end). Together with X2a/Y2a, defines the width and angle of the ending line."
+msgstr ""
+
+msgid "X coordinate of the second endpoint of the starting line (side B start). Together with X1a/Y1a, defines the width and angle of the starting line."
+msgstr ""
+
+msgid "X-axis Center"
+msgstr ""
+
+msgid "X-axis End"
+msgstr ""
+
+msgid "X-axis Start"
+msgstr ""
+
+msgid "X1a"
+msgstr ""
+
+msgid "X1b"
+msgstr ""
+
+msgid "X2a"
+msgstr ""
+
+msgid "X2b"
+msgstr ""
+
+msgid "XL Font"
+msgstr ""
+
+msgid "XML Version:"
+msgstr ""
+
+msgid "XXXXXXXXXXXXXXX"
+msgstr ""
+
+msgid "Y"
+msgstr ""
+
+msgid "Y Center"
+msgstr ""
+
+msgid "Y Frequency"
+msgstr ""
+
+msgid "Y Frequency:"
+msgstr ""
+
+msgid "Y Location"
+msgstr ""
+
+msgid "Y Offset"
+msgstr ""
+
+msgid "Y Offset:"
+msgstr ""
+
+msgid "Y Phase"
+msgstr ""
+
+msgid "Y Phase:"
+msgstr ""
+
+msgid "Y Size:"
+msgstr ""
+
+msgid "Y Velocity"
+msgstr ""
+
+msgid "Y coordinate of the first endpoint of the ending line (side A end). Defines where the morph finishes on one side."
+msgstr ""
+
+msgid "Y coordinate of the first endpoint of the starting line (side A start). Defines where the morph begins on one side."
+msgstr ""
+
+msgid "Y coordinate of the second endpoint of the ending line (side B end). Together with X2b, defines the other end of the ending line."
+msgstr ""
+
+msgid "Y coordinate of the second endpoint of the starting line (side B start). Together with X1b, defines the other end of the starting line."
+msgstr ""
+
+msgid "Y-axis Center"
+msgstr ""
+
+msgid "Y-axis End"
+msgstr ""
+
+msgid "Y-axis Start"
+msgstr ""
+
+msgid "Y-axis center"
+msgstr ""
+
+msgid "Y1a"
+msgstr ""
+
+msgid "Y1b"
+msgstr ""
+
+msgid "Y2a"
+msgstr ""
+
+msgid "Y2b"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "You Cannot rename this item"
+msgstr ""
+
+msgid "You are running xLights version xxx\nWhereas the most recent release is xxx"
+msgstr ""
+
+msgid "You cannot delete this item"
+msgstr ""
+
+msgid "You cannot store an effect on the selected item."
+msgstr ""
+
+msgid "Zoom"
+msgstr ""
+
+msgid "Zoom In"
+msgstr ""
+
+msgid "Zoom Out"
+msgstr ""
+
+msgid "Zoom Room Help"
+msgstr ""
+
+msgid "Zoom To Cursor"
+msgstr ""
+
+msgid "Zoom level for the shader output. Positive values zoom in, negative values zoom out, and zero shows the shader at its native scale. Only active for shaders that consume iResolution / coordinate uniforms."
+msgstr ""
+
+msgid "Zoom. Hold Ctrl/Cmd and use the mouse wheel over the node layout."
+msgstr ""
+
+msgid "a - Animation"
+msgstr ""
+
+msgid "aborted twice, may be incomplete"
+msgstr ""
+
+msgid "cancelled"
+msgstr ""
+
+msgid "controller outputs"
+msgstr ""
+
+msgid "could not be opened"
+msgstr ""
+
+msgid "could not open the fseq"
+msgstr ""
+
+msgid "d - Distance"
+msgstr ""
+
+msgid "done"
+msgstr ""
+
+msgid "eMail Address:"
+msgstr ""
+
+msgid "etc"
+msgstr ""
+
+msgid "found"
+msgstr ""
+
+msgid "https://xlights.org"
+msgstr ""
+
+msgid "https://xlights.org/privacy-policy/"
+msgstr ""
+
+msgid "iPad Link tab body: per-head sync preview plus a Re-sync button, mirroring desktop's StaticText_MHLinkPreview."
+msgstr ""
+
+msgid "iPad colour-wheel picker for colour-wheel fixtures: a strip of the model's wheel slots that writes a single-colour Wheel: command. Hidden for RGB/CMYW fixtures."
+msgstr ""
+
+msgid "iPad dimmer intensity authoring: a flat-ramp 0..100% slider that writes a constant Dimmer: command into the active fixtures."
+msgstr ""
+
+msgid "iPad single-colour authoring: SwiftUI ColorPicker writes a single HSV triple into the active fixtures' Color: command."
+msgstr ""
+
+msgid "iPad waypoint path editor: a touch Canvas that draws Bezier (line / quadratic / cubic) waypoint paths plus path presets, writing the same Path: command desktop's Effect Assist reads."
+msgstr ""
+
+msgid "iPad-only explanatory banner for the Moving Head inspector."
+msgstr ""
+
+msgid "iPad-only fixture selection: eight toggles for Moving Head slots 1-8. Each toggle flips the matching MH*_Settings entry between active and empty. Position slider changes (Pan / Tilt / Offsets / Groupings / Cycles) automatically re-sync into every active fixture, as do the Pattern, shutter and Link settings. Colour, dimmer intensity, waypoint path drawing and parametric patterns each have their own tab."
+msgstr ""
+
+msgid "iPad-only touch editor for the sketch definition — drag endpoints and Bezier controls; tap in Add Line mode to append line segments; New Path starts a disconnected sub-path. Round-trips advanced segments through the desktop Effect Assist unchanged; desktop skips this entry."
+msgstr ""
+
+msgid "iPad-only touch editor showing the current Start (blue) and End (orange) lines on a 100x100 grid. Drag the four labelled endpoints to reposition; linked-point pairs (see Link Points) follow their master. Desktop skips this entry; desktop users edit via the sliders below."
+msgstr ""
+
+msgid "models"
+msgstr ""
+
+msgid "noone@nowhere.xlights.org"
+msgstr ""
+
+msgid "nothing to check"
+msgstr ""
+
+msgid "or Stream URL:"
+msgstr ""
+
+msgid "playlist"
+msgstr ""
+
+msgid "proxies"
+msgstr ""
+
+msgid "r - Radius of inner circle"
+msgstr ""
+
+msgid "rest"
+msgstr ""
+
+msgid "seconds: enter time in seconds\nminutes seconds: enter time as mm:ss. To prepend or append text to the counter, delimit the time with / (The next show begins in /15:30/! Stay Tuned.)\n\nto date 'd h m s'\nto date 'h:m:s'\nto date 'm' or 's'\nto date 's'\n\nThese options count down to given date based on system date and time. Enter Date in on of the following formats: \nFri, 25 Dec 2015 00:00:00 +0100\nFri, 25 Dec 2015 00:00:00 CST\nFri, 25 Dec 2015 00:00:00 MST\n\n\n!to date!%fmt\n\nThis option allows you to choose the output format. i.e. days only.\nEnter Date in the following format to display days only:\n/Fri, 25 Dec 2015 00:00:00 +0100/ %D"
+msgstr ""
+
+msgid "tabs = wxNotebook, section = wxStaticBoxSizer, xyCenter = XY position control pair"
+msgstr ""
+
+msgid "up to date"
+msgstr ""
+
+msgid "v"
+msgstr ""
+
+msgid "vv"
+msgstr ""
+
+msgid "will be uploaded"
+msgstr ""
+
+msgid "x"
+msgstr ""
+
+msgid "xLights"
+msgstr ""
+
+msgid "xLights File Conversion"
+msgstr ""
+
+msgid "xLights Update Available"
+msgstr ""
+
+msgid "xLights could not get access to the show folder:\n%s"
+msgstr ""
+
+msgid "xLights/FPP Sequences(*.fseq)|*.fseq|\n\n\t\t\tLOR Music Sequences (*.lms)|*.lms|\n\n\t\t\tLOR Animation Sequences (*.las)|*.las|\n\n\t\t\tVixen Sequences (*.vix)|*.vix|\n\n\t\t\tGlediator Record File (*.gled)|*.gled)|\n\n\t\t\tLynx Conductor Sequences (*.seq)|*.seq|\n\n\t\t\tHLS hlsIdata Sequences(*.hlsIdata)|*.hlsIdata"
+msgstr ""
+
+msgid "xLights/FPP, *.fseq"
+msgstr ""
+
+msgid "{Show Directory not set}"
+msgstr ""
+
+msgid "Sync Lyrics"
+msgstr ""
+
+msgid "Sync Lyrics..."
+msgstr ""
+
+msgid "Import Lyrics Text..."
+msgstr ""
+
+msgid "Open Lyrics File..."
+msgstr ""
+
+msgid "Phrase"
+msgstr ""
+
+msgid "Start (m:ss)"
+msgstr ""
+
+msgid "End (m:ss)"
+msgstr ""
+
+msgid "Play / Pause"
+msgstr ""
+
+msgid "Play Phrase"
+msgstr ""
+
+msgid "Play From Here"
+msgstr ""
+
+msgid "Mark Start"
+msgstr ""
+
+msgid "Mark End"
+msgstr ""
+
+msgid "Confirm Phrase"
+msgstr ""
+
+msgid "Adjust Time:"
+msgstr ""
+
+msgid "Start -50 ms"
+msgstr ""
+
+msgid "Start +50 ms"
+msgstr ""
+
+msgid "End -50 ms"
+msgstr ""
+
+msgid "End +50 ms"
+msgstr ""
+
+msgid "Keys: Space plays or pauses, Z marks the start, X marks the end, C confirms the phrase."
+msgstr ""
+
+msgid "Generate Words and Phonemes"
+msgstr ""
+
+msgid "The saved marks could not be read and have been left untouched:\n%s"
+msgstr ""
+
+msgid "The marks could not be saved:\n%s"
+msgstr ""
+
+msgid "approximate"
+msgstr ""
+
+msgid "not marked"
+msgstr ""
+
+msgid "confirmed"
+msgstr ""
+
+msgid "adjusted"
+msgstr ""
+
+msgid "marked"
+msgstr ""
+
+msgid "start marked"
+msgstr ""
+
+msgid "No lyrics yet: import or write them first."
+msgstr ""
+
+msgid "Manual sync"
+msgstr ""
+
+msgid "Approximate sync"
+msgstr ""
+
+msgid "Not synchronized"
+msgstr ""
+
+msgid "%s: %d of %d phrases marked by hand"
+msgstr ""
+
+msgid "Paste or write the lyrics. Optional tags such as [Chorus], and blank lines between verses, are kept."
+msgstr ""
+
+msgid "Lyrics files (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt"
+msgstr ""
+
+msgid "Mark the start and end of this phrase first."
+msgstr ""
+
+msgid "Mark the start of this phrase first."
+msgstr ""
+
+msgid "Mark the start and end of at least one phrase first."
+msgstr ""
+
+msgid "Replace the words and phonemes of \"%s\" with %d phrases, %d words and %d mouth shapes?"
+msgstr ""
+
+msgid "%d phrases have only their start marked and will be left out."
+msgstr ""
+
+msgid "This sequence has no audio, so phrases cannot be marked by ear. Lyrics can still be imported, and phrases with times can be generated."
+msgstr ""
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which does not exist, so the mouth will not move."
+msgstr ""
+
+msgid "Choose an existing lyrics track."
+msgstr ""
+
+msgid "The face on \"{model}\" uses the lyrics track \"{track}\", which only has {layers} layers. Three layers are needed to move the mouth, so it will stay still."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no phonemes while the face on \"{model}\" is active, so the mouth will not move."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no words layer."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" contains \"{label}\", which is not a mouth shape."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" moves the mouth with \"{label}\" outside any word, where it should be resting."
+msgstr ""
+
+msgid "Write a text or choose a lyrics track."
+msgstr ""
+
+msgid "The text effect on \"{model}\" refers to the lyrics \"{value}\", which will show nothing (reason: {reason})."
+msgstr ""
+
+msgid "Choose the phrases or the words of an existing lyrics track."
+msgstr ""
+
+msgid "Check the lyrics track and the face definition."
+msgstr ""
+
+msgid "Check the lyrics track around that pause."
+msgstr ""
+
+msgid "The word \"{word}\" in the lyrics track \"{track}\" has no mouth shapes, so the mouth will rest while it is sung."
+msgstr ""
+
+msgid "Write the word in letters, or add its pronunciation as an exception."
+msgstr ""
+
+msgid "The lyrics of \"{track}\" look like language \"{language}\", but mouth shapes are only generated for Spanish."
+msgstr ""
+
+msgid "Check the mouth movements, or use a lyrics track made for that language."
+msgstr ""
+
+msgid "{count} phrases of the lyrics track \"{track}\" have no times yet, so the mouth will not move during them."
+msgstr ""
+
+msgid "Mark when those phrases start and end while listening to the song."
+msgstr ""
+
+msgid "The lyrics track \"{track}\" has no {missing} ({layers} layers), so the mouth cannot follow it."
+msgstr ""
+
+msgid "Generate the words and phonemes of that track again."
+msgstr ""
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" has invalid times or overlaps the previous one."
+msgstr ""
+
+msgid "The {layer} mark \"{label}\" of the lyrics track \"{track}\" falls outside the phrase or word it belongs to."
+msgstr ""
+
+msgid "Adjust the times so that every word stays inside its phrase and every mouth shape inside its word."
+msgstr ""
+
+msgid "In the lyrics track \"{track}\" the mouth does not rest in the pause at {at} ms."
+msgstr ""
+
+msgid "Put a rest in that pause."
+msgstr ""
+
+msgid "The layers of the lyrics track \"{track}\" are in the wrong order: the face would read words as mouth shapes."
+msgstr ""
+
+msgid "The layers must be phrases, words and phonemes, in that order."
+msgstr ""
+
+msgid "{count} phrases of the lyrics track \"{track}\" have uncertain times ({quality})."
+msgstr ""
+
+msgid "Listen to them and confirm or correct their start and end."
+msgstr ""
+
+msgid "A {level} correction made by hand on \"{target}\" was not kept in the lyrics track \"{track}\"."
+msgstr ""
+
+msgid "Generate the track again; if it repeats, report the problem."
+msgstr ""
+
+msgid "A correction made by hand on \"{target}\" could not be applied to the lyrics track \"{track}\" ({reason}). It has been kept, not deleted."
+msgstr ""
+
+msgid "Check whether that part of the lyrics was changed, and mark it again."
+msgstr ""
+
+msgid "Generate the phrases, words and phonemes of that track."
+msgstr ""

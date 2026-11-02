@@ -220,6 +220,23 @@ std::string GenerateGuid();
         return res;
     }
 
+    // Bytes of the UTF-8 character starting at s[i]. A stray or truncated sequence
+    // counts as one byte, so legacy 8-bit text still advances a byte at a time.
+    inline size_t Utf8CharLength(const std::string& s, size_t i) noexcept
+    {
+        const unsigned char lead = static_cast<unsigned char>(s[i]);
+        const size_t len = lead < 0x80 ? 1 : (lead & 0xE0) == 0xC0 ? 2 : (lead & 0xF0) == 0xE0 ? 3 : (lead & 0xF8) == 0xF0 ? 4 : 1;
+        if (i + len > s.size()) {
+            return 1;
+        }
+        for (size_t k = 1; k < len; ++k) {
+            if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) {
+                return 1;
+            }
+        }
+        return len;
+    }
+
     inline std::string Trim(const std::string& input)
     {
         if (input.empty()) return "";
