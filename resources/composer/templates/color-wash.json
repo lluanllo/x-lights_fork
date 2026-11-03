@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "color-wash",
+  "version": 1,
+  "effect": "Color Wash",
+  "roles": [
+    "mega-tree",
+    "small-tree",
+    "window",
+    "arch",
+    "line",
+    "star",
+    "prop",
+    "figure",
+    "group",
+    "matrix"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "accompany",
+    "feature"
+  ],
+  "prominence": [
+    "lead",
+    "support",
+    "accent"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    0.65
+  ],
+  "intensity": 0.5,
+  "durationMS": [
+    4000,
+    16000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Blend"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "ColorWash_Cycles",
+      "energy": [
+        0.5,
+        2.0
+      ]
+    }
+  ],
+  "weight": 0.8,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

@@ -1,6 +1,6 @@
 # Modelo de datos — Juajilandia Show Composer
 
-Esta es una **propuesta de contratos**. Las secciones 2 (análisis musical) y 3 (letras) están implementadas; el resto no existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
+Esta es una **propuesta de contratos**. Las secciones 2 (análisis musical), 3 (letras), 4 (modelos) y 6 (composición, como plan abstracto) están implementadas; el resto no existe todavía. Se usa JSON con `nlohmann/json`, que ya está en el núcleo.
 
 ## 1. Reglas comunes
 
@@ -143,27 +143,44 @@ Dentro de una frase, las palabras se reparten por peso silábico (confianza 0,5 
 
 ## 4. Modelos
 
-```cpp
-enum class ModelRole { Matrix, MegaTree, SmallTree, Window, Arch, Line, Star, Face, Figure, Prop, Group, Excluded };
+**Implementado en la Fase 5.** La fuente de verdad es `src-core/composer/ModelCapabilities.h`.
 
-struct ModelCapabilities {
-    std::string name;
-    std::string displayAs;          // de DisplayAsType
-    std::vector<ModelRole> roles;   // puede tener varios
-    std::string roleSource;         // "user" o "derived"
-    int bufferWidth, bufferHeight;
-    int nodeCount, strandCount;
-    std::vector<std::string> faceDefinitions;   // nombres reales
-    std::vector<std::string> faceTypes;         // NodeRange, Matrix…
-    int stateCount, subModelCount;
-    bool hasController;
-    bool canShowImage;              // resolución suficiente
-    int maxReadableChars;           // calculado, 0 si no sirve para texto
-    std::vector<std::string> groupMembers;      // solo para grupos
-};
+`ExtractCapabilities` lee el layout cargado una sola vez y produce datos planos: un `TargetInfo` por modelo, grupo y submodelo. El planificador ya no vuelve a tocar objetos de xLights.
+
+| Campo | Contenido |
+|---|---|
+| Identidad | `name`, más `signature` = tipo, nodos y buffer (`Tree:800:16x50`). xLights no tiene un identificador estable, y la firma sobrevive a recablear pero no a cambiar el modelo. Se acompaña de la huella del layout |
+| Forma | `displayAs`, buffer, nodos, hebras, canales por nodo, primer y último canal |
+| Controlador | `controller` y `noController`. Un modelo «No Controller» **participa**: la parte eléctrica no decide lo visual |
+| Relaciones | Caras con algo que dibujar, estados, submodelos, grupos que lo contienen y, en los grupos, sus miembros directos y todos los modelos que alcanzan (grupos anidados resueltos, con protección contra ciclos) |
+| Roles | Varios por modelo, con estado (`confirmed`, `suggested`, `unknown`, `excluded-manually`), fuente y confianza |
+| Capacidades | `text`, `lyric-track`, `image`, `video`, `face`, `geometric`, `color`, `group-delivery`, `states`: `yes`, `limited`, `no` o `unknown`, cada una con su motivo |
+
+**Prioridad de los roles**
+
+1. Manual (`roles.json`) → `confirmed`.
+2. Tipo de modelo (`Matrix` → matriz, `Window Frame` → ventana…) y definición facial → `suggested`, 0,9.
+3. Geometría: un `Tree` de 500 nodos o más, o de 40 filas o más, es megaárbol; si no, árbol pequeño → 0,7.
+4. El nombre solo es un indicio (0,3) cuando el tipo no dice nada mejor, y **nunca** da matriz ni megaárbol: «Ventana Matrix 1» es un `Window Frame`.
+
+**Capacidades sin inventar**
+
+- Texto, imagen y vídeo son `yes` solo en una matriz con buffer suficiente. En un modelo personalizado grande son `unknown`, porque la legibilidad depende de cómo estén los nodos.
+- Si un vídeo concreto se puede decodificar se sabe al elegirlo.
+- Un `unknown` nunca se trata como incompatible.
+
+**`ShowComposer/roles.json`**
+
+```json
+{ "schemaVersion": 1, "layoutFingerprint": "…",
+  "models": [ { "name": "Mega Tree", "signature": "Tree:2048:32x64", "roles": ["mega-tree", "face"], "excluded": false, "note": "" } ] }
 ```
 
-`roles.json` guarda **solo las decisiones del usuario**, por nombre de modelo. Lo demás se recalcula, porque el layout puede cambiar.
+- Solo se aplica si coinciden el nombre y la firma.
+- Si el modelo cambió de forma, se avisa (`role-identity-changed`) y no se aplica.
+- Si desaparece, se avisa (`role-model-missing`). Si otro modelo tiene la misma firma, se indica como «posible renombrado», pero el rol **no se traslada solo**.
+- `--composer-model-capabilities` escribe una plantilla con todos los modelos y su sugerencia actual.
+- Un grupo que encendería un modelo excluido tampoco participa.
 
 ## 5. Estilo
 
@@ -281,6 +298,26 @@ struct LearnedPreference {
 
 ## 6. Composición
 
+**Implementado en la Fase 5** como plan abstracto, sin efectos. La fuente de verdad es `src-core/composer/CompositionPlan.h`. El texto que sigue a esta nota es la propuesta original de la fase 0, conservada como referencia.
+
+| Tipo | Contenido |
+|---|---|
+| `StyleProfile` | «Neutral Starter Profile» (`resources/composer/neutral-starter-profile.json`, `learned: false`): duraciones de segmento, cambios por minuto, densidad por energía, máximo de participantes, preferencias por rol, reglas de grupo y miembro, y los tres niveles |
+| `GenerationOptions` | Nivel (`conservative`, `balanced`, `creative`), semilla, fotograma y confianza mínima del indicio de voz |
+| `CompositionPlan` | Versiones, hashes del análisis, la letra, el layout y el perfil, semilla, nivel, segmentos, correcciones, conflictos y avisos |
+| `PlanSegment` | `id` (`s<sección>.<ordinal>`), tiempos, sección y su repetición, energía, intensidad objetivo, densidad, prioridad, señales (`silence`, `climax`, `user-chorus`, `lyrics`…), estado y motivos |
+| `PlanAssignment` | Destino, rol, protagonismo (`lead`, `support`, `accent`, `rest`), intención (`feature`, `accompany`, `beat-accent`, `lyric-text`, `face-sing`, `rest`), intensidad, confianza, estado y motivos |
+| `PlanCorrection` | `exclude`, `include`, `set-prominence`, `set-density`, `move-boundary`, `lock`, `accept` y `reject`, con su rango |
+
+Estados de decisión: `automatic`, `manual-edit`, `approved-preference` y `locked`.
+
+**Garantías**
+
+- Las decisiones de una sección dependen solo de esa sección, de su orden de repetición, de las capacidades, del perfil y de la semilla. Cambiar una sección no cambia las demás.
+- Lo bloqueado sobrevive a regenerar con otra semilla y otro nivel.
+- Una decisión manual incompatible se registra en `conflicts` y no se aplica.
+
+
 ### GenerationOptions
 
 ```cpp
@@ -375,6 +412,32 @@ struct Choreography {
 
 `Spirals_Count` es un `id` real de `resources/effectmetadata/Spirals.json`, cuya etiqueta visible es "Palette Rep". La clave completa `E_SLIDER_Spirals_Count` ya se usa en `src-core/import_export/LOREdit.cpp:816`. Las claves se validan contra los JSON de efectos en cada ejecución de pruebas.
 
+### Coreografía (Fase 6)
+
+**Implementado.** La fuente de verdad son `TemplateLibrary.h` y `Choreography.h`.
+
+**Plantilla** (`resources/composer/templates/<id>.json`, `schemaVersion: 1`):
+
+| Campo | Contenido |
+|---|---|
+| Identidad | `id`, `version`, `effect` (el nombre que usa `EffectManager`) |
+| A quién | `roles`, `targetTypes` (`model`, `group`, `submodel`), `requires` (capacidades) |
+| Cuándo | `intents`, `prominence`, `sections`, `energy` [mín, máx] |
+| Cómo | `intensity`, `durationMS` [mín, máx], `maxPerMinute`, `transitions` (tipos nativos), `palette` {`colors`, `families`}, `rhythm` (`downbeat`), `binding` (`lyrics-phrase`, `face-track`), `media`, `minBuffer` |
+| Origen | `weight`, `provenance`, `visuallyValidated` (siempre `false` hasta que una persona lo revise) |
+
+Cada parámetro es `{"id", "value"}`, `{"id", "energy": [bajo, alto]}` o `{"id", "choices": [...]}`. El `id` es la propiedad de `resources/effectmetadata`. La clave se deriva igual que la guarda el panel: `E_SLIDER_`, o `E_TEXTCTRL_` para los decimales con divisor, salvo que `settingPrefix` diga otra cosa, y `E_CHECKBOX_`, `E_CHOICE_`, `E_SPINCTRL_`. Al cargar se comprueban el formato, la versión, que el efecto exista, que existan los parámetros, los tipos, los rangos, las opciones, la coherencia de roles y vínculos, y que existan las familias de paletas. Una plantilla mal hecha se rechaza con su motivo.
+
+**Paletas** (`resources/composer/palettes.json`): `id`, `family` y colores `#RRGGBB`. Son valores de partida.
+
+**`ChoreographyEvent`**: `id` (`<segmento>/<destino>/<bloque>`), destino, tipo, rol, protagonismo, intención, tiempos, capa, efecto, plantilla y versión, ajustes (`E_` y `T_`), paleta y colores, intensidad, transición de entrada y de salida, continuidad (`new`, `vary`, `extend`), compatibilidad, restricciones, motivos, confianza, procedencia, estado y `needsReview`.
+
+**`MediaCue`** sugiere una imagen o un vídeo, sin crear nunca un efecto con una ruta vacía.
+
+**Correcciones**: `set-template`, `set-palette`, `set-timing`, `exclude`, `confirm` y `lock`. Lo bloqueado sobrevive a regenerar. Lo incompatible se registra como conflicto y se conserva la decisión anterior.
+
+**`ToSequenceSpec`** convierte la coreografía en `SequenceSpec` para `SequenceWriter`. En esta fase solo se usa en el fixture de prueba.
+
 ## 7. Marcadores
 
 ```cpp
@@ -444,6 +507,28 @@ struct GenerationReport {
   "report": { }
 }
 ```
+
+### Implementado en la Fase 7
+
+La fuente de verdad son `GenerationSidecar.h` y `ShowGenerationPipeline.h`. Difiere de la propuesta anterior en esto:
+
+| Campo | Contenido |
+|---|---|
+| `schemaVersion` | 1. Uno mayor se rechaza sin leerlo ni reescribirlo (`newer`); uno menor que 1, un JSON roto o un campo obligatorio ausente es `damaged` |
+| `generator` | Versiones del pipeline, del análisis, del planificador y de la coreografía |
+| `generationId` | Hash de todo lo que decide el resultado: audio, opciones, layout, perfil, plantillas, letra, nivel, semilla, versiones y correcciones |
+| `sequenceFile` | El `.xsq` al que pertenece, por nombre |
+| `inputs` | `audioHash` (SHA-256 de los bytes), tamaño, clave de opciones, hash del análisis, huella del layout, perfil, plantillas, letra y su calidad, nivel, semilla y `frameMS` |
+| `outputs` | Hashes del plan, de la coreografía y de lo escrito (`specHash`, independiente del formato del XML), duración y número de efectos |
+| `tracks` | Id estable → nombre de cada pista de tiempos de la secuencia |
+| `mediaCues` | Las sugerencias de imagen o vídeo, que también van como pista de tiempos. La figura conserva su efecto: no son marcadores que reserven el tramo a oscuras |
+| `corrections` | `plan` y `choreography`, con los mismos serializadores que el plan y la coreografía |
+| `lyrics` | Un `LyricSession`: el texto tal como se dio y las marcas manuales, sincronizado o no |
+| `validation` | Errores, avisos, si se renderizó y `visualReview: not-reviewed`, que solo cambia una persona |
+
+Al regenerar con `--previous`, se recuperan las correcciones, los bloqueos y la letra del sidecar. Si el sidecar es de otro audio (`incompatible`), dañado o más nuevo, la generación se rechaza con el motivo. La pista de letra de la secuencia anterior manda sobre los tiempos calculados entonces, porque recoge lo que la persona haya movido después.
+
+`summary.json`, `generation-report.txt` y `validation.tsv` van a la carpeta de informes (`--out`), con el análisis, la letra alineada, el plan, la coreografía y el `.fseq`. No van en el show.
 
 ## 9. Reparto de responsabilidades
 

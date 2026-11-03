@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "matrix-picture",
+  "version": 1,
+  "effect": "Pictures",
+  "roles": [
+    "matrix"
+  ],
+  "targetTypes": [
+    "model"
+  ],
+  "intents": [
+    "feature"
+  ],
+  "prominence": [
+    "lead"
+  ],
+  "requires": [
+    "image"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    4000,
+    16000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      0,
+      0
+    ],
+    "families": []
+  },
+  "parameters": [
+    {
+      "id": "Scaling",
+      "value": "Scale Keep Aspect Ratio"
+    }
+  ],
+  "media": "image",
+  "minBuffer": [
+    16,
+    16
+  ],
+  "weight": 0.5,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

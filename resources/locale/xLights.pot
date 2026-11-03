@@ -8625,3 +8625,186 @@ msgstr ""
 
 msgid "Generate the phrases, words and phonemes of that track."
 msgstr ""
+
+msgid "The composition plan was made for another {what} (expected {expected}, found {found})."
+msgstr ""
+
+msgid "Make the plan again for this show and this song."
+msgstr ""
+
+msgid "The plan segment {segment} has invalid times or leaves a gap in the song."
+msgstr ""
+
+msgid "Make the plan again; if it repeats, report the problem."
+msgstr ""
+
+msgid "The plan segment {segment} lasts {length} ms, far from what the profile allows."
+msgstr ""
+
+msgid "Check the profile's segment lengths, or move the segment's limits."
+msgstr ""
+
+msgid "The decisions of plan segment {segment} are repeated or out of order, so two plans could not be compared."
+msgstr ""
+
+msgid "The plan uses \"{model}\" in segment {segment}, which does not exist in this layout."
+msgstr ""
+
+msgid "Make the plan again for the current layout."
+msgstr ""
+
+msgid "The plan uses \"{model}\" in segment {segment}, but it was excluded from the show."
+msgstr ""
+
+msgid "Leave it resting, or include it again in the roles file."
+msgstr ""
+
+msgid "\"{model}\" is asked to do \"{intent}\" in segment {segment}, but it cannot ({capability})."
+msgstr ""
+
+msgid "Give that action to a figure that can do it."
+msgstr ""
+
+msgid "Whether \"{model}\" can do \"{intent}\" in segment {segment} is not known until it is rendered ({capability})."
+msgstr ""
+
+msgid "Check it in the preview once the effects exist."
+msgstr ""
+
+msgid "Segment {segment} has {active} figures active, more than the {limit} the profile allows."
+msgstr ""
+
+msgid "Rest some of them, or raise the profile's density."
+msgstr ""
+
+msgid "\"{model}\" and \"{over}\" share lights in segment {segment} ({classification})."
+msgstr ""
+
+msgid "Keep only one of them active, unless the overlap is intended."
+msgstr ""
+
+msgid "A decision locked by hand on \"{model}\" in segment {segment} is no longer in the plan."
+msgstr ""
+
+msgid "A manual decision on \"{model}\" could not be applied ({reason}). It was not applied silently."
+msgstr ""
+
+msgid "Change the decision, or the figure's roles, so that they agree."
+msgstr ""
+
+msgid "Segment {segment} has figures active but none leading."
+msgstr ""
+
+msgid "Choose a lead for that segment."
+msgstr ""
+
+msgid "The choreography was made from another composition plan."
+msgstr ""
+
+msgid "Make the choreography again from the current plan."
+msgstr ""
+
+msgid "The choreography event {event} is repeated or out of order, so two choreographies could not be compared."
+msgstr ""
+
+msgid "Make the choreography again; if it repeats, report the problem."
+msgstr ""
+
+msgid "The choreography event {event} uses \"{model}\", which does not exist in this layout."
+msgstr ""
+
+msgid "Make the choreography again for the current layout."
+msgstr ""
+
+msgid "The choreography event {event} lights \"{model}\", which was excluded from the show."
+msgstr ""
+
+msgid "Remove that event, or include the figure again in the roles file."
+msgstr ""
+
+msgid "The choreography event {event} uses the template \"{template}\", which is not in the library or whose effect this xLights does not have."
+msgstr ""
+
+msgid "Choose an existing template."
+msgstr ""
+
+msgid "The choreography event {event} uses \"{effect}\", but the template \"{template}\" is for \"{expected}\"."
+msgstr ""
+
+msgid "The template \"{template}\" cannot be used on \"{model}\" ({reason})."
+msgstr ""
+
+msgid "Choose a template made for that kind of figure."
+msgstr ""
+
+msgid "Whether the template \"{template}\" works on \"{model}\" is only known once rendered."
+msgstr ""
+
+msgid "Check that part in the preview."
+msgstr ""
+
+msgid "The choreography event {event} has an invalid setting {key}={value}: {reason}."
+msgstr ""
+
+msgid "Correct the template that produced it."
+msgstr ""
+
+msgid "The choreography event {event} has an invalid colour: {value}."
+msgstr ""
+
+msgid "Choose another palette."
+msgstr ""
+
+msgid "The choreography event {event} has invalid times or does not fall on the sequence's frames."
+msgstr ""
+
+msgid "Correct its start and end."
+msgstr ""
+
+msgid "The choreography event {event} lasts {length} ms, outside the {min}-{max} ms its template recommends."
+msgstr ""
+
+msgid "Check that it reads well at that length."
+msgstr ""
+
+msgid "The choreography event {event} overlaps {over} on the same figure and layer."
+msgstr ""
+
+msgid "Move one of them to another layer or shorten it."
+msgstr ""
+
+msgid "The choreography event {event} on \"{model}\" shares lights with \"{over}\" at the same time."
+msgstr ""
+
+msgid "The choreography event {event} needs a {kind} file that does not exist."
+msgstr ""
+
+msgid "Add the file, or use the media cue instead of an effect."
+msgstr ""
+
+msgid "The choreography event {event} needs lyrics that are not there ({track})."
+msgstr ""
+
+msgid "Synchronize the lyrics first."
+msgstr ""
+
+msgid "A choreography event locked by hand on \"{model}\" ({event}) is no longer there."
+msgstr ""
+
+msgid "A manual choreography decision on \"{model}\" could not be applied ({reason}). The previous decision was kept."
+msgstr ""
+
+msgid "Change the decision so that it suits the figure."
+msgstr ""
+
+msgid "{count} choreography events have limitations or unknowns that only a look at the preview can settle."
+msgstr ""
+
+msgid "Review them in the preview."
+msgstr ""
+
+msgid "{count} choreography events use templates nobody has reviewed visually yet."
+msgstr ""
+
+msgid "Watch the result and adjust the templates' starting values."
+msgstr ""

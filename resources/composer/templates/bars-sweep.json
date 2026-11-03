@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "bars-sweep",
+  "version": 1,
+  "effect": "Bars",
+  "roles": [
+    "mega-tree",
+    "small-tree",
+    "line",
+    "arch",
+    "matrix",
+    "group"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "feature",
+    "accompany"
+  ],
+  "prominence": [
+    "lead",
+    "support",
+    "accent"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.3,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    4000,
+    12000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Bars_BarCount",
+      "energy": [
+        1,
+        4
+      ]
+    },
+    {
+      "id": "Bars_Cycles",
+      "energy": [
+        0.5,
+        3.0
+      ]
+    },
+    {
+      "id": "Bars_Direction",
+      "choices": [
+        "up",
+        "down",
+        "expand"
+      ]
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

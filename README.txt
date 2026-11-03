@@ -12,6 +12,11 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: --composer-generate makes a complete sequence for a song on a show
+                                 folder with no window, checks and renders it before publishing, and never
+                                 replaces an existing file
+    -change (lluanllo)           The desktop window title now reads xJuanjiLights; settings, show folders
+                                 and file formats are unchanged
     -enh (lluanllo)              Sync Lyrics on lyrics timing tracks: mark phrases while the song plays and
                                  generate words and Spanish mouth shapes for singing faces
     -bug (lluanllo)              Importing an .srt subtitle file as a timing track no longer drops the last subtitle

@@ -1,9 +1,13 @@
 #include "composer/GenerationValidator.h"
 
+#include "composer/Choreography.h"
+#include "composer/CompositionPlan.h"
 #include "composer/LyricAligner.h"
+#include "composer/ModelCapabilities.h"
 #include "composer/SequenceWriter.h"
 #include "effects/EffectManager.h"
 #include "effects/RenderableEffect.h"
+#include "media/AudioManager.h"
 #include "models/Model.h"
 #include "models/ModelGroup.h"
 #include "render/Effect.h"
@@ -1372,6 +1376,251 @@ ValidationReport ValidateLyrics(const LyricAlignment& alignment, const TimingTra
     return report;
 }
 
+ValidationReport ValidateCompositionPlan(const CompositionPlan& plan, const ModelCapabilities& caps, const StyleProfile* profile) {
+    ValidationReport report;
+    report.structuralRan = true;
+    report.configurationRan = true;
+    const StyleProfile neutral = NeutralStarterProfile();
+    const StyleProfile& p = profile != nullptr ? *profile : neutral;
+    const LevelSettings& level = p.Level(plan.level);
+    const auto raise = [&](const char* code, IssueSeverity severity, IssueCategory category, const std::string& target, int start, int end, Args args) {
+        Raise(report, code, severity, category, target, "", start, end, std::move(args));
+    };
+
+    if (plan.layoutHash != caps.layoutFingerprint) {
+        raise(issue::PlanHashMismatch, IssueSeverity::Error, IssueCategory::Structural, "", -1, -1, { { "what", "layout" }, { "expected", caps.layoutFingerprint }, { "found", plan.layoutHash } });
+    }
+    if (plan.analysisHash.empty() || plan.profileHash.empty()) {
+        raise(issue::PlanHashMismatch, IssueSeverity::Error, IssueCategory::Structural, "", -1, -1, { { "what", plan.analysisHash.empty() ? "analysis" : "profile" }, { "expected", "a hash" }, { "found", "none" } });
+    }
+
+    int expectedStart = 0;
+    for (const PlanSegment& s : plan.segments) {
+        const Args where = { { "segment", s.id } };
+        if (s.startMS != expectedStart || s.endMS <= s.startMS || s.endMS > plan.durationMS) {
+            raise(issue::PlanSegmentInvalid, IssueSeverity::Error, IssueCategory::Structural, "", s.startMS, s.endMS, where);
+        }
+        expectedStart = s.endMS;
+        const bool silence = std::find(s.flags.begin(), s.flags.end(), "silence") != s.flags.end();
+        const bool byUser = std::any_of(s.reasons.begin(), s.reasons.end(), [](const Reason& r) { return r.code == "boundary-by-user"; }) || s.state != DecisionState::Automatic;
+        const int length = s.endMS - s.startMS;
+        if (!silence && !byUser && (length < p.minSegmentMS / 2 || length > p.maxSegmentMS * 3 / 2)) {
+            raise(issue::PlanSegmentDuration, IssueSeverity::Warning, IssueCategory::Structural, "", s.startMS, s.endMS, { { "segment", s.id }, { "length", std::to_string(length) } });
+        }
+        int active = 0;
+        bool lead = false;
+        std::set<std::string> seen;
+        std::string previous;
+        for (const PlanAssignment& a : s.assignments) {
+            if (!seen.insert(a.target).second || a.target < previous) {
+                raise(issue::PlanOrderUnstable, IssueSeverity::Error, IssueCategory::Structural, a.target, s.startMS, s.endMS, where);
+            }
+            previous = a.target;
+            const TargetInfo* t = caps.Find(a.target);
+            if (t == nullptr) {
+                raise(issue::PlanTargetUnknown, IssueSeverity::Error, IssueCategory::Structural, a.target, s.startMS, s.endMS, where);
+                continue;
+            }
+            if (a.prominence == Prominence::Rest) {
+                continue;
+            }
+            ++active;
+            lead = lead || a.prominence == Prominence::Lead;
+            if (caps.LightsExcluded(a.target)) {
+                raise(issue::PlanTargetExcluded, IssueSeverity::Error, IssueCategory::Configuration, a.target, s.startMS, s.endMS, where);
+            }
+            const Capability needed = a.intent == "face-sing" ? Capability::Face : a.intent == "lyric-text" ? Capability::Text : Capability::Geometric;
+            const Support support = t->Can(needed).support;
+            if (support == Support::No) {
+                raise(issue::PlanRoleIncompatible, IssueSeverity::Error, IssueCategory::Configuration, a.target, s.startMS, s.endMS, { { "segment", s.id }, { "intent", a.intent }, { "capability", CapabilityId(needed) } });
+            } else if (support == Support::Unknown || (support == Support::Limited && needed != Capability::Geometric)) {
+                raise(issue::PlanCapabilityUnknown, IssueSeverity::Warning, IssueCategory::Configuration, a.target, s.startMS, s.endMS, { { "segment", s.id }, { "intent", a.intent }, { "capability", CapabilityId(needed) } });
+            }
+        }
+        const int limit = static_cast<int>(std::lround(p.maxParticipants * level.densityScale)) + level.maxLeads + level.accents + level.maxFaces + 1;
+        if (active > limit || s.density > 1.0) {
+            raise(issue::PlanDensityExceeded, IssueSeverity::Error, IssueCategory::Configuration, "", s.startMS, s.endMS, { { "segment", s.id }, { "active", std::to_string(active) }, { "limit", std::to_string(limit) } });
+        }
+        if (active > 0 && !lead && !silence) {
+            raise(issue::PlanNoLead, IssueSeverity::Warning, IssueCategory::Configuration, "", s.startMS, s.endMS, where);
+        }
+        // Two decisions on the same lights: what the profile allows is intentional,
+        // two leads is a confirmed conflict, anything else is possible and reported.
+        for (size_t i = 0; i < s.assignments.size(); ++i) {
+            for (size_t j = i + 1; j < s.assignments.size(); ++j) {
+                const PlanAssignment& a = s.assignments[i];
+                const PlanAssignment& b = s.assignments[j];
+                if (a.prominence == Prominence::Rest || b.prominence == Prominence::Rest || !caps.Overlap(a.target, b.target)) {
+                    continue;
+                }
+                const bool bothLead = a.prominence == Prominence::Lead && b.prominence == Prominence::Lead;
+                const char* classification = p.groupsMayOverlapMembers ? overlap::Intentional : bothLead ? overlap::Confirmed : overlap::Possible;
+                const IssueSeverity severity = p.groupsMayOverlapMembers ? IssueSeverity::Info : bothLead ? IssueSeverity::Error : IssueSeverity::Warning;
+                raise(issue::PlanGroupConflict, severity, IssueCategory::Configuration, a.target, s.startMS, s.endMS, { { "segment", s.id }, { "over", b.target }, { "classification", classification } });
+            }
+        }
+    }
+    if (expectedStart != plan.durationMS) {
+        raise(issue::PlanSegmentInvalid, IssueSeverity::Error, IssueCategory::Structural, "", expectedStart, plan.durationMS, { { "segment", "end" } });
+    }
+
+    for (const PlanCorrection& c : plan.corrections) {
+        if (c.action != PlanCorrection::Action::Lock) {
+            continue;
+        }
+        for (const PlanSegment& s : plan.segments) {
+            const int middle = (s.startMS + s.endMS) / 2;
+            if (c.startMS >= 0 && (middle < c.startMS || middle >= c.endMS)) {
+                continue;
+            }
+            for (const PlanAssignment& wanted : c.assignments) {
+                const bool refused = std::any_of(plan.conflicts.begin(), plan.conflicts.end(), [&](const PlanConflict& k) { return k.target == wanted.target; });
+                const bool kept = s.state == DecisionState::Locked && std::any_of(s.assignments.begin(), s.assignments.end(), [&](const PlanAssignment& a) {
+                    return a.target == wanted.target && a.prominence == wanted.prominence && a.state == DecisionState::Locked;
+                });
+                if (!kept && !refused) {
+                    raise(issue::PlanLockLost, IssueSeverity::Error, IssueCategory::Configuration, wanted.target, s.startMS, s.endMS, { { "segment", s.id } });
+                }
+            }
+        }
+    }
+    for (const PlanConflict& c : plan.conflicts) {
+        raise(issue::PlanManualConflict, IssueSeverity::Warning, IssueCategory::Configuration, c.target, c.startMS, c.endMS, { { "reason", c.reason } });
+    }
+    return report;
+}
+
+ValidationReport ValidateChoreography(const Choreography& c, const CompositionPlan& plan, const ModelCapabilities& caps, const TemplateLibrary& library, const std::function<const nlohmann::json*(const std::string&)>& metadata) {
+    ValidationReport report;
+    report.structuralRan = true;
+    report.configurationRan = true;
+    const auto raise = [&](const char* code, IssueSeverity severity, IssueCategory category, const ChoreographyEvent* e, Args args) {
+        Raise(report, code, severity, category, e != nullptr ? e->target : "", e != nullptr ? e->effect : "", e != nullptr ? e->startMS : -1, e != nullptr ? e->endMS : -1, std::move(args));
+    };
+    if (c.planHash != HashText(ToJson(plan))) {
+        raise(issue::ChoreoPlanMismatch, IssueSeverity::Error, IssueCategory::Structural, nullptr, {});
+    }
+    std::set<std::string> ids;
+    int review = 0;
+    int unvalidated = 0;
+    for (size_t i = 0; i < c.events.size(); ++i) {
+        const ChoreographyEvent& e = c.events[i];
+        const Args id = { { "event", e.id } };
+        if (!ids.insert(e.id).second || (i > 0 && (c.events[i - 1].startMS > e.startMS || (c.events[i - 1].startMS == e.startMS && c.events[i - 1].target > e.target)))) {
+            raise(issue::ChoreoOrderUnstable, IssueSeverity::Error, IssueCategory::Structural, &e, id);
+        }
+        if (e.startMS < 0 || e.endMS <= e.startMS || e.endMS > c.durationMS || (c.frameMS > 0 && (e.startMS % c.frameMS != 0 || e.endMS % c.frameMS != 0))) {
+            raise(issue::ChoreoTimeInvalid, IssueSeverity::Error, IssueCategory::Structural, &e, id);
+        }
+        const TargetInfo* target = caps.Find(e.target);
+        if (target == nullptr) {
+            raise(issue::ChoreoTargetUnknown, IssueSeverity::Error, IssueCategory::Structural, &e, id);
+            continue;
+        }
+        if (caps.LightsExcluded(e.target)) {
+            raise(issue::ChoreoTargetExcluded, IssueSeverity::Error, IssueCategory::Configuration, &e, id);
+        }
+        const EffectTemplate* t = library.Find(e.templateId);
+        const nlohmann::json* md = metadata ? metadata(e.effect) : nullptr;
+        if (t == nullptr || md == nullptr) {
+            raise(issue::ChoreoTemplateUnknown, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "template", e.templateId } });
+            continue;
+        }
+        if (t->effect != e.effect) {
+            raise(issue::ChoreoEffectMismatch, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "template", t->id }, { "expected", t->effect } });
+        }
+        unvalidated += t->visuallyValidated ? 0 : 1;
+        const CompatibilityResult compat = EvaluateCompatibility(*t, *target);
+        if (compat.level == Compatibility::Incompatible) {
+            raise(issue::ChoreoIncompatible, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "template", t->id }, { "reason", compat.reasons.empty() ? "" : compat.reasons.front() } });
+        } else if (compat.level == Compatibility::Unknown) {
+            raise(issue::ChoreoCapabilityUnknown, IssueSeverity::Warning, IssueCategory::Configuration, &e, { { "event", e.id }, { "template", t->id } });
+        }
+        const int length = e.endMS - e.startMS;
+        if (length < t->minMS || length > t->maxMS) {
+            raise(issue::ChoreoDuration, IssueSeverity::Warning, IssueCategory::Configuration, &e, { { "event", e.id }, { "length", std::to_string(length) }, { "min", std::to_string(t->minMS) }, { "max", std::to_string(t->maxMS) } });
+        }
+        std::string faceTrack;
+        std::string faceDefinition;
+        std::string text;
+        bool file = false;
+        for (const auto& [key, value] : e.settings) {
+            std::string problem;
+            if (key.rfind("E_", 0) == 0) {
+                problem = CheckSetting(*md, key, value);
+            } else if (key == "T_CHOICE_In_Transition_Type" || key == "T_CHOICE_Out_Transition_Type") {
+                problem = std::find(TransitionTypes().begin(), TransitionTypes().end(), value) == TransitionTypes().end() ? "unknown transition" : "";
+            } else if (key == "T_TEXTCTRL_Fadein" || key == "T_TEXTCTRL_Fadeout") {
+                const double seconds = std::strtod(value.c_str(), nullptr);
+                problem = seconds < 0 || seconds * 1000 > length ? "fade longer than the event" : "";
+            } else {
+                problem = "not a setting the choreography may write";
+            }
+            if (!problem.empty()) {
+                raise(issue::ChoreoSettingInvalid, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "key", key }, { "value", value }, { "reason", problem } });
+            }
+            faceTrack = key == "E_CHOICE_Faces_TimingTrack" ? value : faceTrack;
+            faceDefinition = key == "E_CHOICE_Faces_FaceDefinition" ? value : faceDefinition;
+            text = key == "E_TEXTCTRL_Text" ? value : text;
+            file = file || key == "E_TEXTCTRL_Pictures_Filename" || key == "E_FILEPICKER_Pictures_Filename" || key == "E_FILEPICKERCTRL_Video_Filename";
+        }
+        for (const std::string& color : e.colors) {
+            if (color.size() != 7 || color[0] != '#' || color.find_first_not_of("0123456789ABCDEFabcdef", 1) != std::string::npos) {
+                raise(issue::ChoreoPaletteInvalid, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "value", color } });
+            }
+        }
+        if (e.colors.empty() && t->minColors > 0) {
+            raise(issue::ChoreoPaletteInvalid, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "value", "none" } });
+        }
+        if (!t->media.empty() && !file) {
+            raise(issue::ChoreoMediaMissing, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "kind", t->media } });
+        }
+        if (e.effect == "Faces" && (faceTrack.empty() || faceTrack != c.lyricTrack || std::find(target->faces.begin(), target->faces.end(), faceDefinition) == target->faces.end())) {
+            raise(issue::ChoreoLyricsTrackMissing, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "track", faceTrack } });
+        }
+        if (e.effect == "Text" && text.empty()) {
+            raise(issue::ChoreoLyricsTrackMissing, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "track", "text" } });
+        }
+        review += e.needsReview || compat.level != Compatibility::Compatible ? 1 : 0;
+    }
+    // Same target and layer never overlap; different targets on the same lights are a
+    // conflict, confirmed when both lead.
+    for (size_t i = 0; i < c.events.size(); ++i) {
+        for (size_t j = i + 1; j < c.events.size() && c.events[j].startMS < c.events[i].endMS; ++j) {
+            const ChoreographyEvent& a = c.events[i];
+            const ChoreographyEvent& b = c.events[j];
+            if (a.target == b.target && a.layer == b.layer) {
+                raise(issue::ChoreoOverlap, IssueSeverity::Error, IssueCategory::Structural, &b, { { "event", b.id }, { "over", a.id } });
+            } else if (a.target != b.target && caps.Overlap(a.target, b.target)) {
+                const bool lead = a.prominence == Prominence::Lead && b.prominence == Prominence::Lead;
+                raise(issue::ChoreoGroupConflict, lead ? IssueSeverity::Error : IssueSeverity::Warning, IssueCategory::Configuration, &b, { { "event", b.id }, { "over", a.target } });
+            }
+        }
+    }
+    for (const ChoreographyCorrection& k : c.corrections) {
+        if (k.action != ChoreographyCorrection::Action::Lock) {
+            continue;
+        }
+        const bool refused = std::any_of(c.conflicts.begin(), c.conflicts.end(), [&](const ChoreographyConflict& x) { return x.target == k.event.target && x.startMS == k.event.startMS; });
+        const bool kept = std::any_of(c.events.begin(), c.events.end(), [&](const ChoreographyEvent& e) {
+            return e.state == DecisionState::Locked && e.target == k.event.target && e.templateId == k.event.templateId && e.settings == k.event.settings && e.paletteId == k.event.paletteId && std::abs(e.startMS - k.event.startMS) <= c.frameMS && std::abs(e.endMS - k.event.endMS) <= c.frameMS;
+        });
+        if (!kept && !refused) {
+            Raise(report, issue::ChoreoLockLost, IssueSeverity::Error, IssueCategory::Configuration, k.event.target, k.event.effect, k.event.startMS, k.event.endMS, { { "event", k.event.id } });
+        }
+    }
+    for (const ChoreographyConflict& k : c.conflicts) {
+        Raise(report, issue::ChoreoManualConflict, IssueSeverity::Warning, IssueCategory::Configuration, k.target, "", k.startMS, k.endMS, { { "reason", k.reason } });
+    }
+    if (review > 0) {
+        raise(issue::ChoreoNeedsReview, IssueSeverity::Info, IssueCategory::Configuration, nullptr, { { "count", std::to_string(review) } });
+    }
+    if (unvalidated > 0) {
+        raise(issue::ChoreoVisualReview, IssueSeverity::Info, IssueCategory::Configuration, nullptr, { { "count", std::to_string(unvalidated) } });
+    }
+    return report;
+}
+
 ValidationReport ValidatePlan(xLightsShowContext& ctx, const SequenceSpec& spec, const CancelCheck& cancel) {
     ValidationReport report;
     report.structuralRan = true;
@@ -1627,6 +1876,9 @@ SequenceSpec SpecFromSequence(xLightsShowContext& ctx) {
     // has it in the sequence data, and whatever the elements hold may be older.
     spec.durationMS = ctx.IsSequenceLoaded() ? static_cast<int>(ctx.GetSeqData().NumFrames() * ctx.GetSeqData().FrameTime()) : elements.GetSequenceEnd();
     spec.modelBlending = elements.SupportsModelBlending();
+    if (const AudioManager* media = ctx.GetCurrentMediaManager()) {
+        spec.mediaFile = media->FileName();
+    }
 
     const auto addLayers = [&](const Element& element, const std::string& target, const std::string& subModel) {
         for (size_t l = 0; l < element.GetEffectLayerCount(); ++l) {
@@ -1769,6 +2021,39 @@ const IssueText ISSUE_TEXTS[] = {
     { issue::LyricsLowConfidence, COMPOSER_TEXT("{count} phrases of the lyrics track \"{track}\" have uncertain times ({quality})."), COMPOSER_TEXT("Listen to them and confirm or correct their start and end.") },
     { issue::LyricsCorrectionLost, COMPOSER_TEXT("A {level} correction made by hand on \"{target}\" was not kept in the lyrics track \"{track}\"."), COMPOSER_TEXT("Generate the track again; if it repeats, report the problem.") },
     { issue::LyricsCorrectionConflict, COMPOSER_TEXT("A correction made by hand on \"{target}\" could not be applied to the lyrics track \"{track}\" ({reason}). It has been kept, not deleted."), COMPOSER_TEXT("Check whether that part of the lyrics was changed, and mark it again.") },
+    { issue::PlanHashMismatch, COMPOSER_TEXT("The composition plan was made for another {what} (expected {expected}, found {found})."), COMPOSER_TEXT("Make the plan again for this show and this song.") },
+    { issue::PlanSegmentInvalid, COMPOSER_TEXT("The plan segment {segment} has invalid times or leaves a gap in the song."), COMPOSER_TEXT("Make the plan again; if it repeats, report the problem.") },
+    { issue::PlanSegmentDuration, COMPOSER_TEXT("The plan segment {segment} lasts {length} ms, far from what the profile allows."), COMPOSER_TEXT("Check the profile's segment lengths, or move the segment's limits.") },
+    { issue::PlanOrderUnstable, COMPOSER_TEXT("The decisions of plan segment {segment} are repeated or out of order, so two plans could not be compared."), COMPOSER_TEXT("Make the plan again; if it repeats, report the problem.") },
+    { issue::PlanTargetUnknown, COMPOSER_TEXT("The plan uses \"{model}\" in segment {segment}, which does not exist in this layout."), COMPOSER_TEXT("Make the plan again for the current layout.") },
+    { issue::PlanTargetExcluded, COMPOSER_TEXT("The plan uses \"{model}\" in segment {segment}, but it was excluded from the show."), COMPOSER_TEXT("Leave it resting, or include it again in the roles file.") },
+    { issue::PlanRoleIncompatible, COMPOSER_TEXT("\"{model}\" is asked to do \"{intent}\" in segment {segment}, but it cannot ({capability})."), COMPOSER_TEXT("Give that action to a figure that can do it.") },
+    { issue::PlanCapabilityUnknown, COMPOSER_TEXT("Whether \"{model}\" can do \"{intent}\" in segment {segment} is not known until it is rendered ({capability})."), COMPOSER_TEXT("Check it in the preview once the effects exist.") },
+    { issue::PlanDensityExceeded, COMPOSER_TEXT("Segment {segment} has {active} figures active, more than the {limit} the profile allows."), COMPOSER_TEXT("Rest some of them, or raise the profile's density.") },
+    { issue::PlanGroupConflict, COMPOSER_TEXT("\"{model}\" and \"{over}\" share lights in segment {segment} ({classification})."), COMPOSER_TEXT("Keep only one of them active, unless the overlap is intended.") },
+    { issue::PlanLockLost, COMPOSER_TEXT("A decision locked by hand on \"{model}\" in segment {segment} is no longer in the plan."), COMPOSER_TEXT("Make the plan again; if it repeats, report the problem.") },
+    { issue::PlanManualConflict, COMPOSER_TEXT("A manual decision on \"{model}\" could not be applied ({reason}). It was not applied silently."), COMPOSER_TEXT("Change the decision, or the figure's roles, so that they agree.") },
+    { issue::PlanNoLead, COMPOSER_TEXT("Segment {segment} has figures active but none leading."), COMPOSER_TEXT("Choose a lead for that segment.") },
+    { issue::ChoreoPlanMismatch, COMPOSER_TEXT("The choreography was made from another composition plan."), COMPOSER_TEXT("Make the choreography again from the current plan.") },
+    { issue::ChoreoOrderUnstable, COMPOSER_TEXT("The choreography event {event} is repeated or out of order, so two choreographies could not be compared."), COMPOSER_TEXT("Make the choreography again; if it repeats, report the problem.") },
+    { issue::ChoreoTargetUnknown, COMPOSER_TEXT("The choreography event {event} uses \"{model}\", which does not exist in this layout."), COMPOSER_TEXT("Make the choreography again for the current layout.") },
+    { issue::ChoreoTargetExcluded, COMPOSER_TEXT("The choreography event {event} lights \"{model}\", which was excluded from the show."), COMPOSER_TEXT("Remove that event, or include the figure again in the roles file.") },
+    { issue::ChoreoTemplateUnknown, COMPOSER_TEXT("The choreography event {event} uses the template \"{template}\", which is not in the library or whose effect this xLights does not have."), COMPOSER_TEXT("Choose an existing template.") },
+    { issue::ChoreoEffectMismatch, COMPOSER_TEXT("The choreography event {event} uses \"{effect}\", but the template \"{template}\" is for \"{expected}\"."), COMPOSER_TEXT("Make the choreography again; if it repeats, report the problem.") },
+    { issue::ChoreoIncompatible, COMPOSER_TEXT("The template \"{template}\" cannot be used on \"{model}\" ({reason})."), COMPOSER_TEXT("Choose a template made for that kind of figure.") },
+    { issue::ChoreoCapabilityUnknown, COMPOSER_TEXT("Whether the template \"{template}\" works on \"{model}\" is only known once rendered."), COMPOSER_TEXT("Check that part in the preview.") },
+    { issue::ChoreoSettingInvalid, COMPOSER_TEXT("The choreography event {event} has an invalid setting {key}={value}: {reason}."), COMPOSER_TEXT("Correct the template that produced it.") },
+    { issue::ChoreoPaletteInvalid, COMPOSER_TEXT("The choreography event {event} has an invalid colour: {value}."), COMPOSER_TEXT("Choose another palette.") },
+    { issue::ChoreoTimeInvalid, COMPOSER_TEXT("The choreography event {event} has invalid times or does not fall on the sequence's frames."), COMPOSER_TEXT("Correct its start and end.") },
+    { issue::ChoreoDuration, COMPOSER_TEXT("The choreography event {event} lasts {length} ms, outside the {min}-{max} ms its template recommends."), COMPOSER_TEXT("Check that it reads well at that length.") },
+    { issue::ChoreoOverlap, COMPOSER_TEXT("The choreography event {event} overlaps {over} on the same figure and layer."), COMPOSER_TEXT("Move one of them to another layer or shorten it.") },
+    { issue::ChoreoGroupConflict, COMPOSER_TEXT("The choreography event {event} on \"{model}\" shares lights with \"{over}\" at the same time."), COMPOSER_TEXT("Keep only one of them active, unless the overlap is intended.") },
+    { issue::ChoreoMediaMissing, COMPOSER_TEXT("The choreography event {event} needs a {kind} file that does not exist."), COMPOSER_TEXT("Add the file, or use the media cue instead of an effect.") },
+    { issue::ChoreoLyricsTrackMissing, COMPOSER_TEXT("The choreography event {event} needs lyrics that are not there ({track})."), COMPOSER_TEXT("Synchronize the lyrics first.") },
+    { issue::ChoreoLockLost, COMPOSER_TEXT("A choreography event locked by hand on \"{model}\" ({event}) is no longer there."), COMPOSER_TEXT("Make the choreography again; if it repeats, report the problem.") },
+    { issue::ChoreoManualConflict, COMPOSER_TEXT("A manual choreography decision on \"{model}\" could not be applied ({reason}). The previous decision was kept."), COMPOSER_TEXT("Change the decision so that it suits the figure.") },
+    { issue::ChoreoNeedsReview, COMPOSER_TEXT("{count} choreography events have limitations or unknowns that only a look at the preview can settle."), COMPOSER_TEXT("Review them in the preview.") },
+    { issue::ChoreoVisualReview, COMPOSER_TEXT("{count} choreography events use templates nobody has reviewed visually yet."), COMPOSER_TEXT("Watch the result and adjust the templates' starting values.") },
 };
 
 const IssueText* FindIssueText(const std::string& code) {

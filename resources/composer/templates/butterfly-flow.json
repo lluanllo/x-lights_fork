@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "butterfly-flow",
+  "version": 1,
+  "effect": "Butterfly",
+  "roles": [
+    "mega-tree",
+    "matrix"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "feature"
+  ],
+  "prominence": [
+    "lead"
+  ],
+  "requires": [
+    "geometric",
+    "color"
+  ],
+  "sections": [],
+  "energy": [
+    0.4,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    4000,
+    12000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Butterfly_Colors",
+      "value": "Palette"
+    },
+    {
+      "id": "Butterfly_Style",
+      "choices": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "Butterfly_Speed",
+      "energy": [
+        5,
+        30
+      ]
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

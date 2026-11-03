@@ -3,13 +3,20 @@
 #include "composer/ComposerTypes.h"
 
 #include <functional>
+
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 
 class HeadlessRenderContext;
 class xLightsShowContext;
 
 namespace composer {
+struct Choreography;
+struct CompositionPlan;
+struct TemplateLibrary;
 struct LyricAlignment;
+struct ModelCapabilities;
+struct StyleProfile;
 }
 
 // Decides whether a sequence does what the Composer meant, which xLights itself
@@ -81,6 +88,41 @@ inline constexpr const char* LyricsLayerOrder = "COMPOSER_LYRICS_LAYER_ORDER";
 inline constexpr const char* LyricsLowConfidence = "COMPOSER_LYRICS_LOW_CONFIDENCE";
 inline constexpr const char* LyricsCorrectionLost = "COMPOSER_LYRICS_CORRECTION_LOST";
 inline constexpr const char* LyricsCorrectionConflict = "COMPOSER_LYRICS_CORRECTION_CONFLICT";
+// Composition plan
+inline constexpr const char* PlanHashMismatch = "COMPOSER_PLAN_HASH_MISMATCH";
+inline constexpr const char* PlanSegmentInvalid = "COMPOSER_PLAN_SEGMENT_INVALID";
+inline constexpr const char* PlanSegmentDuration = "COMPOSER_PLAN_SEGMENT_DURATION";
+inline constexpr const char* PlanOrderUnstable = "COMPOSER_PLAN_ORDER_UNSTABLE";
+inline constexpr const char* PlanTargetUnknown = "COMPOSER_PLAN_TARGET_UNKNOWN";
+inline constexpr const char* PlanTargetExcluded = "COMPOSER_PLAN_TARGET_EXCLUDED";
+inline constexpr const char* PlanRoleIncompatible = "COMPOSER_PLAN_ROLE_INCOMPATIBLE";
+inline constexpr const char* PlanCapabilityUnknown = "COMPOSER_PLAN_CAPABILITY_UNKNOWN";
+inline constexpr const char* PlanDensityExceeded = "COMPOSER_PLAN_DENSITY_EXCEEDED";
+inline constexpr const char* PlanGroupConflict = "COMPOSER_PLAN_GROUP_CONFLICT";
+inline constexpr const char* PlanLockLost = "COMPOSER_PLAN_LOCK_LOST";
+inline constexpr const char* PlanManualConflict = "COMPOSER_PLAN_MANUAL_CONFLICT";
+inline constexpr const char* PlanNoLead = "COMPOSER_PLAN_NO_LEAD";
+// Choreography
+inline constexpr const char* ChoreoPlanMismatch = "COMPOSER_CHOREO_PLAN_MISMATCH";
+inline constexpr const char* ChoreoOrderUnstable = "COMPOSER_CHOREO_ORDER_UNSTABLE";
+inline constexpr const char* ChoreoTargetUnknown = "COMPOSER_CHOREO_TARGET_UNKNOWN";
+inline constexpr const char* ChoreoTargetExcluded = "COMPOSER_CHOREO_TARGET_EXCLUDED";
+inline constexpr const char* ChoreoTemplateUnknown = "COMPOSER_CHOREO_TEMPLATE_UNKNOWN";
+inline constexpr const char* ChoreoEffectMismatch = "COMPOSER_CHOREO_EFFECT_MISMATCH";
+inline constexpr const char* ChoreoIncompatible = "COMPOSER_CHOREO_INCOMPATIBLE";
+inline constexpr const char* ChoreoCapabilityUnknown = "COMPOSER_CHOREO_CAPABILITY_UNKNOWN";
+inline constexpr const char* ChoreoSettingInvalid = "COMPOSER_CHOREO_SETTING_INVALID";
+inline constexpr const char* ChoreoPaletteInvalid = "COMPOSER_CHOREO_PALETTE_INVALID";
+inline constexpr const char* ChoreoTimeInvalid = "COMPOSER_CHOREO_TIME_INVALID";
+inline constexpr const char* ChoreoDuration = "COMPOSER_CHOREO_DURATION";
+inline constexpr const char* ChoreoOverlap = "COMPOSER_CHOREO_OVERLAP";
+inline constexpr const char* ChoreoGroupConflict = "COMPOSER_CHOREO_GROUP_CONFLICT";
+inline constexpr const char* ChoreoMediaMissing = "COMPOSER_CHOREO_MEDIA_MISSING";
+inline constexpr const char* ChoreoLyricsTrackMissing = "COMPOSER_CHOREO_LYRICS_TRACK_MISSING";
+inline constexpr const char* ChoreoLockLost = "COMPOSER_CHOREO_LOCK_LOST";
+inline constexpr const char* ChoreoManualConflict = "COMPOSER_CHOREO_MANUAL_CONFLICT";
+inline constexpr const char* ChoreoNeedsReview = "COMPOSER_CHOREO_NEEDS_REVIEW";
+inline constexpr const char* ChoreoVisualReview = "COMPOSER_CHOREO_VISUAL_REVIEW";
 } // namespace issue
 
 // Values of the "classification" argument of GroupMemberConflict.
@@ -126,6 +168,21 @@ enum class Strictness {
 // synchronized, what is too uncertain to trust unseen, and whether every correction a
 // person made is still where they put it.
 [[nodiscard]] ValidationReport ValidateLyrics(const LyricAlignment& alignment, const TimingTrackSpec& track, int durationMS, int frameMS);
+
+// A composition plan against the capabilities it was made for, before any effect
+// exists: segments that tile the song, targets that exist and can do what they are
+// given, density within the profile, no group fighting its own members, and every
+// locked decision still in place. An unknown capability is a warning, never an error.
+// `profile` null: the neutral starter profile.
+[[nodiscard]] ValidationReport ValidateCompositionPlan(const CompositionPlan& plan, const ModelCapabilities& caps, const StyleProfile* profile);
+
+// A choreography against its plan, the capabilities and the template library, before
+// any sequence exists: every effect and setting known to this xLights, every target
+// able to show what it is given, no two decisions on the same lights, no missing
+// media, faces on a real lyrics track, and every locked event where it was locked.
+// Passing proves the data is sound, not that the animation looks good: what needs a
+// person's eye is reported as information.
+[[nodiscard]] ValidationReport ValidateChoreography(const Choreography& choreography, const CompositionPlan& plan, const ModelCapabilities& caps, const TemplateLibrary& library, const std::function<const nlohmann::json*(const std::string&)>& metadata);
 
 // The sequence open in `ctx` as plain data, leaving out disabled effects and
 // strand or node effects, which have no target name of their own.

@@ -3,6 +3,7 @@
 #include "composer/GenerationValidator.h"
 #include "effects/EffectManager.h"
 #include "effects/RenderableEffect.h"
+#include "media/AudioManager.h"
 #include "models/Model.h"
 #include "render/Effect.h"
 #include "render/EffectLayer.h"
@@ -13,6 +14,7 @@
 #include "utils/ExternalHooks.h"
 #include "utils/UtilClasses.h"
 
+#include <pugixml.hpp>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
@@ -28,6 +30,19 @@ namespace fs = std::filesystem;
 namespace composer {
 
 namespace {
+
+// The headless context makes no timing tracks, and the importer needs them from its
+// context.
+class TimingImportContext : public HeadlessRenderContext {
+public:
+    TimingElement* AddTimingElement(const std::string& name, const std::string& /*subType*/ = "") override {
+        Element* element = GetSequenceElements().AddElement(name, "timing", true, false, false, false, false);
+        if (element != nullptr && element->GetEffectLayerCount() == 0) {
+            element->AddEffectLayer();
+        }
+        return dynamic_cast<TimingElement*>(element);
+    }
+};
 
 std::string FullTargetName(const EffectSpec& spec) {
     return spec.subModel.empty() ? spec.target : spec.target + "/" + spec.subModel;
@@ -365,7 +380,7 @@ void AddValidationProblems(WriteResult& result) {
     }
 }
 
-void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName, TemporaryFiles& temporaries, WriteResult& result) {
+void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName, const PublishCheck& beforePublish, TemporaryFiles& temporaries, WriteResult& result) {
     const fs::path name(destinationName);
     if (name.has_parent_path() || name.extension() != ".xsq") {
         result.problems.push_back(fmt::format("el destino debe ser un nombre de archivo .xsq, sin carpetas: '{}'", destinationName));
@@ -451,6 +466,12 @@ void WriteThroughTemporary(const std::string& showDir, const SequenceSpec& spec,
         }
     }
 
+    if (beforePublish && !beforePublish(temporary.string(), result)) {
+        if (result.problems.empty()) {
+            result.problems.push_back("la comprobación previa a la publicación la rechazó");
+        }
+        return;
+    }
     if (!destinationIsFree()) {
         return;
     }
@@ -489,9 +510,22 @@ bool BuildAndSave(xLightsShowContext& ctx, const SequenceSpec& spec, const std::
     }
 
     SequenceFile file(path, static_cast<uint32_t>(spec.frameMS));
-    file.SetSequenceType("Animation");
     file.SetSequenceDurationMS(spec.durationMS);
     file.SetSequenceTiming(std::to_string(spec.frameMS) + " ms");
+    if (spec.mediaFile.empty()) {
+        file.SetSequenceType("Animation");
+    } else {
+        if (!FileExists(spec.mediaFile)) {
+            error = fmt::format("no existe el audio '{}'", spec.mediaFile);
+            return false;
+        }
+        file.SetSequenceType("Media");
+        file.SetMediaFile(ctx.GetShowDirectory(), spec.mediaFile, false);
+        if (file.GetMedia() == nullptr) {
+            error = fmt::format("xLights no puede abrir el audio '{}'", spec.mediaFile);
+            return false;
+        }
+    }
     if (!file.Save(elements)) {
         error = fmt::format("SequenceFile::Save falló en '{}'", path);
         return false;
@@ -502,20 +536,85 @@ bool BuildAndSave(xLightsShowContext& ctx, const SequenceSpec& spec, const std::
 std::vector<std::string> VerifySequence(xLightsShowContext& ctx, const SequenceSpec& spec) {
     std::vector<std::string> problems;
     SequenceElements& elements = ctx.GetSequenceElements();
+    // Only an opened file has its audio loaded; what the builder holds has none yet.
+    if (!spec.mediaFile.empty() && ctx.IsSequenceLoaded()) {
+        const AudioManager* media = ctx.GetCurrentMediaManager();
+        std::error_code ec;
+        if (media == nullptr) {
+            problems.push_back(fmt::format("la secuencia no tiene el audio '{}'", spec.mediaFile));
+        } else if (!fs::equivalent(fs::path(media->FileName()), fs::path(spec.mediaFile), ec)) {
+            problems.push_back(fmt::format("la secuencia usa el audio '{}' y se esperaba '{}'", media->FileName(), spec.mediaFile));
+        }
+    }
     VerifyTimingTracks(elements, spec, problems);
     VerifyEffects(ctx, spec, problems);
     VerifyNothingExtra(elements, spec, problems);
     return problems;
 }
 
-WriteResult WriteSequenceSafely(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName) {
+WriteResult WriteSequenceSafely(const std::string& showDir, const SequenceSpec& spec, const std::string& destinationName, const PublishCheck& beforePublish) {
     WriteResult result;
     {
         // Scoped so that a failed cleanup is in the result before it is returned.
         TemporaryFiles temporaries(result);
-        WriteThroughTemporary(showDir, spec, destinationName, temporaries, result);
+        WriteThroughTemporary(showDir, spec, destinationName, beforePublish, temporaries, result);
     }
     return result;
+}
+
+bool ImportTimingFile(const std::string& path, int frameMS, std::vector<TimingTrackSpec>& tracks, std::string& error) {
+    tracks.clear();
+    ObtainAccessToURL(path, false);
+    // The importer reports a missing or broken file through DisplayError, which may
+    // be a dialog: it only gets a file that is known to parse.
+    if (!FileExists(path)) {
+        error = fmt::format("no existe '{}'", path);
+        return false;
+    }
+    pugi::xml_document doc;
+    if (!doc.load_file(fs::path(path).c_str())) {
+        error = fmt::format("'{}' no es un XML válido", path);
+        return false;
+    }
+    const std::string root = doc.first_child().name();
+    if (root != "timing" && root != "timings") {
+        error = fmt::format("'{}' no es un archivo .xtiming", path);
+        return false;
+    }
+    if (frameMS <= 0) {
+        error = "el intervalo de frame debe ser positivo";
+        return false;
+    }
+
+    TimingImportContext ctx;
+    SequenceElements& elements = ctx.GetSequenceElements();
+    elements.SetFrequency(1000.0 / frameMS);
+    elements.SetViewsManager(&ctx._sequenceViewManager);
+    SequenceFile file(path, static_cast<uint32_t>(frameMS));
+    file.SetSequenceTiming(std::to_string(frameMS) + " ms");
+    file.ProcessXTiming(std::vector<std::string>{ path }, &ctx);
+    for (size_t i = 0; i < elements.GetElementCount(); ++i) {
+        const Element* element = elements.GetElement(i);
+        if (element->GetType() != ElementType::ELEMENT_TYPE_TIMING) {
+            continue;
+        }
+        TimingTrackSpec track;
+        track.name = element->GetName();
+        for (size_t l = 0; l < element->GetEffectLayerCount(); ++l) {
+            std::vector<TimingMark> marks;
+            for (Effect* mark : element->GetEffectLayer(static_cast<int>(l))->GetEffects()) {
+                marks.push_back({ mark->GetEffectName(), mark->GetStartTimeMS(), mark->GetEndTimeMS() });
+            }
+            track.layers.push_back(std::move(marks));
+        }
+        tracks.push_back(std::move(track));
+    }
+    (void)ctx.CloseSequence();
+    if (tracks.empty()) {
+        error = fmt::format("'{}' no tiene pistas", path);
+        return false;
+    }
+    return true;
 }
 
 } // namespace composer

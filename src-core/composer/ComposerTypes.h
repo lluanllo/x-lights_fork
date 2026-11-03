@@ -56,6 +56,7 @@ struct SequenceSpec {
     std::vector<MarkerSpec> markers;
     bool modelBlending = true; // a new sequence defaults to true in SequenceElements
     std::string layoutFingerprint; // empty: not recorded
+    std::string mediaFile; // the song; empty: an animation with no audio
 };
 
 enum class IssueSeverity {

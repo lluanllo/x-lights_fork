@@ -1,0 +1,85 @@
+{
+ "density": {
+  "climax": 0.75,
+  "high": 0.5,
+  "low": 0.15,
+  "maxParticipants": 12,
+  "mid": 0.3
+ },
+ "energy": {
+  "high": 0.6,
+  "low": 0.35
+ },
+ "groupsMayOverlapMembers": false,
+ "id": "neutral-starter",
+ "leadPreference": {
+  "arch": 0.5,
+  "face": 0.3,
+  "figure": 0.6,
+  "group": 0.8,
+  "line": 0.4,
+  "matrix": 1.0,
+  "mega-tree": 1.0,
+  "prop": 0.4,
+  "small-tree": 0.6,
+  "star": 0.5,
+  "window": 0.5
+ },
+ "learned": false,
+ "levels": {
+  "balanced": {
+   "accents": 2,
+   "densityScale": 1.0,
+   "leadPool": 3,
+   "maxFaces": 2,
+   "maxLeads": 2,
+   "minRoleConfidence": 0.4,
+   "rotateWithinSection": true,
+   "variation": 0.35
+  },
+  "conservative": {
+   "accents": 0,
+   "densityScale": 0.6,
+   "leadPool": 2,
+   "maxFaces": 1,
+   "maxLeads": 1,
+   "minRoleConfidence": 0.6,
+   "rotateWithinSection": false,
+   "variation": 0.0
+  },
+  "creative": {
+   "accents": 4,
+   "densityScale": 1.35,
+   "leadPool": 5,
+   "maxFaces": 4,
+   "maxLeads": 3,
+   "minRoleConfidence": 0.3,
+   "rotateWithinSection": true,
+   "variation": 0.8
+  }
+ },
+ "maxLeadShare": 0.5,
+ "name": "Neutral Starter Profile",
+ "note": "Starting parameters for a first plan, not a learned style. Replace them with a profile made from approved shows.",
+ "segments": {
+  "maxChangesPerMinute": 8.0,
+  "maxMS": 16000,
+  "minMS": 4000,
+  "minRestMS": 1500
+ },
+ "supportPreference": {
+  "arch": 0.8,
+  "face": 0.4,
+  "figure": 0.6,
+  "group": 0.9,
+  "line": 0.8,
+  "matrix": 0.5,
+  "mega-tree": 0.5,
+  "prop": 0.6,
+  "small-tree": 0.7,
+  "star": 0.7,
+  "window": 0.8
+ },
+ "templateWeights": {},
+ "version": 1
+}

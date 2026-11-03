@@ -8627,3 +8627,186 @@ msgstr "Comprueba si esa parte de la letra ha cambiado y vuelve a marcarla."
 
 msgid "Generate the phrases, words and phonemes of that track."
 msgstr "Genera las frases, las palabras y los fonemas de esa pista."
+
+msgid "The composition plan was made for another {what} (expected {expected}, found {found})."
+msgstr "El plan de composición se hizo para otro {what} (se esperaba {expected} y se ha encontrado {found})."
+
+msgid "Make the plan again for this show and this song."
+msgstr "Vuelve a hacer el plan para este show y esta canción."
+
+msgid "The plan segment {segment} has invalid times or leaves a gap in the song."
+msgstr "El segmento {segment} del plan tiene tiempos no válidos o deja un hueco en la canción."
+
+msgid "Make the plan again; if it repeats, report the problem."
+msgstr "Vuelve a hacer el plan; si se repite, informa del problema."
+
+msgid "The plan segment {segment} lasts {length} ms, far from what the profile allows."
+msgstr "El segmento {segment} del plan dura {length} ms, muy lejos de lo que permite el perfil."
+
+msgid "Check the profile's segment lengths, or move the segment's limits."
+msgstr "Revisa las duraciones de segmento del perfil o mueve los límites del segmento."
+
+msgid "The decisions of plan segment {segment} are repeated or out of order, so two plans could not be compared."
+msgstr "Las decisiones del segmento {segment} están repetidas o desordenadas, así que no se podrían comparar dos planes."
+
+msgid "The plan uses \"{model}\" in segment {segment}, which does not exist in this layout."
+msgstr "El plan usa «{model}» en el segmento {segment}, y no existe en este layout."
+
+msgid "Make the plan again for the current layout."
+msgstr "Vuelve a hacer el plan para el layout actual."
+
+msgid "The plan uses \"{model}\" in segment {segment}, but it was excluded from the show."
+msgstr "El plan usa «{model}» en el segmento {segment}, pero se excluyó del espectáculo."
+
+msgid "Leave it resting, or include it again in the roles file."
+msgstr "Déjalo en reposo o vuelve a incluirlo en el archivo de roles."
+
+msgid "\"{model}\" is asked to do \"{intent}\" in segment {segment}, but it cannot ({capability})."
+msgstr "A «{model}» se le pide «{intent}» en el segmento {segment}, pero no puede hacerlo ({capability})."
+
+msgid "Give that action to a figure that can do it."
+msgstr "Asigna esa acción a una figura que pueda hacerla."
+
+msgid "Whether \"{model}\" can do \"{intent}\" in segment {segment} is not known until it is rendered ({capability})."
+msgstr "No se sabe si «{model}» puede hacer «{intent}» en el segmento {segment} hasta renderizarlo ({capability})."
+
+msgid "Check it in the preview once the effects exist."
+msgstr "Compruébalo en la vista previa cuando existan los efectos."
+
+msgid "Segment {segment} has {active} figures active, more than the {limit} the profile allows."
+msgstr "El segmento {segment} tiene {active} figuras activas, más de las {limit} que permite el perfil."
+
+msgid "Rest some of them, or raise the profile's density."
+msgstr "Deja algunas en reposo o sube la densidad del perfil."
+
+msgid "\"{model}\" and \"{over}\" share lights in segment {segment} ({classification})."
+msgstr "«{model}» y «{over}» comparten luces en el segmento {segment} ({classification})."
+
+msgid "Keep only one of them active, unless the overlap is intended."
+msgstr "Deja activa solo una de las dos, salvo que el solapamiento sea intencionado."
+
+msgid "A decision locked by hand on \"{model}\" in segment {segment} is no longer in the plan."
+msgstr "Una decisión bloqueada a mano sobre «{model}» en el segmento {segment} ya no está en el plan."
+
+msgid "A manual decision on \"{model}\" could not be applied ({reason}). It was not applied silently."
+msgstr "No se ha podido aplicar una decisión manual sobre «{model}» ({reason}). No se ha aplicado en silencio."
+
+msgid "Change the decision, or the figure's roles, so that they agree."
+msgstr "Cambia la decisión o los roles de la figura para que coincidan."
+
+msgid "Segment {segment} has figures active but none leading."
+msgstr "El segmento {segment} tiene figuras activas, pero ninguna protagonista."
+
+msgid "Choose a lead for that segment."
+msgstr "Elige una protagonista para ese segmento."
+
+msgid "The choreography was made from another composition plan."
+msgstr "La coreografía se hizo a partir de otro plan de composición."
+
+msgid "Make the choreography again from the current plan."
+msgstr "Vuelve a hacer la coreografía a partir del plan actual."
+
+msgid "The choreography event {event} is repeated or out of order, so two choreographies could not be compared."
+msgstr "El evento {event} de la coreografía está repetido o desordenado, así que no se podrían comparar dos coreografías."
+
+msgid "Make the choreography again; if it repeats, report the problem."
+msgstr "Vuelve a hacer la coreografía; si se repite, informa del problema."
+
+msgid "The choreography event {event} uses \"{model}\", which does not exist in this layout."
+msgstr "El evento {event} de la coreografía usa «{model}», que no existe en este layout."
+
+msgid "Make the choreography again for the current layout."
+msgstr "Vuelve a hacer la coreografía para el layout actual."
+
+msgid "The choreography event {event} lights \"{model}\", which was excluded from the show."
+msgstr "El evento {event} de la coreografía enciende «{model}», que se excluyó del espectáculo."
+
+msgid "Remove that event, or include the figure again in the roles file."
+msgstr "Quita ese evento o vuelve a incluir la figura en el archivo de roles."
+
+msgid "The choreography event {event} uses the template \"{template}\", which is not in the library or whose effect this xLights does not have."
+msgstr "El evento {event} de la coreografía usa la plantilla «{template}», que no está en la biblioteca o cuyo efecto no existe en este xLights."
+
+msgid "Choose an existing template."
+msgstr "Elige una plantilla que exista."
+
+msgid "The choreography event {event} uses \"{effect}\", but the template \"{template}\" is for \"{expected}\"."
+msgstr "El evento {event} de la coreografía usa «{effect}», pero la plantilla «{template}» es para «{expected}»."
+
+msgid "The template \"{template}\" cannot be used on \"{model}\" ({reason})."
+msgstr "La plantilla «{template}» no se puede usar en «{model}» ({reason})."
+
+msgid "Choose a template made for that kind of figure."
+msgstr "Elige una plantilla hecha para ese tipo de figura."
+
+msgid "Whether the template \"{template}\" works on \"{model}\" is only known once rendered."
+msgstr "Si la plantilla «{template}» funciona en «{model}» solo se sabe al renderizar."
+
+msgid "Check that part in the preview."
+msgstr "Comprueba esa parte en la vista previa."
+
+msgid "The choreography event {event} has an invalid setting {key}={value}: {reason}."
+msgstr "El evento {event} de la coreografía tiene un ajuste no válido {key}={value}: {reason}."
+
+msgid "Correct the template that produced it."
+msgstr "Corrige la plantilla que lo generó."
+
+msgid "The choreography event {event} has an invalid colour: {value}."
+msgstr "El evento {event} de la coreografía tiene un color no válido: {value}."
+
+msgid "Choose another palette."
+msgstr "Elige otra paleta."
+
+msgid "The choreography event {event} has invalid times or does not fall on the sequence's frames."
+msgstr "El evento {event} de la coreografía tiene tiempos no válidos o no cae en los fotogramas de la secuencia."
+
+msgid "Correct its start and end."
+msgstr "Corrige su comienzo y su final."
+
+msgid "The choreography event {event} lasts {length} ms, outside the {min}-{max} ms its template recommends."
+msgstr "El evento {event} de la coreografía dura {length} ms, fuera de los {min}-{max} ms que recomienda su plantilla."
+
+msgid "Check that it reads well at that length."
+msgstr "Comprueba que se vea bien con esa duración."
+
+msgid "The choreography event {event} overlaps {over} on the same figure and layer."
+msgstr "El evento {event} de la coreografía se solapa con {over} en la misma figura y capa."
+
+msgid "Move one of them to another layer or shorten it."
+msgstr "Mueve uno de ellos a otra capa o acórtalo."
+
+msgid "The choreography event {event} on \"{model}\" shares lights with \"{over}\" at the same time."
+msgstr "El evento {event} de la coreografía sobre «{model}» comparte luces con «{over}» al mismo tiempo."
+
+msgid "The choreography event {event} needs a {kind} file that does not exist."
+msgstr "El evento {event} de la coreografía necesita un archivo de {kind} que no existe."
+
+msgid "Add the file, or use the media cue instead of an effect."
+msgstr "Añade el archivo o usa la sugerencia de medios en lugar de un efecto."
+
+msgid "The choreography event {event} needs lyrics that are not there ({track})."
+msgstr "El evento {event} de la coreografía necesita una letra que no está ({track})."
+
+msgid "Synchronize the lyrics first."
+msgstr "Sincroniza primero la letra."
+
+msgid "A choreography event locked by hand on \"{model}\" ({event}) is no longer there."
+msgstr "Un evento de coreografía bloqueado a mano sobre «{model}» ({event}) ya no está."
+
+msgid "A manual choreography decision on \"{model}\" could not be applied ({reason}). The previous decision was kept."
+msgstr "No se ha podido aplicar una decisión manual de coreografía sobre «{model}» ({reason}). Se ha conservado la decisión anterior."
+
+msgid "Change the decision so that it suits the figure."
+msgstr "Cambia la decisión para que se adapte a la figura."
+
+msgid "{count} choreography events have limitations or unknowns that only a look at the preview can settle."
+msgstr "{count} eventos de la coreografía tienen limitaciones o incógnitas que solo se resuelven mirando la vista previa."
+
+msgid "Review them in the preview."
+msgstr "Revísalos en la vista previa."
+
+msgid "{count} choreography events use templates nobody has reviewed visually yet."
+msgstr "{count} eventos de la coreografía usan plantillas que nadie ha revisado visualmente todavía."
+
+msgid "Watch the result and adjust the templates' starting values."
+msgstr "Mira el resultado y ajusta los valores iniciales de las plantillas."

@@ -1,0 +1,49 @@
+#pragma once
+
+#include <string>
+
+// Entry points behind --composer-generate and --composer-pipeline-test. Neither opens a
+// window; both only create new files and never touch a layout or a networks file.
+namespace composer {
+
+struct GenerateCommandOptions {
+    std::string audioPath;
+    std::string showDir;
+    std::string sequenceName;
+    std::string reportDir;
+    std::string profilePath;
+    std::string rolesPath;
+    std::string templatesDir;
+    std::string cacheDir;
+    std::string lyricsPath;
+    std::string timingPath;
+    std::string timingTrack;
+    std::string lyricSessionPath;
+    std::string correctionsPath;
+    std::string previousSidecarPath;
+    std::string level; // empty: the default or the previous sidecar's
+    std::string seed;  // empty: likewise
+    std::string stopAfter; // a stage id; empty: every stage
+    std::string cancelFile; // the generation stops if this file appears
+    bool render = true;
+    int renderTimeoutMS = 0;
+};
+
+// Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.
+[[nodiscard]] int RunGenerateCommand(const GenerateCommandOptions& options);
+
+struct PipelineTestOptions {
+    std::string outDir;
+    std::string showDir;   // a copy of a real show with every controller inactive; empty: synthetic only
+    std::string audioPath; // a real song for the runs on that show
+    std::string lyricsPath;
+    std::string timingPath;
+    std::string level; // empty: the three levels
+};
+
+// The synthetic cases on a fixture show and WAV files written under a new folder of
+// `outDir`, then, with a show and a song, the three levels on that show. Returns 0
+// when every check passed, 1 otherwise.
+[[nodiscard]] int RunPipelineTest(const PipelineTestOptions& options);
+
+} // namespace composer

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "shimmer-accent",
+  "version": 1,
+  "effect": "Shimmer",
+  "roles": [
+    "arch",
+    "star",
+    "line",
+    "window",
+    "prop"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "beat-accent"
+  ],
+  "prominence": [
+    "accent"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.5,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    600,
+    2000
+  ],
+  "maxPerMinute": 30,
+  "transitions": [],
+  "palette": {
+    "colors": [
+      1,
+      2
+    ],
+    "families": [
+      "festive",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Shimmer_Duty_Factor",
+      "value": 50
+    },
+    {
+      "id": "Shimmer_Cycles",
+      "energy": [
+        2.0,
+        8.0
+      ]
+    }
+  ],
+  "rhythm": "downbeat",
+  "weight": 0.8,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

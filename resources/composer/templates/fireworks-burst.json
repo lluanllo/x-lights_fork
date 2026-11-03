@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "fireworks-burst",
+  "version": 1,
+  "effect": "Fireworks",
+  "roles": [
+    "matrix",
+    "star",
+    "mega-tree"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "feature"
+  ],
+  "prominence": [
+    "lead"
+  ],
+  "requires": [
+    "geometric",
+    "color"
+  ],
+  "sections": [],
+  "energy": [
+    0.65,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    3000,
+    10000
+  ],
+  "maxPerMinute": 1,
+  "transitions": [
+    "Fade",
+    "Zoom"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Fireworks_Explosions",
+      "energy": [
+        8,
+        25
+      ]
+    },
+    {
+      "id": "Fireworks_Velocity",
+      "energy": [
+        2,
+        5
+      ]
+    }
+  ],
+  "weight": 0.7,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}
