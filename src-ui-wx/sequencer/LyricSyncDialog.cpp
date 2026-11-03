@@ -79,6 +79,24 @@ LyricSyncDialog::LyricSyncDialog(wxWindow* parent, SequenceElements* elements, T
     _audio(audio),
     _sessionPath(sessionPath),
     _timer(this) {
+    _durationMS = elements->GetSequenceEnd();
+    _frameMS = static_cast<int>(std::lround(1000.0 / elements->GetFrequency()));
+    BuildControls();
+    LoadSession();
+    Bind(wxEVT_TIMER, &LyricSyncDialog::OnTimer, this);
+    _timer.Start(50);
+}
+
+LyricSyncDialog::LyricSyncDialog(wxWindow* parent, AudioManager* audio, int durationMS, int frameMS, const std::string& sessionPath, const std::string& lyrics, const std::string& trackName) :
+    wxDialog(parent, wxID_ANY, _("Sync Lyrics"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    _audio(audio),
+    _durationMS(durationMS),
+    _frameMS(std::max(1, frameMS)),
+    _sessionOnly(true),
+    _sessionPath(sessionPath),
+    _timer(this) {
+    _session.lyrics = lyrics;
+    _session.trackName = trackName;
     BuildControls();
     LoadSession();
     Bind(wxEVT_TIMER, &LyricSyncDialog::OnTimer, this);
@@ -135,7 +153,7 @@ void LyricSyncDialog::BuildControls() {
     main->Add(new wxStaticText(this, wxID_ANY, _("Keys: Space plays or pauses, Z marks the start, X marks the end, C confirms the phrase.")), 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
 
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
-    buttons->Add(new wxButton(this, ID_GENERATE, _("Generate Words and Phonemes")), 0, wxRIGHT, 6);
+    buttons->Add(new wxButton(this, ID_GENERATE, _sessionOnly ? _("Save Marks") : _("Generate Words and Phonemes")), 0, wxRIGHT, 6);
     buttons->AddStretchSpacer();
     buttons->Add(new wxButton(this, wxID_CLOSE, _("Close")), 0);
     main->Add(buttons, 0, wxEXPAND | wxALL, 8);
@@ -217,7 +235,9 @@ void LyricSyncDialog::LoadSession() {
         _session.corrections = marks;
         _session.lyrics = lyrics;
     }
-    _session.trackName = _element != nullptr ? _element->GetName() : "";
+    if (!_sessionOnly) {
+        _session.trackName = _element != nullptr ? _element->GetName() : "";
+    }
     SetLyrics(_session.lyrics);
 }
 
@@ -512,9 +532,19 @@ void LyricSyncDialog::OnNudge(wxCommandEvent& event) {
 }
 
 void LyricSyncDialog::OnGenerate(wxCommandEvent&) {
+    if (_sessionOnly) {
+        // The generation turns the marks into the track; here they are only kept.
+        SaveSession();
+        _trackChanged = true;
+        if (_audio != nullptr && _startedPlayback && _audio->GetPlayingState() != MEDIAPLAYINGSTATE::STOPPED) {
+            _audio->Stop();
+        }
+        EndModal(wxID_OK);
+        return;
+    }
     composer::AlignerInput input;
     input.document = &_document;
-    input.durationMS = _elements->GetSequenceEnd();
+    input.durationMS = _durationMS;
     int incomplete = 0;
     for (const composer::LyricCorrection& c : _session.corrections) {
         // A phrase with only its start marked is not given an end it does not have.
@@ -525,14 +555,14 @@ void LyricSyncDialog::OnGenerate(wxCommandEvent&) {
         input.corrections.push_back(c);
     }
     composer::AlignerOptions options;
-    options.frameMS = static_cast<int>(std::lround(1000.0 / _elements->GetFrequency()));
+    options.frameMS = _frameMS;
     const composer::LyricAlignment alignment = composer::AlignLyrics(input, options);
     const composer::TimingTrackSpec track = composer::BuildLyricTrack(alignment, _element->GetName());
     if (track.layers[0].empty()) {
         wxMessageBox(_("Mark the start and end of at least one phrase first."), _("Sync Lyrics"), wxOK | wxICON_INFORMATION, this);
         return;
     }
-    const composer::ValidationReport report = composer::ValidateLyrics(alignment, track, _elements->GetSequenceEnd(), options.frameMS);
+    const composer::ValidationReport report = composer::ValidateLyrics(alignment, track, _durationMS, options.frameMS);
 
     wxString summary = wxString::Format(_("Replace the words and phonemes of \"%s\" with %d phrases, %d words and %d mouth shapes?"), wxString::FromUTF8(_element->GetName()),
                                         static_cast<int>(track.layers[0].size()), static_cast<int>(track.layers[1].size()), static_cast<int>(track.layers[2].size()));

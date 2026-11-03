@@ -8808,3 +8808,954 @@ msgstr ""
 
 msgid "Watch the result and adjust the templates' starting values."
 msgstr ""
+
+msgid "Checking the inputs"
+msgstr ""
+
+msgid "Loading the installation"
+msgstr ""
+
+msgid "Analyzing the song"
+msgstr ""
+
+msgid "Preparing the lyrics"
+msgstr ""
+
+msgid "Synchronizing"
+msgstr ""
+
+msgid "Building the composition"
+msgstr ""
+
+msgid "Choreographing"
+msgstr ""
+
+msgid "Writing the sequence"
+msgstr ""
+
+msgid "Validating"
+msgstr ""
+
+msgid "Rendering"
+msgstr ""
+
+msgid "Publishing"
+msgstr ""
+
+msgid "Mega tree"
+msgstr ""
+
+msgid "Small tree"
+msgstr ""
+
+msgid "Window"
+msgstr ""
+
+msgid "Arch"
+msgstr ""
+
+msgid "Star"
+msgstr ""
+
+msgid "Singing face"
+msgstr ""
+
+msgid "Figure"
+msgstr ""
+
+msgid "Group"
+msgstr ""
+
+msgid "Excluded"
+msgstr ""
+
+msgid "Prop"
+msgstr ""
+
+msgid "Conservative"
+msgstr ""
+
+msgid "Creative"
+msgstr ""
+
+msgid "Balanced"
+msgstr ""
+
+msgid "There is no technique yet for this kind of figure in this role."
+msgstr ""
+
+msgid "Its accents follow the strong beats, and none were found in this stretch: mark the bar in Analysis."
+msgstr ""
+
+msgid "This automation level adds no accents."
+msgstr ""
+
+msgid "The strong beats here are too close for its accents."
+msgstr ""
+
+msgid "It would show the lyrics, and there are none."
+msgstr ""
+
+msgid "No synchronized phrase is sung in its stretch."
+msgstr ""
+
+msgid "Its face would sing, and the lyrics are not synchronized."
+msgstr ""
+
+msgid "It has no face definition to draw."
+msgstr ""
+
+msgid "Nothing is sung in its stretch."
+msgstr ""
+
+msgid "A picture or video could go here; none is assigned yet."
+msgstr ""
+
+msgid "Reason: %s"
+msgstr ""
+
+msgid "The technique chosen by hand does not suit this figure; the previous decision was kept."
+msgstr ""
+
+msgid "The figure is excluded, so a decision on it cannot be applied."
+msgstr ""
+
+msgid "Two decisions made by hand overlap on this figure; the first one was kept."
+msgstr ""
+
+msgid "The figure no longer exists in this installation."
+msgstr ""
+
+msgid "There was nothing to change at that time."
+msgstr ""
+
+msgid "A decision could not be applied (%s)."
+msgstr ""
+
+msgid "The song file does not exist. Choose it again."
+msgstr ""
+
+msgid "The song could not be read. Check that it is an audio file and that it is not damaged."
+msgstr ""
+
+msgid "The song is too short to make a show from it."
+msgstr ""
+
+msgid "The installation folder has no layout. Choose the show folder that contains your models."
+msgstr ""
+
+msgid "The installation could not be loaded. Open it in xLights and check it."
+msgstr ""
+
+msgid "A sequence with that name already exists, and it is never replaced. Choose another name."
+msgstr ""
+
+msgid "The sequence name must be a file name ending in .xsq, without folders."
+msgstr ""
+
+msgid "The lyrics file could not be read."
+msgstr ""
+
+msgid "The lyrics times are not valid. Check the marks."
+msgstr ""
+
+msgid "The synchronization file is not a valid xLights timing file."
+msgstr ""
+
+msgid "The synchronization file has no lyrics track with phrases, words and phonemes."
+msgstr ""
+
+msgid "The saved lyrics marks could not be read."
+msgstr ""
+
+msgid "The style profile could not be read."
+msgstr ""
+
+msgid "The figure roles file could not be read."
+msgstr ""
+
+msgid "No technique could be loaded."
+msgstr ""
+
+msgid "The composition did not pass its checks. See the technical report."
+msgstr ""
+
+msgid "The choreography did not pass its checks, often because of a decision made by hand. See the technical report."
+msgstr ""
+
+msgid "The sequence would not look as planned, so it was not written. See the technical report."
+msgstr ""
+
+msgid "The sequence did not pass the checks after writing and rendering it, so nothing was saved. See the technical report."
+msgstr ""
+
+msgid "The saved sequence did not pass the checks when opened again. See the technical report."
+msgstr ""
+
+msgid "Saving the sequence again changed it. See the technical report."
+msgstr ""
+
+msgid "The earlier show's data could not be used."
+msgstr ""
+
+msgid "The installation files changed during the generation. Nothing of the Composer writes them: check whether another program did."
+msgstr ""
+
+msgid "The analysis could not be saved in the show folder."
+msgstr ""
+
+msgid "The report folder could not be prepared."
+msgstr ""
+
+msgid "The generation stopped: %s"
+msgstr ""
+
+msgid "Show Composer"
+msgstr ""
+
+msgid "Make a show from a song, its lyrics and your installation, review it and open it in xLights."
+msgstr ""
+
+msgid "1. Create the show"
+msgstr ""
+
+msgid "2. Analysis and synchronization"
+msgstr ""
+
+msgid "3. Review the composition"
+msgstr ""
+
+msgid "4. Generate the show"
+msgstr ""
+
+msgid "5. Review the result"
+msgstr ""
+
+msgid "< Back"
+msgstr ""
+
+msgid "Next >"
+msgstr ""
+
+msgid "Create the show"
+msgstr ""
+
+msgid "Open a Show Made Earlier..."
+msgstr ""
+
+msgid "Song"
+msgstr ""
+
+msgid "Choose Song..."
+msgstr ""
+
+msgid "Installation"
+msgstr ""
+
+msgid "Choose Another Show Folder..."
+msgstr ""
+
+msgid "Use the Open Show"
+msgstr ""
+
+msgid "Lyrics"
+msgstr ""
+
+msgid "Choose Lyrics..."
+msgstr ""
+
+msgid "No Lyrics"
+msgstr ""
+
+msgid "Choose Synchronization..."
+msgstr ""
+
+msgid "No Synchronization"
+msgstr ""
+
+msgid "Mark the Lyrics by Ear..."
+msgstr ""
+
+msgid "Plain text, LRC or SRT lyrics; an xLights timing file (.xtiming) with a lyrics track wins over any other time."
+msgstr ""
+
+msgid "Style and automation"
+msgstr ""
+
+msgid "Style profile:"
+msgstr ""
+
+msgid "Seed:"
+msgstr ""
+
+msgid "Another"
+msgstr ""
+
+msgid "Conservative: few figures, calm changes"
+msgstr ""
+
+msgid "Creative: more figures, more variety and accents"
+msgstr ""
+
+msgid "Automation level"
+msgstr ""
+
+msgid "The same song, installation, lyrics, level and seed always give the same show."
+msgstr ""
+
+msgid "Advanced options"
+msgstr ""
+
+msgid "Techniques Folder..."
+msgstr ""
+
+msgid "Figure Roles File..."
+msgstr ""
+
+msgid "Render and check the sequence before saving it (recommended)"
+msgstr ""
+
+msgid "Choose the Song"
+msgstr ""
+
+msgid "Audio files (*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff)|*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff;*.aif|All files (*.*)|*.*"
+msgstr ""
+
+msgid "Choose the Show Folder"
+msgstr ""
+
+msgid "Choose the Lyrics"
+msgstr ""
+
+msgid "Lyrics (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt|All files (*.*)|*.*"
+msgstr ""
+
+msgid "Choose the Synchronization"
+msgstr ""
+
+msgid "xLights timing (*.xtiming)|*.xtiming"
+msgstr ""
+
+msgid "Choose a song that can be played first."
+msgstr ""
+
+msgid "The phrases are marked while the song plays."
+msgstr ""
+
+msgid "Open a Show Made Earlier"
+msgstr ""
+
+msgid "Show Composer data (*.composer.json)|*.composer.json"
+msgstr ""
+
+msgid "That show could not be opened."
+msgstr ""
+
+msgid "Choose the Techniques Folder"
+msgstr ""
+
+msgid "Choose the Figure Roles File"
+msgstr ""
+
+msgid "Roles (*.json)|*.json"
+msgstr ""
+
+msgid "Analysis and synchronization"
+msgstr ""
+
+msgid "Analyze the Song"
+msgstr ""
+
+msgid "Synchronize Again"
+msgstr ""
+
+msgid "Play the Selection"
+msgstr ""
+
+msgid "Zoom:"
+msgstr ""
+
+msgid "From the top: time, sections, waveform with silences and climax, beats (strong beats in red, marked by hand in green), onsets, and the lyrics' phrases, words and mouth shapes. Click to place the cursor, drag to select, Ctrl+wheel to zoom."
+msgstr ""
+
+msgid "Correct the music"
+msgstr ""
+
+msgid "The Bar Starts at the Cursor"
+msgstr ""
+
+msgid "Beats per bar:"
+msgstr ""
+
+msgid "Add a Strong Beat at the Cursor"
+msgstr ""
+
+msgid "Remove the Nearest Beat"
+msgstr ""
+
+msgid "The section at the cursor is:"
+msgstr ""
+
+msgid "Intro"
+msgstr ""
+
+msgid "Verse"
+msgstr ""
+
+msgid "Bridge"
+msgstr ""
+
+msgid "Instrumental"
+msgstr ""
+
+msgid "Outro"
+msgstr ""
+
+msgid "Change It"
+msgstr ""
+
+msgid "Undo All Music Corrections"
+msgstr ""
+
+msgid "Correct the Phrases by Ear..."
+msgstr ""
+
+msgid "Marks made by hand win over any computed time and are kept for every new version."
+msgstr ""
+
+msgid "Review the composition"
+msgstr ""
+
+msgid "Work Out the Composition"
+msgstr ""
+
+msgid "Level"
+msgstr ""
+
+msgid "Figures lit"
+msgstr ""
+
+msgid "In the plan"
+msgstr ""
+
+msgid "Accents"
+msgstr ""
+
+msgid "Techniques"
+msgstr ""
+
+msgid "Mean intensity"
+msgstr ""
+
+msgid "To review"
+msgstr ""
+
+msgid "Show:"
+msgstr ""
+
+msgid "Every figure in the show"
+msgstr ""
+
+msgid "Leading figures"
+msgstr ""
+
+msgid "Accompanying figures"
+msgstr ""
+
+msgid "Accent figures"
+msgstr ""
+
+msgid "Single models"
+msgstr ""
+
+msgid "Singing faces"
+msgstr ""
+
+msgid "Matrices showing lyrics"
+msgstr ""
+
+msgid "Excluded figures"
+msgstr ""
+
+msgid "Planned but left dark"
+msgstr ""
+
+msgid "Kind"
+msgstr ""
+
+msgid "Part in the plan"
+msgstr ""
+
+msgid "Exclude This Figure"
+msgstr ""
+
+msgid "Include It Again"
+msgstr ""
+
+msgid "Lock Its Effects"
+msgstr ""
+
+msgid "Unlock"
+msgstr ""
+
+msgid "Suggested pictures and videos (none is created: choose the files when the media library exists)"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "To"
+msgstr ""
+
+msgid "Generate the show"
+msgstr ""
+
+msgid "Generate the Show"
+msgstr ""
+
+msgid "The generation runs apart from this window, which stays usable. Loading the installation, saving and rendering cannot stop halfway: a cancel takes effect as soon as the current one ends, and nothing is saved."
+msgstr ""
+
+msgid "Review the result"
+msgstr ""
+
+msgid "Open the Sequence in xLights"
+msgstr ""
+
+msgid "Open the Folder"
+msgstr ""
+
+msgid "Technical Report"
+msgstr ""
+
+msgid "Review the Composition Again"
+msgstr ""
+
+msgid "Make Another Version"
+msgstr ""
+
+msgid "Mark as Reviewed and Approved..."
+msgstr ""
+
+msgid "Points that need your attention"
+msgstr ""
+
+msgid "What"
+msgstr ""
+
+msgid "Figures in the plan that stayed dark"
+msgstr ""
+
+msgid "Why"
+msgstr ""
+
+msgid "Suggested pictures and videos"
+msgstr ""
+
+msgid "You have watched this sequence in xLights and approve how it looks. Who reviewed it?"
+msgstr ""
+
+msgid "Mark as Reviewed and Approved"
+msgstr ""
+
+msgid "This folder has no xLights layout."
+msgstr ""
+
+msgid "Neutral starting profile (not your style yet)"
+msgstr ""
+
+msgid "It was made by a newer version of Show Composer."
+msgstr ""
+
+msgid "Its data is damaged or incomplete."
+msgstr ""
+
+msgid "The song %s was not found; choose it again."
+msgstr ""
+
+msgid "The song file has changed since that show was made."
+msgstr ""
+
+msgid "The Show Composer generator could not be started."
+msgstr ""
+
+msgid "Choose a song and an installation first."
+msgstr ""
+
+msgid "Both are on the first step."
+msgstr ""
+
+msgid "The show cannot be generated yet."
+msgstr ""
+
+msgid "Choose a song and an installation on the first step."
+msgstr ""
+
+msgid "Cancelling: the generator stops as soon as the current step ends. Nothing is saved."
+msgstr ""
+
+msgid "Working: %s"
+msgstr ""
+
+msgid "In progress"
+msgstr ""
+
+msgid "Rendering the whole song without a window, to check every effect lights its figure."
+msgstr ""
+
+msgid "Checking the render: figures, faces, silences and timing."
+msgstr ""
+
+msgid "Now: %s"
+msgstr ""
+
+msgid "Done, with notes"
+msgstr ""
+
+msgid "Cancelled. Nothing was saved in the show folder."
+msgstr ""
+
+msgid "The show was not saved. See below what happened."
+msgstr ""
+
+msgid "Nothing was saved in the show folder. The technical report has every detail."
+msgstr ""
+
+msgid "The generator's results could not be read."
+msgstr ""
+
+msgid "The installation could not be read."
+msgstr ""
+
+msgid "Done: the show is saved. Review it in the next step."
+msgstr ""
+
+msgid "The generator is still working. Cancel it and close? Nothing will be saved."
+msgstr ""
+
+msgid "The name must end in .xsq and have no folders in it."
+msgstr ""
+
+msgid "A sequence with this name already exists, and it is never replaced. Choose another name."
+msgstr ""
+
+msgid "No song chosen"
+msgstr ""
+
+msgid "Choose the song the show is for."
+msgstr ""
+
+msgid "This file cannot be played by xLights: choose another one."
+msgstr ""
+
+msgid "Length %s. It can be played. %s"
+msgstr ""
+
+msgid "Its analysis is already saved for this installation."
+msgstr ""
+
+msgid "It will be analyzed in the next step."
+msgstr ""
+
+msgid "Reading the installation..."
+msgstr ""
+
+msgid "%d models, %d groups, %d submodels. %d figures with a face and %d matrices for lyrics. %s"
+msgstr ""
+
+msgid "It is the show open in xLights."
+msgstr ""
+
+msgid "It is not the show open in xLights; it will be opened with it."
+msgstr ""
+
+msgid "No lyrics"
+msgstr ""
+
+msgid "Lyrics marked by ear"
+msgstr ""
+
+msgid "No synchronization file"
+msgstr ""
+
+msgid "No lyrics: no face will sing and no lyrics will be shown."
+msgstr ""
+
+msgid "%d lines of lyrics, not synchronized. No face will sing until the phrases are marked: use \"Mark the Lyrics by Ear\"."
+msgstr ""
+
+msgid "%d lines with their times (LRC or SRT). Words and mouth shapes are estimated by syllables inside each line."
+msgstr ""
+
+msgid "%d phrases marked by ear. Words and mouth shapes are estimated by syllables inside each phrase."
+msgstr ""
+
+msgid "A synchronized lyrics track with %d phrases: its times win over any other."
+msgstr ""
+
+msgid "The synchronization file could not be read."
+msgstr ""
+
+msgid "Faces can sing: %d figures have a face."
+msgstr ""
+
+msgid "No figure has a face, so no face will sing."
+msgstr ""
+
+msgid "Starting techniques of Show Composer"
+msgstr ""
+
+msgid "Roles saved with the show, if any"
+msgstr ""
+
+msgid "It will be saved as %s, next to the show's other sequences. Nothing existing is replaced."
+msgstr ""
+
+msgid "Analyzing the song..."
+msgstr ""
+
+msgid "The song has not been analyzed yet."
+msgstr ""
+
+msgid "%s long, about %.0f beats a minute. %d beats, %d strong beats, %d sections, %d silences."
+msgstr ""
+
+msgid "No strong beat was found: accents need them. Place the cursor on the first beat of a bar and press \"The Bar Starts at the Cursor\"."
+msgstr ""
+
+msgid "No lyrics: no face will sing."
+msgstr ""
+
+msgid "The lyrics are loaded but not synchronized: no face will sing and no lyrics will be shown until the phrases are marked."
+msgstr ""
+
+msgid "Lyrics synchronized: %d phrases, %d words and %d mouth shapes."
+msgstr ""
+
+msgid "in the section %s-%s"
+msgstr ""
+
+msgid ", phrase \"%s\""
+msgstr ""
+
+msgid "Cursor %s %s"
+msgstr ""
+
+msgid "No music corrections. They are kept with the show and win over the analysis in every version."
+msgstr ""
+
+msgid "%d music corrections, kept with the show for every version."
+msgstr ""
+
+msgid "Working out level %d of 3..."
+msgstr ""
+
+msgid "The composition has not been worked out yet."
+msgstr ""
+
+msgid "Something changed since this composition was worked out: press \"Work Out the Composition\" to see its effect."
+msgstr ""
+
+msgid "Level %s, seed %d. Choose a row to compare the levels; the numbers come from the choreography itself."
+msgstr ""
+
+msgid "leads %d"
+msgstr ""
+
+msgid "accompanies %d"
+msgstr ""
+
+msgid "accents %d"
+msgstr ""
+
+msgid "Excluded by you"
+msgstr ""
+
+msgid "Locked"
+msgstr ""
+
+msgid "Conflict"
+msgstr ""
+
+msgid "Left dark"
+msgstr ""
+
+msgid "Sings"
+msgstr ""
+
+msgid "Shows lyrics"
+msgstr ""
+
+msgid "Your decisions: %d locked effects, %d excluded figures. %d could not be applied (see the figure). They are kept for every version, whatever the level or seed."
+msgstr ""
+
+msgid "Video"
+msgstr ""
+
+msgid "Picture"
+msgstr ""
+
+msgid "Pending"
+msgstr ""
+
+msgid "Choose a figure to see what it does in this show."
+msgstr ""
+
+msgid "Kind: %s%s"
+msgstr ""
+
+msgid " (set by you)"
+msgstr ""
+
+msgid " (suggested from the layout)"
+msgstr ""
+
+msgid "It has no controller: it takes part, but the render cannot show it."
+msgstr ""
+
+msgid "It has a face definition."
+msgstr ""
+
+msgid "It has no face."
+msgstr ""
+
+msgid "It can show text."
+msgstr ""
+
+msgid "It cannot show readable text."
+msgstr ""
+
+msgid "It is excluded: it stays dark, and no group lights it."
+msgstr ""
+
+msgid "In the plan: leads %d, accompanies %d, accents %d stretches. %d effects."
+msgstr ""
+
+msgid "Effects: %s"
+msgstr ""
+
+msgid "Its face sings the synchronized lyrics."
+msgstr ""
+
+msgid "It shows the lyrics' phrases."
+msgstr ""
+
+msgid "Its effects are locked: they stay as they are in every version."
+msgstr ""
+
+msgid " (limited)"
+msgstr ""
+
+msgid " (to check)"
+msgstr ""
+
+msgid "Techniques it can take: %s"
+msgstr ""
+
+msgid "Song: %s\nInstallation: %s\nLevel: %s, seed %d. %d decisions of yours.\nIt will be saved as %s."
+msgstr ""
+
+msgid "No show has been generated in this window yet."
+msgstr ""
+
+msgid "Done: %s"
+msgstr ""
+
+msgid "no lyrics"
+msgstr ""
+
+msgid "lyrics not synchronized"
+msgstr ""
+
+msgid "synchronized lyrics"
+msgstr ""
+
+msgid "%s long, level %s, seed %d. %d effects on %d figures (%d in the plan).\nChecks: %s. Render: %s.\nLyrics: %s. Faces singing: %s. Lyrics shown on: %s. %d pictures or videos suggested."
+msgstr ""
+
+msgid "passed"
+msgstr ""
+
+msgid "failed"
+msgstr ""
+
+msgid "%d of %d frames, every effect lights its figure"
+msgstr ""
+
+msgid "not run"
+msgstr ""
+
+msgid "none"
+msgstr ""
+
+msgid "Reviewed and approved by a person: %s, %s."
+msgstr ""
+
+msgid "Rendered correctly. Pending visual review: watch it in xLights before showing it."
+msgstr ""
+
+msgid "Pending visual review: watch it in xLights before showing it."
+msgstr ""
+
+msgid "The lyrics are not synchronized, so no face sings. Mark the phrases and make another version."
+msgstr ""
+
+msgid "No face sings: no figure with a face took part."
+msgstr ""
+
+msgid "%d effects are best checked by eye, for example lyrics that scroll on a small matrix."
+msgstr ""
+
+msgid "%d of your decisions could not be applied; the earlier ones were kept. See the composition."
+msgstr ""
+
+msgid "%d minor notices from the checks; the technical report lists them."
+msgstr ""
+
+msgid "No strong beat was found, so there are no accents. Mark the bar in Analysis and make another version."
+msgstr ""
+
+msgid "Show Composer's techniques are starting values that nobody has approved by eye yet."
+msgstr ""
+
+msgid "No reason was recorded."
+msgstr ""
+
+msgid "Section"
+msgstr ""
+
+msgid "Analyze the song to see it here."
+msgstr ""
+
+msgid "silence"
+msgstr ""
+
+msgid "climax"
+msgstr ""
+
+msgid "(no waveform: the song could not be read here)"
+msgstr ""
+
+msgid "Save Marks"
+msgstr ""
+
+msgid "Show Composer..."
+msgstr ""
+
+msgid "Make a show from a song, its lyrics and this installation"
+msgstr ""
+
+msgid "This sequence belongs to the installation in\n%s\nwhich is not the show folder open now. Use that show folder for this session and open the sequence?"
+msgstr ""
+
+msgid "Faces singing"
+msgstr ""
+
+msgid "%d models, %d groups, %d submodels. Figures with a face: %d. Matrices for lyrics: %d. %s"
+msgstr ""
+
+msgid "Another %d have a face but no controller, so the render cannot show them."
+msgstr ""
+
+msgid "It will be saved in the show folder as %s, next to its other sequences. Nothing existing is replaced."
+msgstr ""

@@ -8810,3 +8810,954 @@ msgstr "{count} eventos de la coreografía usan plantillas que nadie ha revisado
 
 msgid "Watch the result and adjust the templates' starting values."
 msgstr "Mira el resultado y ajusta los valores iniciales de las plantillas."
+
+msgid "Checking the inputs"
+msgstr "Comprobando las entradas"
+
+msgid "Loading the installation"
+msgstr "Cargando la instalación"
+
+msgid "Analyzing the song"
+msgstr "Analizando la canción"
+
+msgid "Preparing the lyrics"
+msgstr "Preparando la letra"
+
+msgid "Synchronizing"
+msgstr "Sincronizando"
+
+msgid "Building the composition"
+msgstr "Construyendo la composición"
+
+msgid "Choreographing"
+msgstr "Generando la coreografía"
+
+msgid "Writing the sequence"
+msgstr "Escribiendo la secuencia"
+
+msgid "Validating"
+msgstr "Validando"
+
+msgid "Rendering"
+msgstr "Renderizando"
+
+msgid "Publishing"
+msgstr "Publicando"
+
+msgid "Mega tree"
+msgstr "Megaárbol"
+
+msgid "Small tree"
+msgstr "Árbol pequeño"
+
+msgid "Window"
+msgstr "Ventana"
+
+msgid "Arch"
+msgstr "Arco"
+
+msgid "Star"
+msgstr "Estrella"
+
+msgid "Singing face"
+msgstr "Cara cantante"
+
+msgid "Figure"
+msgstr "Figura"
+
+msgid "Group"
+msgstr "Grupo"
+
+msgid "Excluded"
+msgstr "Excluida"
+
+msgid "Prop"
+msgstr "Elemento"
+
+msgid "Conservative"
+msgstr "Conservador"
+
+msgid "Creative"
+msgstr "Creativo"
+
+msgid "Balanced"
+msgstr "Equilibrado"
+
+msgid "There is no technique yet for this kind of figure in this role."
+msgstr "Todavía no hay ninguna técnica para este tipo de figura en este papel."
+
+msgid "Its accents follow the strong beats, and none were found in this stretch: mark the bar in Analysis."
+msgstr "Sus acentos siguen los tiempos fuertes y en este tramo no se encontró ninguno: marca el compás en Análisis."
+
+msgid "This automation level adds no accents."
+msgstr "Este nivel de automatización no añade acentos."
+
+msgid "The strong beats here are too close for its accents."
+msgstr "Aquí los tiempos fuertes están demasiado juntos para sus acentos."
+
+msgid "It would show the lyrics, and there are none."
+msgstr "Mostraría la letra, y no hay letra."
+
+msgid "No synchronized phrase is sung in its stretch."
+msgstr "En su tramo no se canta ninguna frase sincronizada."
+
+msgid "Its face would sing, and the lyrics are not synchronized."
+msgstr "Su cara cantaría, pero la letra no está sincronizada."
+
+msgid "It has no face definition to draw."
+msgstr "No tiene ninguna cara que se pueda dibujar."
+
+msgid "Nothing is sung in its stretch."
+msgstr "En su tramo no se canta nada."
+
+msgid "A picture or video could go here; none is assigned yet."
+msgstr "Aquí podría ir una imagen o un vídeo; todavía no hay ninguno asignado."
+
+msgid "Reason: %s"
+msgstr "Motivo: %s"
+
+msgid "The technique chosen by hand does not suit this figure; the previous decision was kept."
+msgstr "La técnica elegida a mano no sirve para esta figura; se ha conservado la decisión anterior."
+
+msgid "The figure is excluded, so a decision on it cannot be applied."
+msgstr "La figura está excluida, así que no se le puede aplicar una decisión."
+
+msgid "Two decisions made by hand overlap on this figure; the first one was kept."
+msgstr "Dos decisiones tomadas a mano se solapan en esta figura; se ha conservado la primera."
+
+msgid "The figure no longer exists in this installation."
+msgstr "La figura ya no existe en esta instalación."
+
+msgid "There was nothing to change at that time."
+msgstr "En ese momento no había nada que cambiar."
+
+msgid "A decision could not be applied (%s)."
+msgstr "No se ha podido aplicar una decisión (%s)."
+
+msgid "The song file does not exist. Choose it again."
+msgstr "El archivo de la canción no existe. Vuelve a elegirlo."
+
+msgid "The song could not be read. Check that it is an audio file and that it is not damaged."
+msgstr "No se ha podido leer la canción. Comprueba que es un archivo de audio y que no está dañado."
+
+msgid "The song is too short to make a show from it."
+msgstr "La canción es demasiado corta para hacer un espectáculo con ella."
+
+msgid "The installation folder has no layout. Choose the show folder that contains your models."
+msgstr "La carpeta de la instalación no tiene layout. Elige la carpeta del show que contiene tus modelos."
+
+msgid "The installation could not be loaded. Open it in xLights and check it."
+msgstr "No se ha podido cargar la instalación. Ábrela en xLights y revísala."
+
+msgid "A sequence with that name already exists, and it is never replaced. Choose another name."
+msgstr "Ya existe una secuencia con ese nombre y nunca se sustituye. Elige otro nombre."
+
+msgid "The sequence name must be a file name ending in .xsq, without folders."
+msgstr "El nombre de la secuencia debe ser un nombre de archivo terminado en .xsq, sin carpetas."
+
+msgid "The lyrics file could not be read."
+msgstr "No se ha podido leer el archivo de la letra."
+
+msgid "The lyrics times are not valid. Check the marks."
+msgstr "Los tiempos de la letra no son válidos. Revisa las marcas."
+
+msgid "The synchronization file is not a valid xLights timing file."
+msgstr "El archivo de sincronización no es un archivo de tiempos de xLights válido."
+
+msgid "The synchronization file has no lyrics track with phrases, words and phonemes."
+msgstr "El archivo de sincronización no tiene ninguna pista de letra con frases, palabras y fonemas."
+
+msgid "The saved lyrics marks could not be read."
+msgstr "No se han podido leer las marcas de la letra guardadas."
+
+msgid "The style profile could not be read."
+msgstr "No se ha podido leer el perfil de estilo."
+
+msgid "The figure roles file could not be read."
+msgstr "No se ha podido leer el archivo de papeles de las figuras."
+
+msgid "No technique could be loaded."
+msgstr "No se ha podido cargar ninguna técnica."
+
+msgid "The composition did not pass its checks. See the technical report."
+msgstr "La composición no ha superado sus comprobaciones. Consulta el informe técnico."
+
+msgid "The choreography did not pass its checks, often because of a decision made by hand. See the technical report."
+msgstr "La coreografía no ha superado sus comprobaciones, a menudo por una decisión tomada a mano. Consulta el informe técnico."
+
+msgid "The sequence would not look as planned, so it was not written. See the technical report."
+msgstr "La secuencia no se vería como estaba previsto, así que no se ha escrito. Consulta el informe técnico."
+
+msgid "The sequence did not pass the checks after writing and rendering it, so nothing was saved. See the technical report."
+msgstr "La secuencia no ha superado las comprobaciones después de escribirla y renderizarla, así que no se ha guardado nada. Consulta el informe técnico."
+
+msgid "The saved sequence did not pass the checks when opened again. See the technical report."
+msgstr "La secuencia guardada no ha superado las comprobaciones al volver a abrirla. Consulta el informe técnico."
+
+msgid "Saving the sequence again changed it. See the technical report."
+msgstr "Al volver a guardar la secuencia, ha cambiado. Consulta el informe técnico."
+
+msgid "The earlier show's data could not be used."
+msgstr "No se han podido usar los datos del espectáculo anterior."
+
+msgid "The installation files changed during the generation. Nothing of the Composer writes them: check whether another program did."
+msgstr "Los archivos de la instalación han cambiado durante la generación. Show Composer no los escribe nunca: comprueba si lo ha hecho otro programa."
+
+msgid "The analysis could not be saved in the show folder."
+msgstr "No se ha podido guardar el análisis en la carpeta del show."
+
+msgid "The report folder could not be prepared."
+msgstr "No se ha podido preparar la carpeta del informe."
+
+msgid "The generation stopped: %s"
+msgstr "La generación se ha detenido: %s"
+
+msgid "Show Composer"
+msgstr "Show Composer"
+
+msgid "Make a show from a song, its lyrics and your installation, review it and open it in xLights."
+msgstr "Crea un espectáculo a partir de una canción, su letra y tu instalación, revísalo y ábrelo en xLights."
+
+msgid "1. Create the show"
+msgstr "1. Crear espectáculo"
+
+msgid "2. Analysis and synchronization"
+msgstr "2. Análisis y sincronización"
+
+msgid "3. Review the composition"
+msgstr "3. Revisar la composición"
+
+msgid "4. Generate the show"
+msgstr "4. Generar espectáculo"
+
+msgid "5. Review the result"
+msgstr "5. Revisar resultado"
+
+msgid "< Back"
+msgstr "< Atrás"
+
+msgid "Next >"
+msgstr "Siguiente >"
+
+msgid "Create the show"
+msgstr "Crear espectáculo"
+
+msgid "Open a Show Made Earlier..."
+msgstr "Abrir un espectáculo anterior..."
+
+msgid "Song"
+msgstr "Canción"
+
+msgid "Choose Song..."
+msgstr "Elegir canción..."
+
+msgid "Installation"
+msgstr "Instalación"
+
+msgid "Choose Another Show Folder..."
+msgstr "Elegir otra carpeta del show..."
+
+msgid "Use the Open Show"
+msgstr "Usar el show abierto"
+
+msgid "Lyrics"
+msgstr "Letra"
+
+msgid "Choose Lyrics..."
+msgstr "Elegir letra..."
+
+msgid "No Lyrics"
+msgstr "Sin letra"
+
+msgid "Choose Synchronization..."
+msgstr "Elegir sincronización..."
+
+msgid "No Synchronization"
+msgstr "Sin sincronización"
+
+msgid "Mark the Lyrics by Ear..."
+msgstr "Marcar la letra de oído..."
+
+msgid "Plain text, LRC or SRT lyrics; an xLights timing file (.xtiming) with a lyrics track wins over any other time."
+msgstr "Letra en texto, LRC o SRT; un archivo de tiempos de xLights (.xtiming) con una pista de letra manda sobre cualquier otro tiempo."
+
+msgid "Style and automation"
+msgstr "Estilo y automatización"
+
+msgid "Style profile:"
+msgstr "Perfil de estilo:"
+
+msgid "Seed:"
+msgstr "Semilla:"
+
+msgid "Another"
+msgstr "Otra"
+
+msgid "Conservative: few figures, calm changes"
+msgstr "Conservador: pocas figuras y cambios tranquilos"
+
+msgid "Creative: more figures, more variety and accents"
+msgstr "Creativo: más figuras, más variedad y acentos"
+
+msgid "Automation level"
+msgstr "Nivel de automatización"
+
+msgid "The same song, installation, lyrics, level and seed always give the same show."
+msgstr "La misma canción, instalación, letra, nivel y semilla dan siempre el mismo espectáculo."
+
+msgid "Advanced options"
+msgstr "Opciones avanzadas"
+
+msgid "Techniques Folder..."
+msgstr "Carpeta de técnicas..."
+
+msgid "Figure Roles File..."
+msgstr "Archivo de papeles de las figuras..."
+
+msgid "Render and check the sequence before saving it (recommended)"
+msgstr "Renderizar y comprobar la secuencia antes de guardarla (recomendado)"
+
+msgid "Choose the Song"
+msgstr "Elegir la canción"
+
+msgid "Audio files (*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff)|*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff;*.aif|All files (*.*)|*.*"
+msgstr "Archivos de audio (*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff)|*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff;*.aif|Todos los archivos (*.*)|*.*"
+
+msgid "Choose the Show Folder"
+msgstr "Elegir la carpeta del show"
+
+msgid "Choose the Lyrics"
+msgstr "Elegir la letra"
+
+msgid "Lyrics (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt|All files (*.*)|*.*"
+msgstr "Letras (*.txt;*.lrc;*.srt)|*.txt;*.lrc;*.srt|Todos los archivos (*.*)|*.*"
+
+msgid "Choose the Synchronization"
+msgstr "Elegir la sincronización"
+
+msgid "xLights timing (*.xtiming)|*.xtiming"
+msgstr "Tiempos de xLights (*.xtiming)|*.xtiming"
+
+msgid "Choose a song that can be played first."
+msgstr "Elige primero una canción que se pueda reproducir."
+
+msgid "The phrases are marked while the song plays."
+msgstr "Las frases se marcan mientras suena la canción."
+
+msgid "Open a Show Made Earlier"
+msgstr "Abrir un espectáculo anterior"
+
+msgid "Show Composer data (*.composer.json)|*.composer.json"
+msgstr "Datos de Show Composer (*.composer.json)|*.composer.json"
+
+msgid "That show could not be opened."
+msgstr "No se ha podido abrir ese espectáculo."
+
+msgid "Choose the Techniques Folder"
+msgstr "Elegir la carpeta de técnicas"
+
+msgid "Choose the Figure Roles File"
+msgstr "Elegir el archivo de papeles de las figuras"
+
+msgid "Roles (*.json)|*.json"
+msgstr "Papeles (*.json)|*.json"
+
+msgid "Analysis and synchronization"
+msgstr "Análisis y sincronización"
+
+msgid "Analyze the Song"
+msgstr "Analizar la canción"
+
+msgid "Synchronize Again"
+msgstr "Volver a sincronizar"
+
+msgid "Play the Selection"
+msgstr "Reproducir la selección"
+
+msgid "Zoom:"
+msgstr "Zoom:"
+
+msgid "From the top: time, sections, waveform with silences and climax, beats (strong beats in red, marked by hand in green), onsets, and the lyrics' phrases, words and mouth shapes. Click to place the cursor, drag to select, Ctrl+wheel to zoom."
+msgstr "De arriba abajo: tiempo, secciones, forma de onda con silencios y clímax, beats (tiempos fuertes en rojo, los marcados a mano en verde), ataques, y las frases, palabras y bocas de la letra. Haz clic para colocar el cursor, arrastra para seleccionar y usa Ctrl+rueda para el zoom."
+
+msgid "Correct the music"
+msgstr "Corregir la música"
+
+msgid "The Bar Starts at the Cursor"
+msgstr "El compás empieza en el cursor"
+
+msgid "Beats per bar:"
+msgstr "Tiempos por compás:"
+
+msgid "Add a Strong Beat at the Cursor"
+msgstr "Añadir un tiempo fuerte en el cursor"
+
+msgid "Remove the Nearest Beat"
+msgstr "Quitar el tiempo más cercano"
+
+msgid "The section at the cursor is:"
+msgstr "La sección del cursor es:"
+
+msgid "Intro"
+msgstr "Introducción"
+
+msgid "Verse"
+msgstr "Estrofa"
+
+msgid "Bridge"
+msgstr "Puente"
+
+msgid "Instrumental"
+msgstr "Instrumental"
+
+msgid "Outro"
+msgstr "Final"
+
+msgid "Change It"
+msgstr "Cambiarla"
+
+msgid "Undo All Music Corrections"
+msgstr "Deshacer todas las correcciones de música"
+
+msgid "Correct the Phrases by Ear..."
+msgstr "Corregir las frases de oído..."
+
+msgid "Marks made by hand win over any computed time and are kept for every new version."
+msgstr "Las marcas hechas a mano mandan sobre cualquier tiempo calculado y se conservan en cada versión nueva."
+
+msgid "Review the composition"
+msgstr "Revisar la composición"
+
+msgid "Work Out the Composition"
+msgstr "Calcular la composición"
+
+msgid "Level"
+msgstr "Nivel"
+
+msgid "Figures lit"
+msgstr "Figuras encendidas"
+
+msgid "In the plan"
+msgstr "En el plan"
+
+msgid "Accents"
+msgstr "Acentos"
+
+msgid "Techniques"
+msgstr "Técnicas"
+
+msgid "Mean intensity"
+msgstr "Intensidad media"
+
+msgid "To review"
+msgstr "Para revisar"
+
+msgid "Show:"
+msgstr "Mostrar:"
+
+msgid "Every figure in the show"
+msgstr "Todas las figuras del espectáculo"
+
+msgid "Leading figures"
+msgstr "Figuras protagonistas"
+
+msgid "Accompanying figures"
+msgstr "Figuras de acompañamiento"
+
+msgid "Accent figures"
+msgstr "Figuras de acento"
+
+msgid "Single models"
+msgstr "Modelos individuales"
+
+msgid "Singing faces"
+msgstr "Caras que cantan"
+
+msgid "Matrices showing lyrics"
+msgstr "Matrices que muestran la letra"
+
+msgid "Excluded figures"
+msgstr "Figuras excluidas"
+
+msgid "Planned but left dark"
+msgstr "Previstas pero apagadas"
+
+msgid "Kind"
+msgstr "Tipo"
+
+msgid "Part in the plan"
+msgstr "Papel en el plan"
+
+msgid "Exclude This Figure"
+msgstr "Excluir esta figura"
+
+msgid "Include It Again"
+msgstr "Volver a incluirla"
+
+msgid "Lock Its Effects"
+msgstr "Bloquear sus efectos"
+
+msgid "Unlock"
+msgstr "Desbloquear"
+
+msgid "Suggested pictures and videos (none is created: choose the files when the media library exists)"
+msgstr "Imágenes y vídeos sugeridos (no se crea ninguno: elegirás los archivos cuando exista la biblioteca de medios)"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "To"
+msgstr "Hasta"
+
+msgid "Generate the show"
+msgstr "Generar espectáculo"
+
+msgid "Generate the Show"
+msgstr "Generar espectáculo"
+
+msgid "The generation runs apart from this window, which stays usable. Loading the installation, saving and rendering cannot stop halfway: a cancel takes effect as soon as the current one ends, and nothing is saved."
+msgstr "La generación se ejecuta aparte y esta ventana sigue respondiendo. Cargar la instalación, guardar y renderizar no se pueden detener a medias: la cancelación surte efecto en cuanto termina el paso en curso, y no se guarda nada."
+
+msgid "Review the result"
+msgstr "Revisar resultado"
+
+msgid "Open the Sequence in xLights"
+msgstr "Abrir la secuencia en xLights"
+
+msgid "Open the Folder"
+msgstr "Abrir la carpeta"
+
+msgid "Technical Report"
+msgstr "Informe técnico"
+
+msgid "Review the Composition Again"
+msgstr "Volver a revisar la composición"
+
+msgid "Make Another Version"
+msgstr "Generar otra versión"
+
+msgid "Mark as Reviewed and Approved..."
+msgstr "Marcar como revisada y aprobada..."
+
+msgid "Points that need your attention"
+msgstr "Puntos que requieren tu atención"
+
+msgid "What"
+msgstr "Qué"
+
+msgid "Figures in the plan that stayed dark"
+msgstr "Figuras del plan que se quedaron apagadas"
+
+msgid "Why"
+msgstr "Por qué"
+
+msgid "Suggested pictures and videos"
+msgstr "Imágenes y vídeos sugeridos"
+
+msgid "You have watched this sequence in xLights and approve how it looks. Who reviewed it?"
+msgstr "Has visto esta secuencia en xLights y apruebas cómo se ve. ¿Quién la ha revisado?"
+
+msgid "Mark as Reviewed and Approved"
+msgstr "Marcar como revisada y aprobada"
+
+msgid "This folder has no xLights layout."
+msgstr "Esta carpeta no tiene un layout de xLights."
+
+msgid "Neutral starting profile (not your style yet)"
+msgstr "Perfil neutral de partida (todavía no es tu estilo)"
+
+msgid "It was made by a newer version of Show Composer."
+msgstr "Se hizo con una versión más nueva de Show Composer."
+
+msgid "Its data is damaged or incomplete."
+msgstr "Sus datos están dañados o incompletos."
+
+msgid "The song %s was not found; choose it again."
+msgstr "No se ha encontrado la canción %s; vuelve a elegirla."
+
+msgid "The song file has changed since that show was made."
+msgstr "El archivo de la canción ha cambiado desde que se hizo ese espectáculo."
+
+msgid "The Show Composer generator could not be started."
+msgstr "No se ha podido iniciar el generador de Show Composer."
+
+msgid "Choose a song and an installation first."
+msgstr "Elige primero una canción y una instalación."
+
+msgid "Both are on the first step."
+msgstr "Las dos están en el primer paso."
+
+msgid "The show cannot be generated yet."
+msgstr "Todavía no se puede generar el espectáculo."
+
+msgid "Choose a song and an installation on the first step."
+msgstr "Elige una canción y una instalación en el primer paso."
+
+msgid "Cancelling: the generator stops as soon as the current step ends. Nothing is saved."
+msgstr "Cancelando: el generador se detiene en cuanto termina el paso en curso. No se guarda nada."
+
+msgid "Working: %s"
+msgstr "Trabajando: %s"
+
+msgid "In progress"
+msgstr "En curso"
+
+msgid "Rendering the whole song without a window, to check every effect lights its figure."
+msgstr "Renderizando toda la canción sin ventana, para comprobar que cada efecto enciende su figura."
+
+msgid "Checking the render: figures, faces, silences and timing."
+msgstr "Comprobando el render: figuras, caras, silencios y tiempos."
+
+msgid "Now: %s"
+msgstr "Ahora: %s"
+
+msgid "Done, with notes"
+msgstr "Hecho, con avisos"
+
+msgid "Cancelled. Nothing was saved in the show folder."
+msgstr "Cancelado. No se ha guardado nada en la carpeta del show."
+
+msgid "The show was not saved. See below what happened."
+msgstr "El espectáculo no se ha guardado. Abajo se explica qué ha pasado."
+
+msgid "Nothing was saved in the show folder. The technical report has every detail."
+msgstr "No se ha guardado nada en la carpeta del show. El informe técnico tiene todos los detalles."
+
+msgid "The generator's results could not be read."
+msgstr "No se han podido leer los resultados del generador."
+
+msgid "The installation could not be read."
+msgstr "No se ha podido leer la instalación."
+
+msgid "Done: the show is saved. Review it in the next step."
+msgstr "Hecho: el espectáculo está guardado. Revísalo en el paso siguiente."
+
+msgid "The generator is still working. Cancel it and close? Nothing will be saved."
+msgstr "El generador sigue trabajando. ¿Cancelarlo y cerrar? No se guardará nada."
+
+msgid "The name must end in .xsq and have no folders in it."
+msgstr "El nombre debe terminar en .xsq y no puede incluir carpetas."
+
+msgid "A sequence with this name already exists, and it is never replaced. Choose another name."
+msgstr "Ya existe una secuencia con este nombre y nunca se sustituye. Elige otro nombre."
+
+msgid "No song chosen"
+msgstr "No se ha elegido ninguna canción"
+
+msgid "Choose the song the show is for."
+msgstr "Elige la canción del espectáculo."
+
+msgid "This file cannot be played by xLights: choose another one."
+msgstr "xLights no puede reproducir este archivo: elige otro."
+
+msgid "Length %s. It can be played. %s"
+msgstr "Duración %s. Se puede reproducir. %s"
+
+msgid "Its analysis is already saved for this installation."
+msgstr "Su análisis ya está guardado en esta instalación."
+
+msgid "It will be analyzed in the next step."
+msgstr "Se analizará en el paso siguiente."
+
+msgid "Reading the installation..."
+msgstr "Leyendo la instalación..."
+
+msgid "%d models, %d groups, %d submodels. %d figures with a face and %d matrices for lyrics. %s"
+msgstr "%d modelos, %d grupos y %d submodelos. %d figuras con cara y %d matrices para la letra. %s"
+
+msgid "It is the show open in xLights."
+msgstr "Es el show abierto en xLights."
+
+msgid "It is not the show open in xLights; it will be opened with it."
+msgstr "No es el show abierto en xLights; la secuencia se abrirá con él."
+
+msgid "No lyrics"
+msgstr "Sin letra"
+
+msgid "Lyrics marked by ear"
+msgstr "Letra marcada de oído"
+
+msgid "No synchronization file"
+msgstr "Sin archivo de sincronización"
+
+msgid "No lyrics: no face will sing and no lyrics will be shown."
+msgstr "Sin letra: ninguna cara cantará y no se mostrará la letra."
+
+msgid "%d lines of lyrics, not synchronized. No face will sing until the phrases are marked: use \"Mark the Lyrics by Ear\"."
+msgstr "%d líneas de letra sin sincronizar. Ninguna cara cantará hasta que se marquen las frases: usa «Marcar la letra de oído»."
+
+msgid "%d lines with their times (LRC or SRT). Words and mouth shapes are estimated by syllables inside each line."
+msgstr "%d líneas con sus tiempos (LRC o SRT). Las palabras y las bocas se estiman por sílabas dentro de cada línea."
+
+msgid "%d phrases marked by ear. Words and mouth shapes are estimated by syllables inside each phrase."
+msgstr "%d frases marcadas de oído. Las palabras y las bocas se estiman por sílabas dentro de cada frase."
+
+msgid "A synchronized lyrics track with %d phrases: its times win over any other."
+msgstr "Una pista de letra sincronizada con %d frases: sus tiempos mandan sobre cualquier otro."
+
+msgid "The synchronization file could not be read."
+msgstr "No se ha podido leer el archivo de sincronización."
+
+msgid "Faces can sing: %d figures have a face."
+msgstr "Las caras podrán cantar: %d figuras tienen cara."
+
+msgid "No figure has a face, so no face will sing."
+msgstr "Ninguna figura tiene cara, así que ninguna cantará."
+
+msgid "Starting techniques of Show Composer"
+msgstr "Técnicas de partida de Show Composer"
+
+msgid "Roles saved with the show, if any"
+msgstr "Los papeles guardados con el show, si los hay"
+
+msgid "It will be saved as %s, next to the show's other sequences. Nothing existing is replaced."
+msgstr "Se guardará como %s, junto a las demás secuencias del show. No se sustituye nada de lo que ya existe."
+
+msgid "Analyzing the song..."
+msgstr "Analizando la canción..."
+
+msgid "The song has not been analyzed yet."
+msgstr "La canción todavía no se ha analizado."
+
+msgid "%s long, about %.0f beats a minute. %d beats, %d strong beats, %d sections, %d silences."
+msgstr "Duración %s, unos %.0f pulsos por minuto. %d beats, %d tiempos fuertes, %d secciones y %d silencios."
+
+msgid "No strong beat was found: accents need them. Place the cursor on the first beat of a bar and press \"The Bar Starts at the Cursor\"."
+msgstr "No se ha encontrado ningún tiempo fuerte y los acentos los necesitan. Coloca el cursor en el primer tiempo de un compás y pulsa «El compás empieza en el cursor»."
+
+msgid "No lyrics: no face will sing."
+msgstr "Sin letra: ninguna cara cantará."
+
+msgid "The lyrics are loaded but not synchronized: no face will sing and no lyrics will be shown until the phrases are marked."
+msgstr "La letra está cargada pero sin sincronizar: ninguna cara cantará y no se mostrará la letra hasta que se marquen las frases."
+
+msgid "Lyrics synchronized: %d phrases, %d words and %d mouth shapes."
+msgstr "Letra sincronizada: %d frases, %d palabras y %d posiciones de boca."
+
+msgid "in the section %s-%s"
+msgstr "en la sección %s-%s"
+
+msgid ", phrase \"%s\""
+msgstr ", frase «%s»"
+
+msgid "Cursor %s %s"
+msgstr "Cursor %s %s"
+
+msgid "No music corrections. They are kept with the show and win over the analysis in every version."
+msgstr "Sin correcciones de música. Se guardan con el espectáculo y mandan sobre el análisis en cada versión."
+
+msgid "%d music corrections, kept with the show for every version."
+msgstr "%d correcciones de música, guardadas con el espectáculo para cada versión."
+
+msgid "Working out level %d of 3..."
+msgstr "Calculando el nivel %d de 3..."
+
+msgid "The composition has not been worked out yet."
+msgstr "Todavía no se ha calculado la composición."
+
+msgid "Something changed since this composition was worked out: press \"Work Out the Composition\" to see its effect."
+msgstr "Algo ha cambiado desde que se calculó esta composición: pulsa «Calcular la composición» para ver su efecto."
+
+msgid "Level %s, seed %d. Choose a row to compare the levels; the numbers come from the choreography itself."
+msgstr "Nivel %s, semilla %d. Elige una fila para comparar los niveles; las cifras salen de la propia coreografía."
+
+msgid "leads %d"
+msgstr "protagonista %d"
+
+msgid "accompanies %d"
+msgstr "acompaña %d"
+
+msgid "accents %d"
+msgstr "acentos %d"
+
+msgid "Excluded by you"
+msgstr "Excluida por ti"
+
+msgid "Locked"
+msgstr "Bloqueada"
+
+msgid "Conflict"
+msgstr "Conflicto"
+
+msgid "Left dark"
+msgstr "Apagada"
+
+msgid "Sings"
+msgstr "Canta"
+
+msgid "Shows lyrics"
+msgstr "Muestra la letra"
+
+msgid "Your decisions: %d locked effects, %d excluded figures. %d could not be applied (see the figure). They are kept for every version, whatever the level or seed."
+msgstr "Tus decisiones: %d efectos bloqueados y %d figuras excluidas. %d no se han podido aplicar (consulta la figura). Se conservan en cada versión, sea cual sea el nivel o la semilla."
+
+msgid "Video"
+msgstr "Vídeo"
+
+msgid "Picture"
+msgstr "Imagen"
+
+msgid "Pending"
+msgstr "Pendiente"
+
+msgid "Choose a figure to see what it does in this show."
+msgstr "Elige una figura para ver qué hace en este espectáculo."
+
+msgid "Kind: %s%s"
+msgstr "Tipo: %s%s"
+
+msgid " (set by you)"
+msgstr " (elegido por ti)"
+
+msgid " (suggested from the layout)"
+msgstr " (deducido del layout)"
+
+msgid "It has no controller: it takes part, but the render cannot show it."
+msgstr "No tiene controlador: participa, pero el render no puede mostrarla."
+
+msgid "It has a face definition."
+msgstr "Tiene una definición de cara."
+
+msgid "It has no face."
+msgstr "No tiene cara."
+
+msgid "It can show text."
+msgstr "Puede mostrar texto."
+
+msgid "It cannot show readable text."
+msgstr "No puede mostrar texto legible."
+
+msgid "It is excluded: it stays dark, and no group lights it."
+msgstr "Está excluida: se queda apagada y ningún grupo la enciende."
+
+msgid "In the plan: leads %d, accompanies %d, accents %d stretches. %d effects."
+msgstr "En el plan: protagonista en %d tramos, acompaña en %d y marca acentos en %d. %d efectos."
+
+msgid "Effects: %s"
+msgstr "Efectos: %s"
+
+msgid "Its face sings the synchronized lyrics."
+msgstr "Su cara canta la letra sincronizada."
+
+msgid "It shows the lyrics' phrases."
+msgstr "Muestra las frases de la letra."
+
+msgid "Its effects are locked: they stay as they are in every version."
+msgstr "Sus efectos están bloqueados: se quedan igual en cada versión."
+
+msgid " (limited)"
+msgstr " (limitada)"
+
+msgid " (to check)"
+msgstr " (por comprobar)"
+
+msgid "Techniques it can take: %s"
+msgstr "Técnicas que admite: %s"
+
+msgid "Song: %s\nInstallation: %s\nLevel: %s, seed %d. %d decisions of yours.\nIt will be saved as %s."
+msgstr "Canción: %s\nInstalación: %s\nNivel: %s, semilla %d. %d decisiones tuyas.\nSe guardará como %s."
+
+msgid "No show has been generated in this window yet."
+msgstr "Todavía no se ha generado ningún espectáculo en esta ventana."
+
+msgid "Done: %s"
+msgstr "Hecho: %s"
+
+msgid "no lyrics"
+msgstr "sin letra"
+
+msgid "lyrics not synchronized"
+msgstr "letra sin sincronizar"
+
+msgid "synchronized lyrics"
+msgstr "letra sincronizada"
+
+msgid "%s long, level %s, seed %d. %d effects on %d figures (%d in the plan).\nChecks: %s. Render: %s.\nLyrics: %s. Faces singing: %s. Lyrics shown on: %s. %d pictures or videos suggested."
+msgstr "Duración %s, nivel %s, semilla %d. %d efectos en %d figuras (%d en el plan).\nComprobaciones: %s. Render: %s.\nLetra: %s. Caras que cantan: %s. Letra mostrada en: %s. %d imágenes o vídeos sugeridos."
+
+msgid "passed"
+msgstr "superadas"
+
+msgid "failed"
+msgstr "no superadas"
+
+msgid "%d of %d frames, every effect lights its figure"
+msgstr "%d de %d fotogramas; cada efecto enciende su figura"
+
+msgid "not run"
+msgstr "no ejecutado"
+
+msgid "none"
+msgstr "ninguna"
+
+msgid "Reviewed and approved by a person: %s, %s."
+msgstr "Revisada y aprobada por una persona: %s, %s."
+
+msgid "Rendered correctly. Pending visual review: watch it in xLights before showing it."
+msgstr "Renderizada correctamente. Pendiente de revisión visual: mírala en xLights antes de mostrarla."
+
+msgid "Pending visual review: watch it in xLights before showing it."
+msgstr "Pendiente de revisión visual: mírala en xLights antes de mostrarla."
+
+msgid "The lyrics are not synchronized, so no face sings. Mark the phrases and make another version."
+msgstr "La letra no está sincronizada, así que ninguna cara canta. Marca las frases y genera otra versión."
+
+msgid "No face sings: no figure with a face took part."
+msgstr "Ninguna cara canta: no ha participado ninguna figura con cara."
+
+msgid "%d effects are best checked by eye, for example lyrics that scroll on a small matrix."
+msgstr "Conviene revisar a ojo %d efectos, por ejemplo la letra que se desplaza por una matriz pequeña."
+
+msgid "%d of your decisions could not be applied; the earlier ones were kept. See the composition."
+msgstr "%d de tus decisiones no se han podido aplicar; se han conservado las anteriores. Consulta la composición."
+
+msgid "%d minor notices from the checks; the technical report lists them."
+msgstr "%d avisos menores de las comprobaciones; el informe técnico los detalla."
+
+msgid "No strong beat was found, so there are no accents. Mark the bar in Analysis and make another version."
+msgstr "No se ha encontrado ningún tiempo fuerte, así que no hay acentos. Marca el compás en Análisis y genera otra versión."
+
+msgid "Show Composer's techniques are starting values that nobody has approved by eye yet."
+msgstr "Las técnicas de Show Composer son valores de partida que nadie ha aprobado a ojo todavía."
+
+msgid "No reason was recorded."
+msgstr "No se ha registrado ningún motivo."
+
+msgid "Section"
+msgstr "Sección"
+
+msgid "Analyze the song to see it here."
+msgstr "Analiza la canción para verla aquí."
+
+msgid "silence"
+msgstr "silencio"
+
+msgid "climax"
+msgstr "clímax"
+
+msgid "(no waveform: the song could not be read here)"
+msgstr "(sin forma de onda: aquí no se ha podido leer la canción)"
+
+msgid "Save Marks"
+msgstr "Guardar marcas"
+
+msgid "Show Composer..."
+msgstr "Show Composer..."
+
+msgid "Make a show from a song, its lyrics and this installation"
+msgstr "Crea un espectáculo a partir de una canción, su letra y esta instalación"
+
+msgid "This sequence belongs to the installation in\n%s\nwhich is not the show folder open now. Use that show folder for this session and open the sequence?"
+msgstr "Esta secuencia pertenece a la instalación de\n%s\nque no es la carpeta del show abierta ahora. ¿Usar esa carpeta del show en esta sesión y abrir la secuencia?"
+
+msgid "Faces singing"
+msgstr "Caras"
+
+msgid "%d models, %d groups, %d submodels. Figures with a face: %d. Matrices for lyrics: %d. %s"
+msgstr "%d modelos, %d grupos y %d submodelos. Figuras con cara: %d. Matrices para la letra: %d. %s"
+
+msgid "Another %d have a face but no controller, so the render cannot show them."
+msgstr "Otras %d tienen cara pero no controlador, así que el render no puede mostrarlas."
+
+msgid "It will be saved in the show folder as %s, next to its other sequences. Nothing existing is replaced."
+msgstr "Se guardará en la carpeta del show como %s, junto a sus demás secuencias. No se sustituye nada de lo que ya existe."

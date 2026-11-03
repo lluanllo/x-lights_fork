@@ -79,6 +79,10 @@
     <ClCompile Include="..\src-ui-wx\import_export\LorConvertDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\LyricsDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\sequencer\LyricSyncDialog.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ShowComposerDialog.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerJob.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerTimeline.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
     <ClCompile Include="..\src-ui-wx\import_export\MusicXML.cpp" />
@@ -106,6 +110,7 @@
     <ClCompile Include="..\src-core\composer\Choreography.cpp" />
     <ClCompile Include="..\src-core\composer\ShowGenerationPipeline.cpp" />
     <ClCompile Include="..\src-core\composer\GenerationSidecar.cpp" />
+    <ClCompile Include="..\src-core\composer\ComposerReview.cpp" />
     <ClCompile Include="..\src-core\composer\PipelineTest.cpp" />
     <ClCompile Include="..\src-core\composer\ChoreographyTest.cpp" />
     <ClCompile Include="..\src-core\composer\SequenceWriter.cpp" />
@@ -1669,6 +1674,10 @@
     <ClInclude Include="..\src-ui-wx\import_export\LorConvertDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\LyricsDialog.h" />
     <ClInclude Include="..\src-ui-wx\sequencer\LyricSyncDialog.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ShowComposerDialog.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerJob.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerTimeline.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />
     <ClInclude Include="..\src-core\models\Shapes.h" />
@@ -1699,6 +1708,7 @@
     <ClInclude Include="..\src-core\composer\Choreography.h" />
     <ClInclude Include="..\src-core\composer\ShowGenerationPipeline.h" />
     <ClInclude Include="..\src-core\composer\GenerationSidecar.h" />
+    <ClInclude Include="..\src-core\composer\ComposerReview.h" />
     <ClInclude Include="..\src-core\composer\PipelineTest.h" />
     <ClInclude Include="..\src-core\composer\SyntheticAudio.h" />
     <ClInclude Include="..\src-core\composer\ChoreographyTest.h" />

@@ -149,6 +149,7 @@ struct LyricSession {
 };
 
 [[nodiscard]] std::string ToJson(const LyricAlignment& alignment);
+[[nodiscard]] bool FromJson(const std::string& text, LyricAlignment& alignment, std::string& error);
 [[nodiscard]] std::string ToJson(const LyricSession& session);
 [[nodiscard]] bool FromJson(const std::string& text, LyricSession& session, std::string& error);
 [[nodiscard]] bool SaveLyricSession(const std::string& path, const LyricSession& session, std::string& error);

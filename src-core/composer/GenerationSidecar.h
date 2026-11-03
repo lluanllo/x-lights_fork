@@ -3,6 +3,7 @@
 #include "composer/Choreography.h"
 #include "composer/CompositionPlan.h"
 #include "composer/LyricAligner.h"
+#include "composer/SongAnalysis.h"
 
 #include <cstdint>
 #include <map>
@@ -26,6 +27,7 @@ struct GenerationSidecar {
     std::string generationId; // the same inputs and versions give the same id
     std::string sequenceFile; // the .xsq it belongs to, by file name
     std::string audioFile;
+    std::string audioPath; // where it was read from, to find it again on this machine
     std::string audioHash; // SHA-256 of the audio's bytes
     long audioSize = 0;
     std::string analysisOptionsKey;
@@ -48,6 +50,7 @@ struct GenerationSidecar {
     std::vector<MediaCue> mediaCues;
     std::vector<PlanCorrection> planCorrections;
     std::vector<ChoreographyCorrection> choreographyCorrections;
+    AnalysisCorrections analysisCorrections; // beats, bars and sections a person fixed
     LyricSession lyrics; // the text as given and its manual marks, synchronized or not
     int validationErrors = 0;
     int validationWarnings = 0;
@@ -73,12 +76,19 @@ enum class SidecarStatus {
 [[nodiscard]] std::string SidecarPathFor(const std::string& sequencePath);
 
 // The corrections a person can hand over in a file of their own, in the same form the
-// sidecar keeps them: { "plan": [...], "choreography": [...], "lyrics": [...] }.
+// sidecar keeps them: { "plan": [...], "choreography": [...], "lyrics": [...], "analysis": {...} }.
 struct CorrectionSet {
     std::vector<PlanCorrection> plan;
     std::vector<ChoreographyCorrection> choreography;
     std::vector<LyricCorrection> lyrics;
+    AnalysisCorrections analysis;
+
+    [[nodiscard]] bool Empty() const;
 };
+
+// Adds `extra` to `into`: lists are appended, and a bar correction in `extra` replaces one in `into`.
+void MergeCorrections(CorrectionSet& into, const CorrectionSet& extra);
+void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra);
 
 [[nodiscard]] std::string ToJson(const CorrectionSet& corrections);
 [[nodiscard]] bool FromJson(const std::string& text, CorrectionSet& corrections, std::string& error);

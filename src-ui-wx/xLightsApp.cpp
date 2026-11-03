@@ -76,6 +76,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "composer/ChoreographyTest.h"
 #include "composer/LyricTest.h"
 #include "composer/PipelineTest.h"
+#include "composer/ComposerUITest.h"
 #include "composer/PlanTest.h"
 #include "composer/ValidatorTest.h"
 #include "composer/WriterTest.h"
@@ -1083,7 +1084,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots") {
             headlessArg = true;
             break;
         }
@@ -1235,7 +1236,11 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
-        { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test: a song for the runs on the show (-s)" },
+        { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
+        { wxCMD_LINE_SWITCH, "", "composer-snapshots", "internal tool: write PNG pictures of --models at --times in a rendered --fseq of the show (-s) with all controllers inactive, to --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "models", "with --composer-snapshots: model names separated by ';'" },
+        { wxCMD_LINE_OPTION, "", "times", "with --composer-snapshots: times in milliseconds separated by ','" },
+        { wxCMD_LINE_SWITCH, "", "composer-ui-test", "internal test: drive Show Composer through its window on the show (-s) with all controllers inactive, with --audio and --lyrics, writing results and screenshots to --out, and exit" },
         { wxCMD_LINE_SWITCH, "cvt", "composer-validator-test", "internal test: run the validator cases on a synthetic show written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "st", "shadertranslate", "assemble every .fs shader in the show dir to GLSL (spike) and exit" },
         { wxCMD_LINE_SWITCH, "cs", "checksequence", "run check sequence and exit" },
@@ -1425,7 +1430,7 @@ bool xLightsApp::OnInit()
             sequenceFiles.Clear();
         }
 
-        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("clt") && !parser.Found("cft") && !parser.Found("cmc") && !parser.Found("cpt") && !parser.Found("cct") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
+        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("clt") && !parser.Found("cft") && !parser.Found("cmc") && !parser.Found("cpt") && !parser.Found("cct") && !parser.Found("fc") && !parser.Found("st") && !headlessArg && !parser.Found("composer-ui-test") && !info.empty() && readOnlyZipFile == "")
         {
             if (parser.Found("q")) {
                 spdlog::info("Command line notices (dialog suppressed by -q):\n{}", (const char*)info.c_str());
@@ -2080,6 +2085,36 @@ bool xLightsApp::OnInit()
         std::exit(composer::RunGenerateCommand(command));
     }
 
+    if (parser.Found("composer-snapshots")) {
+        composer::SnapshotOptions options;
+        wxString value;
+        options.showDir = showDir.ToStdString();
+        if (parser.Found("fseq", &value)) {
+            options.fseqPath = value.ToStdString();
+        }
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString();
+        }
+        if (parser.Found("models", &value)) {
+            for (const wxString& m : wxSplit(value, ';')) {
+                if (!m.IsEmpty()) {
+                    options.models.push_back(m.ToStdString(wxConvUTF8));
+                }
+            }
+        }
+        if (parser.Found("times", &value)) {
+            for (const wxString& t : wxSplit(value, ',')) {
+                options.timesMS.push_back(static_cast<int>(std::strtol(t.ToStdString().c_str(), nullptr, 10)));
+            }
+        }
+        if (options.showDir.empty() || options.fseqPath.empty() || options.outDir.empty() || options.models.empty() || options.timesMS.empty()) {
+            spdlog::error("--composer-snapshots requires -s <dir>, --fseq <file>, --models <a;b>, --times <ms,ms> and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        std::exit(composer::RunSnapshotCommand(options));
+    }
+
     if (parser.Found("cpl")) {
         composer::PipelineTestOptions options;
         wxString value;
@@ -2310,6 +2345,23 @@ bool xLightsApp::OnInit()
         spdlog::info("-v: Check sequence mode is ON");
         topFrame->_checkSequenceMode = true;
         topFrame->CallAfter(&xLightsFrame::OpenAndCheckSequence, sequenceFiles, true);
+    }
+
+    if (parser.Found("composer-ui-test")) {
+        ComposerUITestOptions options;
+        wxString value;
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("audio", &value)) {
+            options.audio = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("lyrics", &value)) {
+            options.lyrics = value.ToStdString(wxConvUTF8);
+        }
+        spdlog::info("--composer-ui-test: driving Show Composer, results in {}", options.outDir);
+        // After the show has loaded and the window is up.
+        topFrame->CallAfter([topFrame, options]() { StartComposerUITest(topFrame, options); });
     }
 
     if (parser.Found("o")) {

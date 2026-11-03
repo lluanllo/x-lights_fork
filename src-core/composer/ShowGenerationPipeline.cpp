@@ -340,6 +340,7 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.choreographerVersion = run.choreography.engineVersion;
     s.sequenceFile = fs::path(run.sequencePath).filename().string();
     s.audioFile = fs::path(run.request.audioPath).filename().string();
+    s.audioPath = fs::absolute(fs::path(run.request.audioPath)).string();
     s.audioHash = run.analysis.audioHash;
     s.audioSize = run.analysis.fileSize;
     s.analysisOptionsKey = run.analysis.optionsKey;
@@ -362,6 +363,7 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.mediaCues = run.choreography.mediaCues;
     s.planCorrections = run.corrections.plan;
     s.choreographyCorrections = run.corrections.choreography;
+    s.analysisCorrections = run.corrections.analysis;
     s.lyrics = run.lyricSession;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
                                           LevelId(s.level), s.seed, s.frameMS, s.pipelineVersion, s.plannerVersion, s.choreographerVersion, ToJson(run.corrections)));
@@ -508,7 +510,9 @@ bool CheckInputs(GenerationRun& run) {
             run.corrections.plan = run.previous.planCorrections;
             run.corrections.choreography = run.previous.choreographyCorrections;
             run.corrections.lyrics = run.previous.lyrics.corrections;
-            Note(run, S, "previous-sidecar", fmt::format("{}: {} plan, {} choreography and {} lyric corrections kept", run.previous.sequenceFile, run.corrections.plan.size(), run.corrections.choreography.size(), run.corrections.lyrics.size()));
+            run.corrections.analysis = run.previous.analysisCorrections;
+            Note(run, S, "previous-sidecar", fmt::format("{}: {} plan, {} choreography, {} lyric and {} music corrections kept", run.previous.sequenceFile, run.corrections.plan.size(), run.corrections.choreography.size(),
+                                                         run.corrections.lyrics.size(), run.corrections.analysis.events.size() + run.corrections.analysis.sections.size() + (run.corrections.analysis.bar.firstDownbeatMS >= 0 ? 1 : 0)));
             run.Stage(S).status = StageStatus::Ok;
         }
         if (!r.correctionsPath.empty()) {
@@ -518,13 +522,9 @@ bool CheckInputs(GenerationRun& run) {
             if (!ReadText(r.correctionsPath, text) || !FromJson(text, file, error)) {
                 return Fail(run, S, "corrections-invalid", r.correctionsPath + ": " + error);
             }
-            run.corrections.plan.insert(run.corrections.plan.end(), file.plan.begin(), file.plan.end());
-            run.corrections.choreography.insert(run.corrections.choreography.end(), file.choreography.begin(), file.choreography.end());
-            run.corrections.lyrics.insert(run.corrections.lyrics.end(), file.lyrics.begin(), file.lyrics.end());
+            MergeCorrections(run.corrections, file);
         }
-        run.corrections.plan.insert(run.corrections.plan.end(), r.corrections.plan.begin(), r.corrections.plan.end());
-        run.corrections.choreography.insert(run.corrections.choreography.end(), r.corrections.choreography.begin(), r.corrections.choreography.end());
-        run.corrections.lyrics.insert(run.corrections.lyrics.end(), r.corrections.lyrics.begin(), r.corrections.lyrics.end());
+        MergeCorrections(run.corrections, r.corrections);
         if (!run.request.level) {
             run.request.level = run.hasPrevious ? run.previous.level : AutomationLevel::Balanced;
         }
@@ -621,6 +621,13 @@ bool AnalyzeAudio(GenerationRun& run) {
         }
         run.analysis = result.analysis;
         run.analysisFromCache = result.reusedCache;
+        const AnalysisCorrections& fixes = run.corrections.analysis;
+        if (!fixes.events.empty() || !fixes.sections.empty() || fixes.bar.firstDownbeatMS >= 0) {
+            // A person's beats, bars and sections win over the detection, here as in the cache.
+            MergeAnalysisCorrections(run.analysis.corrections, fixes);
+            ApplyCorrections(run.analysis);
+            run.Stage(GenerationStage::Analysis).notes.push_back(fmt::format("music corrections applied: {} marks, {} sections{}", fixes.events.size(), fixes.sections.size(), fixes.bar.firstDownbeatMS >= 0 ? ", the bar" : ""));
+        }
         const SongAnalysis& a = run.analysis;
         if (a.durationMS < 2 * r.frameMS) {
             return Fail(run, S, "audio-too-short", std::to_string(a.durationMS));
@@ -759,6 +766,23 @@ bool PrepareLyrics(GenerationRun& run) {
 bool PlanShow(GenerationRun& run) {
     return RunStage(run, GenerationStage::Plan, [&]() {
         const GenerationStage S = GenerationStage::Plan;
+        // A figure a person excluded for the whole song is out of this show the way
+        // roles.json would take it out: dark, and no group lights it either.
+        for (const PlanCorrection& c : run.corrections.plan) {
+            if (c.action != PlanCorrection::Action::Exclude || c.startMS >= 0) {
+                continue;
+            }
+            const int index = run.capabilities.IndexOf(c.target);
+            if (index < 0) {
+                Note(run, S, "excluded-figure-missing", c.target);
+                continue;
+            }
+            TargetInfo& t = run.capabilities.targets[index];
+            if (!t.Excluded()) {
+                t.roles.insert(t.roles.begin(), { Role::Excluded, RoleStatus::ExcludedManually, "correction", 1.0 });
+                run.Stage(S).notes.push_back("excluded by a correction: " + c.target);
+            }
+        }
         PlannerInput in;
         in.analysis = &run.analysis;
         in.capabilities = &run.capabilities;
@@ -1176,6 +1200,33 @@ std::string SummaryJson(const GenerationRun& run) {
     root["participants"] = participants;
     root["targetsLit"] = lit;
     root["visualReview"] = "not-reviewed";
+    root["showDir"] = run.request.showDir;
+    root["sequenceName"] = run.request.sequenceName;
+    root["audio"] = run.request.audioPath;
+    root["durationMS"] = run.spec.durationMS > 0 ? run.spec.durationMS : run.analysis.durationMS;
+    root["lyricTrack"] = run.lyricTrack.layers.empty() ? std::string() : run.lyricTrack.name;
+    json coverage = json::array();
+    for (const TargetCoverage& t : run.coverage) {
+        coverage.push_back({ { "target", t.target }, { "planned", t.plannedSegments }, { "events", t.events }, { "written", t.written }, { "lit", t.effectsLit }, { "framesLit", t.framesLit }, { "note", t.note } });
+    }
+    root["coverage"] = std::move(coverage);
+    root["findings"] = run.findings;
+    json cues = json::array();
+    for (const MediaCue& m : run.choreography.mediaCues) {
+        cues.push_back({ { "id", m.id }, { "target", m.target }, { "startMS", m.startMS }, { "endMS", m.endMS }, { "kind", m.kind } });
+    }
+    root["mediaCueList"] = std::move(cues);
+    std::set<std::string> faces;
+    std::set<std::string> texts;
+    for (const ChoreographyEvent& e : run.choreography.events) {
+        if (e.effect == "Faces") {
+            faces.insert(e.target);
+        } else if (e.effect == "Text") {
+            texts.insert(e.target);
+        }
+    }
+    root["faceTargets"] = faces;
+    root["textTargets"] = texts;
     return root.dump(1);
 }
 

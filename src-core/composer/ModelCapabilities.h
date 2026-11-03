@@ -170,6 +170,8 @@ void ClassifyTarget(TargetInfo& target);
 [[nodiscard]] const char* TargetTypeId(TargetType type);
 
 [[nodiscard]] std::string ToJson(const ModelCapabilities& caps);
+// The JSON ToJson writes, read back with its index rebuilt.
+[[nodiscard]] bool FromJson(const std::string& text, ModelCapabilities& caps, std::string& error);
 [[nodiscard]] std::string ToJson(const RoleOverrides& overrides);
 [[nodiscard]] bool FromJson(const std::string& text, RoleOverrides& overrides, std::string& error);
 // A roles.json with every model and its current suggestion, ready to edit by hand.

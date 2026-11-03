@@ -1198,6 +1198,7 @@ public:
     // Set by the Batch Render menu; scripted and command-line batches get no progress window.
     bool _batchRenderShowProgress = false;
     bool _snapToTimingMarks = true;
+    int _showComposerMenuId = wxID_ANY;
     bool _autoSavePerspecive = true;
     bool _renderBellEnabled = false;
     bool _pasteAsLayers = false;
@@ -1800,6 +1801,9 @@ public:
     void SaveSequence();
     void SetSequenceTiming(int timingMS);
     bool CloseSequence();
+    // Show Composer, from Tools; opens what it generated when asked to. Returns the menu id.
+    void OpenShowComposer();
+    [[nodiscard]] int ShowComposerMenuId() const { return _showComposerMenuId; }
 
     // Held across an operation that runs nested event loops (modal dialogs) over
     // the open sequence, such as Import Effects. While held, anything that would

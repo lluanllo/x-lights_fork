@@ -39,6 +39,24 @@ json LyricCorrectionsJson(const std::vector<LyricCorrection>& corrections) {
     return json::parse(ToJson(holder)).at("corrections");
 }
 
+json AnalysisCorrectionsJson(const AnalysisCorrections& corrections) {
+    SongAnalysis holder;
+    holder.corrections = corrections;
+    return json::parse(ToJson(holder)).at("corrections");
+}
+
+bool AnalysisCorrectionsFrom(const json& object, AnalysisCorrections& out, std::string& error) {
+    json holder = json::parse(ToJson(SongAnalysis()));
+    holder["corrections"] = object;
+    SongAnalysis read;
+    if (!object.is_object() || !FromJson(holder.dump(), read, error)) {
+        error = "analysis corrections: " + (error.empty() ? std::string("not an object") : error);
+        return false;
+    }
+    out = std::move(read.corrections);
+    return true;
+}
+
 bool PlanCorrectionsFrom(const json& list, std::vector<PlanCorrection>& out, std::string& error) {
     CompositionPlan holder;
     if (!list.is_array() || !FromJson(json{ { "schemaVersion", PLAN_SCHEMA_VERSION }, { "corrections", list } }.dump(), holder, error)) {
@@ -78,6 +96,7 @@ std::string ToJson(const GenerationSidecar& s) {
     root["generationId"] = s.generationId;
     root["sequenceFile"] = s.sequenceFile;
     root["inputs"] = { { "audioFile", s.audioFile },
+                       { "audioPath", s.audioPath },
                        { "audioHash", s.audioHash },
                        { "audioSize", s.audioSize },
                        { "analysisOptionsKey", s.analysisOptionsKey },
@@ -98,7 +117,7 @@ std::string ToJson(const GenerationSidecar& s) {
         cues.push_back({ { "id", m.id }, { "target", m.target }, { "startMS", m.startMS }, { "endMS", m.endMS }, { "kind", m.kind }, { "reason", m.reason } });
     }
     root["mediaCues"] = std::move(cues);
-    root["corrections"] = { { "plan", PlanCorrectionsJson(s.planCorrections) }, { "choreography", ChoreographyCorrectionsJson(s.choreographyCorrections) } };
+    root["corrections"] = { { "plan", PlanCorrectionsJson(s.planCorrections) }, { "choreography", ChoreographyCorrectionsJson(s.choreographyCorrections) }, { "analysis", AnalysisCorrectionsJson(s.analysisCorrections) } };
     root["lyrics"] = json::parse(ToJson(s.lyrics));
     root["validation"] = { { "errors", s.validationErrors }, { "warnings", s.validationWarnings }, { "rendered", s.rendered }, { "visualReview", s.visualReview } };
     return root.dump(1);
@@ -130,6 +149,7 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         s.sequenceFile = root.at("sequenceFile").get<std::string>();
         const json& inputs = root.at("inputs");
         s.audioFile = inputs.value("audioFile", std::string());
+        s.audioPath = inputs.value("audioPath", std::string());
         s.audioHash = inputs.at("audioHash").get<std::string>();
         s.audioSize = inputs.value("audioSize", 0L);
         s.analysisOptionsKey = inputs.value("analysisOptionsKey", std::string());
@@ -156,6 +176,9 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         }
         const json& corrections = root.at("corrections");
         if (!PlanCorrectionsFrom(corrections.at("plan"), s.planCorrections, error) || !ChoreographyCorrectionsFrom(corrections.at("choreography"), s.choreographyCorrections, error)) {
+            return SidecarStatus::Damaged;
+        }
+        if (corrections.contains("analysis") && !AnalysisCorrectionsFrom(corrections["analysis"], s.analysisCorrections, error)) {
             return SidecarStatus::Damaged;
         }
         if (root.contains("lyrics") && !FromJson(root["lyrics"].dump(), s.lyrics, error)) {
@@ -210,12 +233,34 @@ std::string SidecarPathFor(const std::string& sequencePath) {
     return path.string();
 }
 
+bool CorrectionSet::Empty() const {
+    return plan.empty() && choreography.empty() && lyrics.empty() && analysis.events.empty() && analysis.sections.empty() && analysis.bar.firstDownbeatMS < 0;
+}
+
+void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra) {
+    into.events.insert(into.events.end(), extra.events.begin(), extra.events.end());
+    into.sections.insert(into.sections.end(), extra.sections.begin(), extra.sections.end());
+    if (extra.bar.firstDownbeatMS >= 0) {
+        into.bar = extra.bar;
+    }
+}
+
+void MergeCorrections(CorrectionSet& into, const CorrectionSet& extra) {
+    into.plan.insert(into.plan.end(), extra.plan.begin(), extra.plan.end());
+    into.choreography.insert(into.choreography.end(), extra.choreography.begin(), extra.choreography.end());
+    for (const LyricCorrection& c : extra.lyrics) {
+        UpsertCorrection(into.lyrics, c);
+    }
+    MergeAnalysisCorrections(into.analysis, extra.analysis);
+}
+
 std::string ToJson(const CorrectionSet& c) {
     json root;
     root["schemaVersion"] = SIDECAR_SCHEMA_VERSION;
     root["plan"] = PlanCorrectionsJson(c.plan);
     root["choreography"] = ChoreographyCorrectionsJson(c.choreography);
     root["lyrics"] = LyricCorrectionsJson(c.lyrics);
+    root["analysis"] = AnalysisCorrectionsJson(c.analysis);
     return root.dump(1);
 }
 
@@ -231,7 +276,7 @@ bool FromJson(const std::string& text, CorrectionSet& corrections, std::string& 
     }
     CorrectionSet out;
     if ((root.contains("plan") && !PlanCorrectionsFrom(root["plan"], out.plan, error)) || (root.contains("choreography") && !ChoreographyCorrectionsFrom(root["choreography"], out.choreography, error)) ||
-        (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error))) {
+        (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error)) || (root.contains("analysis") && !AnalysisCorrectionsFrom(root["analysis"], out.analysis, error))) {
         return false;
     }
     corrections = std::move(out);

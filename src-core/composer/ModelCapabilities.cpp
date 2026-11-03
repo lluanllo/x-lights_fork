@@ -6,6 +6,8 @@
 #include "models/Model.h"
 #include "models/ModelGroup.h"
 #include "render/xLightsShowContext.h"
+#include "utils/ExternalHooks.h"
+#include "utils/FileUtils.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -206,6 +208,30 @@ void ClassifyTarget(TargetInfo& t) {
     Set(t, Capability::States, t.states.empty() ? Support::No : Support::Yes, t.states.empty() ? "no-state-definitions" : "state-definitions");
 }
 
+namespace {
+
+// Models on a controller whose channel ranges cross: lighting one lights part of the
+// other, whatever the groups say. Models with no controller have no real channels.
+std::map<std::string, std::vector<std::string>> SharedChannelPartners(const std::vector<TargetInfo>& targets) {
+    std::vector<const TargetInfo*> models;
+    for (const TargetInfo& t : targets) {
+        if (t.type == TargetType::Model && !t.noController && t.nodes > 0 && t.lastChannel >= t.firstChannel) {
+            models.push_back(&t);
+        }
+    }
+    std::sort(models.begin(), models.end(), [](const TargetInfo* a, const TargetInfo* b) { return a->firstChannel != b->firstChannel ? a->firstChannel < b->firstChannel : a->name < b->name; });
+    std::map<std::string, std::vector<std::string>> partners;
+    for (size_t i = 0; i < models.size(); ++i) {
+        for (size_t j = i + 1; j < models.size() && models[j]->firstChannel <= models[i]->lastChannel; ++j) {
+            partners[models[i]->name].push_back(models[j]->name);
+            partners[models[j]->name].push_back(models[i]->name);
+        }
+    }
+    return partners;
+}
+
+} // namespace
+
 ModelCapabilities ExtractCapabilities(const xLightsShowContext& ctx, const RoleOverrides* overrides) {
     ModelCapabilities caps;
     caps.layoutFingerprint = LayoutFingerprint(ctx);
@@ -244,7 +270,16 @@ ModelCapabilities ExtractCapabilities(const xLightsShowContext& ctx, const RoleO
         t.noController = t.controller == "No Controller";
         for (const auto& [face, info] : model->GetFaceInfo()) {
             const bool drawable = std::any_of(info.begin(), info.end(), [](const auto& kv) { return kv.first.rfind("Mouth-", 0) == 0 && kv.first.find("-Color") == std::string::npos && !kv.second.empty(); });
-            if (!face.empty() && drawable) {
+            // An image face whose files are not on this machine paints every node red,
+            // as the validator says: it is not a face that can be drawn here.
+            const auto type = info.find("Type");
+            const bool images = type != info.end() && type->second == "Matrix";
+            const bool missing = images && std::any_of(info.begin(), info.end(), [&](const auto& kv) {
+                return kv.first != "CustomColors" && kv.first != "ImagePlacement" && kv.first != "Type" && kv.first != "Name" && !kv.second.empty() && !FileExists(FileUtils::FixFile(ctx.GetShowDirectory(), kv.second));
+            });
+            if (!face.empty() && drawable && missing) {
+                t.warnings.push_back("face-images-missing:" + face);
+            } else if (!face.empty() && drawable) {
                 t.faces.push_back(face);
             }
         }
@@ -334,6 +369,13 @@ ModelCapabilities ExtractCapabilities(const xLightsShowContext& ctx, const RoleO
         }
     }
     caps.Index();
+    for (const auto& [name, others] : SharedChannelPartners(caps.targets)) {
+        TargetInfo& t = caps.targets[caps.IndexOf(name)];
+        for (const std::string& other : others) {
+            t.warnings.push_back("shares-channels:" + other);
+        }
+        caps.warnings.push_back(fmt::format("{} shares channels with {} other models: they never light at the same time", name, others.size()));
+    }
     if (overrides != nullptr) {
         ApplyRoleOverrides(caps, *overrides);
     }
@@ -357,12 +399,21 @@ void ModelCapabilities::Index() {
         }
     }
     modelBits.assign(targets.size(), Bits(modelOrdinal.size()));
+    const std::map<std::string, std::vector<std::string>> partners = SharedChannelPartners(targets);
     for (size_t i = 0; i < targets.size(); ++i) {
         const TargetInfo& t = targets[i];
-        const auto mark = [&](const std::string& model) {
+        const auto markOne = [&](const std::string& model) {
             const auto found = modelOrdinal.find(model);
             if (found != modelOrdinal.end()) {
                 modelBits[i][found->second / 64] |= 1ULL << (found->second % 64);
+            }
+        };
+        const auto mark = [&](const std::string& model) {
+            markOne(model);
+            if (const auto shared = partners.find(model); shared != partners.end()) {
+                for (const std::string& other : shared->second) {
+                    markOne(other);
+                }
             }
         };
         if (t.type == TargetType::Model) {
@@ -540,6 +591,81 @@ std::string ToJson(const ModelCapabilities& caps) {
     }
     root["targets"] = std::move(targets);
     return root.dump(1);
+}
+
+bool FromJson(const std::string& text, ModelCapabilities& caps, std::string& error) {
+    const json root = json::parse(text, nullptr, false);
+    if (root.is_discarded() || !root.is_object()) {
+        error = "not a JSON object";
+        return false;
+    }
+    const auto idOf = [](const auto& ids, int count, const std::string& id, int fallback) {
+        for (int i = 0; i < count; ++i) {
+            if (id == ids[i]) {
+                return i;
+            }
+        }
+        return fallback;
+    };
+    try {
+        ModelCapabilities out;
+        out.schemaVersion = root.at("schemaVersion").get<int>();
+        if (out.schemaVersion > CAPABILITIES_SCHEMA_VERSION) {
+            error = "written by a newer version";
+            return false;
+        }
+        out.layoutFingerprint = root.value("layoutFingerprint", std::string());
+        out.warnings = root.value("warnings", std::vector<std::string>());
+        out.unresolved = root.value("unresolved", std::vector<std::string>());
+        for (const json& item : root.at("targets")) {
+            TargetInfo t;
+            t.name = item.at("name").get<std::string>();
+            t.identity = item.value("identity", std::string());
+            t.type = static_cast<TargetType>(idOf(TARGET_TYPE_IDS, 3, item.value("type", std::string("model")), 0));
+            t.displayAs = item.value("displayAs", std::string());
+            if (item.contains("buffer") && item["buffer"].size() == 2) {
+                t.bufferWi = item["buffer"][0].get<int>();
+                t.bufferHt = item["buffer"][1].get<int>();
+            }
+            t.nodes = item.value("nodes", 0);
+            t.strands = item.value("strands", 0);
+            t.channelsPerNode = item.value("channelsPerNode", 0);
+            t.controller = item.value("controller", std::string());
+            t.noController = item.value("noController", false);
+            if (item.contains("channels") && item["channels"].size() == 2) {
+                t.firstChannel = item["channels"][0].get<uint32_t>();
+                t.lastChannel = item["channels"][1].get<uint32_t>();
+            }
+            t.parent = item.value("parent", std::string());
+            for (const json& r : item.value("roles", json::array())) {
+                t.roles.push_back({ static_cast<Role>(idOf(ROLE_IDS, ROLE_COUNT, r.value("role", std::string("prop")), static_cast<int>(Role::Prop))),
+                                    static_cast<RoleStatus>(idOf(ROLE_STATUS_IDS, 4, r.value("status", std::string("suggested")), static_cast<int>(RoleStatus::Suggested))), r.value("source", std::string()), r.value("confidence", 0.0) });
+            }
+            const json capabilities = item.value("capabilities", json::object());
+            for (int c = 0; c < CAPABILITY_COUNT; ++c) {
+                if (capabilities.contains(CAPABILITY_IDS[c])) {
+                    const json& v = capabilities[CAPABILITY_IDS[c]];
+                    t.capabilities[c] = { static_cast<Support>(idOf(SUPPORT_IDS, 4, v.value("support", std::string("unknown")), static_cast<int>(Support::Unknown))), v.value("reason", std::string()) };
+                }
+            }
+            t.faces = item.value("faces", std::vector<std::string>());
+            t.states = item.value("states", std::vector<std::string>());
+            t.subModels = item.value("subModels", std::vector<std::string>());
+            t.groups = item.value("groups", std::vector<std::string>());
+            t.members = item.value("members", std::vector<std::string>());
+            t.flatModels = item.value("flatModels", std::vector<std::string>());
+            t.warnings = item.value("warnings", std::vector<std::string>());
+            const size_t bar = t.identity.find('|');
+            t.signature = bar == std::string::npos ? std::string() : t.identity.substr(bar + 1);
+            out.targets.push_back(std::move(t));
+        }
+        out.Index();
+        caps = std::move(out);
+    } catch (const json::exception& e) {
+        error = e.what();
+        return false;
+    }
+    return true;
 }
 
 std::string ToJson(const RoleOverrides& overrides) {

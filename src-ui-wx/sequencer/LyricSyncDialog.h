@@ -33,6 +33,9 @@ class wxStaticText;
 class LyricSyncDialog : public wxDialog {
 public:
     LyricSyncDialog(wxWindow* parent, SequenceElements* elements, TimingElement* element, AudioManager* audio, const std::string& sessionPath);
+    // Only the marks, with no sequence open: Show Composer hands them to the generation,
+    // which builds the track itself. `lyrics` is used when no session is saved yet.
+    LyricSyncDialog(wxWindow* parent, AudioManager* audio, int durationMS, int frameMS, const std::string& sessionPath, const std::string& lyrics, const std::string& trackName);
     ~LyricSyncDialog() override;
 
     [[nodiscard]] bool TrackChanged() const { return _trackChanged; }
@@ -66,6 +69,9 @@ private:
     SequenceElements* _elements = nullptr;
     TimingElement* _element = nullptr;
     AudioManager* _audio = nullptr;
+    int _durationMS = 0;
+    int _frameMS = 25;
+    bool _sessionOnly = false;
     std::string _sessionPath;
     composer::LyricSession _session;
     composer::LyricDocument _document;

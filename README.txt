@@ -12,6 +12,11 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer window (Tools > Show Composer): choose a song, its lyrics and the
+                                 installation, review the song, the lyrics and the composition, fix beats and
+                                 figures by hand, generate the show and open it
+    -bug (lluanllo)              Show Composer no longer gives a face whose images are missing, or two models
+                                 that share channels at the same time
     -enh (lluanllo)              Show Composer: --composer-generate makes a complete sequence for a song on a show
                                  folder with no window, checks and renders it before publishing, and never
                                  replaces an existing file

@@ -4,24 +4,32 @@
 
 #include "composer/PipelineTest.h"
 
+#include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
 #include "composer/PlanTest.h"
 #include "composer/SequenceWriter.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "composer/SyntheticAudio.h"
 #include "composer/WriterTest.h"
+#include "models/Model.h"
+#include "models/Node.h"
+#include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
+#include "utils/Color.h"
+#include "utils/xlImage.h"
 #include "utils/ExternalHooks.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 
@@ -129,6 +137,8 @@ public:
         TestCancel();
         TestSidecar();
         TestDeterminism();
+        TestReviewData();
+        TestMusicCorrections();
         TestRealLayout();
         Check(Sha256OfFile((_show / "xlights_rgbeffects.xml").string()) == _layoutHash, "the fixture layout was never modified");
         printf("composer-pipeline-test: %d checks passed, %d failed (%s)\n", _passed, _failed, _root.string().c_str());
@@ -626,6 +636,87 @@ private:
               "a run that stops after the plan writes the plan and nothing in the show");
     }
 
+    // ------------------------------------------------------------ what the window reads
+
+    void TestReviewData() {
+        Title("What the Show Composer window reads back");
+        if (!_synced.ok) {
+            Check(false, "needs the synchronized run");
+            return;
+        }
+        ReportFolder report;
+        std::string error;
+        Check(LoadReportFolder(_synced.request.reportDir, report, error) && report.hasAnalysis && report.hasLyrics && report.hasPlan && report.hasChoreography && report.hasCapabilities && report.hasSummary,
+              "the report folder reads back: analysis, lyrics, plan, choreography, capabilities and summary " + error);
+        Check(ToJson(report.analysis) == ToJson(_synced.analysis) && ToJson(report.alignment) == ToJson(_synced.alignment) && ToJson(report.capabilities) == ToJson(_synced.capabilities) &&
+                  ToJson(report.plan) == ToJson(_synced.plan) && ToJson(report.choreography) == ToJson(_synced.choreography),
+              "each one is what the run had, byte for byte");
+        const LevelSummary level = SummarizeLevel(report);
+        Check(level.events == static_cast<int>(_synced.choreography.events.size()) && level.faces > 0 && level.texts > 0 && level.planned > 0 && level.accents == _synced.choreography.metrics.accents,
+              fmt::format("level summary from the choreography itself: {} events, {} figures of {} planned, {} faces, {} showing text", level.events, level.figures, level.planned, level.faces, level.texts));
+        const std::vector<FigureSummary> figures = SummarizeFigures(report, &_synced.library, _synced.corrections);
+        bool facesRight = true;
+        bool textRight = true;
+        bool templates = false;
+        bool excludedListed = false;
+        for (const FigureSummary& f : figures) {
+            facesRight = facesRight && (!f.receivesFace || f.hasFace);
+            textRight = textRight && (!f.receivesText || f.canShowText);
+            templates = templates || (f.name == "Arbol Grande" && std::any_of(f.templates.begin(), f.templates.end(), [](const auto& t) { return t.first == "tree-spirals"; }));
+            excludedListed = excludedListed || f.excluded;
+        }
+        Check(!figures.empty() && facesRight && textRight, "a face only on a figure with a face, text only on one that can show it");
+        Check(templates, "a figure lists the templates it can take");
+        const std::vector<ChoreographyCorrection> locks = LockFigure(_synced.choreography, "Arbol Grande");
+        const auto onTree = std::count_if(_synced.choreography.events.begin(), _synced.choreography.events.end(), [](const ChoreographyEvent& e) { return e.target == "Arbol Grande"; });
+        CorrectionSet set;
+        set.choreography = locks;
+        Check(!locks.empty() && static_cast<long>(locks.size()) == onTree && RemoveCorrections(set, "Arbol Grande", true, false) == static_cast<int>(locks.size()) && set.choreography.empty(),
+              fmt::format("locking a figure locks its {} events, and undoing it removes exactly those", locks.size()));
+        (void)excludedListed;
+    }
+
+    void TestMusicCorrections() {
+        Title("Beats and bars fixed by hand win, and come back from the sidecar");
+        if (!_base.ok) {
+            return;
+        }
+        int firstBeat = -1;
+        int detectedDownbeats = 0;
+        for (const MusicalEvent& e : _base.analysis.events) {
+            if (e.type == MusicalEventType::Beat && firstBeat < 0 && e.timeMS >= 8000) {
+                firstBeat = e.timeMS;
+            }
+            detectedDownbeats += e.type == MusicalEventType::Downbeat ? 1 : 0;
+        }
+        GenerationRequest r = Request("compas-a-mano");
+        r.corrections.analysis.bar.firstDownbeatMS = firstBeat;
+        r.corrections.analysis.bar.beatsPerBar = 4;
+        EventCorrection added;
+        added.action = EventCorrection::Action::Add;
+        added.type = MusicalEventType::Climax;
+        added.timeMS = 30000;
+        added.durationMS = 4000;
+        r.corrections.analysis.events.push_back(added);
+        const std::string json = ToJson(r.corrections);
+        CorrectionSet back;
+        std::string error;
+        Check(FromJson(json, back, error) && ToJson(back) == json && back.analysis.bar.firstDownbeatMS == firstBeat, "music corrections read back from their file " + error);
+        GenerationRun bar = Generate(r);
+        const auto downbeats = std::count_if(bar.analysis.events.begin(), bar.analysis.events.end(), [](const MusicalEvent& e) { return e.type == MusicalEventType::Downbeat; });
+        Check(bar.ok && downbeats > 0 && bar.choreography.metrics.accents > 0,
+              fmt::format("the song had {} downbeats detected; with the bar marked by hand it has {}, and the choreography {} accents", detectedDownbeats, downbeats, bar.choreography.metrics.accents));
+        GenerationSidecar sidecar;
+        Check(ReadSidecar(bar.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.analysisCorrections.bar.firstDownbeatMS == firstBeat && sidecar.analysisCorrections.events.size() == 1 && !sidecar.audioPath.empty(),
+              "the sidecar keeps them, and where the song is");
+        GenerationRequest again = Request("compas-regenerado");
+        again.previousSidecarPath = bar.sidecarPath;
+        again.seed = 31;
+        GenerationRun regenerated = Generate(again, GenerationStage::Choreography);
+        const auto kept = std::count_if(regenerated.analysis.events.begin(), regenerated.analysis.events.end(), [](const MusicalEvent& e) { return e.type == MusicalEventType::Downbeat; });
+        Check(kept == downbeats, fmt::format("regenerated with another seed: the same {} downbeats", kept));
+    }
+
     // ------------------------------------------------------------ B. real layout
 
     void TestRealLayout() {
@@ -776,6 +867,104 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
            r.reportDir.c_str());
     printf("composer-generate: open it with the show folder %s; nobody has reviewed how it looks\n", r.showDir.c_str());
     return 0;
+}
+
+int RunSnapshotCommand(const SnapshotOptions& o) {
+    std::string refused;
+    if (!ControllersAreInactive(o.showDir, refused)) {
+        printf("composer-snapshots: REFUSED: %s\n", refused.c_str());
+        return 2;
+    }
+    HeadlessRenderContext ctx;
+    if (!ctx.LoadShowFolder(o.showDir)) {
+        printf("composer-snapshots: cannot load the show %s\n", o.showDir.c_str());
+        return 1;
+    }
+    std::unique_ptr<FSEQFile> file(FSEQFile::openFSEQFile(o.fseqPath));
+    if (file == nullptr) {
+        printf("composer-snapshots: cannot read %s\n", o.fseqPath.c_str());
+        return 1;
+    }
+    std::error_code ec;
+    fs::create_directories(fs::path(o.outDir), ec);
+    const uint32_t channels = file->getMaxChannel();
+    file->setReadPattern(FSEQFile::ReadPattern::Bulk);
+    std::vector<std::pair<uint32_t, uint32_t>> ranges{ { 0, channels } };
+    file->prepareRead(ranges);
+    std::vector<uint8_t> data(channels, 0);
+    int written = 0;
+    for (const std::string& name : o.models) {
+        Model* model = ctx.AllModels[name];
+        if (model == nullptr) {
+            printf("composer-snapshots: no model '%s'\n", name.c_str());
+            continue;
+        }
+        int width = 1;
+        int height = 1;
+        for (uint32_t n = 0; n < model->GetNodeCount(); ++n) {
+            const NodeBaseClass* node = model->GetNode(n);
+            for (uint32_t c = 0; c < node->Coords.size(); ++c) {
+                width = std::max(width, node->Coords[c].bufX + 1);
+                height = std::max(height, node->Coords[c].bufY + 1);
+            }
+        }
+        const int scale = std::max(1, o.scale);
+        for (int ms : o.timesMS) {
+            const int frame = ms / std::max(1, file->getStepTime());
+            std::fill(data.begin(), data.end(), 0);
+            std::unique_ptr<FSEQFile::FrameData> frameData(file->getFrame(frame));
+            if (frameData == nullptr || !frameData->readFrame(data.data(), channels)) {
+                printf("composer-snapshots: frame %d unreadable\n", frame);
+                continue;
+            }
+            xlImage image(width * scale, height * scale);
+            for (int y = 0; y < height * scale; ++y) {
+                for (int x = 0; x < width * scale; ++x) {
+                    image.SetRGBA(x, y, 24, 24, 24, 255);
+                }
+            }
+            int lit = 0;
+            uint64_t digest = 1469598103934665603ULL;
+            for (uint32_t n = 0; n < model->GetNodeCount(); ++n) {
+                NodeBaseClass* node = model->GetNode(n);
+                if (node->ActChan + node->GetChanCount() > channels) {
+                    continue;
+                }
+                node->SetFromChannels(&data[node->ActChan]);
+                xlColor color;
+                node->GetColor(color);
+                const bool on = color.red != 0 || color.green != 0 || color.blue != 0;
+                lit += on ? 1 : 0;
+                digest = (digest ^ (on ? n + 1 : 0) ^ (static_cast<uint64_t>(color.red) << 16 | color.green << 8 | color.blue)) * 1099511628211ULL;
+                for (uint32_t c = 0; c < node->Coords.size(); ++c) {
+                    // The buffer counts rows from the bottom.
+                    const int bx = node->Coords[c].bufX;
+                    const int by = height - 1 - node->Coords[c].bufY;
+                    for (int dy = 1; dy < scale; ++dy) {
+                        for (int dx = 1; dx < scale; ++dx) {
+                            image.SetRGBA(bx * scale + dx, by * scale + dy, on ? color.red : 50, on ? color.green : 50, on ? color.blue : 50, 255);
+                        }
+                    }
+                }
+            }
+            std::vector<uint8_t> png;
+            std::string safe = name;
+            for (char& ch : safe) {
+                if (!std::isalnum(static_cast<unsigned char>(ch))) {
+                    ch = '_';
+                }
+            }
+            const fs::path out = fs::path(o.outDir) / fmt::format("{}_{:06d}ms.png", safe, ms);
+            if (!image.SaveAsPNG(png) || !WriteText(out, std::string(png.begin(), png.end()))) {
+                printf("composer-snapshots: cannot write %s\n", out.string().c_str());
+                continue;
+            }
+            ++written;
+            printf("composer-snapshots: %s at %d ms (frame %d): %d of %u nodes lit, picture %016llx -> %s\n", name.c_str(), ms, frame, lit, model->GetNodeCount(), static_cast<unsigned long long>(digest), out.string().c_str());
+        }
+    }
+    printf("composer-snapshots: %d pictures written; they show the render, nobody has judged them\n", written);
+    return written > 0 ? 0 : 1;
 }
 
 int RunPipelineTest(const PipelineTestOptions& options) {

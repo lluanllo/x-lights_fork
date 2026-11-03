@@ -530,6 +530,13 @@ Al regenerar con `--previous`, se recuperan las correcciones, los bloqueos y la 
 
 `summary.json`, `generation-report.txt` y `validation.tsv` van a la carpeta de informes (`--out`), con el análisis, la letra alineada, el plan, la coreografía y el `.fseq`. No van en el show.
 
+### Cambios de la Fase 8
+
+- `inputs.audioPath`: la ruta completa del audio, para volver a encontrarlo al abrir un espectáculo anterior desde la ventana.
+- `corrections.analysis`: los beats, compases y secciones corregidos a mano, con la forma de `SongAnalysis::corrections`. Se aplican sobre el análisis detectado en cada generación, igual que en la ventana.
+- Un `PlanCorrection` `exclude` sin tramo saca la figura del espectáculo como lo haría `roles.json`: queda apagada y ningún grupo la enciende.
+- `<secuencia>.composer-review.json`, aparte del sidecar: lo crea el botón «Marcar como revisada y aprobada» con quién y cuándo. Es lo único que cambia el estado de revisión visual, y nunca lo escribe una prueba.
+
 ## 9. Reparto de responsabilidades
 
 | Contrato | Responsabilidad única | Lo produce | Lo consume |

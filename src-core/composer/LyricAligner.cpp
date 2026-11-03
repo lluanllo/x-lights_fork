@@ -873,6 +873,94 @@ std::string ToJson(const LyricAlignment& a) {
     return root.dump(1);
 }
 
+bool FromJson(const std::string& text, LyricAlignment& alignment, std::string& error) {
+    const json root = json::parse(text, nullptr, false);
+    if (root.is_discarded() || !root.is_object()) {
+        error = "not a JSON object";
+        return false;
+    }
+    const auto parentOf = [](const std::string& id) {
+        const size_t slash = id.rfind('/');
+        return slash == std::string::npos ? std::string() : id.substr(0, slash);
+    };
+    try {
+        LyricAlignment a;
+        a.schemaVersion = root.at("schemaVersion").get<int>();
+        if (a.schemaVersion > LYRIC_ALIGNMENT_SCHEMA_VERSION) {
+            error = "written by a newer version";
+            return false;
+        }
+        const std::string provider = root.value("provider", std::string("none"));
+        for (int i = 0; i < static_cast<int>(std::size(PROVIDER_IDS)); ++i) {
+            if (provider == PROVIDER_IDS[i]) {
+                a.provider = static_cast<AlignmentProvider>(i);
+            }
+        }
+        a.quality = root.value("quality", std::string("none"));
+        a.musicQuality = root.value("musicQuality", std::string(MUSIC_QUALITY_NOT_VALIDATED));
+        a.language = root.value("language", std::string());
+        a.warnings = root.value("warnings", std::vector<std::string>());
+        for (const json& p : root.value("phrases", json::array())) {
+            AlignedPhrase phrase;
+            phrase.id = p.at("id").get<std::string>();
+            phrase.text = p.value("text", std::string());
+            phrase.voice = p.value("voice", std::string());
+            phrase.startMS = p.value("startMS", -1);
+            phrase.endMS = p.value("endMS", -1);
+            phrase.instrumental = p.value("instrumental", false);
+            phrase.confidence = p.value("confidence", 0.0);
+            phrase.source = p.value("source", std::string());
+            phrase.state = StateFromId(p.value("state", std::string("detected")));
+            phrase.originalStartMS = p.value("originalStartMS", -1);
+            phrase.originalEndMS = p.value("originalEndMS", -1);
+            a.phrases.push_back(std::move(phrase));
+        }
+        for (const json& w : root.value("words", json::array())) {
+            AlignedWord word;
+            word.id = w.at("id").get<std::string>();
+            word.phraseId = parentOf(word.id);
+            word.text = w.value("text", std::string());
+            const size_t colon = word.id.rfind(':');
+            word.key = colon == std::string::npos ? std::string() : word.id.substr(colon + 1);
+            word.startMS = w.value("startMS", 0);
+            word.endMS = w.value("endMS", 0);
+            word.confidence = w.value("confidence", 0.0);
+            word.source = w.value("source", std::string());
+            word.state = StateFromId(w.value("state", std::string("detected")));
+            word.pronunciation = w.value("pronunciation", std::string());
+            word.phonemes = w.value("phonemes", std::string());
+            word.originalStartMS = w.value("originalStartMS", -1);
+            word.originalEndMS = w.value("originalEndMS", -1);
+            a.words.push_back(std::move(word));
+        }
+        for (const json& p : root.value("phonemes", json::array())) {
+            AlignedPhoneme phoneme;
+            phoneme.id = p.at("id").get<std::string>();
+            phoneme.wordId = phoneme.id.rfind("rest:", 0) == 0 ? std::string() : parentOf(phoneme.id);
+            phoneme.shape = p.value("shape", std::string());
+            phoneme.phoneme = p.value("phoneme", std::string());
+            phoneme.startMS = p.value("startMS", 0);
+            phoneme.endMS = p.value("endMS", 0);
+            phoneme.confidence = p.value("confidence", 0.0);
+            phoneme.state = StateFromId(p.value("state", std::string("detected")));
+            a.phonemes.push_back(std::move(phoneme));
+        }
+        LyricSession corrections;
+        if (!FromJson(json{ { "schemaVersion", LYRIC_ALIGNMENT_SCHEMA_VERSION }, { "corrections", root.value("corrections", json::array()) } }.dump(), corrections, error)) {
+            return false;
+        }
+        a.corrections = std::move(corrections.corrections);
+        for (const json& c : root.value("conflicts", json::array())) {
+            a.conflicts.push_back({ c.value("targetId", std::string()), c.value("reason", std::string()) });
+        }
+        alignment = std::move(a);
+    } catch (const json::exception& e) {
+        error = e.what();
+        return false;
+    }
+    return true;
+}
+
 std::string ToJson(const LyricSession& session) {
     json root;
     root["schemaVersion"] = session.schemaVersion;

@@ -521,6 +521,7 @@ file(GLOB_RECURSE SRC_UI
     src-ui-wx/modelproperties/*.cpp
     src-ui-wx/preferences/*.cpp
     src-ui-wx/render/*.cpp
+    src-ui-wx/composer/*.cpp
     src-ui-wx/sequencer/*.cpp
     src-ui-wx/settings/*.cpp
     src-ui-wx/setup/*.cpp

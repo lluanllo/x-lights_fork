@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 // Entry points behind --composer-generate and --composer-pipeline-test. Neither opens a
 // window; both only create new files and never touch a layout or a networks file.
@@ -31,6 +32,20 @@ struct GenerateCommandOptions {
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.
 [[nodiscard]] int RunGenerateCommand(const GenerateCommandOptions& options);
+
+// Pictures of what a render drew on some models at some times, one PNG per model and
+// time, laid out on each model's own buffer: evidence a person can look at, not a check.
+struct SnapshotOptions {
+    std::string showDir; // a copy with every controller inactive
+    std::string fseqPath;
+    std::vector<std::string> models;
+    std::vector<int> timesMS;
+    std::string outDir;
+    int scale = 8;
+};
+
+// Returns 0 written, 1 failed, 2 refused.
+[[nodiscard]] int RunSnapshotCommand(const SnapshotOptions& options);
 
 struct PipelineTestOptions {
     std::string outDir;

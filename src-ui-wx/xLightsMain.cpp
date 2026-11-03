@@ -50,6 +50,7 @@
 #include <string>
 
 #include "app-shell/AboutDialog.h"
+#include "composer/ShowComposerDialog.h"
 #include "sequencer/BatchRenderDialog.h"
 #include "sequencer/BatchRenderProgressDialog.h"
 #include "CachedFileDownloader.h"
@@ -1426,6 +1427,12 @@ xLightsFrame::xLightsFrame(wxWindow* parent, int ab, wxWindowID id, bool renderO
     Connect(wxID_ANY, wxEVT_CLOSE_WINDOW, (wxObjectEventFunction)&xLightsFrame::OnClose);
     Connect(wxEVT_CHAR, (wxObjectEventFunction)&xLightsFrame::OnChar);
     //*)
+
+    // Outside the wxSmith block, so xLightsframe.wxs needs no change.
+    _showComposerMenuId = wxWindow::NewControlId();
+    Menu1->Insert(0, _showComposerMenuId, _("Show Composer..."), _("Make a show from a song, its lyrics and this installation"));
+    Menu1->InsertSeparator(1);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { OpenShowComposer(); }, _showComposerMenuId);
 
     // Right-click anywhere on the Effects toolbar jumps to Preferences >
     // Toolbars. wxEVT_CONTEXT_MENU (unlike a raw right-click mouse event)
@@ -7689,6 +7696,32 @@ void xLightsFrame::GetRenderPreviewSize(int& w, int& h) const
             h = vh;
         }
     }
+}
+
+void xLightsFrame::OpenShowComposer()
+{
+    std::string sequence;
+    std::string show;
+    {
+        ShowComposerDialog dialog(this);
+        if (dialog.ShowModal() != wxID_OK || dialog.SequenceToOpen().empty()) {
+            return;
+        }
+        sequence = dialog.SequenceToOpen();
+        show = dialog.ShowFolderToOpen();
+    }
+    std::error_code ec;
+    if (std::filesystem::weakly_canonical(show, ec) != std::filesystem::weakly_canonical(GetShowDirectory(), ec)) {
+        // The sequence only finds its models with its own layout: say so before switching.
+        if (wxMessageBox(wxString::Format(_("This sequence belongs to the installation in\n%s\nwhich is not the show folder open now. Use that show folder for this session and open the sequence?"), wxString::FromUTF8(show)), _("Show Composer"),
+                         wxYES_NO | wxICON_QUESTION, this) != wxYES) {
+            return;
+        }
+        if (!SetDir(wxString::FromUTF8(show), false)) {
+            return;
+        }
+    }
+    OpenSequence(wxString::FromUTF8(sequence), nullptr);
 }
 
 void xLightsFrame::OnMenuItem_GenerateLyricsSelected(wxCommandEvent& event)
