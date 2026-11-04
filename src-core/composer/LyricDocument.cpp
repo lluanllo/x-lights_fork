@@ -5,6 +5,8 @@
 #include "lyrics/SRTParser.h"
 
 #include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <map>
 #include <set>
 #include <sstream>
@@ -186,6 +188,44 @@ std::vector<const LyricLine*> LyricDocument::Lines() const {
     return lines;
 }
 
+int LyricDocument::ErrorCount() const {
+    return static_cast<int>(std::count_if(issues.begin(), issues.end(), [](const LyricIssue& i) { return i.error; }));
+}
+
+void CheckLyricsAgainstSong(LyricDocument& document, int durationMS) {
+    if (durationMS <= 0) {
+        return;
+    }
+    for (LyricBlock& block : document.blocks) {
+        for (auto it = block.lines.begin(); it != block.lines.end();) {
+            if (it->startMS < durationMS) {
+                ++it;
+                continue;
+            }
+            // A pause after the music adds nothing; words there are a wrong file or a wrong song.
+            document.issues.push_back({ "time-past-song-end", 0, it->startMS, it->text, !it->instrumental, it->instrumental });
+            it = it->instrumental ? block.lines.erase(it) : it + 1;
+        }
+    }
+}
+
+std::string DescribeLyricIssue(const LyricIssue& issue) {
+    std::string out = issue.code;
+    if (issue.line > 0) {
+        out += " line " + std::to_string(issue.line);
+    }
+    if (issue.timeMS >= 0) {
+        out += " at " + std::to_string(issue.timeMS) + " ms";
+    }
+    if (!issue.text.empty()) {
+        out += ": " + issue.text;
+    }
+    if (issue.repaired) {
+        out += " (repaired)";
+    }
+    return out;
+}
+
 bool LyricDocument::Empty() const {
     for (const LyricBlock& block : blocks) {
         for (const LyricLine& line : block.lines) {
@@ -309,17 +349,67 @@ LyricDocument ParsePlainLyrics(const std::string& source) {
 }
 
 LyricDocument ParseLrcLyrics(const std::string& source) {
-    std::vector<LyricLine> lines;
-    for (const auto& [ms, raw] : lrc::ParseLRC(source)) {
-        LyricLine line = MakeLine(raw, "");
-        if (text::Trim(raw).empty()) {
+    const lrc::ParsedLRC parsed = lrc::ParseLRCDetailed(source);
+    std::vector<LyricIssue> issues;
+    for (const lrc::ParsedLRC::Issue& i : parsed.issues) {
+        // A line with no tag is not lyrics an LRC player would show; the rest is a bad mark.
+        issues.push_back({ i.code, i.line, -1, i.text, i.code != "untimed-line", false });
+    }
+    if (text::Trim(source).empty()) {
+        issues.push_back({ "empty-file", 0, -1, "", true, false });
+    } else if (parsed.timestampCount == 0) {
+        issues.push_back({ "no-timestamps", 0, -1, "", true, false });
+    }
+    if (parsed.hadOffset && parsed.offsetMS != 0) {
+        issues.push_back({ "offset-applied", 0, parsed.offsetMS, std::to_string(parsed.offsetMS) + " ms", false, true });
+    }
+    if (parsed.hadWordTimes) {
+        issues.push_back({ "word-times-ignored", 0, -1, "", false, false });
+    }
+
+    struct Timed {
+        LyricLine line;
+        int number;
+    };
+    std::vector<Timed> timed;
+    for (const lrc::ParsedLRC::Line& l : parsed.lines) {
+        LyricLine line = MakeLine(l.text, "");
+        if (text::Trim(l.text).empty()) {
             line.instrumental = true; // a blank timed line is where the singing stops
         }
-        line.startMS = ms;
+        line.startMS = l.timeMS;
         line.timingSource = "lrc";
-        lines.push_back(std::move(line));
+        // Several stamps on one line repeat it on purpose; only a stamp earlier than the
+        // line before it in the file is out of order.
+        if (!timed.empty() && l.number != timed.back().number && l.timeMS < timed.back().line.startMS) {
+            issues.push_back({ "out-of-order", l.number, l.timeMS, line.text, false, true });
+        }
+        timed.push_back({ std::move(line), l.number });
     }
-    return FromTimedLines("lrc", std::move(lines), source);
+    std::stable_sort(timed.begin(), timed.end(), [](const Timed& a, const Timed& b) { return a.line.startMS < b.line.startMS; });
+    // Two lines on the same time would leave the first one no time at all: they are sung
+    // together, so they become one line.
+    std::vector<LyricLine> lines;
+    for (Timed& t : timed) {
+        if (!lines.empty() && lines.back().startMS == t.line.startMS) {
+            LyricLine& previous = lines.back();
+            issues.push_back({ "duplicate-time", t.number, t.line.startMS, t.line.text, false, true });
+            if (t.line.instrumental) {
+                continue;
+            }
+            if (previous.instrumental) {
+                previous = std::move(t.line);
+                continue;
+            }
+            previous.text += " " + t.line.text;
+            previous.words = SplitLyricWords(previous.text);
+            continue;
+        }
+        lines.push_back(std::move(t.line));
+    }
+    LyricDocument document = FromTimedLines("lrc", std::move(lines), source);
+    document.issues = std::move(issues);
+    return document;
 }
 
 LyricDocument ParseSrtLyrics(const std::string& source) {
@@ -384,6 +474,12 @@ LyricDocument ParseLyrics(const std::string& source) {
         }
     }
     return lrc ? ParseLrcLyrics(source) : ParsePlainLyrics(source);
+}
+
+LyricDocument ParseLyricsFile(const std::string& path, const std::string& source) {
+    std::string extension = std::filesystem::path(path).extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return extension == ".lrc" ? ParseLrcLyrics(source) : ParseLyrics(source);
 }
 
 LanguageGuess DetectLyricLanguage(const std::string& source) {

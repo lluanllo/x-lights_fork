@@ -43,6 +43,17 @@ struct LyricLine {
     std::string timingSource; // "lrc", "srt", "track", or empty
 };
 
+// Something the source got wrong. An error means the lyrics cannot be used as they
+// are; a repaired one was fixed here and says how; the rest are worth knowing.
+struct LyricIssue {
+    std::string code; // "malformed-time", "negative-time", "out-of-order", "duplicate-time", "time-past-song-end", ...
+    int line = 0;     // 1-based line of the source; 0 when it is about the whole file
+    int timeMS = -1;
+    std::string text;
+    bool error = false;
+    bool repaired = false;
+};
+
 struct LyricBlock {
     LyricBlockKind kind = LyricBlockKind::Unlabeled;
     std::string label; // the tag as written, "" when there was none
@@ -57,8 +68,10 @@ struct LyricDocument {
     double languageConfidence = 0;
     std::vector<LyricBlock> blocks;
     std::vector<std::string> warnings;
+    std::vector<LyricIssue> issues;
 
     [[nodiscard]] std::vector<const LyricLine*> Lines() const;
+    [[nodiscard]] int ErrorCount() const;
     [[nodiscard]] bool Empty() const;
     [[nodiscard]] bool HasTimes() const;
 };
@@ -74,6 +87,13 @@ struct LyricDocument {
 [[nodiscard]] LyricDocument LyricsFromTrack(const TimingTrackSpec& track);
 // By content: an LRC timestamp or an SRT arrow decide, otherwise plain text.
 [[nodiscard]] LyricDocument ParseLyrics(const std::string& text);
+// A lyrics file: a ".lrc" is read as LRC even with no valid time in it, so that is an
+// error rather than plain text to mark by hand; anything else by content.
+[[nodiscard]] LyricDocument ParseLyricsFile(const std::string& path, const std::string& text);
+// A line that starts at or after the end of the song can never be sung: an error,
+// unless it is only a pause. The song's duration is not known when parsing.
+void CheckLyricsAgainstSong(LyricDocument& document, int durationMS);
+[[nodiscard]] std::string DescribeLyricIssue(const LyricIssue& issue);
 
 [[nodiscard]] std::vector<LyricWord> SplitLyricWords(const std::string& line);
 [[nodiscard]] std::string LyricKey(const std::string& line);

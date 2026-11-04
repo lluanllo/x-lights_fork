@@ -570,6 +570,12 @@
 		<Unit filename="../src-core/composer/ComposerReview.h" />
 		<Unit filename="../src-core/composer/PipelineTest.cpp" />
 		<Unit filename="../src-core/composer/PipelineTest.h" />
+		<Unit filename="../src-core/composer/ReferenceStudy.cpp" />
+		<Unit filename="../src-core/composer/ReferenceStudy.h" />
+		<Unit filename="../src-core/composer/AssistTest.cpp" />
+		<Unit filename="../src-core/composer/AssistTest.h" />
+		<Unit filename="../src-core/composer/MusicAssist.cpp" />
+		<Unit filename="../src-core/composer/MusicAssist.h" />
 		<Unit filename="../src-core/composer/SyntheticAudio.h" />
 		<Unit filename="../src-core/composer/ChoreographyTest.cpp" />
 		<Unit filename="../src-core/composer/ChoreographyTest.h" />

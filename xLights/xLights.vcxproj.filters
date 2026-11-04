@@ -112,6 +112,9 @@
     <ClCompile Include="..\src-core\composer\GenerationSidecar.cpp" />
     <ClCompile Include="..\src-core\composer\ComposerReview.cpp" />
     <ClCompile Include="..\src-core\composer\PipelineTest.cpp" />
+    <ClCompile Include="..\src-core\composer\ReferenceStudy.cpp" />
+    <ClCompile Include="..\src-core\composer\AssistTest.cpp" />
+    <ClCompile Include="..\src-core\composer\MusicAssist.cpp" />
     <ClCompile Include="..\src-core\composer\ChoreographyTest.cpp" />
     <ClCompile Include="..\src-core\composer\SequenceWriter.cpp" />
     <ClCompile Include="..\src-core\composer\SongAnalysis.cpp" />
@@ -1710,6 +1713,9 @@
     <ClInclude Include="..\src-core\composer\GenerationSidecar.h" />
     <ClInclude Include="..\src-core\composer\ComposerReview.h" />
     <ClInclude Include="..\src-core\composer\PipelineTest.h" />
+    <ClInclude Include="..\src-core\composer\ReferenceStudy.h" />
+    <ClInclude Include="..\src-core\composer\AssistTest.h" />
+    <ClInclude Include="..\src-core\composer\MusicAssist.h" />
     <ClInclude Include="..\src-core\composer\SyntheticAudio.h" />
     <ClInclude Include="..\src-core\composer\ChoreographyTest.h" />
     <ClInclude Include="..\src-core\composer\SequenceWriter.h" />

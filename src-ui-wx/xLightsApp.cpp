@@ -74,7 +74,9 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "shared/utils/BitmapCache.h"
 #include "composer/AnalyzerTest.h"
 #include "composer/ChoreographyTest.h"
+#include "composer/AssistTest.h"
 #include "composer/LyricTest.h"
+#include "composer/ReferenceStudy.h"
 #include "composer/PipelineTest.h"
 #include "composer/ComposerUITest.h"
 #include "composer/PlanTest.h"
@@ -1084,7 +1086,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study") {
             headlessArg = true;
             break;
         }
@@ -1214,6 +1216,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "cat", "composer-analyzer-test", "internal test: run the analyzer cases on synthetic audio written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "clt", "composer-lyrics-test", "internal test: run the lyrics, phonetics and alignment cases under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cst", "composer-assist-test", "internal test: LRCLIB, Groq and Gemini against stand-ins (nothing is sent), under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cft", "composer-faces-test", "internal test: write, render and check a singing face on a copy of a show (-s) with all controllers inactive, as --out, and exit" },
         { wxCMD_LINE_SWITCH, "cmc", "composer-model-capabilities", "internal tool: write the roles and capabilities of a show (-s) with all controllers inactive to --out <file>.json, and exit" },
         { wxCMD_LINE_SWITCH, "cpt", "composer-plan-test", "internal test: run the composition planner cases under --out, also on the show (-s) if given, and exit" },
@@ -1237,6 +1240,9 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
+        { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
+        { wxCMD_LINE_OPTION, "", "study-id", "with --composer-reference-study: a short name for the reports" },
         { wxCMD_LINE_SWITCH, "", "composer-snapshots", "internal tool: write PNG pictures of --models at --times in a rendered --fseq of the show (-s) with all controllers inactive, to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "models", "with --composer-snapshots: model names separated by ';'" },
         { wxCMD_LINE_OPTION, "", "times", "with --composer-snapshots: times in milliseconds separated by ','" },
@@ -1430,7 +1436,7 @@ bool xLightsApp::OnInit()
             sequenceFiles.Clear();
         }
 
-        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("clt") && !parser.Found("cft") && !parser.Found("cmc") && !parser.Found("cpt") && !parser.Found("cct") && !parser.Found("fc") && !parser.Found("st") && !headlessArg && !parser.Found("composer-ui-test") && !info.empty() && readOnlyZipFile == "")
+        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("clt") && !parser.Found("cst") && !parser.Found("cft") && !parser.Found("cmc") && !parser.Found("cpt") && !parser.Found("cct") && !parser.Found("fc") && !parser.Found("st") && !headlessArg && !parser.Found("composer-ui-test") && !info.empty() && readOnlyZipFile == "")
         {
             if (parser.Found("q")) {
                 spdlog::info("Command line notices (dialog suppressed by -q):\n{}", (const char*)info.c_str());
@@ -1989,6 +1995,15 @@ bool xLightsApp::OnInit()
         std::exit(composer::RunLyricsTest(outName.ToStdString()));
     }
 
+    if (parser.Found("cst")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-assist-test requires --out <folder>");
+            std::exit(2);
+        }
+        std::exit(composer::RunAssistTest(outName.ToStdString()));
+    }
+
     if (parser.Found("cft")) {
         wxString outName;
         if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
@@ -2083,6 +2098,34 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunGenerateCommand(command));
+    }
+
+    if (parser.Found("composer-reference-study")) {
+        composer::ReferenceStudyOptions options;
+        wxString value;
+        options.showDir = showDir.ToStdString(wxConvUTF8);
+        if (parser.Found("sequence", &value)) {
+            options.sequencePath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("study-id", &value)) {
+            options.id = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("times", &value)) {
+            for (const wxString& t : wxSplit(value, ',')) {
+                options.timesMS.push_back(static_cast<int>(std::strtol(t.ToStdString().c_str(), nullptr, 10)));
+            }
+        }
+        if (options.showDir.empty() || options.sequencePath.empty() || options.outDir.empty()) {
+            spdlog::error("--composer-reference-study requires -s <dir>, --sequence <file.xsq> and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunReferenceStudy(options));
     }
 
     if (parser.Found("composer-snapshots")) {

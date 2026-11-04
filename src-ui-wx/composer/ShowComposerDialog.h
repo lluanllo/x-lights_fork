@@ -38,6 +38,7 @@ class wxGauge;
 class wxListBox;
 class wxListCtrl;
 class wxListEvent;
+class wxPanel;
 class wxRadioBox;
 class wxSimplebook;
 class wxSlider;
@@ -74,6 +75,12 @@ public:
     void SetShowFolder(const std::string& path);
     void SetLyrics(const std::string& path);
     void SetTiming(const std::string& path);
+    // Files dropped on the first step: a song, lyrics (.txt, .lrc, .srt) or an .xtiming.
+    // Each is used where it is, never copied or moved.
+    void DropFiles(const std::vector<std::string>& paths);
+    // While something is dragged over the first step: whether it would be taken.
+    void ShowDropState(bool over);
+    [[nodiscard]] bool AcceptsDrops() const { return !_job.Running() && _queue.empty(); }
     void SetLevel(composer::AutomationLevel level);
     void SetSequenceName(const std::string& name);
     void GoTo(Step step);
@@ -100,7 +107,9 @@ public:
     void SetTestMode(bool on) { _testMode = on; }
     [[nodiscard]] const composer::SongAnalysis& ShownAnalysis() const { return _shownAnalysis; }
     [[nodiscard]] const std::string& LyricsState() const { return _lyricsState; }
+    [[nodiscard]] const std::vector<composer::LyricIssue>& LyricIssues() const { return _lyricIssues; }
     [[nodiscard]] bool AudioOk() const { return _audioOk; }
+    [[nodiscard]] const std::string& AudioPath() const { return _audioPath; }
     [[nodiscard]] bool ShowOk() const { return _showOk; }
     [[nodiscard]] const composer::ModelCapabilities& Capabilities() const { return _capabilities; }
     [[nodiscard]] const std::string& ShowFolder() const { return _showDir; }
@@ -194,6 +203,7 @@ private:
     std::string _lyricsState;
     int _lyricLines = 0;
     bool _lyricsTimed = false;
+    std::vector<composer::LyricIssue> _lyricIssues;
 
     // Results of the generator
     ComposerJob _job;
@@ -238,6 +248,8 @@ private:
     // Create
     wxStaticText* _audioName = nullptr;
     wxStaticText* _audioInfo = nullptr;
+    wxPanel* _dropZone = nullptr;
+    wxStaticText* _dropLabel = nullptr;
     wxStaticText* _showName = nullptr;
     wxStaticText* _showInfo = nullptr;
     wxStaticText* _lyricsName = nullptr;

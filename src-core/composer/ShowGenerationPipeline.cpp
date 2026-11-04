@@ -707,15 +707,28 @@ bool PrepareLyrics(GenerationRun& run) {
         } else if (run.hasPrevious && !run.previous.lyrics.lyrics.empty()) {
             text = run.previous.lyrics.lyrics;
         }
+        if (!r.lyricsPath.empty() && existing == nullptr && text.find_first_not_of(" \t\r\n") == std::string::npos) {
+            // Chosen as the lyrics and empty: a wrong file, not a song without lyrics.
+            Note(run, S, "lyrics-error", "empty-file: " + r.lyricsPath);
+            return Fail(run, S, "lyrics-empty-file", r.lyricsPath);
+        }
         if (text.empty() && existing == nullptr) {
             Note(run, S, "no-lyrics", "no text, no faces");
             return true;
         }
         // A synchronized track is the source of truth for its text and its times, as the
         // aligner's provider A expects; the text given beside it is only kept.
-        run.lyrics = existing != nullptr ? LyricsFromTrack(*existing) : ParseLyrics(text);
+        run.lyrics = existing != nullptr ? LyricsFromTrack(*existing) : ParseLyricsFile(r.lyricsPath, text);
         if (existing != nullptr && !text.empty()) {
             Note(run, S, "lyrics-from-track", fmt::format("the track '{}' wins over the text and times given with it", existing->name));
+        }
+        CheckLyricsAgainstSong(run.lyrics, run.analysis.durationMS);
+        for (const LyricIssue& issue : run.lyrics.issues) {
+            Note(run, S, issue.error ? "lyrics-error" : issue.repaired ? "lyrics-repaired" : "lyrics-issue", DescribeLyricIssue(issue));
+        }
+        if (run.lyrics.ErrorCount() > 0) {
+            const auto first = std::find_if(run.lyrics.issues.begin(), run.lyrics.issues.end(), [](const LyricIssue& i) { return i.error; });
+            return Fail(run, S, "lyrics-times-invalid", fmt::format("{} problems in the lyrics' times, the first: {}", run.lyrics.ErrorCount(), DescribeLyricIssue(*first)));
         }
         if (run.lyrics.Empty()) {
             Note(run, S, "lyrics-empty", r.lyricsPath);

@@ -604,6 +604,12 @@ add_executable(xLights WIN32 MACOSX_BUNDLE
     ${WIN32_RC}
 )
 
+if(MSVC)
+    # The manifest xLights.vcxproj embeds: without it the UTF-8 code page is missing and
+    # paths with accents, read through std::string, do not open.
+    target_sources(xLights PRIVATE xLights/xLightsApp.manifest)
+endif()
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     add_custom_command(TARGET xLights POST_BUILD

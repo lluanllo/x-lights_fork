@@ -22,7 +22,10 @@
 #include <wx/listctrl.h>
 #include <wx/msgdlg.h>
 #include <wx/radiobox.h>
+#include <wx/choicdlg.h>
 #include <wx/datetime.h>
+#include <wx/dnd.h>
+#include <wx/panel.h>
 #include <wx/scrolwin.h>
 #include <wx/settings.h>
 #include <wx/simplebook.h>
@@ -135,6 +138,16 @@ wxString Time(int ms) {
     return wxString::Format("%d:%02d.%d", ms / 60000, (ms / 1000) % 60, (ms % 1000) / 100);
 }
 
+bool HasExtension(const std::string& path, std::initializer_list<const char*> extensions) {
+    std::string e = fs::path(path).extension().string();
+    std::transform(e.begin(), e.end(), e.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return std::any_of(extensions.begin(), extensions.end(), [&](const char* x) { return e == x; });
+}
+
+bool IsAudioFile(const std::string& path) {
+    return HasExtension(path, { ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".wma", ".aiff", ".aif" });
+}
+
 wxString U(const std::string& s) {
     return wxString::FromUTF8(s);
 }
@@ -142,6 +155,37 @@ wxString U(const std::string& s) {
 std::string S(const wxString& s) {
     return s.ToStdString(wxConvUTF8);
 }
+
+class ComposerDropTarget : public wxFileDropTarget {
+public:
+    explicit ComposerDropTarget(ShowComposerDialog* dialog) :
+        _dialog(dialog) {}
+
+    wxDragResult OnEnter(wxCoord x, wxCoord y, wxDragResult def) override {
+        _dialog->ShowDropState(true);
+        return OnDragOver(x, y, def);
+    }
+    wxDragResult OnDragOver(wxCoord, wxCoord, wxDragResult def) override {
+        return _dialog->AcceptsDrops() ? (def == wxDragMove ? wxDragCopy : def) : wxDragNone;
+    }
+    void OnLeave() override {
+        _dialog->ShowDropState(false);
+    }
+    bool OnDropFiles(wxCoord, wxCoord, const wxArrayString& names) override {
+        _dialog->ShowDropState(false);
+        std::vector<std::string> paths;
+        for (const wxString& n : names) {
+            paths.push_back(S(n));
+        }
+        // The program the files came from waits until this returns: loading the song
+        // happens after, so neither of them freezes.
+        _dialog->CallAfter([d = _dialog, paths]() { d->DropFiles(paths); });
+        return true;
+    }
+
+private:
+    ShowComposerDialog* _dialog;
+};
 
 wxString RoleText(Role role) {
     switch (role) {
@@ -220,6 +264,36 @@ wxString ConflictText(const std::string& reason) {
     return wxString::Format(_("A decision could not be applied (%s)."), U(reason));
 }
 
+wxString LyricIssueText(const LyricIssue& issue) {
+    const wxString line = issue.line > 0 ? wxString::Format(_("line %d"), issue.line) : wxString();
+    const wxString text = U(issue.text);
+    if (issue.code == "malformed-time") {
+        return wxString::Format(_("%s has a time that is not minutes:seconds (%s)."), line, text);
+    }
+    if (issue.code == "negative-time") {
+        return wxString::Format(_("%s would start before the song (%s)."), line, text);
+    }
+    if (issue.code == "time-past-song-end") {
+        return wxString::Format(_("\"%s\" starts at %s, after the end of the song: is it the right song?"), text, Time(issue.timeMS));
+    }
+    if (issue.code == "empty-file") {
+        return _("the file is empty.");
+    }
+    if (issue.code == "no-timestamps") {
+        return _("it is an LRC file without a single time.");
+    }
+    if (issue.code == "out-of-order") {
+        return wxString::Format(_("%s was out of order and was moved to its time."), line);
+    }
+    if (issue.code == "duplicate-time") {
+        return wxString::Format(_("%s had the same time as the line before and was joined to it."), line);
+    }
+    if (issue.code == "offset-applied") {
+        return wxString::Format(_("the file's [offset:] of %s ms was applied."), text);
+    }
+    return U(DescribeLyricIssue(issue));
+}
+
 // What went wrong in the generator, worded for whoever has to fix it.
 wxString ProblemText(const std::string& line) {
     static const std::vector<std::pair<const char*, const char*>> texts = {
@@ -232,6 +306,8 @@ wxString ProblemText(const std::string& line) {
         { "sequence-name-invalid", COMPOSER_TEXT("The sequence name must be a file name ending in .xsq, without folders.") },
         { "lyrics-unreadable", COMPOSER_TEXT("The lyrics file could not be read.") },
         { "lyrics-invalid", COMPOSER_TEXT("The lyrics times are not valid. Check the marks.") },
+        { "lyrics-times-invalid", COMPOSER_TEXT("Some times in the lyrics file cannot be used: a time that is not minutes:seconds, one before the song, or a line after its end. The first step says which.") },
+        { "lyrics-empty-file", COMPOSER_TEXT("The lyrics file is empty.") },
         { "timing-invalid", COMPOSER_TEXT("The synchronization file is not a valid xLights timing file.") },
         { "timing-no-lyrics-track", COMPOSER_TEXT("The synchronization file has no lyrics track with phrases, words and phonemes.") },
         { "lyric-session-invalid", COMPOSER_TEXT("The saved lyrics marks could not be read.") },
@@ -421,6 +497,14 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     row(song, _audioName, ID_AUDIO, _("Choose Song..."));
     _audioInfo = Muted(song->GetStaticBox(), "");
     song->Add(_audioInfo, 0, wxLEFT | wxRIGHT | wxBOTTOM, 6);
+    _dropZone = new wxPanel(song->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE);
+    auto* dropSizer = new wxBoxSizer(wxVERTICAL);
+    _dropLabel = new wxStaticText(_dropZone, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
+    dropSizer->Add(_dropLabel, 0, wxEXPAND | wxALL, 14);
+    _dropZone->SetSizer(dropSizer);
+    song->Add(_dropZone, 0, wxEXPAND | wxALL, 4);
+    ShowDropState(false);
+    page->SetDropTarget(new ComposerDropTarget(this));
 
     wxStaticBoxSizer* show = box(_("Installation"));
     row(show, _showName, ID_SHOW, _("Choose Another Show Folder..."), ID_SHOW_CURRENT, _("Use the Open Show"));
@@ -912,7 +996,93 @@ void ShowComposerDialog::SetAudio(const std::string& path) {
         SetSequenceName("");
     }
     LoadAudio();
+    LoadLyricsInfo(); // a line past the end depends on the song
     RefreshAll();
+}
+
+void ShowComposerDialog::ShowDropState(bool over) {
+    if (_dropZone == nullptr) {
+        return;
+    }
+    const bool accept = AcceptsDrops();
+    if (over && accept) {
+        _dropZone->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT));
+        _dropLabel->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT));
+        _dropLabel->SetLabel(_("Drop it to use it: a song, lyrics or an .xtiming. The file stays where it is."));
+    } else {
+        _dropZone->SetBackgroundColour(wxNullColour);
+        _dropLabel->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
+        _dropLabel->SetLabel(!accept ? _("Wait until the generator finishes to change the song.")
+                                     : _("Or drag the song here from the file explorer. Lyrics (.txt, .lrc, .srt) and .xtiming files can be dropped too."));
+    }
+    _dropZone->Refresh();
+    _dropZone->Layout();
+}
+
+void ShowComposerDialog::DropFiles(const std::vector<std::string>& paths) {
+    if (!AcceptsDrops()) {
+        ShowError(_("The generator is working."), _("Wait until it finishes, or cancel it, to change the song."));
+        return;
+    }
+    std::vector<std::string> songs;
+    std::string lyrics;
+    std::string timing;
+    std::vector<std::string> unknown;
+    for (const std::string& p : paths) {
+        std::error_code ec;
+        if (fs::is_directory(fs::path(p), ec)) {
+            unknown.push_back(p);
+        } else if (IsAudioFile(p)) {
+            songs.push_back(p);
+        } else if (HasExtension(p, { ".txt", ".lrc", ".srt" })) {
+            lyrics = lyrics.empty() ? p : lyrics;
+        } else if (HasExtension(p, { ".xtiming" })) {
+            timing = timing.empty() ? p : timing;
+        } else {
+            unknown.push_back(p);
+        }
+    }
+    std::string song;
+    if (songs.size() == 1) {
+        song = songs[0];
+    } else if (songs.size() > 1) {
+        wxArrayString names;
+        for (const std::string& s : songs) {
+            names.Add(U(fs::path(s).filename().string()));
+        }
+        int chosen = 0;
+        if (!_testMode) {
+            wxSingleChoiceDialog choose(this, _("Several songs were dropped. Which one is the show for?"), _("Show Composer"), names);
+            chosen = choose.ShowModal() == wxID_OK ? choose.GetSelection() : -1;
+        }
+        if (chosen < 0) {
+            return;
+        }
+        song = songs[chosen];
+    }
+    for (const std::string& p : { song, lyrics, timing }) {
+        if (!p.empty()) {
+            ObtainAccessToURL(p, false);
+        }
+    }
+    if (!song.empty()) {
+        SetAudio(song);
+    }
+    if (!lyrics.empty()) {
+        SetLyrics(lyrics);
+    }
+    if (!timing.empty()) {
+        SetTiming(timing);
+    }
+    if (song.empty() && lyrics.empty() && timing.empty()) {
+        wxString names;
+        for (const std::string& u : unknown) {
+            names += "\n" + U(fs::path(u).filename().string());
+        }
+        ShowError(_("That is not a song xLights can play."), _("Drop an audio file (mp3, wav, m4a, ogg, flac, aac, wma or aiff), lyrics (.txt, .lrc, .srt) or an .xtiming file.") + names);
+    } else if (!song.empty() && !_audioOk) {
+        ShowError(_("This file cannot be played by xLights: choose another one."), U(fs::path(song).filename().string()));
+    }
 }
 
 void ShowComposerDialog::SetShowFolder(const std::string& path) {
@@ -1035,6 +1205,7 @@ void ShowComposerDialog::LoadLyricsInfo() {
     _lyricLines = 0;
     _lyricsTimed = false;
     _lyricsState = "none";
+    _lyricIssues.clear();
     std::string error;
     if (!_timingPath.empty()) {
         std::vector<TimingTrackSpec> tracks;
@@ -1070,9 +1241,14 @@ void ShowComposerDialog::LoadLyricsInfo() {
     if (text.empty()) {
         return;
     }
-    const LyricDocument doc = ParseLyrics(text);
+    // Read as the generator will read it, so a wrong time is seen here and not after waiting.
+    LyricDocument doc = _lyricsPath.empty() ? ParseLyrics(text) : ParseLyricsFile(_lyricsPath, text);
+    CheckLyricsAgainstSong(doc, _audioOk ? _durationMS : 0);
+    _lyricIssues = doc.issues;
     _lyricLines = static_cast<int>(doc.Lines().size());
-    if (marks > 0) {
+    if (doc.ErrorCount() > 0 && marks == 0) {
+        _lyricsState = "invalid";
+    } else if (marks > 0) {
         _lyricsState = "marked";
         _lyricsTimed = true;
         _lyricLines = marks;
@@ -1715,10 +1891,19 @@ void ShowComposerDialog::RefreshCreate() {
         lyrics = wxString::Format(_("%d phrases marked by ear. Words and mouth shapes are estimated by syllables inside each phrase."), _lyricLines);
     } else if (_lyricsState == "track") {
         lyrics = wxString::Format(_("A synchronized lyrics track with %d phrases: its times win over any other."), _lyricLines);
+    } else if (_lyricsState == "invalid") {
+        const auto first = std::find_if(_lyricIssues.begin(), _lyricIssues.end(), [](const LyricIssue& i) { return i.error; });
+        const int errors = static_cast<int>(std::count_if(_lyricIssues.begin(), _lyricIssues.end(), [](const LyricIssue& i) { return i.error; }));
+        lyrics = wxString::Format(_("The lyrics file has %d times that cannot be used, so no show can be made from it until it is fixed. The first: %s"), errors, LyricIssueText(*first));
     } else if (_lyricsState == "track-unusable") {
         lyrics = _("The synchronization file has no lyrics track with phrases, words and phonemes.");
     } else {
         lyrics = _("The synchronization file could not be read.");
+    }
+    const int repaired = static_cast<int>(std::count_if(_lyricIssues.begin(), _lyricIssues.end(), [](const LyricIssue& i) { return i.repaired; }));
+    if (repaired > 0 && _lyricsState != "invalid") {
+        const auto first = std::find_if(_lyricIssues.begin(), _lyricIssues.end(), [](const LyricIssue& i) { return i.repaired; });
+        lyrics += " " + wxString::Format(_("%d things in the file were put right: %s"), repaired, LyricIssueText(*first));
     }
     if (_lyricsTimed) {
         lyrics += " " + (faceFigures > 0 ? wxString::Format(_("Faces can sing: %d figures have a face."), faceFigures) : _("No figure has a face, so no face will sing."));

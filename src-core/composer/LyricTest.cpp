@@ -11,6 +11,7 @@
 #include "composer/SequenceWriter.h"
 #include "composer/SpanishPhonemizer.h"
 #include "composer/WriterTest.h"
+#include "lyrics/LRCParser.h"
 #include "lyrics/LyricBreakdown.h"
 #include "lyrics/PhonemeDictionary.h"
 #include "lyrics/SRTParser.h"
@@ -112,6 +113,7 @@ public:
         TestPhonetics();
         TestVisemes();
         TestDocuments();
+        TestLrcFormats();
         TestAlignmentProviders();
         TestAlignmentShapes();
         TestCorrections();
@@ -364,6 +366,92 @@ private:
     }
 
     // ------------------------------------------------------------- alignment
+
+    static int Issues(const LyricDocument& d, const std::string& code) {
+        return static_cast<int>(std::count_if(d.issues.begin(), d.issues.end(), [&](const LyricIssue& i) { return i.code == code; }));
+    }
+
+    static std::string Times(const LyricDocument& d) {
+        std::string out;
+        for (const LyricLine* l : d.Lines()) {
+            out += (out.empty() ? "" : " ") + std::to_string(l->startMS);
+        }
+        return out;
+    }
+
+    void TestLrcFormats() {
+        Title("LRC as people write it, and what is wrong in it");
+        // A BOM, Windows line ends, metadata, every fraction width, and a chorus written once with two times.
+        const std::string written = "\xEF\xBB\xBF[ti:Chiquetere]\r\n[ar:Seba]\r\n[al:Álbum]\r\n[length:02:14]\r\n[00:01.5]Una\r\n[00:02.25]noche de Navidad\r\n"
+                                    "[00:03.125]¡Año nuevo, señor!\r\n[00:05]Cigüeña\r\n[00:08.00][00:20.00]Vuelve la canción\r\n";
+        const LyricDocument d = ParseLyrics(written);
+        const std::vector<const LyricLine*> lines = d.Lines();
+        Check(d.format == "lrc" && Times(d) == "1500 2250 3125 5000 8000 20000", fmt::format("BOM, CRLF and tags: {} lines at {}", lines.size(), Times(d)));
+        Check(d.issues.empty() && d.ErrorCount() == 0, fmt::format("a correct file has nothing to report ({} issues)", d.issues.size()));
+        if (lines.size() == 6) {
+            Check(lines[0]->text == "Una" && lines[2]->text == "¡Año nuevo, señor!" && lines[3]->text == "Cigüeña", "the first line survives the BOM; Spanish letters kept");
+            Check(lines[4]->text == "Vuelve la canción" && lines[5]->text == "Vuelve la canción" && lines[4]->id != lines[5]->id, "two times on one line: the line twice, with two ids");
+            Check(lines[2]->words.size() == 3 && lines[2]->words[0].key == "año", "words split as in any other line");
+        }
+        const auto shared = lrc::ParseLRC("[00:01.00][00:03.00]x\n[00:02.00]y\n");
+        Check(shared.size() == 3 && shared[1].first == 3000 && shared[1].second == "x", "the reader shared with the desktop and the iPad expands the times too");
+
+        const LyricDocument later = ParseLrcLyrics("[offset:+500]\n[00:02.00]hola\n");
+        Check(Times(later) == "1500" && Issues(later, "offset-applied") == 1 && later.ErrorCount() == 0, fmt::format("[offset:+500] plays every line 500 ms earlier: {}", Times(later)));
+        Check(Times(ParseLrcLyrics("[offset:-250]\r\n[00:02.00]hola\r\n")) == "2250", "and a negative offset later");
+        const LyricDocument pushed = ParseLrcLyrics("[offset:3000]\n[00:01.00]antes\n[00:05.00]después\n");
+        Check(Issues(pushed, "negative-time") == 1 && pushed.ErrorCount() == 1 && Times(pushed) == "2000", "an offset that leaves a line before the song: an error, not a line at 0");
+
+        const LyricDocument negative = ParseLrcLyrics("[-00:01.00]hola\n[00:02.00]adiós\n");
+        Check(Issues(negative, "negative-time") == 1 && negative.ErrorCount() == 1 && negative.issues[0].line == 1, "a negative time is an error, with its line");
+        const LyricDocument malformed = ParseLrcLyrics("[00:01.00]bien\n[00:1x.00]letra\n[00:75.00]segundos\n[00:03.0000]fracción\n[00:04.00 sin cerrar\n");
+        Check(Issues(malformed, "malformed-time") == 4 && malformed.ErrorCount() == 4 && Times(malformed) == "1000", fmt::format("letters, 75 seconds, four decimals and an open bracket: {} malformed", Issues(malformed, "malformed-time")));
+        if (Issues(malformed, "malformed-time") == 4) {
+            Check(malformed.issues[0].line == 2 && malformed.issues[3].line == 5, "each with the line it is on");
+        }
+
+        const LyricDocument unordered = ParseLrcLyrics("[00:05.00]segunda\n[00:02.00]primera\n[00:09.00]tercera\n");
+        Check(Times(unordered) == "2000 5000 9000" && Issues(unordered, "out-of-order") == 1 && unordered.ErrorCount() == 0 && unordered.issues[0].repaired,
+              "lines out of order: sorted, and the repair reported");
+        Check(unordered.Lines()[0]->text == "primera", "the text goes with its time");
+        const LyricDocument together = ParseLrcLyrics("[00:02.00]una\n[00:02.00]dos\n[00:04.00]tres\n");
+        Check(Times(together) == "2000 4000" && together.Lines()[0]->text == "una dos" && Issues(together, "duplicate-time") == 1, "two lines on the same time: one line, nothing lost, reported");
+        const LyricDocument pause = ParseLrcLyrics("[00:02.00]una\n[00:04.00]\n[00:04.00]dos\n");
+        Check(Times(pause) == "2000 4000" && !pause.Lines()[1]->instrumental && pause.Lines()[1]->text == "dos", "a pause and a line on the same time: the line wins");
+
+        const LyricDocument empty = ParseLrcLyrics("");
+        Check(Issues(empty, "empty-file") == 1 && empty.ErrorCount() == 1, "an empty file says so");
+        Check(Issues(ParseLrcLyrics(" \r\n\r\n"), "empty-file") == 1, "and so does one with only blank lines");
+        const LyricDocument untimed = ParseLrcLyrics("[ti:Sin tiempos]\nhola\nadiós\n");
+        Check(Issues(untimed, "no-timestamps") == 1 && untimed.ErrorCount() == 1 && Issues(untimed, "untimed-line") == 2, "an LRC with no time at all is an error, and its lines are named");
+        const LyricDocument stray = ParseLrcLyrics("Créditos: alguien\n[00:01.00]hola\n");
+        Check(stray.ErrorCount() == 0 && Issues(stray, "untimed-line") == 1 && stray.Lines().size() == 1, "a stray line without a time is left out, and said");
+        const LyricDocument enhanced = ParseLrcLyrics("[00:01.00]<00:01.00>Hola <00:01.50>mundo\n");
+        Check(enhanced.Lines().size() == 1 && enhanced.Lines()[0]->text == "Hola mundo" && Issues(enhanced, "word-times-ignored") == 1, "word times <mm:ss.xx> out of the text, and said");
+
+        LyricDocument past = ParseLrcLyrics("[00:01.00]dentro\n[00:11.00]fuera\n[00:12.00]\n");
+        CheckLyricsAgainstSong(past, 10000);
+        Check(Issues(past, "time-past-song-end") == 2 && past.ErrorCount() == 1, "a line after the end of the song is an error; a pause there is not");
+        Check(past.Lines().size() == 2, "the pause after the music is dropped, the line is kept for the person to see");
+
+        // Chiquetere: a song that does not end on a frame, and a last line close to its end.
+        const LyricDocument song = ParseLrcLyrics("[00:01.00]Chiquetere\n[02:06.30]Una musiquilla que suena tal que así\n");
+        AlignerInput in;
+        in.document = &song;
+        in.durationMS = 134072;
+        const LyricAlignment aligned = AlignLyrics(in);
+        const TimingTrackSpec track = BuildLyricTrack(aligned, "Letra");
+        const ValidationReport report = ValidateLyrics(aligned, track, in.durationMS, FRAME_MS);
+        int lastEnd = 0;
+        bool grid = true;
+        for (const auto& layer : track.layers) {
+            for (const TimingMark& m : layer) {
+                lastEnd = std::max(lastEnd, m.endMS);
+                grid = grid && m.endMS % FRAME_MS == 0;
+            }
+        }
+        Check(report.ErrorCount() == 0 && lastEnd == 134050 && grid, fmt::format("song of 134072 ms: the last phrase, word and mouth shape end on the last frame ({} ms), {} errors", lastEnd, report.ErrorCount()));
+    }
 
     void TestAlignmentProviders() {
         Title("Without lyrics, or without times");

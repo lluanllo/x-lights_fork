@@ -25,7 +25,7 @@ namespace composer {
 
 namespace {
 
-const char* const PROVIDER_IDS[] = { "auto", "existing-track", "manual-phrases", "line-times", "experimental", "none" };
+const char* const PROVIDER_IDS[] = { "auto", "existing-track", "manual-phrases", "line-times", "experimental", "transcript", "none" };
 const char* const LEVEL_IDS[] = { "phrase", "word", "phoneme" };
 const char* const STATE_IDS[] = { "detected", "corrected", "locked", "confirmed" };
 const std::set<std::string> SHAPES = { "AI", "E", "FV", "L", "MBP", "O", "U", "WQ", "etc", "rest" };
@@ -243,16 +243,54 @@ public:
         ShapeWords();
         ApplyPhonemeCorrections();
         AddRests();
+        ClampToSong();
         Summarize();
     }
 
 private:
+    // A song seldom ends on a frame, and rounding the last mark to the nearest one can
+    // put it a few milliseconds past the end: nothing may run past the last whole frame.
+    void ClampToSong() {
+        if (_in.durationMS <= 0) {
+            return;
+        }
+        const int last = _in.durationMS - _in.durationMS % _frame;
+        int dropped = 0;
+        for (AlignedPhrase& p : _a.phrases) {
+            if (p.startMS < 0) {
+                continue;
+            }
+            p.endMS = std::min(p.endMS, last);
+            if (p.endMS <= p.startMS) {
+                p.startMS = -1;
+                p.endMS = -1;
+                ++dropped;
+            }
+        }
+        const auto clamp = [&](auto& marks) {
+            for (auto& m : marks) {
+                m.endMS = std::min(m.endMS, last);
+            }
+            const size_t before = marks.size();
+            marks.erase(std::remove_if(marks.begin(), marks.end(), [](const auto& m) { return m.endMS <= m.startMS; }), marks.end());
+            dropped += static_cast<int>(before - marks.size());
+        };
+        clamp(_a.words);
+        clamp(_a.phonemes);
+        if (dropped > 0) {
+            _a.warnings.push_back("marks-past-song-end");
+        }
+    }
+
     AlignmentProvider ChooseProvider(const LyricDocument& document) const {
         if (_in.provider != AlignmentProvider::Auto) {
             return _in.provider;
         }
         if (_in.existingTrack != nullptr && !_in.existingTrack->layers.empty() && !_in.existingTrack->layers[0].empty()) {
             return AlignmentProvider::ExistingTrack;
+        }
+        if (_in.anchors != nullptr && !_in.anchors->empty()) {
+            return AlignmentProvider::Transcript;
         }
         const bool marks = std::any_of(_a.corrections.begin(), _a.corrections.end(), [](const LyricCorrection& c) { return c.level == LyricCorrection::Level::Phrase && c.startMS >= 0; });
         if (marks) {
@@ -290,6 +328,10 @@ private:
             break;
         case AlignmentProvider::Experimental:
             TimeExperimentally();
+            break;
+        case AlignmentProvider::Transcript:
+            TimeFromLines(); // lines no word was heard in keep their LRC or SRT times
+            TimeFromTranscript();
             break;
         default:
             break;
@@ -331,6 +373,74 @@ private:
         }
         if (estimatedEnds) {
             _a.warnings.push_back("lrc-line-ends-estimated");
+        }
+    }
+
+    static std::string WordId(const std::string& lineId, size_t index, const std::string& key) {
+        return fmt::format("{}/{}:{}", lineId, index, key);
+    }
+
+    // A phrase runs from the first word heard to the last; words before or after
+    // those were not heard, so they get only a little room, and a line nobody was
+    // heard singing keeps whatever times its source had, or none.
+    void TimeFromTranscript() {
+        for (const WordAnchor& anchor : *_in.anchors) {
+            _anchors[anchor.wordId] = &anchor;
+        }
+        constexpr int LEAD_MS = 4000;
+        constexpr int TRAILING_WORD_MS = 400;
+        for (size_t i = 0; i < _lines.size(); ++i) {
+            const LyricLine& line = *_lines[i];
+            AlignedPhrase& phrase = _a.phrases[i];
+            if (line.instrumental || line.words.empty()) {
+                continue;
+            }
+            int first = -1;
+            int last = -1;
+            int heard = 0;
+            double confidence = 0;
+            for (size_t w = 0; w < line.words.size(); ++w) {
+                const auto found = _anchors.find(WordId(line.id, w, line.words[w].key));
+                if (found == _anchors.end()) {
+                    continue;
+                }
+                first = first < 0 ? static_cast<int>(w) : first;
+                last = static_cast<int>(w);
+                ++heard;
+                confidence += found->second->confidence;
+            }
+            if (heard == 0) {
+                continue;
+            }
+            const WordAnchor& a = *_anchors[WordId(line.id, first, line.words[first].key)];
+            const WordAnchor& b = *_anchors[WordId(line.id, last, line.words[last].key)];
+            int start = a.startMS;
+            if (first > 0 && line.startMS >= 0 && line.startMS < start && start - line.startMS <= LEAD_MS) {
+                start = line.startMS;
+            }
+            const int trailing = static_cast<int>(line.words.size()) - 1 - last;
+            const int end = b.endMS + trailing * TRAILING_WORD_MS;
+            phrase.startMS = ToFrame(start, _frame);
+            phrase.endMS = std::max(phrase.startMS + _frame, ToFrame(end, _frame));
+            phrase.source = "transcript";
+            phrase.confidence = Round3(confidence / static_cast<double>(line.words.size())); // the mean confidence, words not heard counting 0
+        }
+        // A phrase never runs into the next one.
+        int next = -1;
+        for (size_t i = _a.phrases.size(); i-- > 0;) {
+            AlignedPhrase& phrase = _a.phrases[i];
+            if (phrase.startMS < 0) {
+                continue;
+            }
+            if (next >= 0 && phrase.endMS > next) {
+                phrase.endMS = std::max(phrase.startMS + _frame, next);
+                if (phrase.endMS > next) {
+                    phrase.startMS = phrase.endMS = -1;
+                    _a.warnings.push_back("transcript-phrase-overlap");
+                    continue;
+                }
+            }
+            next = phrase.startMS;
         }
     }
 
@@ -535,6 +645,26 @@ private:
             plans[w].word.startMS = natural[w].first;
             plans[w].word.endMS = natural[w].second;
         }
+        if (phrase.source == "transcript") {
+            int floor = phrase.startMS;
+            for (WordPlan& plan : plans) {
+                const auto found = _anchors.find(plan.word.id);
+                if (found == _anchors.end()) {
+                    continue;
+                }
+                const int start = std::max(floor, ToFrame(found->second->startMS, _frame));
+                const int end = std::min(phrase.endMS, std::max(start + _frame, ToFrame(found->second->endMS, _frame)));
+                if (end <= start) {
+                    continue; // no room left: it is spread with its neighbours instead
+                }
+                plan.word.startMS = start;
+                plan.word.endMS = end;
+                plan.word.source = "transcript";
+                plan.word.confidence = Round3(found->second->confidence);
+                plan.fixed = true;
+                floor = end;
+            }
+        }
         ApplyWordCorrections(plans);
         for (WordPlan& plan : plans) {
             if (plan.fixed && (plan.word.startMS < phrase.startMS || plan.word.endMS > phrase.endMS)) {
@@ -720,6 +850,8 @@ private:
             _a.warnings.push_back("lyrics-not-synchronized");
         } else if (sources.contains("experimental")) {
             _a.quality = "experimental";
+        } else if (sources.contains("transcript")) {
+            _a.quality = "transcribed";
         } else if (sources.contains("lrc") || sources.contains("srt")) {
             _a.quality = "approximate";
         } else if (sources.contains("track")) {
@@ -739,6 +871,7 @@ private:
     std::vector<const LyricLine*> _lines;
     std::map<std::string, Pronunciation> _pronunciations;
     std::set<std::string> _appliedWords;
+    std::map<std::string, const WordAnchor*> _anchors;
 };
 
 Provenance StateFromId(const std::string& id) {

@@ -130,6 +130,7 @@ public:
         }
         TestComplete();
         TestLyrics();
+        TestLrcFiles();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -362,6 +363,60 @@ private:
     }
 
     // ------------------------------------------------------------ faces
+
+    void TestLrcFiles() {
+        Title("A2b. LRC files: repaired when it is safe, refused when a time is wrong");
+        // 20.037 s: the song does not end on a frame, and its last line is sung up to the end.
+        const fs::path odd = _root / "cancion-impar.wav";
+        testaudio::SyntheticSong song(20.037);
+        for (double t = 0; t < 20; t += 0.5) {
+            song.Kick(t, 0.4);
+        }
+        song.Tone(2, 17, 220, 0.1);
+        const fs::path lastLine = _root / "ultima-linea.lrc";
+        (void)WriteText(lastLine, "\xEF\xBB\xBF[ti:Prueba]\r\n[00:02.00]¿Dónde está el niño?\r\n[00:18.50]Una musiquilla que suena tal que así\r\n");
+        if (!song.Save(odd.string())) {
+            Check(false, "the odd-length song could not be written");
+            return;
+        }
+        GenerationRequest r = Request("lrc-final");
+        r.audioPath = odd.string();
+        r.lyricsPath = lastLine.string();
+        const GenerationRun ending = Generate(r, GenerationStage::Lyrics);
+        const StageStatus status = ending.Stage(GenerationStage::Lyrics).status;
+        int lastEnd = 0;
+        for (const auto& layer : ending.lyricTrack.layers) {
+            for (const TimingMark& m : layer) {
+                lastEnd = std::max(lastEnd, m.endMS);
+            }
+        }
+        Check(status != StageStatus::Failed && ending.lyricTrack.layers.size() == 3 && lastEnd <= ending.analysis.durationMS && lastEnd % r.frameMS == 0,
+              fmt::format("a last line near the end of a {} ms song: synchronized up to {} ms, on a frame", ending.analysis.durationMS, lastEnd));
+
+        _expectSuccess = false;
+        const auto refused = [&](const char* name, const std::string& lrc, const char* note) {
+            const fs::path path = _root / (std::string(name) + ".lrc");
+            (void)WriteText(path, lrc);
+            GenerationRequest bad = Request(name);
+            bad.lyricsPath = path.string();
+            const GenerationRun run = Generate(bad);
+            const bool said = std::any_of(run.Stage(GenerationStage::Lyrics).notes.begin(), run.Stage(GenerationStage::Lyrics).notes.end(), [&](const std::string& n) { return n.find(note) != std::string::npos; });
+            Check(!run.ok && run.Stage(GenerationStage::Lyrics).status == StageStatus::Failed && !FileExists(run.sequencePath) && said, fmt::format("{}: refused before writing, saying {}", name, note));
+        };
+        refused("lrc-marca-rota", "[00:09.00]¿Dónde está el niño?\n[00:1x.00]Pingüino en la nieve\n", "malformed-time line 2");
+        refused("lrc-negativa", "[-00:01.00]¿Dónde está el niño?\n[00:13.00]Pingüino en la nieve\n", "negative-time line 1");
+        refused("lrc-fuera", "[00:09.00]¿Dónde está el niño?\n[01:30.00]Pingüino en la nieve\n", "time-past-song-end at 90000 ms");
+        refused("lrc-vacio", "", "empty-file");
+        refused("lrc-sin-tiempos", "¿Dónde está el niño?\nPingüino en la nieve\n", "no-timestamps");
+        _expectSuccess = true;
+
+        const fs::path unordered = _root / "desordenada.lrc";
+        (void)WriteText(unordered, "[00:13.00]Pingüino en la nieve\r\n[00:09.00]¿Dónde está el niño?\r\n[00:17.00]Cigüeña sobre el tejado\r\n");
+        GenerationRequest fixed = Request("lrc-reparada");
+        fixed.lyricsPath = unordered.string();
+        const GenerationRun repaired = Generate(fixed);
+        Check(repaired.ok && HasNote(repaired, GenerationStage::Lyrics, "lyrics-repaired") && repaired.lyrics.Lines().front()->startMS == 9000, "lines out of order: sorted, published, and the repair in the report");
+    }
 
     void TestFacesAndExclusion() {
         Title("A5-A7. Faces only where there is one; an excluded model stays dark");

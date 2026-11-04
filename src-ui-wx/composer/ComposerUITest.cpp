@@ -179,6 +179,44 @@ private:
                               return true;
                           },
                            10 });
+        _steps.push_back({ "files dropped on the first step", [this, out]() {
+                              const fs::path drops = out / "soltar";
+                              std::error_code ec;
+                              fs::create_directories(drops, ec);
+                              const fs::path other = drops / "documento.docx";
+                              std::ofstream(other, std::ios::binary) << "no";
+                              const std::string before = _dialog->AudioPath();
+                              _dialog->DropFiles({ other.string() });
+                              Check(_dialog->ErrorShown() == "That is not a song xLights can play." && _dialog->AudioPath() == before, "a file that is not a song: explained, and the song chosen stays");
+                              // A name with accents, a dash and CJK letters, as Windows explorers hand them over.
+                              const fs::path song = drops / fs::path(u8"Canción ñandú — 漢字.wav");
+                              const fs::path second = drops / "otra.wav";
+                              fs::copy_file(fs::path(_o.audio), song, fs::copy_options::overwrite_existing, ec);
+                              fs::copy_file(fs::path(_o.audio), second, fs::copy_options::overwrite_existing, ec);
+                              const std::u8string utf8 = song.u8string();
+                              const std::string songPath(utf8.begin(), utf8.end());
+                              const std::string hash = Sha256OfFile(songPath);
+                              size_t files = 0;
+                              for (const auto& e : fs::directory_iterator(drops, ec)) {
+                                  files += e.is_regular_file() ? 1 : 0;
+                              }
+                              _dialog->ShowDropState(true);
+                              Capture(_dialog, "soltar-aceptado");
+                              _dialog->ShowDropState(false);
+                              _dialog->DropFiles({ songPath, _o.lyrics });
+                              Check(_dialog->AudioOk() && _dialog->AudioPath() == songPath && _dialog->LyricsState() == "lines", "a song with a Unicode name and its LRC dropped together: both used");
+                              size_t after = 0;
+                              for (const auto& e : fs::directory_iterator(drops, ec)) {
+                                  after += e.is_regular_file() ? 1 : 0;
+                              }
+                              Check(after == files && Sha256OfFile(songPath) == hash && FileExists(_o.audio) && FileExists(_o.lyrics), "nothing was copied, moved or changed");
+                              Capture(_dialog, "soltar-cancion-unicode");
+                              _dialog->DropFiles({ second.string(), songPath });
+                              Check(_dialog->AudioPath() == second.string(), "several songs: one is chosen (the first, with no one to ask in the test)");
+                              _dialog->SetLyrics("");
+                              return true;
+                          },
+                           20 });
         _steps.push_back({ "song and lyrics", [this, out]() {
                               _dialog->SetAudio(_o.audio);
                               Check(_dialog->AudioOk(), "the demo song is readable");
@@ -223,6 +261,10 @@ private:
                                   _started = true;
                                   _dialog->GoTo(ShowComposerDialog::Step::Analysis);
                                   Check(_dialog->JobRunning(), "going to Analysis starts the analysis in the generator");
+                                  const std::string song = _dialog->AudioPath();
+                                  _dialog->DropFiles({ song });
+                                  Check(!_dialog->AcceptsDrops() && _dialog->ErrorShown() == "The generator is working." && _dialog->AudioPath() == song && _dialog->JobRunning(),
+                                        "a song dropped while the generator works is refused, and the work goes on");
                                   return false;
                               }
                               if (!JobDone() || !Waited(1.0)) {

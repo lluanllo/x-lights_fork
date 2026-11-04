@@ -28,6 +28,7 @@ enum class AlignmentProvider {
     ManualPhrases, // B: phrase marks made by a person
     LineTimes,     // C: LRC or SRT line times
     Experimental,  // D: voice activity and syllables; only on request
+    Transcript,    // E: the words a transcription heard, matched to the lyrics
     None           // text without times: nothing is timed
 };
 
@@ -118,6 +119,14 @@ struct AlignerOptions {
     double minConfidence = 0.5;   // below this a phrase is reported for review
 };
 
+// One lyric word given the time a transcription heard it at.
+struct WordAnchor {
+    std::string wordId; // "<line id>/<index>:<key>", as words are named here
+    int startMS = 0;
+    int endMS = 0;
+    double confidence = 0;
+};
+
 struct AlignerInput {
     const LyricDocument* document = nullptr;
     AlignmentProvider provider = AlignmentProvider::Auto;
@@ -125,6 +134,7 @@ struct AlignerInput {
     const SongAnalysis* analysis = nullptr;         // provider D
     int durationMS = 0;                             // 0: unknown
     std::vector<LyricCorrection> corrections;       // manual marks are phrase corrections
+    const std::vector<WordAnchor>* anchors = nullptr; // provider E
 };
 
 [[nodiscard]] LyricAlignment AlignLyrics(const AlignerInput& input, const AlignerOptions& options = {});
