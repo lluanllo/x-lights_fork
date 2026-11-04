@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "ens-fan",
+  "version": 1,
+  "effect": "Fan",
+  "roles": [
+    "figure",
+    "prop",
+    "star",
+    "mega-tree",
+    "matrix",
+    "group"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-bed"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    2000,
+    12000
+  ],
+  "maxPerMinute": 12,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Fan_CenterX",
+      "value": 50
+    },
+    {
+      "id": "Fan_CenterY",
+      "value": 50
+    },
+    {
+      "id": "Fan_Start_Radius",
+      "value": 1
+    },
+    {
+      "id": "Fan_End_Radius",
+      "value": 640
+    },
+    {
+      "id": "Fan_Revolutions",
+      "energy": [
+        360.0,
+        1080.0
+      ]
+    },
+    {
+      "id": "Fan_Num_Blades",
+      "energy": [
+        2,
+        5
+      ]
+    },
+    {
+      "id": "Fan_Blade_Width",
+      "value": 80
+    },
+    {
+      "id": "Fan_Blade_Angle",
+      "value": 90
+    },
+    {
+      "id": "Fan_Duration",
+      "value": 95
+    },
+    {
+      "id": "Fan_Blend_Edges",
+      "value": true
+    },
+    {
+      "id": "Fan_Reverse",
+      "choices": [
+        true,
+        false
+      ]
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

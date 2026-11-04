@@ -868,6 +868,9 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     r.lyricSessionPath = o.lyricSessionPath;
     r.correctionsPath = o.correctionsPath;
     r.previousSidecarPath = o.previousSidecarPath;
+    r.themesPath = o.themesPath;
+    r.characterPath = o.characterPath;
+    r.transcriptPath = o.transcriptPath;
     r.render = o.render;
     r.renderTimeoutMS = o.renderTimeoutMS;
     if (!o.level.empty()) {

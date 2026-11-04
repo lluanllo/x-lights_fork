@@ -1,5 +1,7 @@
 #include "composer/ReferenceStudy.h"
 
+#include "composer/CompositionPlan.h"
+#include "composer/VisualDirection.h"
 #include "composer/WriterTest.h"
 #include "models/Model.h"
 #include "models/ModelGroup.h"
@@ -24,6 +26,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <sstream>
 #include <set>
 #include <string>
 #include <vector>
@@ -166,6 +169,7 @@ struct NodePoint {
     const NodeBaseClass* node = nullptr;
     float x = 0;
     float y = 0;
+    bool wired = true; // on a controller: a model with "No Controller" can never light
 };
 
 } // namespace
@@ -389,6 +393,7 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
     json render = { { "ran", false } };
     std::vector<double> litShare;
     std::vector<double> brightness;
+    std::vector<double> litWired; // over the nodes that are on a controller
     std::vector<NodePoint> points;
     float minX = 1e9F, maxX = -1e9F, minY = 1e9F, maxY = -1e9F;
     if (o.render) {
@@ -403,6 +408,7 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
                 if (dynamic_cast<ModelGroup*>(model) != nullptr || model->GetLayoutGroup() != "Default") {
                     continue;
                 }
+                const bool wired = model->GetControllerName() != "No Controller";
                 for (uint32_t n = 0; n < model->GetNodeCount(); ++n) {
                     std::vector<std::tuple<float, float, float>> pts;
                     model->GetNode3DScreenCoords(static_cast<int>(n), pts);
@@ -412,7 +418,7 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
                     }
                     for (auto [x, y, z] : pts) {
                         model->GetModelScreenLocation().TranslatePoint(x, y, z);
-                        points.push_back({ node, x, y });
+                        points.push_back({ node, x, y, wired });
                     }
                 }
             }
@@ -438,8 +444,12 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
             }
             // Every node of every model, on or off, once per bin: what the render lights.
             std::set<const NodeBaseClass*> unique;
+            std::set<const NodeBaseClass*> wiredNodes;
             for (const NodePoint& p : points) {
                 unique.insert(p.node);
+                if (p.wired) {
+                    wiredNodes.insert(p.node);
+                }
             }
             for (int ms = 0; ms < durationMS; ms += BIN_MS) {
                 const unsigned frame = std::min<unsigned>(data.NumFrames() - 1, static_cast<unsigned>(ms / frameMS));
@@ -457,8 +467,10 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
                 }
                 litShare.push_back(unique.empty() ? 0 : static_cast<double>(lit) / unique.size());
                 brightness.push_back(unique.empty() ? 0 : light / unique.size());
+                litWired.push_back(wiredNodes.empty() ? 0 : static_cast<double>(lit) / wiredNodes.size());
             }
             render["nodesDrawn"] = unique.size();
+            render["nodesWired"] = wiredNodes.size();
         }
     }
 
@@ -669,21 +681,47 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
     for (size_t i = 0; i < scenes.size(); ++i) {
         const int end = i + 1 < scenes.size() ? scenes[i + 1] : durationMS;
         std::map<std::string, double> mix;
+        std::map<std::string, double> sceneHues;
+        std::map<std::string, double> sceneColours;
         for (const Placed& p : placed) {
             const int s = std::max(p.effect->GetStartTimeMS(), scenes[i]);
             const int t = std::min(p.effect->GetEndTimeMS(), end);
-            if (t > s && (p.kind == "model" || p.kind == "group")) {
+            if (t <= s) {
+                continue;
+            }
+            if (p.kind == "model" || p.kind == "group") {
                 mix[p.effect->GetEffectName()] += (t - s) / 1000.0;
             }
+            int ignored = 0;
+            const std::vector<std::string> active = ActiveColours(*p.effect, ignored);
+            for (const std::string& c : active) {
+                const double w = (t - s) / 1000.0 / active.size();
+                sceneHues[HueName(ParseHex(c))] += w;
+                sceneColours[c] += w;
+            }
         }
+        const auto top = [](const std::map<std::string, double>& m, size_t n) {
+            std::vector<std::pair<double, std::string>> v;
+            double total = 0;
+            for (const auto& [k, w] : m) {
+                v.push_back({ w, k });
+                total += w;
+            }
+            std::sort(v.rbegin(), v.rend());
+            json out = json::array();
+            for (size_t k = 0; k < v.size() && k < n; ++k) {
+                out.push_back({ v[k].second, Round2(total > 0 ? v[k].first / total : 0) });
+            }
+            return out;
+        };
         std::vector<std::pair<double, std::string>> ranked;
         for (const auto& [n, sec] : mix) {
             ranked.push_back({ sec, n });
         }
         std::sort(ranked.rbegin(), ranked.rend());
-        json top = json::array();
+        json ranking = json::array();
         for (size_t k = 0; k < ranked.size() && k < 4; ++k) {
-            top.push_back(ranked[k].second);
+            ranking.push_back(ranked[k].second);
         }
         double lit = 0;
         int count = 0;
@@ -691,7 +729,7 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
             lit += litShare[b];
             ++count;
         }
-        scenesJson.push_back({ { "startMS", scenes[i] }, { "endMS", end }, { "effects", top }, { "litShare", Round2(count > 0 ? lit / count : 0) } });
+        scenesJson.push_back({ { "startMS", scenes[i] }, { "endMS", end }, { "effects", ranking }, { "hues", top(sceneHues, 4) }, { "colours", top(sceneColours, 5) }, { "litShare", Round2(count > 0 ? lit / count : 0) } });
     }
 
     const json root = {
@@ -729,6 +767,7 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
         { "scenes", scenesJson },
         { "render", render },
         { "litShare", { { "median", Round2(Percentile(litShare, 0.5)) }, { "p10", Round2(Percentile(litShare, 0.1)) }, { "p90", Round2(Percentile(litShare, 0.9)) } } },
+        { "litShareWired", { { "median", Round2(Percentile(litWired, 0.5)) }, { "p10", Round2(Percentile(litWired, 0.1)) }, { "p90", Round2(Percentile(litWired, 0.9)) } } },
         { "pictures", pictures },
         { "visuallyReviewed", false },
     };
@@ -743,6 +782,167 @@ int RunReferenceStudy(const ReferenceStudyOptions& o) {
     printf("composer-reference-study: %s: %zu effects (%s), %zu scenes, %zu pictures, %lld ms\n", o.id.c_str(), placed.size(), json(byKind).dump().c_str(), scenes.size(), pictures.size(), totalMS);
     (void)ctx.CloseSequence();
     return 0;
+}
+
+bool BuildReferenceProfile(const std::vector<std::string>& studyDirs, const std::string& id, const std::string& name, const ThemeCatalog* themes, std::string& profileJson, std::string& error) {
+    struct Measured {
+        std::string id;
+        double coverageP10 = 0, coverageP50 = 0;
+        double hitsPerMinute = 0;
+        double hitMS = 0;
+        double fades = 0;
+        double colours = 0;
+        double sceneMS = 0;
+        double contrast = 0;
+        std::map<std::string, double> hues;
+    };
+    std::vector<Measured> all;
+    for (const std::string& dir : studyDirs) {
+        std::ifstream in(fs::path(dir) / "stats.json", std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        const json d = json::parse(text.str(), nullptr, false);
+        if (d.is_discarded() || d.value("kind", "") != "composer-reference-study") {
+            error = "not a reference study: " + dir;
+            return false;
+        }
+        Measured m;
+        m.id = d.value("id", fs::path(dir).filename().string());
+        const double minutes = std::max(0.1, d.value("durationMS", 0) / 60000.0);
+        m.coverageP10 = d["coverage"].value("p10", 0.0);
+        m.coverageP50 = d["coverage"].value("median", 0.0);
+        // The short effects that make the rhythm: those whose typical length is under 0.6 s.
+        double hits = 0;
+        double hitTime = 0;
+        for (const auto& [effect, e] : d["effects"].items()) {
+            const double median = e.value("medianMS", 0.0);
+            const int count = e.value("count", 0);
+            if (median > 0 && median <= 600 && count >= 10) {
+                hits += count;
+                hitTime += median * count;
+            }
+        }
+        m.hitsPerMinute = hits / minutes;
+        m.hitMS = hits > 0 ? hitTime / hits : 350;
+        const int effects = std::max(1, d.value("effectCount", 1));
+        m.fades = d["fades"].value("effectsWithFades", 0) / static_cast<double>(effects);
+        m.colours = d["coloursPerEffect"].value("median", 2.0);
+        std::vector<double> lengths;
+        std::map<std::string, int> dominant;
+        for (const json& sc : d["scenes"]) {
+            lengths.push_back(sc.value("endMS", 0) - sc.value("startMS", 0));
+            if (sc.contains("hues") && !sc["hues"].empty()) {
+                dominant[sc["hues"][0][0].get<std::string>()]++;
+            }
+        }
+        m.sceneMS = Percentile(lengths, 0.5);
+        int top = 0;
+        int scenes = 0;
+        for (const auto& [h, n] : dominant) {
+            top = std::max(top, n);
+            scenes += n;
+        }
+        m.contrast = scenes > 0 ? 1.0 - static_cast<double>(top) / scenes : 0;
+        for (const auto& [h, sec] : d["hueSeconds"].items()) {
+            m.hues[h] += sec.get<double>();
+        }
+        all.push_back(std::move(m));
+    }
+    if (all.empty()) {
+        error = "no study given";
+        return false;
+    }
+    const auto mean = [&](auto field) {
+        double sum = 0;
+        for (const Measured& m : all) {
+            sum += field(m);
+        }
+        return sum / all.size();
+    };
+    StyleProfile p = NeutralStarterProfile();
+    p.id = id;
+    p.name = name;
+    p.learned = false;
+    EnsembleSettings& e = p.ensemble;
+    e.enabled = true;
+    const double p10 = mean([](const Measured& m) { return m.coverageP10; });
+    const double p50 = mean([](const Measured& m) { return m.coverageP50; });
+    // The references keep almost the whole display under an effect; calm scenes are
+    // lighter in what is lit, which the ensemble does with outlines and soft motifs.
+    e.coverageLow = Round2(std::clamp(p10 * 0.7, 0.3, 0.8));
+    e.coverageMid = Round2(std::clamp(p50 * 0.9, 0.5, 0.95));
+    e.coverageHigh = Round2(std::clamp(p50, 0.6, 1.0));
+    e.coverageClimax = 1.0;
+    // Hits measured over the whole song happen in its busy parts. Shows differ by a
+    // factor of a hundred here, so several shows give their median, not their mean.
+    std::vector<double> rates;
+    for (const Measured& m : all) {
+        rates.push_back(m.hitsPerMinute);
+    }
+    const double hits = Percentile(rates, 0.5);
+    e.hitsPerMinuteMid = Round2(std::clamp(hits * 0.4, 0.0, 600.0));
+    e.hitsPerMinuteHigh = Round2(std::clamp(hits * 1.25, 0.0, 600.0));
+    e.hitsPerMinuteClimax = Round2(std::clamp(hits * 1.6, 0.0, 600.0));
+    e.hitMS = static_cast<int>(std::lround(std::clamp(mean([](const Measured& m) { return m.hitMS; }), 120.0, 900.0) / 25.0)) * 25;
+    e.fadeOutShare = Round2(mean([](const Measured& m) { return m.fades; }));
+    e.colorsPerEvent = static_cast<int>(std::clamp(std::lround(mean([](const Measured& m) { return m.colours; })), 1L, 3L));
+    e.contrastShare = Round2(std::clamp(mean([](const Measured& m) { return m.contrast; }), 0.0, 0.6));
+    const double scene = mean([](const Measured& m) { return m.sceneMS; });
+    p.minSegmentMS = static_cast<int>(std::clamp(scene * 0.5, 2000.0, 4000.0));
+    p.maxSegmentMS = std::max(p.minSegmentMS * 2, static_cast<int>(std::clamp(scene * 1.5, 8000.0, 16000.0)));
+    p.maxChangesPerMinute = Round2(std::clamp(60000.0 / std::max(1000.0, scene) * 1.2, 4.0, 20.0));
+    for (const Measured& m : all) {
+        e.sources.push_back(m.id);
+    }
+    // The busiest rows of every reference are the matrix and the mega tree, with the
+    // faces singing the whole song: those are what the plan picks. Everything else
+    // moves as a family in the ensemble, so the plan no longer reaches for groups or
+    // a prop's submodel groups, which would leave the rest of that prop dark.
+    p.leadPreference = { { Role::Matrix, 1.0 }, { Role::MegaTree, 1.0 }, { Role::Face, 0.8 }, { Role::Star, 0.3 }, { Role::SmallTree, 0.3 }, { Role::Window, 0.25 },
+                         { Role::Arch, 0.25 }, { Role::Line, 0.2 }, { Role::Figure, 0.2 }, { Role::Prop, 0.2 }, { Role::Group, 0.1 } };
+    p.supportPreference = { { Role::Matrix, 0.6 }, { Role::MegaTree, 0.6 }, { Role::Face, 0.5 }, { Role::Star, 0.2 }, { Role::SmallTree, 0.2 }, { Role::Window, 0.2 },
+                            { Role::Arch, 0.2 }, { Role::Line, 0.15 }, { Role::Figure, 0.15 }, { Role::Prop, 0.15 }, { Role::Group, 0.1 } };
+    p.maxParticipants = 6;
+    // The theme whose home colours are nearest the hues these shows spend most time in.
+    std::map<std::string, double> hues;
+    for (const Measured& m : all) {
+        double total = 0;
+        for (const auto& [h, sec] : m.hues) {
+            total += sec;
+        }
+        for (const auto& [h, sec] : m.hues) {
+            hues[h] += total > 0 ? sec / total : 0;
+        }
+    }
+    e.defaultTheme = "christmas-classic";
+    if (themes != nullptr) {
+        double best = -1;
+        for (const ThemeDef& t : themes->themes) {
+            std::set<std::string> names;
+            for (const auto& palette : t.home) {
+                for (const std::string& c : palette) {
+                    names.insert(HueName(ParseHex(c)));
+                }
+            }
+            // The time the shows spend in the theme's hues, less a little for each hue
+            // of the theme they hardly use.
+            double score = 0;
+            for (const std::string& n : names) {
+                const double share = hues.contains(n) ? hues[n] / all.size() : 0;
+                score += share;
+                score -= share < 0.02 ? 0.05 : 0;
+            }
+            if (score > best) {
+                best = score;
+                e.defaultTheme = t.id;
+            }
+        }
+    }
+    json root = json::parse(ToJson(p));
+    root["note"] = "Measured from reference shows by --composer-reference-profile: coverage from their share of the display under an effect, hits from their short effects, scenes from their cuts, colours from their palettes. A style to start from, not anyone's approval.";
+    root["measuredFrom"] = e.sources;
+    profileJson = root.dump(1);
+    return true;
 }
 
 } // namespace composer

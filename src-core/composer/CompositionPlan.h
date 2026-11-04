@@ -57,6 +57,30 @@ struct LevelSettings {
     bool rotateWithinSection = true;
 };
 
+// The whole display working together, as the reference shows do: every family of
+// figures under a base effect in the scene's colours, short hits on the beat above it,
+// and the same look when a section comes back. Off in the neutral profile; a profile
+// made from reference shows turns it on with what was measured in them.
+struct EnsembleSettings {
+    bool enabled = false;
+    // Share of the display's nodes under an effect, by energy band.
+    double coverageLow = 0.45;
+    double coverageMid = 0.75;
+    double coverageHigh = 0.9;
+    double coverageClimax = 1.0;
+    // Short hits a minute on the whole display, by band; 0 turns them off.
+    double hitsPerMinuteMid = 0;
+    double hitsPerMinuteHigh = 60;
+    double hitsPerMinuteClimax = 120;
+    int hitMS = 350;
+    double fadeOutShare = 0.3;   // of base events that fade out
+    double contrastShare = 0.25; // of non-repeated sections that leave the home palette
+    int colorsPerEvent = 2;
+    bool outlinesWhenCalm = true; // calm sections light rings and outlines rather than whole props
+    std::string defaultTheme = "christmas-classic";
+    std::vector<std::string> sources; // the reference studies this was measured from
+};
+
 // Starting values, not anyone's taste: the "Neutral Starter Profile". A profile learned
 // from approved shows will replace it, through the same fields.
 struct StyleProfile {
@@ -83,6 +107,7 @@ struct StyleProfile {
     LevelSettings conservative;
     LevelSettings balanced;
     LevelSettings creative;
+    EnsembleSettings ensemble;
 
     [[nodiscard]] const LevelSettings& Level(AutomationLevel level) const;
 };

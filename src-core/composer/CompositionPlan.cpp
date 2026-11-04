@@ -608,7 +608,14 @@ private:
         const bool vocal = _plan.lyricsSynchronized && s.vocalCoverage >= 0.2;
         if (vocal) {
             std::vector<Candidate> faces = _faces;
+            // A face with no controller sings where nobody can see it: the wired ones go
+            // first, and the draw only orders faces of the same kind.
             std::sort(faces.begin(), faces.end(), [&](const Candidate& a, const Candidate& b) {
+                const bool wa = !_caps.targets[a.target].noController;
+                const bool wb = !_caps.targets[b.target].noController;
+                if (wa != wb) {
+                    return wa;
+                }
                 return Unit(_in.options.seed, key + "/face/" + _caps.targets[a.target].name) < Unit(_in.options.seed, key + "/face/" + _caps.targets[b.target].name);
             });
             int taken = 0;
@@ -1161,6 +1168,20 @@ std::string ToJson(const StyleProfile& p) {
     root["supportPreference"] = RoleMap(p.supportPreference);
     root["templateWeights"] = p.templateWeights;
     root["levels"] = { { "conservative", LevelJson(p.conservative) }, { "balanced", LevelJson(p.balanced) }, { "creative", LevelJson(p.creative) } };
+    // Written only when on, so a profile without it keeps the hash it always had.
+    if (p.ensemble.enabled) {
+        const EnsembleSettings& e = p.ensemble;
+        root["ensemble"] = { { "enabled", true },
+                             { "coverage", { { "low", e.coverageLow }, { "mid", e.coverageMid }, { "high", e.coverageHigh }, { "climax", e.coverageClimax } } },
+                             { "hitsPerMinute", { { "mid", e.hitsPerMinuteMid }, { "high", e.hitsPerMinuteHigh }, { "climax", e.hitsPerMinuteClimax } } },
+                             { "hitMS", e.hitMS },
+                             { "fadeOutShare", e.fadeOutShare },
+                             { "contrastShare", e.contrastShare },
+                             { "colorsPerEvent", e.colorsPerEvent },
+                             { "outlinesWhenCalm", e.outlinesWhenCalm },
+                             { "defaultTheme", e.defaultTheme },
+                             { "sources", e.sources } };
+    }
     return root.dump(1);
 }
 
@@ -1212,6 +1233,27 @@ bool FromJson(const std::string& text, StyleProfile& profile, std::string& error
         p.conservative = LevelFrom(levels.value("conservative", json::object()), p.conservative);
         p.balanced = LevelFrom(levels.value("balanced", json::object()), p.balanced);
         p.creative = LevelFrom(levels.value("creative", json::object()), p.creative);
+        if (root.contains("ensemble")) {
+            const json en2 = root.at("ensemble");
+            EnsembleSettings& e = p.ensemble;
+            e.enabled = en2.value("enabled", false);
+            const json cov = en2.value("coverage", json::object());
+            e.coverageLow = std::clamp(cov.value("low", e.coverageLow), 0.0, 1.0);
+            e.coverageMid = std::clamp(cov.value("mid", e.coverageMid), 0.0, 1.0);
+            e.coverageHigh = std::clamp(cov.value("high", e.coverageHigh), 0.0, 1.0);
+            e.coverageClimax = std::clamp(cov.value("climax", e.coverageClimax), 0.0, 1.0);
+            const json hits = en2.value("hitsPerMinute", json::object());
+            e.hitsPerMinuteMid = std::clamp(hits.value("mid", e.hitsPerMinuteMid), 0.0, 600.0);
+            e.hitsPerMinuteHigh = std::clamp(hits.value("high", e.hitsPerMinuteHigh), 0.0, 600.0);
+            e.hitsPerMinuteClimax = std::clamp(hits.value("climax", e.hitsPerMinuteClimax), 0.0, 600.0);
+            e.hitMS = std::clamp(en2.value("hitMS", e.hitMS), 50, 2000);
+            e.fadeOutShare = std::clamp(en2.value("fadeOutShare", e.fadeOutShare), 0.0, 1.0);
+            e.contrastShare = std::clamp(en2.value("contrastShare", e.contrastShare), 0.0, 1.0);
+            e.colorsPerEvent = std::clamp(en2.value("colorsPerEvent", e.colorsPerEvent), 1, 4);
+            e.outlinesWhenCalm = en2.value("outlinesWhenCalm", e.outlinesWhenCalm);
+            e.defaultTheme = en2.value("defaultTheme", e.defaultTheme);
+            e.sources = en2.value("sources", std::vector<std::string>());
+        }
         profile = std::move(p);
     } catch (const json::exception& e) {
         error = e.what();

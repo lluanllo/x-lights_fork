@@ -744,6 +744,24 @@ bool PrepareLyrics(GenerationRun& run) {
         in.existingTrack = existing;
         in.durationMS = run.analysis.durationMS;
         in.corrections = corrections;
+        if (!r.transcriptPath.empty() && existing == nullptr) {
+            // A transcription saved earlier: its words, matched to the lyrics, give the
+            // times; the lyrics stay the text.
+            std::string json;
+            std::string error;
+            if (!ReadText(r.transcriptPath, json) || !FromJson(json, run.transcript, error)) {
+                return Fail(run, S, "transcript-invalid", r.transcriptPath + (error.empty() ? std::string() : ": " + error));
+            }
+            run.transcriptAlignment = AlignTranscriptToLyrics(run.lyrics, run.transcript);
+            Note(run, S, "transcript", fmt::format("{} {}: {} of {} lyric words heard ({:.0f}%), {} words heard that are not in the lyrics", run.transcript.provider, run.transcript.model,
+                                                   run.transcriptAlignment.matchedWords, run.transcriptAlignment.lyricWords, run.transcriptAlignment.coverage * 100, run.transcriptAlignment.extraWords));
+            for (const std::string& w : run.transcriptAlignment.warnings) {
+                Note(run, S, "transcript-warning", w);
+            }
+            if (!run.transcriptAlignment.anchors.empty()) {
+                in.anchors = &run.transcriptAlignment.anchors;
+            }
+        }
         AlignerOptions options;
         options.frameMS = r.frameMS;
         run.alignment = AlignLyrics(in, options);
@@ -846,7 +864,40 @@ bool ChoreographShow(GenerationRun& run) {
         in.lyricTrack = run.lyricTrack.layers.empty() ? std::string() : run.lyricTrack.name;
         in.frameMS = run.request.frameMS;
         in.corrections = run.corrections.choreography;
+        if (run.profile.ensemble.enabled) {
+            const std::string catalog = run.request.themesPath.empty() ? DefaultThemeCatalogPath() : run.request.themesPath;
+            std::string error;
+            if (!LoadThemeCatalog(catalog, run.themes, error)) {
+                return Fail(run, S, "themes-invalid", error);
+            }
+            if (!run.request.characterPath.empty()) {
+                std::string text;
+                if (!ReadText(run.request.characterPath, text) || !FromJson(text, run.character, error)) {
+                    return Fail(run, S, "character-invalid", run.request.characterPath + (error.empty() ? std::string() : ": " + error));
+                }
+                run.hasCharacter = true;
+            }
+            DirectionInput d;
+            d.plan = &run.plan;
+            d.capabilities = &run.capabilities;
+            d.profile = &run.profile;
+            d.catalog = &run.themes;
+            d.analysis = &run.analysis;
+            d.lyrics = run.hasLyrics ? &run.lyrics : nullptr;
+            d.character = run.hasCharacter ? &run.character : nullptr;
+            d.title = run.request.audioPath;
+            run.direction = DirectShow(d);
+            in.direction = &run.direction;
+            Note(run, S, "visual-direction", fmt::format("theme {} from {} ({:.2f}), {} families, {} scenes", run.direction.themeId, run.direction.themeSource, run.direction.themeConfidence,
+                                                         run.direction.families.size(), run.direction.scenes.size()));
+        }
         run.choreography = Choreograph(in);
+        if (run.direction.enabled) {
+            run.directionMetrics = MeasureDirection(run.direction, run.choreography, run.capabilities);
+            const DirectionMetrics& dm = run.directionMetrics;
+            Note(run, S, "direction-metrics", fmt::format("coverage {:.2f}, palette coherence {:.2f}, two hues {:.2f}, starts together {:.2f}, {:.0f} events a minute, {} hits, repeats kept {:.2f}, looks {:.2f}",
+                                                          dm.coverageMean, dm.paletteCoherence, dm.hueConcentration, dm.startsTogether, dm.eventsPerMinute, dm.hits, dm.repeatConsistency, dm.lookDiversity));
+        }
         run.choreographyValidation = ValidateChoreography(run.choreography, run.plan, run.capabilities, run.library, run.metadata);
         AddValidationNotes(run, S, run.choreographyValidation, "choreography");
         for (const ChoreographyConflict& c : run.choreography.conflicts) {
@@ -1114,6 +1165,21 @@ void WriteDiagnostics(GenerationRun& run) {
     if (run.Stage(GenerationStage::Choreography).status != StageStatus::NotRun) {
         ok &= WriteText(report / "choreography.json", ToJson(run.choreography));
         ok &= WriteText(report / "choreography-report.txt", ChoreographyReport(run.choreography));
+        if (run.direction.enabled) {
+            ok &= WriteText(report / "visual-direction.json", ToJson(run.direction));
+            ok &= WriteText(report / "visual-direction-report.txt", DirectionReport(run.direction));
+            ok &= WriteText(report / "direction-metrics.json", ToJson(run.directionMetrics));
+        }
+    }
+    if (!run.transcriptAlignment.anchors.empty()) {
+        nlohmann::json lines = nlohmann::json::array();
+        for (const TranscriptLineMatch& l : run.transcriptAlignment.lines) {
+            lines.push_back({ { "lineId", l.lineId }, { "words", l.words }, { "matched", l.matched }, { "confidence", l.confidence } });
+        }
+        ok &= WriteText(report / "transcript-alignment.json", nlohmann::json({ { "coverage", run.transcriptAlignment.coverage }, { "matchedWords", run.transcriptAlignment.matchedWords },
+                                                                                 { "lyricWords", run.transcriptAlignment.lyricWords }, { "extraWords", run.transcriptAlignment.extraWords },
+                                                                                 { "warnings", run.transcriptAlignment.warnings }, { "lines", lines } })
+                                                                     .dump(1));
     }
     std::string validation;
     const auto dump = [&](const char* what, const ValidationReport& v) {
@@ -1213,6 +1279,12 @@ std::string SummaryJson(const GenerationRun& run) {
     root["participants"] = participants;
     root["targetsLit"] = lit;
     root["visualReview"] = "not-reviewed";
+    if (run.direction.enabled) {
+        const DirectionMetrics& m = run.directionMetrics;
+        root["direction"] = { { "theme", run.direction.themeId }, { "themeName", run.direction.themeName }, { "source", run.direction.themeSource }, { "confidence", run.direction.themeConfidence },
+                              { "coverage", m.coverageMean }, { "paletteCoherence", m.paletteCoherence }, { "hueConcentration", m.hueConcentration }, { "startsTogether", m.startsTogether },
+                              { "eventsPerMinute", m.eventsPerMinute }, { "hits", m.hits }, { "repeatConsistency", m.repeatConsistency }, { "lookDiversity", m.lookDiversity }, { "layers", m.layersUsed } };
+    }
     root["showDir"] = run.request.showDir;
     root["sequenceName"] = run.request.sequenceName;
     root["audio"] = run.request.audioPath;

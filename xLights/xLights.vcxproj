@@ -997,6 +997,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-core\composer\GenerationSidecar.cpp" />
     <ClCompile Include="..\src-core\composer\ComposerReview.cpp" />
     <ClCompile Include="..\src-core\composer\PipelineTest.cpp" />
+    <ClCompile Include="..\src-core\composer\VisualDirection.cpp" />
     <ClCompile Include="..\src-core\composer\ReferenceStudy.cpp" />
     <ClCompile Include="..\src-core\composer\AssistTest.cpp" />
     <ClCompile Include="..\src-core\composer\MusicAssist.cpp" />
@@ -1707,6 +1708,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-core\composer\GenerationSidecar.h" />
     <ClInclude Include="..\src-core\composer\ComposerReview.h" />
     <ClInclude Include="..\src-core\composer\PipelineTest.h" />
+    <ClInclude Include="..\src-core\composer\VisualDirection.h" />
     <ClInclude Include="..\src-core\composer\ReferenceStudy.h" />
     <ClInclude Include="..\src-core\composer\AssistTest.h" />
     <ClInclude Include="..\src-core\composer\MusicAssist.h" />

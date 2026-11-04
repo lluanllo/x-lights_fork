@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "id": "ens-chase",
+  "version": 1,
+  "effect": "SingleStrand",
+  "roles": [
+    "line",
+    "window",
+    "arch",
+    "group",
+    "small-tree",
+    "mega-tree"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-bed"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    2000,
+    12000
+  ],
+  "maxPerMinute": 12,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "SingleStrand_Colors",
+      "value": "Palette"
+    },
+    {
+      "id": "Number_Chases",
+      "energy": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "Chase_Rotations",
+      "energy": [
+        1.0,
+        3.0
+      ]
+    },
+    {
+      "id": "Color_Mix1",
+      "value": 46
+    },
+    {
+      "id": "Chase_Type1",
+      "choices": [
+        "Left-Right",
+        "From Middle",
+        "Right-Left",
+        "Bounce from Left"
+      ]
+    },
+    {
+      "id": "Fade_Type",
+      "choices": [
+        "From Head",
+        "None",
+        "Middle"
+      ]
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

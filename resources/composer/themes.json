@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 1,
+  "notes": "Themes a show can be built around. 'home' palettes carry most of a song, 'contrast' ones break it for a section, 'accent' is the flash colour of the strongest moments. Colours marked reference-measured are the ones the reference shows spend most of their time in; the rest are starting values. Edit freely: ids are what profiles and corrections refer to.",
+  "themes": [
+    {
+      "id": "christmas-classic",
+      "name": "Christmas, red and green",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "pop-dense"
+      ],
+      "home": [
+        [
+          "#FF0000",
+          "#00FF00"
+        ],
+        [
+          "#FF0000",
+          "#FFFFFF"
+        ],
+        [
+          "#00FF00",
+          "#FFFFFF"
+        ],
+        [
+          "#D90000",
+          "#00FFFF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#00FFFF",
+          "#1E76E1"
+        ],
+        [
+          "#FFB000",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "christmas"
+      ],
+      "keywords": [
+        "navidad",
+        "nochebuena",
+        "belen",
+        "belén",
+        "reyes",
+        "papa noel",
+        "papá noel",
+        "santa",
+        "regalo",
+        "regalos",
+        "villancico",
+        "campana",
+        "campanas",
+        "christmas",
+        "xmas",
+        "merry",
+        "jingle",
+        "sleigh",
+        "mistletoe",
+        "reindeer",
+        "reno"
+      ]
+    },
+    {
+      "id": "christmas-candy",
+      "name": "Candy cane, red and white",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "candy-classic",
+        "magic-ballad"
+      ],
+      "home": [
+        [
+          "#FF0000",
+          "#FFFFFF"
+        ],
+        [
+          "#FF0000",
+          "#FF8080",
+          "#FFFFFF"
+        ],
+        [
+          "#D90000",
+          "#FFFFFF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#00FFFF",
+          "#FFB000"
+        ],
+        [
+          "#E6E600",
+          "#FFFFFF"
+        ],
+        [
+          "#00C000",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "playful"
+      ],
+      "keywords": [
+        "caramelo",
+        "dulce",
+        "dulces",
+        "candy",
+        "sweet",
+        "want for christmas"
+      ]
+    },
+    {
+      "id": "winter-night",
+      "name": "Winter night, blue and white",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "winter-cinematic"
+      ],
+      "home": [
+        [
+          "#0000FF",
+          "#FFFFFF"
+        ],
+        [
+          "#0080FF",
+          "#FFFFFF"
+        ],
+        [
+          "#0144A9",
+          "#80C0FF",
+          "#FFFFFF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#FF0000",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "winter"
+      ],
+      "keywords": [
+        "nieve",
+        "nevando",
+        "invierno",
+        "frio",
+        "frío",
+        "hielo",
+        "tren",
+        "polar",
+        "snow",
+        "winter",
+        "cold",
+        "ice",
+        "frozen",
+        "train"
+      ]
+    },
+    {
+      "id": "warm-earth",
+      "name": "Sunset and savanna, gold and green",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "warm-cinematic"
+      ],
+      "home": [
+        [
+          "#E0D929",
+          "#D88B0A"
+        ],
+        [
+          "#D88B0A",
+          "#A01913"
+        ],
+        [
+          "#018554",
+          "#E0D929"
+        ]
+      ],
+      "contrast": [
+        [
+          "#0688D8",
+          "#E0D929"
+        ],
+        [
+          "#BA59E3",
+          "#D88B0A"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "epic"
+      ],
+      "keywords": [
+        "sol",
+        "selva",
+        "tierra",
+        "vida",
+        "rey",
+        "leon",
+        "león",
+        "africa",
+        "sun",
+        "jungle",
+        "earth",
+        "life",
+        "king",
+        "lion"
+      ]
+    },
+    {
+      "id": "disco-party",
+      "name": "Party, magenta, lime and violet",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "dance"
+      ],
+      "home": [
+        [
+          "#FF06CF",
+          "#9F40FF"
+        ],
+        [
+          "#52FF06",
+          "#FF06CF"
+        ],
+        [
+          "#0080FF",
+          "#9F40FF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#FF0000",
+          "#FFB306"
+        ],
+        [
+          "#00DDDD",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "party"
+      ],
+      "keywords": [
+        "baila",
+        "bailar",
+        "bailando",
+        "fiesta",
+        "dj",
+        "discoteca",
+        "ritmo",
+        "dance",
+        "dancing",
+        "party",
+        "disco",
+        "play me"
+      ]
+    },
+    {
+      "id": "magic-wish",
+      "name": "Magic, red and white with a rainbow",
+      "source": "reference-measured",
+      "measuredFrom": [
+        "magic-ballad"
+      ],
+      "home": [
+        [
+          "#FF0000",
+          "#FFFFFF"
+        ],
+        [
+          "#8000FF",
+          "#FFFFFF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#FF0000",
+          "#FF8000",
+          "#FFFF00",
+          "#00FF00",
+          "#0000FF",
+          "#8000FF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [],
+      "keywords": [
+        "deseo",
+        "deseos",
+        "magia",
+        "magico",
+        "mágico",
+        "sueño",
+        "suenos",
+        "sueños",
+        "wish",
+        "magic",
+        "dream",
+        "dreams"
+      ]
+    },
+    {
+      "id": "halloween",
+      "name": "Halloween, orange and violet",
+      "source": "starter",
+      "measuredFrom": [],
+      "home": [
+        [
+          "#FF6000",
+          "#8000FF"
+        ],
+        [
+          "#00C000",
+          "#FF6000"
+        ]
+      ],
+      "contrast": [
+        [
+          "#FFFFFF",
+          "#8000FF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "halloween"
+      ],
+      "keywords": [
+        "halloween",
+        "bruja",
+        "brujas",
+        "calabaza",
+        "fantasma",
+        "miedo",
+        "witch",
+        "pumpkin",
+        "ghost",
+        "spooky"
+      ]
+    },
+    {
+      "id": "new-year",
+      "name": "New year, gold and white",
+      "source": "starter",
+      "measuredFrom": [],
+      "home": [
+        [
+          "#FFB000",
+          "#FFFFFF"
+        ],
+        [
+          "#FFD080",
+          "#FF6000"
+        ]
+      ],
+      "contrast": [
+        [
+          "#0080FF",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "new-year",
+        "celebration"
+      ],
+      "keywords": [
+        "año nuevo",
+        "ano nuevo",
+        "brindis",
+        "uvas",
+        "campanadas",
+        "new year",
+        "cheers",
+        "midnight"
+      ]
+    },
+    {
+      "id": "calm-soft",
+      "name": "Calm, warm white and soft blue",
+      "source": "starter",
+      "measuredFrom": [],
+      "home": [
+        [
+          "#FFE0A0",
+          "#FF8C20"
+        ],
+        [
+          "#80C0FF",
+          "#FFFFFF"
+        ]
+      ],
+      "contrast": [
+        [
+          "#FFB000",
+          "#FFFFFF"
+        ]
+      ],
+      "accent": "#FFFFFF",
+      "characterThemes": [
+        "calm",
+        "romantic"
+      ],
+      "keywords": [
+        "paz",
+        "calma",
+        "silencio",
+        "noche de paz",
+        "duerme",
+        "peace",
+        "silent",
+        "calm",
+        "lullaby",
+        "holy"
+      ]
+    }
+  ]
+}

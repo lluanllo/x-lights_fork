@@ -22,7 +22,7 @@ namespace composer {
 
 namespace {
 
-const std::set<std::string> INTENTS = { "feature", "accompany", "beat-accent", "lyric-text", "face-sing" };
+const std::set<std::string> INTENTS = { "feature", "accompany", "beat-accent", "lyric-text", "face-sing", "ensemble-bed", "ensemble-hit" };
 const std::set<std::string> BINDINGS = { "", "lyrics-phrase", "face-track" };
 const std::set<std::string> RHYTHMS = { "", "downbeat" };
 const std::set<std::string> MEDIA = { "", "image", "video" };

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "id": "ens-spirals",
+  "version": 1,
+  "effect": "Spirals",
+  "roles": [
+    "small-tree",
+    "mega-tree",
+    "group",
+    "matrix"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-bed"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    2000,
+    12000
+  ],
+  "maxPerMinute": 12,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Spirals_Count",
+      "energy": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "Spirals_Rotation",
+      "energy": [
+        5.0,
+        30.0
+      ]
+    },
+    {
+      "id": "Spirals_Thickness",
+      "energy": [
+        30,
+        60
+      ]
+    },
+    {
+      "id": "Spirals_Movement",
+      "energy": [
+        1.0,
+        4.0
+      ]
+    },
+    {
+      "id": "Spirals_3D",
+      "value": true
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

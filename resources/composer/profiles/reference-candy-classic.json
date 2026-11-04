@@ -1,0 +1,111 @@
+{
+ "density": {
+  "climax": 0.75,
+  "high": 0.5,
+  "low": 0.15,
+  "maxParticipants": 6,
+  "mid": 0.3
+ },
+ "energy": {
+  "high": 0.6,
+  "low": 0.35
+ },
+ "ensemble": {
+  "colorsPerEvent": 1,
+  "contrastShare": 0.36,
+  "coverage": {
+   "climax": 1.0,
+   "high": 0.92,
+   "low": 0.63,
+   "mid": 0.83
+  },
+  "defaultTheme": "christmas-candy",
+  "enabled": true,
+  "fadeOutShare": 0.71,
+  "hitMS": 450,
+  "hitsPerMinute": {
+   "climax": 20.27,
+   "high": 15.84,
+   "mid": 5.07
+  },
+  "outlinesWhenCalm": true,
+  "sources": [
+   "candy-classic"
+  ]
+ },
+ "groupsMayOverlapMembers": false,
+ "id": "reference-candy-classic",
+ "leadPreference": {
+  "arch": 0.25,
+  "face": 0.8,
+  "figure": 0.2,
+  "group": 0.1,
+  "line": 0.2,
+  "matrix": 1.0,
+  "mega-tree": 1.0,
+  "prop": 0.2,
+  "small-tree": 0.3,
+  "star": 0.3,
+  "window": 0.25
+ },
+ "learned": false,
+ "levels": {
+  "balanced": {
+   "accents": 2,
+   "densityScale": 1.0,
+   "leadPool": 3,
+   "maxFaces": 2,
+   "maxLeads": 2,
+   "minRoleConfidence": 0.4,
+   "rotateWithinSection": true,
+   "variation": 0.35
+  },
+  "conservative": {
+   "accents": 0,
+   "densityScale": 0.6,
+   "leadPool": 2,
+   "maxFaces": 1,
+   "maxLeads": 1,
+   "minRoleConfidence": 0.6,
+   "rotateWithinSection": false,
+   "variation": 0.0
+  },
+  "creative": {
+   "accents": 4,
+   "densityScale": 1.35,
+   "leadPool": 5,
+   "maxFaces": 4,
+   "maxLeads": 3,
+   "minRoleConfidence": 0.3,
+   "rotateWithinSection": true,
+   "variation": 0.8
+  }
+ },
+ "maxLeadShare": 0.5,
+ "measuredFrom": [
+  "candy-classic"
+ ],
+ "name": "Reference style: candy cane classic",
+ "note": "Measured from reference shows by --composer-reference-profile: coverage from their share of the display under an effect, hits from their short effects, scenes from their cuts, colours from their palettes. A style to start from, not anyone's approval.",
+ "segments": {
+  "maxChangesPerMinute": 13.65,
+  "maxMS": 8000,
+  "minMS": 2637,
+  "minRestMS": 1500
+ },
+ "supportPreference": {
+  "arch": 0.2,
+  "face": 0.5,
+  "figure": 0.15,
+  "group": 0.1,
+  "line": 0.15,
+  "matrix": 0.6,
+  "mega-tree": 0.6,
+  "prop": 0.15,
+  "small-tree": 0.2,
+  "star": 0.2,
+  "window": 0.2
+ },
+ "templateWeights": {},
+ "version": 1
+}

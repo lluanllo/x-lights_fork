@@ -136,6 +136,8 @@ struct Choreography {
     ChoreographyMetrics metrics;
 };
 
+struct ShowVisualDirection;
+
 struct ChoreographyInput {
     const CompositionPlan* plan = nullptr;           // required
     const ModelCapabilities* capabilities = nullptr; // required
@@ -148,6 +150,9 @@ struct ChoreographyInput {
     std::optional<uint64_t> seed;                    // default: the plan's
     int frameMS = 25;
     std::vector<ChoreographyCorrection> corrections;
+    // With a direction whose ensemble is on, every family of figures follows the scene:
+    // its colours, its kind of movement and how much of the display it lights.
+    const ShowVisualDirection* direction = nullptr;
 };
 
 [[nodiscard]] Choreography Choreograph(const ChoreographyInput& input);

@@ -1,6 +1,7 @@
 #include "composer/Choreography.h"
 
 #include "composer/ComposerText.h"
+#include "composer/VisualDirection.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -198,9 +199,11 @@ private:
             const double energyFit = std::clamp(1.0 - std::fabs(energy - middle) / (half * 2), 0.1, 1.0);
             const auto weight = _profile.templateWeights.find(t.id);
             double score = t.weight * (weight == _profile.templateWeights.end() ? 1.0 : weight->second) * CompatibilityFactor(compat.level) * energyFit;
+            score *= MotifFactor(target, t);
             // Two figures running the same effect at once compete; a different one
-            // is preferred when there is one.
-            if (usedEffects.contains(t.effect)) {
+            // is preferred when there is one. A scene's base is the exception: the
+            // references run one effect across many families on purpose.
+            if (usedEffects.contains(t.effect) && a.intent != "ensemble-bed") {
                 score *= 0.5;
             }
             score += _style.jitter * (Unit(_seed, Key(s) + "/" + a.target + "/" + t.id) - 0.5);
@@ -210,10 +213,50 @@ private:
         return options;
     }
 
+    // With a scene, the motif's effects for the figure's family come first, in the order
+    // of the scene's variant, so the whole house moves the same way in a scene.
+    double MotifFactor(const TargetInfo& target, const EffectTemplate& t) const {
+        if (_scene == nullptr) {
+            return 1.0;
+        }
+        std::string family = _family;
+        if (family.empty()) {
+            const TargetInfo* model = target.type == TargetType::SubModel ? _caps.Find(target.parent) : &target;
+            family = model != nullptr && model->type == TargetType::Model ? FamilyIdOf(*model) : std::string();
+        }
+        const std::vector<std::string>& preferred = MotifEffects(_scene->motif, family);
+        if (preferred.empty()) {
+            return 1.0;
+        }
+        const auto at = std::find(preferred.begin(), preferred.end(), t.effect);
+        if (at == preferred.end()) {
+            return 0.6;
+        }
+        const size_t rank = static_cast<size_t>(at - preferred.begin());
+        const size_t first = _scene->variant % preferred.size();
+        return rank == first ? 2.5 : 1.8;
+    }
+
     // The palette: a family that suits the energy, and within the families the template
     // accepts, one no other figure of this segment is using yet.
     void ChoosePalette(ChoreographyEvent& e, const EffectTemplate& t, Band band, const std::string& key, int rank, double norm) {
         if (t.maxColors == 0 || t.paletteFamilies.empty()) {
+            return;
+        }
+        if (_scene != nullptr && !_scene->colors.empty()) {
+            // The scene's colours for every figure, each starting from a different one so
+            // neighbours are not identical.
+            const std::vector<std::string>& colors = _scene->colors;
+            const int count = std::clamp(_profile.ensemble.colorsPerEvent, std::max(1, t.minColors), std::max(1, std::min<int>(t.maxColors, static_cast<int>(colors.size()))));
+            e.colors.clear();
+            for (int k = 0; k < count; ++k) {
+                e.colors.push_back(colors[(static_cast<size_t>(rank) + k) % colors.size()]);
+            }
+            e.paletteId = "scene:" + _scene->lookKey + ":" + _scene->paletteKind;
+            e.reasons.push_back({ "scene-palette", _scene->paletteKind });
+            (void)band;
+            (void)key;
+            (void)norm;
             return;
         }
         static const std::vector<std::string> LOW = { "soft", "cool", "warm", "festive" };
@@ -324,6 +367,7 @@ private:
         const std::string key = Key(s);
         std::set<std::string> usedEffects;
         _segmentPalettes.clear();
+        _scene = _in.direction != nullptr && _in.direction->enabled ? _in.direction->Scene(s.id) : nullptr;
         int rank = 0;
         for (const PlanAssignment* a : active) {
             const TargetInfo* target = _caps.Find(a->target);
@@ -343,6 +387,214 @@ private:
                 Visual(s, *a, *target, band, key, rank++, usedEffects);
             }
         }
+        if (_scene != nullptr) {
+            Ensemble(s, band, key, rank, usedEffects);
+        }
+        _scene = nullptr;
+    }
+
+    // ------------------------------------------------------------ ensemble
+
+    // Every family the plan left free gets a base effect, until the scene's share of the
+    // display is lit; the plan's figures keep what they had and nothing is lit twice.
+    void Ensemble(const PlanSegment& s, Band band, const std::string& key, int& rank, std::set<std::string>& usedEffects) {
+        const EnsembleSettings& es = _profile.ensemble;
+        const double scale = std::clamp(_profile.Level(_level).densityScale, 0.7, 1.0);
+        std::set<std::string> claimed;
+        std::vector<std::string> claimedTargets;
+        for (const PlanAssignment& a : s.assignments) {
+            if (a.prominence == Prominence::Rest) {
+                continue;
+            }
+            const TargetInfo* t = _caps.Find(a.target);
+            if (t == nullptr) {
+                continue;
+            }
+            claimedTargets.push_back(a.target);
+            if (t->type == TargetType::Group) {
+                claimed.insert(t->flatModels.begin(), t->flatModels.end());
+            } else {
+                claimed.insert(t->type == TargetType::SubModel ? t->parent : t->name);
+            }
+        }
+        long long total = 0;
+        for (const VisualFamily& f : _in.direction->families) {
+            total += f.nodes;
+        }
+        long long covered = 0;
+        for (const std::string& m : claimed) {
+            const TargetInfo* t = _caps.Find(m);
+            covered += t != nullptr && !t->noController ? t->nodes : 0;
+        }
+        // The outline draws the house, so it comes first; the rest in an order that
+        // changes from look to look but not between repeats of one.
+        std::vector<const VisualFamily*> order;
+        for (const VisualFamily& f : _in.direction->families) {
+            if (f.id != "faces") {
+                order.push_back(&f);
+            }
+        }
+        std::stable_sort(order.begin(), order.end(), [&](const VisualFamily* a, const VisualFamily* b) {
+            const bool ao = a->id == "outline";
+            const bool bo = b->id == "outline";
+            if (ao != bo) {
+                return ao;
+            }
+            return Unit(_seed, _scene->lookKey + "/" + a->id) < Unit(_seed, _scene->lookKey + "/" + b->id);
+        });
+        const double wanted = _scene->coverage * scale * static_cast<double>(total);
+        std::map<std::string, std::vector<std::string>> bedTargets;
+        std::vector<std::string> familyOrder;
+        for (const VisualFamily* f : order) {
+            if (total > 0 && static_cast<double>(covered) >= wanted) {
+                break;
+            }
+            for (const FamilyTarget& ft : f->targets) {
+                std::vector<FamilyTarget> parts;
+                const bool shared = std::any_of(ft.models.begin(), ft.models.end(), [&](const std::string& m) { return claimed.contains(m); }) ||
+                                    (ft.type == TargetType::Group && std::any_of(claimedTargets.begin(), claimedTargets.end(), [&](const std::string& c) { return _caps.Overlap(c, ft.target); }));
+                if (!shared) {
+                    parts.push_back(ft);
+                } else if (ft.type == TargetType::Group) {
+                    for (const std::string& m : ft.models) {
+                        const TargetInfo* info = _caps.Find(m);
+                        if (!claimed.contains(m) && info != nullptr) {
+                            parts.push_back({ m, TargetType::Model, { m }, info->nodes, "" });
+                        }
+                    }
+                }
+                for (const FamilyTarget& part : parts) {
+                    const bool calm = band == Band::Low && es.outlinesWhenCalm && !part.calmTarget.empty();
+                    const std::string name = calm ? part.calmTarget : part.target;
+                    const TargetInfo* info = _caps.Find(name);
+                    if (info == nullptr || _caps.LightsExcluded(name)) {
+                        continue;
+                    }
+                    // Lights shared with a figure the plan uses (a face's channels wired
+                    // into a window, say) stay with that figure.
+                    if (std::any_of(claimedTargets.begin(), claimedTargets.end(), [&](const std::string& c) { return _caps.Overlap(c, name); })) {
+                        _out.warnings.push_back(fmt::format("ensemble-shares-lights:{}:{}", name, s.id));
+                        continue;
+                    }
+                    PlanAssignment a;
+                    a.target = name;
+                    a.type = info->type;
+                    a.role = f->role;
+                    a.prominence = Prominence::Support;
+                    a.intent = "ensemble-bed";
+                    a.intensity = s.targetIntensity > 0 ? s.targetIntensity : s.energy;
+                    a.confidence = 0.6;
+                    _family = f->id;
+                    const size_t before = _out.events.size();
+                    Visual(s, a, *info, band, key, rank++, usedEffects);
+                    _family.clear();
+                    for (size_t i = before; i < _out.events.size(); ++i) {
+                        ChoreographyEvent& e = _out.events[i];
+                        // Layer 0 is drawn on top: the base goes under, so the hits show.
+                        e.layer = 1;
+                        e.reasons.push_back({ "ensemble", f->id + (calm ? " (outline only: calm scene)" : "") });
+                        e.reasons.push_back({ "motif", _scene->motif });
+                    }
+                    if (_out.events.size() > before) {
+                        covered += part.nodes;
+                        if (!calm) {
+                            bedTargets[f->id].push_back(name);
+                        }
+                    }
+                }
+            }
+            if (bedTargets.contains(f->id)) {
+                familyOrder.push_back(f->id);
+            }
+        }
+        Hits(s, band, key, bedTargets, familyOrder);
+    }
+
+    // Short hits on the beat, one family after another, over their base: what makes
+    // the reference shows pulse with the music.
+    void Hits(const PlanSegment& s, Band band, const std::string& key, const std::map<std::string, std::vector<std::string>>& bedTargets, const std::vector<std::string>& familyOrder) {
+        const EnsembleSettings& es = _profile.ensemble;
+        const double perMinute = _scene->hitsPerMinute * _profile.Level(_level).densityScale;
+        if (perMinute <= 0 || _in.analysis == nullptr || bedTargets.empty()) {
+            return;
+        }
+        std::vector<std::pair<int, bool>> beats; // time, downbeat
+        for (const MusicalEvent& ev : _in.analysis->events) {
+            if ((ev.type == MusicalEventType::Beat || ev.type == MusicalEventType::Downbeat) && ev.timeMS >= s.startMS && ev.timeMS < s.endMS) {
+                beats.push_back({ ToFrame(ev.timeMS, _frame), ev.type == MusicalEventType::Downbeat });
+            }
+        }
+        std::sort(beats.begin(), beats.end());
+        beats.erase(std::unique(beats.begin(), beats.end(), [](const auto& a, const auto& b) { return a.first == b.first; }), beats.end());
+        if (beats.empty()) {
+            _out.warnings.push_back("ensemble-hits-without-beats:" + s.id);
+            return;
+        }
+        // The round props and the repeated ones carry the hits first, as in the references.
+        static const std::vector<std::string> PREFERENCE = { "snowflakes", "stars", "arches", "trees", "props", "figures", "windows", "outline", "mega-tree", "matrix" };
+        std::vector<std::string> families;
+        for (const std::string& f : PREFERENCE) {
+            if (bedTargets.contains(f)) {
+                families.push_back(f);
+            }
+        }
+        (void)familyOrder;
+        // Dense styles light several families on one beat; sparse ones skip beats.
+        const double wanted = perMinute * (s.endMS - s.startMS) / 60000.0;
+        const double perBeat = wanted / static_cast<double>(beats.size());
+        const int perHit = std::clamp(static_cast<int>(std::lround(perBeat)), 1, static_cast<int>(families.size()));
+        const int every = perBeat >= 1 ? 1 : std::max(1, static_cast<int>(std::lround(1.0 / std::max(0.01, perBeat))));
+        std::map<std::string, int> busyUntil;
+        int fired = 0;
+        for (size_t k = 0; k < beats.size(); k += static_cast<size_t>(every)) {
+            const int start = beats[k].first;
+            const int next = k + 1 < beats.size() ? beats[k + 1].first : s.endMS;
+            const int end = ToFrame(std::min({ start + es.hitMS, s.endMS, std::max(start + _frame, next - _frame) }), _frame);
+            if (end - start < _frame) {
+                continue;
+            }
+            for (int h = 0; h < perHit; ++h) {
+                const std::string& family = families[static_cast<size_t>(fired * perHit + h) % families.size()];
+                for (const std::string& name : bedTargets.at(family)) {
+                    const TargetInfo* info = _caps.Find(name);
+                    if (info == nullptr || busyUntil[name] > start) {
+                        continue;
+                    }
+                    PlanAssignment a;
+                    a.target = name;
+                    a.type = info->type;
+                    a.role = RoleOf(*info);
+                    a.prominence = Prominence::Accent;
+                    a.intent = "ensemble-hit";
+                    a.intensity = 0.9;
+                    a.confidence = 0.5;
+                    _family = family;
+                    const std::set<std::string> none;
+                    const std::vector<Option> options = Options(s, a, *info, none, "");
+                    _family.clear();
+                    if (options.empty()) {
+                        continue;
+                    }
+                    const Option& o = options[static_cast<size_t>(Fnv(_scene->lookKey + "/" + family)) % std::min<size_t>(2, options.size())];
+                    ChoreographyEvent e = Base(s, a, *info, o, start, end, fmt::format("h{}", k));
+                    e.layer = 0;
+                    e.reasons.push_back({ beats[k].second ? "downbeat" : "beat", std::to_string(start) });
+                    e.reasons.push_back({ "ensemble-hit", family });
+                    SetParameters(e, *o.t, 1.0, key, static_cast<int>(k));
+                    const std::vector<std::string>& colors = _scene->colors;
+                    e.colors = { beats[k].second ? _scene->accent : colors[static_cast<size_t>(fired) % colors.size()] };
+                    e.paletteId = "scene:" + _scene->lookKey + ":" + (beats[k].second ? "accent" : _scene->paletteKind);
+                    busyUntil[name] = end;
+                    _out.events.push_back(std::move(e));
+                }
+            }
+            ++fired;
+        }
+    }
+
+    static Role RoleOf(const TargetInfo& t) {
+        const RoleAssignment* r = t.PrimaryRole();
+        return r != nullptr ? r->role : Role::Prop;
     }
 
     double Norm(const PlanSegment& s, const EffectTemplate& t) const {
@@ -363,7 +615,13 @@ private:
     void Visual(const PlanSegment& s, const PlanAssignment& a, const TargetInfo& target, Band band, const std::string& key, int rank, std::set<std::string>& usedEffects) {
         const std::vector<Option> options = Options(s, a, target, usedEffects, "");
         std::string rotation;
-        const Option* o = Pick(options, s, a.target, rotation);
+        // A scene's base follows its motif exactly; the variety comes from the motif's
+        // variant from scene to scene, not from a draw per figure.
+        const bool bed = a.intent == "ensemble-bed";
+        const Option* o = bed ? (options.empty() ? nullptr : &options.front()) : Pick(options, s, a.target, rotation);
+        if (bed) {
+            rotation = "motif";
+        }
         if (o == nullptr) {
             _out.warnings.push_back(fmt::format("no-template:{}:{}", a.target, a.intent));
             return;
@@ -557,9 +815,37 @@ private:
             }
             const EffectTemplate* t = _lib.Find(e.templateId);
             const bool canFade = t != nullptr && !t->transitions.empty();
-            const ChoreographyEvent* before = i > 0 && _out.events[i - 1].target == e.target ? &_out.events[i - 1] : nullptr;
-            const ChoreographyEvent* after = i + 1 < _out.events.size() && _out.events[i + 1].target == e.target ? &_out.events[i + 1] : nullptr;
+            // Neighbours on the same row and layer: a hit above a base is not its neighbour.
+            const ChoreographyEvent* before = nullptr;
+            for (size_t k = i; k-- > 0 && _out.events[k].target == e.target;) {
+                if (_out.events[k].layer == e.layer) {
+                    before = &_out.events[k];
+                    break;
+                }
+            }
+            const ChoreographyEvent* after = nullptr;
+            for (size_t k = i + 1; k < _out.events.size() && _out.events[k].target == e.target; ++k) {
+                if (_out.events[k].layer == e.layer) {
+                    after = &_out.events[k];
+                    break;
+                }
+            }
             const int duration = e.endMS - e.startMS;
+            if (e.intent == "ensemble-hit") {
+                // A hit starts at once and dies away, as the references' hits do.
+                e.continuation = "new";
+                e.transitionIn.clear();
+                e.fadeInMS = 0;
+                e.transitionOut = "Fade";
+                e.fadeOutMS = duration * 3 / 5 / _frame * _frame;
+                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0; }), e.settings.end());
+                if (e.fadeOutMS > 0) {
+                    e.settings.emplace_back("T_CHOICE_Out_Transition_Type", e.transitionOut);
+                    e.settings.emplace_back("T_TEXTCTRL_Fadeout", fmt::format("{:.2f}", e.fadeOutMS / 1000.0));
+                }
+                std::sort(e.settings.begin(), e.settings.end());
+                continue;
+            }
             if (before != nullptr && before->endMS == e.startMS && before->templateId == e.templateId) {
                 e.continuation = "vary";
                 if (canFade) {
@@ -773,6 +1059,8 @@ private:
     int _frame;
     bool _noTrack = false;
     std::map<std::string, std::set<std::string>> _segmentPalettes; // palette -> targets, this segment
+    const SceneLook* _scene = nullptr; // this segment's, with a direction
+    std::string _family;               // the family an ensemble event is for
 };
 
 json ReasonsJson(const std::vector<Reason>& reasons) {

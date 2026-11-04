@@ -22,6 +22,9 @@ struct GenerateCommandOptions {
     std::string lyricSessionPath;
     std::string correctionsPath;
     std::string previousSidecarPath;
+    std::string themesPath;
+    std::string characterPath;
+    std::string transcriptPath;
     std::string level; // empty: the default or the previous sidecar's
     std::string seed;  // empty: likewise
     std::string stopAfter; // a stage id; empty: every stage

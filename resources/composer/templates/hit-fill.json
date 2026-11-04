@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "hit-fill",
+  "version": 1,
+  "effect": "Fill",
+  "roles": [
+    "line",
+    "window",
+    "arch",
+    "small-tree",
+    "star",
+    "mega-tree",
+    "matrix",
+    "figure",
+    "prop",
+    "group"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-hit"
+  ],
+  "prominence": [
+    "accent"
+  ],
+  "requires": [],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.9,
+  "durationMS": [
+    100,
+    900
+  ],
+  "maxPerMinute": 240,
+  "transitions": [],
+  "palette": {
+    "colors": [
+      1,
+      1
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Fill_Position",
+      "value": 100
+    },
+    {
+      "id": "Fill_Direction",
+      "choices": [
+        "Up",
+        "Right"
+      ]
+    },
+    {
+      "id": "Fill_Wrap",
+      "value": true
+    },
+    {
+      "id": "Fill_Offset_In_Pixels",
+      "value": true
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

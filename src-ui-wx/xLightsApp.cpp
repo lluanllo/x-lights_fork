@@ -69,6 +69,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #ifdef __APPLE__
 #include "effects/metal/MetalShaderTranslator.h"
 #endif
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include "shared/utils/BitmapCache.h"
@@ -77,6 +78,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "composer/AssistTest.h"
 #include "composer/LyricTest.h"
 #include "composer/ReferenceStudy.h"
+#include "composer/VisualDirection.h"
 #include "composer/PipelineTest.h"
 #include "composer/ComposerUITest.h"
 #include "composer/PlanTest.h"
@@ -1086,7 +1088,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile") {
             headlessArg = true;
             break;
         }
@@ -1236,12 +1238,17 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "previous", "with --composer-generate: the .composer.json of an earlier generation, whose corrections and locks are kept" },
         { wxCMD_LINE_OPTION, "", "roles", "with --composer-generate: a roles.json instead of <show>/ShowComposer/roles.json" },
         { wxCMD_LINE_OPTION, "", "cache", "with --composer-generate: the analysis cache folder instead of <show>/ShowComposer/cache" },
+        { wxCMD_LINE_OPTION, "", "themes", "with --composer-generate: a theme catalogue JSON instead of resources/composer/themes.json" },
+        { wxCMD_LINE_OPTION, "", "character", "with --composer-generate: a song description saved by the music assistant" },
+        { wxCMD_LINE_OPTION, "", "transcript", "with --composer-generate: a transcription saved by the music assistant, matched to the lyrics for word times" },
         { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
+        { wxCMD_LINE_SWITCH, "", "composer-reference-profile", "internal tool: write a style profile measured from --studies (study folders separated by ';') to --out, named --study-id, and exit" },
+        { wxCMD_LINE_OPTION, "", "studies", "with --composer-reference-profile: study folders written by --composer-reference-study, separated by ';'" },
         { wxCMD_LINE_OPTION, "", "study-id", "with --composer-reference-study: a short name for the reports" },
         { wxCMD_LINE_SWITCH, "", "composer-snapshots", "internal tool: write PNG pictures of --models at --times in a rendered --fseq of the show (-s) with all controllers inactive, to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "models", "with --composer-snapshots: model names separated by ';'" },
@@ -2082,7 +2089,7 @@ bool xLightsApp::OnInit()
             { "name", &command.sequenceName }, { "out", &command.reportDir }, { "profile", &command.profilePath }, { "roles", &command.rolesPath }, { "templates", &command.templatesDir },
             { "cache", &command.cacheDir }, { "lyrics", &command.lyricsPath }, { "timing", &command.timingPath }, { "timing-track", &command.timingTrack }, { "lyric-session", &command.lyricSessionPath },
             { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
-            { "cancel-file", &command.cancelFile },
+            { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
         };
         for (const auto& [name, target] : options) {
             if (parser.Found(name, &value)) {
@@ -2098,6 +2105,34 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunGenerateCommand(command));
+    }
+
+    if (parser.Found("composer-reference-profile")) {
+        wxString studies;
+        wxString out;
+        wxString id;
+        if (!parser.Found("studies", &studies) || !parser.Found("out", &out) || !parser.Found("study-id", &id)) {
+            spdlog::error("--composer-reference-profile requires --studies <a;b>, --out <profile.json> and --study-id <id>");
+            std::exit(2);
+        }
+        std::vector<std::string> dirs;
+        for (const wxString& d : wxSplit(studies, ';')) {
+            if (!d.IsEmpty()) {
+                dirs.push_back(d.ToStdString(wxConvUTF8));
+            }
+        }
+        composer::ThemeCatalog themes;
+        std::string error;
+        const bool haveThemes = composer::LoadThemeCatalog(composer::DefaultThemeCatalogPath(), themes, error);
+        std::string json;
+        if (!composer::BuildReferenceProfile(dirs, id.ToStdString(wxConvUTF8), "Reference style: " + id.ToStdString(wxConvUTF8), haveThemes ? &themes : nullptr, json, error)) {
+            printf("composer-reference-profile: %s\n", error.c_str());
+            std::exit(1);
+        }
+        std::ofstream file(std::filesystem::path(out.ToStdString(wxConvUTF8)), std::ios::binary | std::ios::trunc);
+        file << json;
+        printf("composer-reference-profile: %s written from %zu studies\n", out.ToStdString(wxConvUTF8).c_str(), dirs.size());
+        std::exit(file.good() ? 0 : 1);
     }
 
     if (parser.Found("composer-reference-study")) {

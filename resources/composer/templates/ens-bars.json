@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "ens-bars",
+  "version": 1,
+  "effect": "Bars",
+  "roles": [
+    "window",
+    "arch",
+    "matrix",
+    "mega-tree",
+    "small-tree",
+    "group",
+    "line"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-bed"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    2000,
+    12000
+  ],
+  "maxPerMinute": 12,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Bars_BarCount",
+      "energy": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "Bars_Cycles",
+      "energy": [
+        1.5,
+        6.0
+      ]
+    },
+    {
+      "id": "Bars_Direction",
+      "choices": [
+        "up",
+        "Right",
+        "down"
+      ]
+    },
+    {
+      "id": "Bars_3D",
+      "choices": [
+        true,
+        false
+      ]
+    },
+    {
+      "id": "Bars_Gradient",
+      "value": false
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

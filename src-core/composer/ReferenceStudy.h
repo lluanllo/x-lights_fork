@@ -20,8 +20,15 @@ struct ReferenceStudyOptions {
     int imageWidth = 1280;
 };
 
-// Writes stats.json, summary.txt, timeline.csv, frames/house_<ms>.png and
-// contact_sheet.png under outDir. 0 written, 1 failed, 2 refused.
+// Writes stats.json, timeline.csv, frames/house_<ms>.png and contact_sheet.png
+// under outDir. 0 written, 1 failed, 2 refused.
 [[nodiscard]] int RunReferenceStudy(const ReferenceStudyOptions& options);
+
+// A style profile with the ensemble on, from one or more studies' stats.json: one study
+// gives that show's style, several their average. Every value says what it was
+// measured from; `themes` (may be null) picks the theme nearest to their colours.
+struct ThemeCatalog;
+[[nodiscard]] bool BuildReferenceProfile(const std::vector<std::string>& studyDirs, const std::string& id, const std::string& name, const ThemeCatalog* themes, std::string& profileJson,
+                                         std::string& error);
 
 } // namespace composer

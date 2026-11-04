@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "id": "ens-pinwheel",
+  "version": 1,
+  "effect": "Pinwheel",
+  "roles": [
+    "figure",
+    "prop",
+    "mega-tree",
+    "matrix",
+    "group"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-bed"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    2000,
+    12000
+  ],
+  "maxPerMinute": 12,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Pinwheel_Arms",
+      "energy": [
+        3,
+        6
+      ]
+    },
+    {
+      "id": "Pinwheel_ArmSize",
+      "value": 170
+    },
+    {
+      "id": "Pinwheel_Twist",
+      "value": 60
+    },
+    {
+      "id": "Pinwheel_Thickness",
+      "value": 55
+    },
+    {
+      "id": "Pinwheel_Speed",
+      "energy": [
+        3,
+        10
+      ]
+    },
+    {
+      "id": "Pinwheel_Style",
+      "value": "New Render Method"
+    },
+    {
+      "id": "Pinwheel_3D",
+      "choices": [
+        "3D",
+        "None"
+      ]
+    },
+    {
+      "id": "Pinwheel_Rotation",
+      "value": true
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

@@ -264,6 +264,30 @@ private:
         Check(std::fabs(even.analysis.globalBpm - 120) <= 1, fmt::format("BPM {} (120)", even.analysis.globalBpm));
         Check(TimesOf(even.analysis, MusicalEventType::Downbeat).empty() && HasWarning(even.analysis, "downbeat-undetermined"), fmt::format("no downbeats invented ({})", TimesOf(even.analysis, MusicalEventType::Downbeat).size()));
 
+        Title("A4. Octaves: steady songs from 100 to 199 BPM are read at their own tempo");
+        for (const double bpm : { 100.0, 140.0, 199.0 }) {
+            const double beatS = 60.0 / bpm;
+            SyntheticSong steady(32);
+            std::vector<int> truth;
+            for (int i = 0; START + i * beatS < 31; ++i) {
+                const double at = START + i * beatS;
+                truth.push_back(static_cast<int>(std::lround(at * 1000)));
+                if (i % 4 == 0) {
+                    steady.Kick(at, 0.9);
+                    steady.Click(at, 0.8);
+                } else {
+                    steady.Click(at, 0.35);
+                }
+            }
+            const AnalysisResult r = Analyze(steady, fmt::format("a4_{}bpm", static_cast<int>(bpm)));
+            const double found = r.analysis.globalBpm;
+            const double ratio = found / bpm;
+            Check(std::fabs(ratio - 1.0) <= 0.02, fmt::format("{} BPM read as {} ({}{})", bpm, found, ratio < 0.75 ? "half: an octave down" : ratio > 1.4 ? "double: an octave up" : "its own tempo",
+                                                            ""));
+            const Match m = Compare(TimesOf(r.analysis, MusicalEventType::Beat), truth, BEAT_TOLERANCE_MS);
+            Check(m.f >= MIN_BEAT_F, fmt::format("{} BPM beats: F {:.3f}, median error {} ms", bpm, m.f, m.medianError));
+        }
+
         Title("A3. The first downbeat is not the first beat");
         SyntheticSong shifted(32);
         std::vector<int> shiftedDownbeats;

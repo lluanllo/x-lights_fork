@@ -3,6 +3,8 @@
 #endif
 
 #include "composer/ChoreographyTest.h"
+#include "composer/MusicAssist.h"
+#include "composer/VisualDirection.h"
 
 #include "composer/Choreography.h"
 #include "composer/CompositionPlan.h"
@@ -36,6 +38,7 @@ namespace composer {
 namespace {
 
 constexpr const char* LYRIC_TRACK = "Letra Composer";
+constexpr int FRAME = 25;
 
 long long ElapsedMS(std::chrono::steady_clock::time_point since) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - since).count();
@@ -102,6 +105,7 @@ public:
         TestValidator();
         TestProperties();
         TestSequenceWriter();
+        TestEnsemble();
         WriteOutputs();
         TestRealLayout();
         printf("composer-choreography-test: %d checks passed, %d failed (%s)\n", _passed, _failed, _root.string().c_str());
@@ -193,7 +197,10 @@ private:
 
     void TestTemplates() {
         Title("Template library");
-        Check(_library.rejected.empty() && _library.templates.size() == 17, fmt::format("1. {} starter templates load and validate against the effects' metadata ({} rejected) in {} ms", _library.templates.size(), _library.rejected.size(), _loadMS));
+        const auto starters = std::count_if(_library.templates.begin(), _library.templates.end(), [](const EffectTemplate& t) { return t.provenance == "neutral-starter"; });
+        const auto ensemble = std::count_if(_library.templates.begin(), _library.templates.end(), [](const EffectTemplate& t) { return t.provenance == "reference-derived"; });
+        Check(_library.rejected.empty() && starters == 17 && ensemble == 13 && _library.templates.size() == 30,
+              fmt::format("1. {} starter and {} ensemble templates load and validate against the effects' metadata ({} rejected) in {} ms", starters, ensemble, _library.rejected.size(), _loadMS));
         for (const RejectedTemplate& r : _library.rejected) {
             printf("    rejected %s: %s\n", r.file.c_str(), r.errors.empty() ? "" : r.errors[0].c_str());
         }
@@ -756,6 +763,216 @@ private:
     }
 
     // ------------------------------------------------------------ sequence writer
+
+    // ------------------------------------------------------------ ensemble
+
+    StyleProfile ReferenceProfile(std::string& error) const {
+        StyleProfile p;
+        const fs::path file = fs::path(_templatesDir).parent_path() / "profiles" / "reference-all.json";
+        std::ifstream in(file, std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        if (!FromJson(text.str(), p, error)) {
+            error = file.string() + ": " + error;
+        }
+        return p;
+    }
+
+    void TestEnsemble() {
+        Title("The whole display together: themes, scenes and the ensemble");
+        std::string error;
+        int shipped = 0;
+        bool allOn = true;
+        for (const auto& entry : fs::directory_iterator(fs::path(_templatesDir).parent_path() / "profiles")) {
+            std::ifstream in(entry.path(), std::ios::binary);
+            std::ostringstream text;
+            text << in.rdbuf();
+            StyleProfile p;
+            std::string e;
+            allOn = allOn && FromJson(text.str(), p, e) && p.ensemble.enabled && !p.ensemble.sources.empty();
+            ++shipped;
+        }
+        Check(shipped == 7 && allOn, fmt::format("{} reference profiles ship, each with the ensemble on and what it was measured from", shipped));
+        Check(ToJson(NeutralStarterProfile()).find("ensemble") == std::string::npos, "the neutral profile is written as it always was: no ensemble, the same hash");
+        StyleProfile reference = ReferenceProfile(error);
+        Check(error.empty() && reference.ensemble.enabled && reference.ensemble.coverageHigh > reference.ensemble.coverageLow, "the reference profile reads back " + error);
+        // The fixture is a handful of figures: with six of them in the plan nothing is left
+        // for the ensemble, so the plan here keeps to two.
+        reference.maxParticipants = 2;
+
+        ThemeCatalog themes;
+        const bool loaded = LoadThemeCatalog(DefaultThemeCatalogPath(), themes, error);
+        Check(loaded && themes.themes.size() >= 9, fmt::format("the theme catalogue loads: {} themes {}", themes.themes.size(), error));
+        const auto measured = std::count_if(themes.themes.begin(), themes.themes.end(), [](const ThemeDef& t) { return t.source == "reference-measured"; });
+        Check(measured == 6, fmt::format("{} of them measured in the references", measured));
+        ThemeCatalog broken;
+        const bool parsed = ParseThemeCatalog(R"({"themes":[{"id":"x","home":[["red"]],"accent":"#FFFFFF"}]})", broken, error);
+        Check(!parsed, "a theme with no valid colour is refused: " + error);
+
+        const CompositionPlan plan = MakePlanWith(reference, AutomationLevel::Balanced);
+        DirectionInput d;
+        d.plan = &plan;
+        d.capabilities = &_caps;
+        d.profile = &reference;
+        d.catalog = &themes;
+        d.analysis = &_song;
+        d.lyrics = &_doc;
+        d.title = "villancico.mp3";
+        const ShowVisualDirection direction = DirectShow(d);
+        Check(direction.enabled && direction.themeId == "christmas-classic" && direction.themeSource == "lyrics" && direction.themeConfidence > 0.3,
+              fmt::format("\"Navidad\" three times in the lyrics: theme {} from {} at {:.2f}", direction.themeId, direction.themeSource, direction.themeConfidence));
+        Check(std::none_of(direction.families.begin(), direction.families.end(), [](const VisualFamily& f) {
+                  return std::any_of(f.targets.begin(), f.targets.end(), [](const FamilyTarget& t) { return t.target == "Sin Controlador" || t.target == "Excluido"; });
+              }),
+              "no family holds a figure without a controller or an excluded one");
+        bool scenesOk = true;
+        std::map<std::string, std::set<std::string>> looks;
+        for (const SceneLook& l : direction.scenes) {
+            const PlanSegment* seg = nullptr;
+            for (const PlanSegment& sg : plan.segments) {
+                seg = sg.id == l.segmentId ? &sg : seg;
+            }
+            const bool silence = seg != nullptr && std::find(seg->flags.begin(), seg->flags.end(), "silence") != seg->flags.end();
+            scenesOk = scenesOk && (silence ? l.motif == "rest" : !l.colors.empty());
+            if (l.motif != "rest" && l.band != "climax") {
+                looks[l.lookKey].insert(l.motif + "/" + std::to_string(l.variant) + "/" + l.colors.front());
+            }
+        }
+        Check(scenesOk, "every scene has colours, and a silence stays a rest");
+        Check(std::all_of(looks.begin(), looks.end(), [](const auto& kv) { return kv.second.size() == 1; }), "a section that comes back keeps its colours and its movement");
+
+        ChoreographyInput in;
+        in.plan = &plan;
+        in.capabilities = &_caps;
+        in.library = &_library;
+        in.profile = &reference;
+        in.analysis = &_song;
+        in.alignment = &_alignment;
+        in.lyricTrack = LYRIC_TRACK;
+        in.direction = &direction;
+        const Choreography c = Choreograph(in);
+        const ValidationReport report = ValidateChoreography(c, plan, _caps, _library, _metadata);
+        Check(report.ErrorCount() == 0, fmt::format("the ensemble choreography passes the checks: {} events, {} errors", c.events.size(), report.ErrorCount()));
+        const DirectionMetrics m = MeasureDirection(direction, c, _caps);
+        Check(m.paletteCoherence == 1.0, fmt::format("every coloured event uses its scene's colours ({:.2f})", m.paletteCoherence));
+        Check(m.coverageMean >= 0.6, fmt::format("most of the display is under an effect during music ({:.2f})", m.coverageMean));
+        std::string why;
+        for (const std::string& w : c.warnings) {
+            why += w.rfind("ensemble", 0) == 0 ? " " + w : "";
+        }
+        std::set<std::string> claimedGroups;
+        for (const PlanSegment& sg : plan.segments) {
+            for (const PlanAssignment& a : sg.assignments) {
+                if (a.prominence != Prominence::Rest && a.type == TargetType::Group) {
+                    claimedGroups.insert(a.target);
+                }
+            }
+        }
+        for (const std::string& g : claimedGroups) {
+            why += " plan-group:" + g;
+        }
+        Check(m.hits > 0 && m.startsTogether > 0.5, fmt::format("{} hits; {:.2f} of the starts are shared, as the references cut together{}", m.hits, m.startsTogether, why));
+        std::set<int> beats;
+        for (const MusicalEvent& e : _song.events) {
+            if (e.type == MusicalEventType::Beat || e.type == MusicalEventType::Downbeat) {
+                beats.insert(e.timeMS / FRAME * FRAME);
+            }
+        }
+        bool hitsOnBeat = true;
+        bool layersRight = true;
+        bool silentRest = true;
+        bool noFreeModel = true;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.intent == "ensemble-hit") {
+                hitsOnBeat = hitsOnBeat && (beats.contains(e.startMS) || beats.contains(e.startMS - FRAME) || beats.contains(e.startMS + FRAME));
+                layersRight = layersRight && e.layer == 0 && e.fadeInMS == 0 && e.fadeOutMS > 0;
+            } else if (e.intent == "ensemble-bed") {
+                layersRight = layersRight && e.layer == 1;
+            }
+            const TargetInfo* t = _caps.Find(e.target);
+            noFreeModel = noFreeModel && (t == nullptr || !t->noController || e.intent.rfind("ensemble", 0) != 0);
+        }
+        for (const PlanSegment& sg : plan.segments) {
+            if (std::find(sg.flags.begin(), sg.flags.end(), "silence") == sg.flags.end()) {
+                continue;
+            }
+            for (const ChoreographyEvent& e : c.events) {
+                silentRest = silentRest && (e.endMS <= sg.startMS || e.startMS >= sg.endMS);
+            }
+        }
+        Check(hitsOnBeat, "every hit starts on a beat");
+        Check(layersRight, "bases under (layer 1), hits over (layer 0) and dying away");
+        Check(silentRest, "nothing moves in a pause");
+        Check(noFreeModel, "the ensemble never lights a figure without a controller");
+        bool apart = true;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.intent.rfind("ensemble", 0) != 0) {
+                continue;
+            }
+            for (const ChoreographyEvent& o : c.events) {
+                if (o.intent.rfind("ensemble", 0) == 0 || o.segmentId != e.segmentId) {
+                    continue;
+                }
+                apart = apart && !_caps.Overlap(e.target, o.target);
+            }
+        }
+        Check(apart, "the ensemble keeps off the lights of the plan's figures in the same segment");
+        Check(ToJson(Choreograph(in)) == ToJson(c), "the same inputs give the same ensemble");
+        const Choreography without = Make(_plans[1], _song);
+        ChoreographyInput off = in;
+        off.plan = &_plans[1];
+        off.profile = nullptr;
+        off.direction = nullptr;
+        Check(ToJson(Choreograph(off)) == ToJson(without), "without a direction the choreography is exactly what it was");
+
+        ChoreographyInput calm = in;
+        const CompositionPlan calmPlan = MakePlanWith(reference, AutomationLevel::Conservative);
+        DirectionInput dc = d;
+        dc.plan = &calmPlan;
+        const ShowVisualDirection calmDirection = DirectShow(dc);
+        calm.plan = &calmPlan;
+        calm.direction = &calmDirection;
+        const DirectionMetrics cm = MeasureDirection(calmDirection, Choreograph(calm), _caps);
+        Check(cm.hits < m.hits, fmt::format("conservative: fewer hits ({} against {})", cm.hits, m.hits));
+
+        // Where the theme comes from.
+        const LyricDocument winter = ParsePlainLyrics("Cae la nieve en invierno\nfrío y nieve\n");
+        DirectionInput dw = d;
+        dw.lyrics = &winter;
+        dw.title = "cancion.mp3";
+        Check(DirectShow(dw).themeId == "winter-night", "lyrics about snow and winter: the winter night theme");
+        SongCharacter sure;
+        sure.provider = "gemini";
+        sure.suggestedTheme = "halloween";
+        sure.themeConfidence = 0.8;
+        dw.character = &sure;
+        const ShowVisualDirection fromCharacter = DirectShow(dw);
+        Check(fromCharacter.themeId == "halloween" && fromCharacter.themeSource == "song-character", "a song description sure of its theme wins, and says so");
+        SongCharacter unsure = sure;
+        unsure.suggestedTheme = "uncertain";
+        dw.character = &unsure;
+        Check(DirectShow(dw).themeSource == "lyrics", "an uncertain description is not taken");
+        const LyricDocument nothing = ParsePlainLyrics("La la la\n");
+        dw.lyrics = &nothing;
+        dw.character = nullptr;
+        const ShowVisualDirection fallback = DirectShow(dw);
+        Check(fallback.themeSource == "profile-default" && fallback.themeConfidence <= 0.3, "nothing to go on: the profile's theme, at low confidence");
+        DirectionInput neutral = d;
+        neutral.profile = nullptr;
+        Check(!DirectShow(neutral).enabled, "the neutral profile asks for no direction");
+    }
+
+    CompositionPlan MakePlanWith(const StyleProfile& profile, AutomationLevel level) const {
+        PlannerInput in;
+        in.analysis = &_song;
+        in.capabilities = &_caps;
+        in.options.level = level;
+        in.options.seed = 7;
+        in.lyrics = &_doc;
+        in.alignment = &_alignment;
+        in.profile = &profile;
+        return PlanComposition(in);
+    }
 
     void TestSequenceWriter() {
         Title("A small choreography through SequenceWriter, on the isolated fixture only");

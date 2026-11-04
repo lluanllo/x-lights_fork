@@ -1,6 +1,8 @@
 #pragma once
 
 #include "composer/Choreography.h"
+#include "composer/MusicAssist.h"
+#include "composer/VisualDirection.h"
 #include "composer/ComposerTypes.h"
 #include "composer/CompositionPlan.h"
 #include "composer/GenerationSidecar.h"
@@ -75,6 +77,9 @@ struct GenerationRequest {
     std::string lyricSessionPath; // the marks of the "Sync Lyrics" dialog
     std::string correctionsPath;  // a CorrectionSet file
     std::string previousSidecarPath; // regenerate: its corrections and locks are kept
+    std::string themesPath;     // empty: resources/composer/themes.json
+    std::string characterPath;  // a song description saved by the music assistant
+    std::string transcriptPath; // a transcription saved by the music assistant: word times for the lyrics
     std::optional<AutomationLevel> level; // default: balanced, or the previous sidecar's
     std::optional<uint64_t> seed;         // default: 1, or the previous sidecar's
     int frameMS = 25;
@@ -150,6 +155,13 @@ struct GenerationRun {
 
     // Plan and choreography
     CompositionPlan plan;
+    ShowVisualDirection direction;
+    DirectionMetrics directionMetrics;
+    ThemeCatalog themes;
+    SongCharacter character;
+    bool hasCharacter = false;
+    Transcript transcript;
+    TranscriptAlignment transcriptAlignment;
     Choreography choreography;
     ValidationReport planValidation;
     ValidationReport choreographyValidation;
