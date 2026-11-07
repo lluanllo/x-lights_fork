@@ -112,6 +112,8 @@
     <ClCompile Include="..\src-core\composer\GenerationSidecar.cpp" />
     <ClCompile Include="..\src-core\composer\ComposerReview.cpp" />
     <ClCompile Include="..\src-core\composer\PipelineTest.cpp" />
+    <ClCompile Include="..\src-core\composer\MediaTest.cpp" />
+    <ClCompile Include="..\src-core\composer\MediaLibrary.cpp" />
     <ClCompile Include="..\src-core\composer\VisualDirection.cpp" />
     <ClCompile Include="..\src-core\composer\ReferenceStudy.cpp" />
     <ClCompile Include="..\src-core\composer\AssistTest.cpp" />
@@ -1714,6 +1716,8 @@
     <ClInclude Include="..\src-core\composer\GenerationSidecar.h" />
     <ClInclude Include="..\src-core\composer\ComposerReview.h" />
     <ClInclude Include="..\src-core\composer\PipelineTest.h" />
+    <ClInclude Include="..\src-core\composer\MediaTest.h" />
+    <ClInclude Include="..\src-core\composer\MediaLibrary.h" />
     <ClInclude Include="..\src-core\composer\VisualDirection.h" />
     <ClInclude Include="..\src-core\composer\ReferenceStudy.h" />
     <ClInclude Include="..\src-core\composer\AssistTest.h" />
