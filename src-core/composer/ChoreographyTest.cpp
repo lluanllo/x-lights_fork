@@ -200,7 +200,7 @@ private:
         Title("Template library");
         const auto starters = std::count_if(_library.templates.begin(), _library.templates.end(), [](const EffectTemplate& t) { return t.provenance == "neutral-starter"; });
         const auto ensemble = std::count_if(_library.templates.begin(), _library.templates.end(), [](const EffectTemplate& t) { return t.provenance == "reference-derived"; });
-        Check(_library.rejected.empty() && starters == 17 && ensemble == 13 && _library.templates.size() == 30,
+        Check(_library.rejected.empty() && starters == 18 && ensemble == 13 && _library.templates.size() == 31,
               fmt::format("1. {} starter and {} ensemble templates load and validate against the effects' metadata ({} rejected) in {} ms", starters, ensemble, _library.rejected.size(), _loadMS));
         for (const RejectedTemplate& r : _library.rejected) {
             printf("    rejected %s: %s\n", r.file.c_str(), r.errors.empty() ? "" : r.errors[0].c_str());
