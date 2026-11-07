@@ -32,10 +32,13 @@
 #include <spdlog/fmt/fmt.h>
 
 #include "ComposerJob.h"
+#include "ComposerMediaDialogs.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
 #include "composer/LyricAligner.h"
 #include "composer/LyricDocument.h"
+#include "composer/MediaLibrary.h"
+#include "composer/MediaTest.h"
 #include "composer/WriterTest.h"
 #include "utils/ExternalHooks.h"
 #include "xLightsMain.h"
@@ -287,6 +290,37 @@ private:
                               return true;
                           },
                            20 });
+        _steps.push_back({ "pictures and videos", [this]() {
+                              // Original files made by the test, in a folder of this inactive copy of the show.
+                              const fs::path folder = fs::path(_frame->GetShowDirectory()) / "Medios de prueba Show Composer";
+                              std::string error;
+                              Check(WriteMediaFixtures(folder.string(), error), "original test pictures, an animation and a video in the show copy " + error);
+                              auto* library = new MediaLibraryDialog(_dialog, _frame->GetShowDirectory(), {});
+                              library->SetQuiet(true);
+                              std::string refused;
+                              Check(!library->AddFolder(fs::path(_frame->GetShowDirectory()).root_path().string(), refused) && refused == "root", "a whole disk is refused as a media folder");
+                              Check(library->AddFolder(folder.string(), refused) && library->Scan(), "the folder is searched");
+                              const MediaLibrary& found = library->Library();
+                              int usable = 0;
+                              std::string first;
+                              for (const MediaItem& m : found.items) {
+                                  usable += m.Usable() ? 1 : 0;
+                                  first = first.empty() && m.kind == MediaKind::Image ? m.id : first;
+                              }
+                              Check(usable == 7, fmt::format("{} pictures, animations and videos found, each with a thumbnail", usable));
+                              library->SelectItem(first);
+                              library->SetItemCategories({ "christmas", "snow" });
+                              library->Show();
+                              library->Update();
+                              Capture(library, "biblioteca-medios");
+                              Check(library->SaveLibrary() && FileExists(MediaLibraryPath(_frame->GetShowDirectory())), "the library is kept in the show's Show Composer folder");
+                              _dialog->SetMediaFolders(library->Folders());
+                              library->Destroy();
+                              Check(_dialog->MediaFolders().size() == 1, "the window uses the folder for the show");
+                              Capture(_dialog, "crear-con-medios");
+                              return true;
+                          },
+                           60 });
         _steps.push_back({ "analysis and lyrics", [this]() {
                               if (!_started) {
                                   _started = true;
@@ -350,6 +384,11 @@ private:
                               const LevelSummary b = SummarizeLevel(_dialog->LevelReport(AutomationLevel::Balanced));
                               Check(all, "the three levels compared from their own choreographies:" + numbers);
                               Check(b.faces > 0 && b.texts > 0 && b.accents > 0, "balanced: faces sing, a matrix shows the lyrics, and the hand-made bar gives accents");
+                              {
+                                  const auto& rows = _dialog->MediaRows();
+                                  const bool chosen = std::any_of(rows.begin(), rows.end(), [](const ShowComposerDialog::MediaRow& m) { return !m.name.empty() && !m.why.empty(); });
+                                  Check(chosen, fmt::format("pictures and videos chosen for the show, each saying why ({} rows)", rows.size()));
+                              }
                               const ReportFolder& balanced = _dialog->LevelReport(AutomationLevel::Balanced);
                               Check(balanced.directionReport.find("Theme:") != std::string::npos && balanced.direction.find("\"scenes\"") != std::string::npos,
                                     "the art direction is shown: theme, colours and scenes");
@@ -406,6 +445,50 @@ private:
                               return true;
                           },
                            1800 });
+        _steps.push_back({ "voices", [this]() {
+                              const ReportFolder& a = _dialog->AnalysisReport();
+                              std::vector<VoicePhrase> phrases;
+                              for (const AlignedPhrase& p : a.alignment.phrases) {
+                                  if (!p.instrumental) {
+                                      VoicePhrase v;
+                                      v.id = p.id;
+                                      v.text = p.text;
+                                      v.startMS = p.startMS;
+                                      v.endMS = p.endMS;
+                                      v.voices = p.voices;
+                                      v.words = 3;
+                                      phrases.push_back(v);
+                                  }
+                              }
+                              std::vector<std::string> faces;
+                              for (const TargetInfo& t : _dialog->Capabilities().targets) {
+                                  if (t.type == TargetType::Model && !t.faces.empty()) {
+                                      faces.push_back(t.name);
+                                  }
+                              }
+                              auto* voices = new VoicesDialog(_dialog, _dialog->CurrentVoices(), phrases, faces, {});
+                              voices->AddVoice("Ana");
+                              voices->AddVoice("Narrador");
+                              voices->SetVoiceRole("v:ana", VoiceRole::Lead);
+                              voices->SetVoiceRole("v:narrador", VoiceRole::Narrator);
+                              voices->SetVoiceFacesOff("v:narrador", true);
+                              for (int i = 0; i < static_cast<int>(phrases.size()); ++i) {
+                                  voices->SetPhraseVoices(i, { i == 0 ? std::string("v:narrador") : std::string("v:ana") }, i == 0);
+                              }
+                              voices->Show();
+                              voices->Update();
+                              Capture(voices, "voces");
+                              _dialog->ApplyVoiceEdits(voices->Voices(), voices->Corrections());
+                              voices->Destroy();
+                              const CorrectionSet& c = _dialog->Corrections();
+                              const auto voiceMarks = std::count_if(c.lyrics.begin(), c.lyrics.end(), [](const LyricCorrection& l) { return l.level == LyricCorrection::Level::Voice; });
+                              Check(c.voices.size() == 2 && voiceMarks == static_cast<long>(phrases.size()) && !phrases.empty(),
+                                    fmt::format("two voices named by the person, {} phrases given their voice, the narrator with no face", voiceMarks));
+                              _dialog->GoTo(ShowComposerDialog::Step::Analysis);
+                              Capture(_dialog, "voces-en-analisis");
+                              return true;
+                          },
+                           20 });
         _steps.push_back({ "an error is explained", [this]() {
                               _dialog->SetSequenceName("carpeta/nombre.xsq");
                               _dialog->StartGeneration();
@@ -459,6 +542,8 @@ private:
                               Check(r.hasSummary && r.summary.find("\"faceTargets\": [") != std::string::npos && r.summary.find("\"faceTargets\": []") == std::string::npos && r.summary.find("\"textTargets\": []") == std::string::npos,
                                     "the result names the singing faces and the matrix with lyrics");
                               Check(r.summary.find("\"direction\"") != std::string::npos && r.summary.find("\"paletteCoherence\"") != std::string::npos, "the result compares the show with the references");
+                              Check(r.summary.find("\"assignments\": [") != std::string::npos && r.summary.find("\"assignments\": []") == std::string::npos && r.summary.find("\"name\": \"Ana\"") != std::string::npos,
+                                    "the result shows the pictures and videos used, and the voices the person named");
                               Capture(_dialog, "resultado");
                               return true;
                           },

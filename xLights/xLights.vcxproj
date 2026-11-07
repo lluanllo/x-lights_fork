@@ -901,6 +901,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-ui-wx\composer\ShowComposerDialog.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerJob.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerTimeline.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerMediaDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ManageMediaPanel.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ShaderPreviewGenerator.cpp" />
@@ -1614,6 +1615,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-ui-wx\composer\ShowComposerDialog.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerJob.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerTimeline.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerMediaDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\media\ManageMediaPanel.h" />
     <ClInclude Include="..\src-ui-wx\media\ShaderPreviewGenerator.h" />

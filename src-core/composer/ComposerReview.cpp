@@ -74,6 +74,7 @@ bool LoadReportFolder(const std::string& folder, ReportFolder& out, std::string&
     (void)ReadIfThere(dir / "visual-direction.json", r.direction);
     (void)ReadIfThere(dir / "direction-metrics.json", r.directionMetrics);
     (void)ReadIfThere(dir / "transcript-alignment.json", r.transcriptAlignment);
+    (void)ReadIfThere(dir / "media-plan.json", r.media);
     if (ReadIfThere(dir / "summary.json", r.summary)) {
         r.hasSummary = true;
     }

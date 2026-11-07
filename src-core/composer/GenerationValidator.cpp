@@ -1362,6 +1362,22 @@ ValidationReport ValidateLyrics(const LyricAlignment& alignment, const TimingTra
                     kept = w.state == c.state && (c.startMS < 0 || (near(w.startMS, c.startMS) && near(w.endMS, c.endMS)));
                 }
             }
+        } else if (c.level == LyricCorrection::Level::Voice) {
+            // Who sings it, and how: the phrase says exactly what the person said.
+            for (const AlignedPhrase& p : alignment.phrases) {
+                if (p.id == c.targetId) {
+                    std::vector<std::string> have = p.voices;
+                    std::vector<std::string> want = c.voices;
+                    std::sort(have.begin(), have.end());
+                    std::sort(want.begin(), want.end());
+                    kept = have == want && (c.delivery.empty() || c.delivery == p.delivery);
+                }
+            }
+        } else if (c.level == LyricCorrection::Level::Split) {
+            const std::string second = c.targetId + "~" + std::to_string(c.wordIndex);
+            kept = std::any_of(alignment.phrases.begin(), alignment.phrases.end(), [&](const AlignedPhrase& p) { return p.id == second; });
+        } else if (c.level == LyricCorrection::Level::Merge) {
+            kept = std::any_of(alignment.phrases.begin(), alignment.phrases.end(), [&](const AlignedPhrase& p) { return p.id == c.targetId; });
         } else {
             for (const AlignedPhoneme& p : alignment.phonemes) {
                 if (p.id == c.targetId) {

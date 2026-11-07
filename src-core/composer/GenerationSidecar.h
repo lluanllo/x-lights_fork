@@ -90,6 +90,7 @@ struct CorrectionSet {
     std::vector<LyricCorrection> lyrics;
     AnalysisCorrections analysis;
     std::vector<MediaCorrection> media;
+    std::vector<VoiceDef> voices; // a person's names, roles and faces for the voices
 
     [[nodiscard]] bool Empty() const;
 };

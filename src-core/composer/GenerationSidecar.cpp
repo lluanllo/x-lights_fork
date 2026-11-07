@@ -246,7 +246,7 @@ std::string SidecarPathFor(const std::string& sequencePath) {
 }
 
 bool CorrectionSet::Empty() const {
-    return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && analysis.events.empty() && analysis.sections.empty() && analysis.bar.firstDownbeatMS < 0;
+    return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && voices.empty() && analysis.events.empty() && analysis.sections.empty() && analysis.bar.firstDownbeatMS < 0;
 }
 
 void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra) {
@@ -267,6 +267,10 @@ void MergeCorrections(CorrectionSet& into, const CorrectionSet& extra) {
     for (const MediaCorrection& c : extra.media) {
         UpsertMediaCorrection(into.media, c);
     }
+    for (const VoiceDef& v : extra.voices) {
+        std::erase_if(into.voices, [&](const VoiceDef& o) { return o.id == v.id; });
+        into.voices.push_back(v);
+    }
 }
 
 std::string ToJson(const CorrectionSet& c) {
@@ -278,6 +282,11 @@ std::string ToJson(const CorrectionSet& c) {
     root["analysis"] = AnalysisCorrectionsJson(c.analysis);
     if (!c.media.empty()) {
         root["media"] = MediaCorrectionsJson(c.media);
+    }
+    if (!c.voices.empty()) {
+        LyricSession voices;
+        voices.voices = c.voices;
+        root["voices"] = json::parse(ToJson(voices))["voices"];
     }
     return root.dump(1);
 }
@@ -297,6 +306,13 @@ bool FromJson(const std::string& text, CorrectionSet& corrections, std::string& 
         (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error)) || (root.contains("analysis") && !AnalysisCorrectionsFrom(root["analysis"], out.analysis, error)) ||
         (root.contains("media") && !MediaCorrectionsFrom(root["media"], out.media, error))) {
         return false;
+    }
+    if (root.contains("voices")) {
+        LyricSession voices;
+        if (!FromJson(json({ { "schemaVersion", 1 }, { "voices", root["voices"] } }).dump(), voices, error)) {
+            return false;
+        }
+        out.voices = std::move(voices.voices);
     }
     corrections = std::move(out);
     return true;

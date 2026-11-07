@@ -31,6 +31,11 @@ struct GenerateCommandOptions {
     std::string cancelFile; // the generation stops if this file appears
     bool render = true;
     int renderTimeoutMS = 0;
+    std::string mediaFolders; // separated by ';'
+    bool scanMedia = false;
+    bool mediaManualOnly = false;
+    std::string mediaShare; // 0-1; empty: by level
+    bool copyMedia = false; // the person agreed to copy files outside the show into it
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

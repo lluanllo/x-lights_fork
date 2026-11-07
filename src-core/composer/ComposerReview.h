@@ -35,6 +35,7 @@ struct ReportFolder {
     std::string direction;            // visual-direction.json as written
     std::string directionMetrics;     // direction-metrics.json as written
     std::string transcriptAlignment;  // transcript-alignment.json as written
+    std::string media;                // media-plan.json as written: the pictures and videos chosen
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

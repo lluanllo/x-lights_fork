@@ -813,6 +813,10 @@ bool PrepareLyrics(GenerationRun& run) {
         // A person's voice names and faces come with the marks, from this session or the
         // earlier show's.
         run.lyricSession.voices = !session.voices.empty() ? session.voices : run.hasPrevious ? run.previous.lyrics.voices : std::vector<VoiceDef>();
+        for (const VoiceDef& v : run.corrections.voices) {
+            std::erase_if(run.lyricSession.voices, [&](const VoiceDef& o) { return o.id == v.id; });
+            run.lyricSession.voices.push_back(v);
+        }
 
         int synced = 0;
         for (const AlignedPhrase& p : run.alignment.phrases) {

@@ -10367,3 +10367,336 @@ msgstr "Año nuevo, oro y blanco"
 
 msgid "Calm, warm white and soft blue"
 msgstr "Calma, blanco cálido y azul suave"
+
+msgid "Not usable"
+msgstr "No se puede usar"
+
+msgid "Format not supported"
+msgstr "Formato no admitido"
+
+msgid "Empty file"
+msgstr "Archivo vacío"
+
+msgid "Too large"
+msgstr "Demasiado grande"
+
+msgid "Damaged or unreadable"
+msgstr "Dañado o ilegible"
+
+msgid "Only when chosen"
+msgstr "Solo si lo eliges"
+
+msgid "Ready"
+msgstr "Listo"
+
+msgid "Categories"
+msgstr "Categorías"
+
+msgid "a whole disk is not searched; choose the folder that holds the pictures"
+msgstr "no se busca en un disco entero; elige la carpeta que tiene las imágenes"
+
+msgid "the whole home folder is not searched; choose the folder that holds the pictures"
+msgstr "no se busca en toda la carpeta personal; elige la carpeta que tiene las imágenes"
+
+msgid "a system folder is not searched"
+msgstr "no se busca en una carpeta del sistema"
+
+msgid "the folder does not exist"
+msgstr "la carpeta no existe"
+
+msgid "Christmas"
+msgstr "Navidad"
+
+msgid "Snow"
+msgstr "Nieve"
+
+msgid "Fire"
+msgstr "Fuego"
+
+msgid "Stars"
+msgstr "Estrellas"
+
+msgid "Forest"
+msgstr "Bosque"
+
+msgid "Animals"
+msgstr "Animales"
+
+msgid "Cinema"
+msgstr "Cine"
+
+msgid "Adventure"
+msgstr "Aventura"
+
+msgid "Fantasy"
+msgstr "Fantasía"
+
+msgid "Halloween"
+msgstr "Halloween"
+
+msgid "New Year"
+msgstr "Año Nuevo"
+
+msgid "Lights"
+msgstr "Luces"
+
+msgid "Backgrounds"
+msgstr "Fondos"
+
+msgid "Other"
+msgstr "Otros"
+
+msgid "Lead voice"
+msgstr "Voz principal"
+
+msgid "Second voice"
+msgstr "Segunda voz"
+
+msgid "Choir"
+msgstr "Coro"
+
+msgid "Narrator"
+msgstr "Narrador"
+
+msgid "Dialogue"
+msgstr "Diálogo"
+
+msgid "Other voice"
+msgstr "Otra voz"
+
+msgid "Unknown voice"
+msgstr "Voz desconocida"
+
+msgid "Pictures and Videos of the Show"
+msgstr "Imágenes y vídeos del espectáculo"
+
+msgid "Show Composer only reads these files: nothing is moved, renamed or deleted. A file outside the show is copied into it only if you agree when generating."
+msgstr "Show Composer solo lee estos archivos: no mueve, renombra ni borra nada. Un archivo de fuera del espectáculo solo se copia dentro si lo aceptas al generar."
+
+msgid "Add Folder..."
+msgstr "Añadir carpeta..."
+
+msgid "Remove Folder"
+msgstr "Quitar carpeta"
+
+msgid "Search the Folders"
+msgstr "Buscar en las carpetas"
+
+msgid "Everything"
+msgstr "Todo"
+
+msgid "Pictures and animations"
+msgstr "Imágenes y animaciones"
+
+msgid "Categories (they decide which songs it suits):"
+msgstr "Categorías (deciden a qué canciones le va):"
+
+msgid "Your own words, separated by commas:"
+msgstr "Tus propias palabras, separadas por comas:"
+
+msgid "Only when I choose it (never automatically)"
+msgstr "Solo cuando yo lo elija (nunca automáticamente)"
+
+msgid "Choose a Folder of Pictures and Videos"
+msgstr "Elige una carpeta de imágenes y vídeos"
+
+msgid "This folder is not searched: %s."
+msgstr "En esta carpeta no se busca: %s."
+
+msgid "Pictures and Videos"
+msgstr "Imágenes y vídeos"
+
+msgid "The library could not be saved in the show's Show Composer folder."
+msgstr "No se ha podido guardar la biblioteca en la carpeta Show Composer del espectáculo."
+
+msgid "Searching the Folders"
+msgstr "Buscando en las carpetas"
+
+msgid "Reading the pictures and videos..."
+msgstr "Leyendo las imágenes y los vídeos..."
+
+msgid "%d files read: %s"
+msgstr "%d archivos leídos: %s"
+
+msgid "%d files: %d can be used (%d videos), %d missing."
+msgstr "%d archivos: %d se pueden usar (%d vídeos), %d no están."
+
+msgid "Choose a file to see it and give it categories."
+msgstr "Elige un archivo para verlo y darle categorías."
+
+msgid "Categories suggested from the file's name: check them."
+msgstr "Categorías sugeridas por el nombre del archivo: revísalas."
+
+msgid "Choose a Picture or a Video"
+msgstr "Elige una imagen o un vídeo"
+
+msgid "Voices"
+msgstr "Voces"
+
+msgid "Voices come from the lyrics' tags ([Voz: Ana], [Coro], [Narrador]) and from names before a colon. Nothing is guessed from the sound: a phrase with no voice moves no face until you give it one."
+msgstr "Las voces salen de las etiquetas de la letra ([Voz: Ana], [Coro], [Narrador]) y de los nombres antes de dos puntos. No se adivina nada por el sonido: una frase sin voz no mueve ninguna cara hasta que le des una."
+
+msgid "Voice"
+msgstr "Voz"
+
+msgid "Role"
+msgstr "Papel"
+
+msgid "Role:"
+msgstr "Papel:"
+
+msgid "Chosen automatically"
+msgstr "Elegida automáticamente"
+
+msgid "No face moves for this voice"
+msgstr "Ninguna cara se mueve con esta voz"
+
+msgid "New Voice..."
+msgstr "Nueva voz..."
+
+msgid "How"
+msgstr "Cómo"
+
+msgid "Who sings the selected phrases:"
+msgstr "Quién canta las frases elegidas:"
+
+msgid "Spoken, not sung"
+msgstr "Hablada, no cantada"
+
+msgid "Give Them These Voices"
+msgstr "Darles estas voces"
+
+msgid "Before word:"
+msgstr "Antes de la palabra:"
+
+msgid "Split the Phrase"
+msgstr "Dividir la frase"
+
+msgid "Join With the Next"
+msgstr "Unir con la siguiente"
+
+msgid "Play the Phrase"
+msgstr "Escuchar la frase"
+
+msgid "Your changes are kept with the show and used the next time it is composed."
+msgstr "Tus cambios se guardan con el espectáculo y se usan la próxima vez que se componga."
+
+msgid "The voice's name, as you want to see it:"
+msgstr "El nombre de la voz, como quieras verlo:"
+
+msgid "New Voice"
+msgstr "Nueva voz"
+
+msgid "chosen automatically"
+msgstr "elegida automáticamente"
+
+msgid "no voice"
+msgstr "sin voz"
+
+msgid "spoken"
+msgstr "hablada"
+
+msgid "sung"
+msgstr "cantada"
+
+msgid "Pictures and videos"
+msgstr "Imágenes y vídeos"
+
+msgid "Pictures and Videos..."
+msgstr "Imágenes y vídeos..."
+
+msgid "Choose pictures and videos for the show by themselves (otherwise only the ones I assign)"
+msgstr "Elegir imágenes y vídeos para el espectáculo automáticamente (si no, solo los que yo asigne)"
+
+msgid "Copy the files that are outside the show folder into it (Images, Videos), so the show can be moved"
+msgstr "Copiar dentro de la carpeta del espectáculo (Images, Videos) los archivos que están fuera, para poder moverlo"
+
+msgid "Only your own files are used, on the matrices and mega trees, where no lyrics are shown. Originals are never moved or changed."
+msgstr "Solo se usan tus propios archivos, en las matrices y megaárboles, donde no se muestra la letra. Los originales nunca se mueven ni se cambian."
+
+msgid "Voices..."
+msgstr "Voces..."
+
+msgid "Pictures and videos: the ones chosen, and where one would fit if you had a file"
+msgstr "Imágenes y vídeos: los elegidos, y dónde encajaría uno si tuvieras el archivo"
+
+msgid "Choose a File..."
+msgstr "Elegir un archivo..."
+
+msgid "No Picture Here"
+msgstr "Sin imagen aquí"
+
+msgid "Keep This One"
+msgstr "Quedarme con este"
+
+msgid "No folder of pictures or videos: the show uses none."
+msgstr "Sin carpeta de imágenes o vídeos: el espectáculo no usa ninguno."
+
+msgid "%d folders, %d files that can be used."
+msgstr "%d carpetas, %d archivos que se pueden usar."
+
+msgid "One voice: every face sings the whole lyrics. Tag the lyrics ([Voz: Ana], [Coro], [Narrador]) to have several."
+msgstr "Una sola voz: todas las caras cantan toda la letra. Etiqueta la letra ([Voz: Ana], [Coro], [Narrador]) para tener varias."
+
+msgid "%d voices: %s. Changes are used the next time the show is composed."
+msgstr "%d voces: %s. Los cambios se usan la próxima vez que se componga."
+
+msgid "theme: %s"
+msgstr "tema: %s"
+
+msgid "shape %s"
+msgstr "forma %s"
+
+msgid "energy %s"
+msgstr "energía %s"
+
+msgid "same picture as the repeated section"
+msgstr "la misma imagen que la sección repetida"
+
+msgid "no singing"
+msgstr "sin canto"
+
+msgid "your choice"
+msgstr "elección tuya"
+
+msgid "copied into the show"
+msgstr "copiado al espectáculo"
+
+msgid "a video would fit here"
+msgstr "aquí encajaría un vídeo"
+
+msgid "a picture would fit here"
+msgstr "aquí encajaría una imagen"
+
+msgid "no file"
+msgstr "sin archivo"
+
+msgid "Kept"
+msgstr "Conservado"
+
+msgid "Your choice"
+msgstr "Elección tuya"
+
+msgid "Automatic"
+msgstr "Automático"
+
+msgid "no face"
+msgstr "sin cara"
+
+msgid "Voices: %s."
+msgstr "Voces: %s."
+
+msgid "Pictures and videos: %d, %.0f%% of the song, from your files."
+msgstr "Imágenes y vídeos: %d, el %.0f%% de la canción, de tus archivos."
+
+msgid "Analyze the song with its lyrics first: the voices come from the lyrics."
+msgstr "Analiza primero la canción con su letra: las voces salen de la letra."
+
+msgid "Choose a row of the list first."
+msgstr "Elige antes una fila de la lista."
+
+msgid "Where should the picture or video play?"
+msgstr "¿Dónde debe verse la imagen o el vídeo?"
+
+msgid "There are no pictures or videos yet: add a folder in \"Pictures and Videos...\"."
+msgstr "Todavía no hay imágenes ni vídeos: añade una carpeta en «Imágenes y vídeos...»."

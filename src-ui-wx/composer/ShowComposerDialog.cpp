@@ -53,6 +53,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
+#include "ComposerMediaDialogs.h"
 #include "ComposerTimeline.h"
 #include "ai/WxServiceSettingsStore.h"
 #include "composer/LyricDocument.h"
@@ -116,6 +117,11 @@ enum {
     ID_TRANSCRIBE,
     ID_DESCRIBE,
     ID_AI_KEYS,
+    ID_MEDIA_LIBRARY,
+    ID_VOICES,
+    ID_MEDIA_ASSIGN,
+    ID_MEDIA_REMOVE,
+    ID_MEDIA_LOCK,
 };
 
 constexpr int FRAME_MS = 25;
@@ -677,6 +683,19 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     look->Add(new wxButton(style->GetStaticBox(), ID_DESCRIBE, _("Describe the Song with AI (Gemini)...")), 0, wxALIGN_CENTER_VERTICAL);
     style->Add(look, 0, wxEXPAND | wxALL, 4);
 
+    wxStaticBoxSizer* mediaBox = box(_("Pictures and videos"));
+    auto* mediaRow = new wxBoxSizer(wxHORIZONTAL);
+    _mediaInfo = new wxStaticText(mediaBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1), wxST_ELLIPSIZE_END);
+    mediaRow->Add(_mediaInfo, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+    mediaRow->Add(new wxButton(mediaBox->GetStaticBox(), ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0);
+    mediaBox->Add(mediaRow, 0, wxEXPAND | wxALL, 4);
+    _mediaAuto = new wxCheckBox(mediaBox->GetStaticBox(), wxID_ANY, _("Choose pictures and videos for the show by themselves (otherwise only the ones I assign)"));
+    _mediaAuto->SetValue(true);
+    mediaBox->Add(_mediaAuto, 0, wxALL, 4);
+    _copyMedia = new wxCheckBox(mediaBox->GetStaticBox(), wxID_ANY, _("Copy the files that are outside the show folder into it (Images, Videos), so the show can be moved"));
+    mediaBox->Add(_copyMedia, 0, wxALL, 4);
+    mediaBox->Add(Muted(mediaBox->GetStaticBox(), _("Only your own files are used, on the matrices and mega trees, where no lyrics are shown. Originals are never moved or changed.")), 0, wxLEFT | wxBOTTOM, 6);
+
     wxStaticBoxSizer* output = box(_("Sequence"));
     auto* nameRow = new wxBoxSizer(wxHORIZONTAL);
     nameRow->Add(new wxStaticText(output->GetStaticBox(), wxID_ANY, _("Name:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
@@ -757,6 +776,8 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         StartAssist("describe", AskConsent("Google Gemini (generativelanguage.googleapis.com)", _("to describe its genre, mood and energy; it is only a suggestion and never changes the analysis")));
     }, ID_DESCRIBE);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
+    _mediaAuto->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { RefreshAll(); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         wxFileDialog dialog(this, _("Choose the Synchronization"), U(_showDir), "", _("xLights timing (*.xtiming)|*.xtiming"), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
         if (dialog.ShowModal() == wxID_OK) {
@@ -841,7 +862,13 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     _lyricsSync = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_lyricsSync, 0, wxEXPAND | wxBOTTOM, 2);
     _alignmentInfo = new wxStaticText(page, wxID_ANY, "");
-    sizer->Add(_alignmentInfo, 0, wxEXPAND | wxBOTTOM, 6);
+    sizer->Add(_alignmentInfo, 0, wxEXPAND | wxBOTTOM, 4);
+    auto* voicesRow = new wxBoxSizer(wxHORIZONTAL);
+    voicesRow->Add(new wxButton(page, ID_VOICES, _("Voices...")), 0, wxRIGHT, 8);
+    _voicesInfo = new wxStaticText(page, wxID_ANY, "");
+    voicesRow->Add(_voicesInfo, 1, wxALIGN_CENTER_VERTICAL);
+    sizer->Add(voicesRow, 0, wxEXPAND | wxBOTTOM, 6);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditVoices(); }, ID_VOICES);
 
     auto* play = new wxBoxSizer(wxHORIZONTAL);
     play->Add(new wxButton(page, ID_PLAY, _("Play / Pause")), 0, wxRIGHT, 4);
@@ -1053,12 +1080,22 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     _correctionInfo = Muted(page, "");
     sizer->Add(_correctionInfo, 0, wxEXPAND | wxBOTTOM, 6);
 
-    sizer->Add(new wxStaticText(page, wxID_ANY, _("Suggested pictures and videos (none is created: choose the files when the media library exists)")), 0, wxBOTTOM, 2);
-    _cueList = new wxListCtrl(page, wxID_ANY, wxDefaultPosition, wxSize(-1, 90), wxLC_REPORT | wxLC_SINGLE_SEL);
-    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 80 }, { _("To"), 80 }, { _("Figure"), 220 }, { _("Kind"), 90 }, { _("State"), 110 } }) {
+    sizer->Add(new wxStaticText(page, wxID_ANY, _("Pictures and videos: the ones chosen, and where one would fit if you had a file")), 0, wxBOTTOM, 2);
+    _cueList = new wxListCtrl(page, wxID_ANY, wxDefaultPosition, wxSize(-1, 110), wxLC_REPORT | wxLC_SINGLE_SEL);
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 70 }, { _("To"), 70 }, { _("Figure"), 160 }, { _("File"), 200 }, { _("State"), 110 }, { _("Why"), 320 } }) {
         _cueList->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
-    sizer->Add(_cueList, 0, wxEXPAND);
+    sizer->Add(_cueList, 0, wxEXPAND | wxBOTTOM, 4);
+    auto* mediaActions = new wxBoxSizer(wxHORIZONTAL);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_ASSIGN, _("Choose a File...")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_REMOVE, _("No Picture Here")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_LOCK, _("Keep This One")), 0, wxRIGHT, 12);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0);
+    sizer->Add(mediaActions, 0);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(0); }, ID_MEDIA_ASSIGN);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(1); }, ID_MEDIA_REMOVE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(2); }, ID_MEDIA_LOCK);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
     page->SetSizer(sizer);
 
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { StartComposition(); }, ID_COMPOSE);
@@ -1516,6 +1553,15 @@ void ShowComposerDialog::RefreshStyle() {
 void ShowComposerDialog::SetShowFolder(const std::string& path) {
     _showDir = path;
     _profilePath.clear();
+    // The show's media folders are the ones its library was last searched in.
+    _mediaFolders.clear();
+    MediaLibrary library;
+    std::string error;
+    if (!_showDir.empty() && ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+        for (const MediaFolder& f : library.folders) {
+            _mediaFolders.push_back(f.path);
+        }
+    }
     LoadShowInfo();
     SetSequenceName(_sequenceName);
     RefreshAll();
@@ -1737,6 +1783,16 @@ bool ShowComposerDialog::LoadPreviousShow(const std::string& sidecarPath, std::s
     _corrections.plan = sidecar.planCorrections;
     _corrections.choreography = sidecar.choreographyCorrections;
     _corrections.analysis = sidecar.analysisCorrections;
+    _corrections.media = sidecar.media.corrections;
+    if (!sidecar.media.folders.empty()) {
+        _mediaFolders.clear();
+        for (const std::string& f : sidecar.media.folders) {
+            _mediaFolders.push_back(MediaAbsolutePath(f, _showDir));
+        }
+    }
+    if (_mediaAuto != nullptr) {
+        _mediaAuto->SetValue(sidecar.media.automatic);
+    }
     _lyricsPath.clear();
     _timingPath.clear();
     _sessionPath.clear();
@@ -1801,12 +1857,24 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     if (!_renderCheck && stopAfter.empty()) {
         a.push_back("--no-render");
     }
+    if (!_mediaFolders.empty()) {
+        add("--media-folders", std::accumulate(std::next(_mediaFolders.begin()), _mediaFolders.end(), _mediaFolders.front(), [](std::string x, const std::string& y) { return x + ";" + y; }));
+    }
+    if (_mediaAuto != nullptr && !_mediaAuto->GetValue()) {
+        a.push_back("--media-manual-only");
+    }
+    // A copy is made only by the generation the person asked for, never by a preview.
+    if (_copyMedia != nullptr && _copyMedia->GetValue() && stopAfter.empty()) {
+        a.push_back("--copy-media");
+    }
     return a;
 }
 
 std::string ShowComposerDialog::InputsKey() const {
     return fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", _audioPath, _showDir, _lyricsPath, _timingPath, _sessionPath.empty() ? std::string() : ReadFile(fs::path(_sessionPath)), _profilePath, _templatesDir, _rolesPath,
-                       _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath);
+                       _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath) +
+           fmt::format("|{}|{}", std::accumulate(_mediaFolders.begin(), _mediaFolders.end(), std::string(), [](std::string x, const std::string& y) { return x + ";" + y; }),
+                       _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0);
 }
 
 void ShowComposerDialog::RunNext() {
@@ -2287,6 +2355,21 @@ void ShowComposerDialog::RefreshCreate() {
     if (_audioName == nullptr) {
         return;
     }
+    if (_mediaInfo != nullptr) {
+        if (_mediaFolders.empty()) {
+            _mediaInfo->SetLabel(_("No folder of pictures or videos: the show uses none."));
+        } else {
+            MediaLibrary library;
+            std::string error;
+            int usable = 0;
+            if (ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+                for (const MediaItem& m : library.items) {
+                    usable += m.Usable() ? 1 : 0;
+                }
+            }
+            _mediaInfo->SetLabel(wxString::Format(_("%d folders, %d files that can be used."), static_cast<int>(_mediaFolders.size()), usable));
+        }
+    }
     if (_audioPath.empty()) {
         _audioName->SetLabel(_("No song chosen"));
         SetWrapped(_audioInfo, _("Choose the song the show is for."));
@@ -2372,6 +2455,15 @@ void ShowComposerDialog::RefreshCreate() {
 void ShowComposerDialog::RefreshAnalysis() {
     if (_analysisInfo == nullptr) {
         return;
+    }
+    if (_voicesInfo != nullptr) {
+        const std::vector<VoiceDef> voices = CurrentVoices();
+        wxString names;
+        for (const VoiceDef& v : voices) {
+            names += (names.empty() ? "" : ", ") + U(v.name);
+        }
+        _voicesInfo->SetLabel(voices.empty() ? _("One voice: every face sings the whole lyrics. Tag the lyrics ([Voz: Ana], [Coro], [Narrador]) to have several.")
+                                             : wxString::Format(_("%d voices: %s. Changes are used the next time the show is composed."), static_cast<int>(voices.size()), names));
     }
     const SongAnalysis& a = _shownAnalysis;
     if (a.durationMS <= 0) {
@@ -2565,13 +2657,55 @@ void ShowComposerDialog::RefreshComposition() {
     const int conflicts = r.hasChoreography ? static_cast<int>(r.choreography.conflicts.size() + r.plan.conflicts.size()) : 0;
     _correctionInfo->SetLabel(wxString::Format(_("Your decisions: %d locked effects, %d excluded figures. %d could not be applied (see the figure). They are kept for every version, whatever the level or seed."), locks, exclusions, conflicts));
     _cueList->DeleteAllItems();
-    long cue = 0;
+    _mediaRows.clear();
+    const json media = r.media.empty() ? json() : json::parse(r.media, nullptr, false);
+    if (media.is_object()) {
+        for (const json& a : media.value("assignments", json::array())) {
+            MediaRow row;
+            row.segmentId = a.value("segment", std::string());
+            row.startMS = a.value("startMS", 0);
+            row.endMS = a.value("endMS", 0);
+            row.target = a.value("target", std::string());
+            row.mediaId = a.value("media", std::string());
+            row.name = a.value("name", std::string());
+            row.path = a.value("path", std::string());
+            row.state = a.value("state", std::string("automatic"));
+            for (const json& why : a.value("reasons", json::array())) {
+                const std::string code = why.value("code", std::string());
+                const wxString detail = U(why.value("detail", std::string()));
+                const wxString part = code == "theme-category" ? wxString::Format(_("theme: %s"), detail) : code == "aspect" ? wxString::Format(_("shape %s"), detail.BeforeFirst('(').Strip(wxString::both))
+                                      : code == "energy"           ? wxString::Format(_("energy %s"), detail)
+                                      : code == "repeat-keeps-media" ? _("same picture as the repeated section")
+                                      : code == "instrumental"     ? _("no singing")
+                                      : code == "chosen-by-person" || code == "locked-by-person" ? _("your choice")
+                                      : code == "copied-into-show" ? _("copied into the show")
+                                                                   : wxString();
+                if (!part.empty()) {
+                    row.why += (row.why.empty() ? "" : "; ") + part;
+                }
+            }
+            _mediaRows.push_back(std::move(row));
+        }
+    }
     for (const MediaCue& m : r.choreography.mediaCues) {
+        if (std::any_of(_mediaRows.begin(), _mediaRows.end(), [&](const MediaRow& x) { return x.target == m.target && x.startMS < m.endMS && x.endMS > m.startMS; })) {
+            continue;
+        }
+        MediaRow row;
+        row.startMS = m.startMS;
+        row.endMS = m.endMS;
+        row.target = m.target;
+        row.why = m.kind == "video" ? _("a video would fit here") : _("a picture would fit here");
+        _mediaRows.push_back(std::move(row));
+    }
+    long cue = 0;
+    for (const MediaRow& m : _mediaRows) {
         _cueList->InsertItem(cue, Time(m.startMS));
         _cueList->SetItem(cue, 1, Time(m.endMS));
         _cueList->SetItem(cue, 2, U(m.target));
-        _cueList->SetItem(cue, 3, m.kind == "video" ? _("Video") : _("Picture"));
-        _cueList->SetItem(cue, 4, _("Pending"));
+        _cueList->SetItem(cue, 3, m.name.empty() ? _("no file") : U(m.name));
+        _cueList->SetItem(cue, 4, m.state.empty() ? _("Pending") : m.state == "locked" ? _("Kept") : m.state == "manual-edit" ? _("Your choice") : _("Automatic"));
+        _cueList->SetItem(cue, 5, m.why);
         ++cue;
     }
     RefreshFigureDetails();
@@ -2698,10 +2832,28 @@ void ShowComposerDialog::RefreshResult() {
         textNames += (textNames.IsEmpty() ? "" : ", ") + U(t);
     }
     const wxString lyricText = lyrics == "none" ? _("no lyrics") : lyrics == "unsynchronized" ? _("lyrics not synchronized") : _("synchronized lyrics");
-    SetWrapped(_resultFacts, wxString::Format(_("%s long, level %s, seed %d. %d effects on %d figures (%d in the plan).\nChecks: %s. Render: %s.\nLyrics: %s. Faces singing: %s. Lyrics shown on: %s. %d pictures or videos suggested."),
+    const wxString facts = (wxString::Format(_("%s long, level %s, seed %d. %d effects on %d figures (%d in the plan).\nChecks: %s. Render: %s.\nLyrics: %s. Faces singing: %s. Lyrics shown on: %s. %d pictures or videos suggested."),
                                             Time(s.value("durationMS", 0)), LevelText(Level()), static_cast<int>(s.value("seed", 0)), s.value("effectsWritten", 0), s.value("targetsLit", 0), s.value("participants", 0),
                                             errors == 0 ? _("passed") : _("failed"), render.value("ran", false) ? wxString::Format(_("%d of %d frames, every effect lights its figure"), render.value("frames", 0), render.value("expectedFrames", 0)) : _("not run"),
                                             lyricText, faceNames.IsEmpty() ? _("none") : faceNames, textNames.IsEmpty() ? _("none") : textNames, static_cast<int>(s.value("mediaCues", 0))));
+    wxString extra;
+    wxString voiceNames;
+    for (const json& v : s.value("voices", json::array())) {
+        VoiceRole role = VoiceRole::Unknown;
+        (void)VoiceRoleFromId(v.value("role", std::string()), role);
+        const std::vector<std::string> vf = v.value("faces", std::vector<std::string>());
+        voiceNames += (voiceNames.empty() ? "" : "; ") + U(v.value("name", std::string())) + " (" + VoiceRoleName(role) + ", " +
+                      (v.value("facesOff", false) || vf.empty() ? _("no face") : U(std::accumulate(std::next(vf.begin()), vf.end(), vf.front(), [](std::string x, const std::string& y) { return x + ", " + y; }))) + ")";
+    }
+    if (!voiceNames.empty()) {
+        extra += "\n" + wxString::Format(_("Voices: %s."), voiceNames);
+    }
+    const json mediaSummary = s.value("media", json::object());
+    const json assigned = mediaSummary.value("assignments", json::array());
+    if (!assigned.empty()) {
+        extra += "\n" + wxString::Format(_("Pictures and videos: %d, %.0f%% of the song, from your files."), static_cast<int>(assigned.size()), mediaSummary.value("share", 0.0) * 100);
+    }
+    SetWrapped(_resultFacts, facts + extra);
     fs::path review = _resultSequence;
     review.replace_extension(".composer-review.json");
     if (FileExists(review.string())) {
@@ -2750,6 +2902,14 @@ void ShowComposerDialog::RefreshResult() {
         ++q;
     }
     long m = 0;
+    for (const json& c : s.value("media", json::object()).value("assignments", json::array())) {
+        _resultCues->InsertItem(m, Time(c.value("startMS", 0)));
+        _resultCues->SetItem(m, 1, Time(c.value("endMS", 0)));
+        _resultCues->SetItem(m, 2, U(c.value("target", std::string())));
+        _resultCues->SetItem(m, 3, U(c.value("name", std::string())));
+        _resultCues->SetItem(m, 4, c.value("state", std::string()) == "automatic" ? _("Automatic") : _("Your choice"));
+        ++m;
+    }
     for (const json& c : s.value("mediaCueList", json::array())) {
         _resultCues->InsertItem(m, Time(c.value("startMS", 0)));
         _resultCues->SetItem(m, 1, Time(c.value("endMS", 0)));
@@ -2758,4 +2918,173 @@ void ShowComposerDialog::RefreshResult() {
         _resultCues->SetItem(m, 4, _("Pending"));
         ++m;
     }
+}
+
+// ------------------------------------------------------------------ pictures, videos and voices
+
+void ShowComposerDialog::SetMediaFolders(const std::vector<std::string>& folders) {
+    _mediaFolders = folders;
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetMediaAutomatic(bool on) {
+    _mediaAuto->SetValue(on);
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetCopyMedia(bool on) {
+    _copyMedia->SetValue(on);
+}
+
+void ShowComposerDialog::EditMediaLibrary() {
+    if (_showDir.empty() || !_showOk) {
+        return;
+    }
+    MediaLibraryDialog dialog(this, _showDir, _mediaFolders);
+    if (dialog.ShowModal() == wxID_OK) {
+        _mediaFolders = dialog.Folders();
+        RefreshAll();
+    }
+}
+
+std::vector<VoiceDef> ShowComposerDialog::CurrentVoices() const {
+    std::vector<VoiceDef> cast;
+    const json s = _analysisReport.summary.empty() ? json() : json::parse(_analysisReport.summary, nullptr, false);
+    if (s.is_object()) {
+        for (const json& v : s.value("voices", json::array())) {
+            VoiceDef d;
+            d.id = v.value("id", std::string());
+            d.name = v.value("name", d.id);
+            (void)VoiceRoleFromId(v.value("role", std::string("unknown")), d.role);
+            d.delivery = v.value("delivery", std::string()) == "spoken" ? Delivery::Spoken : Delivery::Sung;
+            d.faces = v.value("faces", std::vector<std::string>());
+            d.facesOff = v.value("facesOff", false);
+            d.source = "lyrics";
+            cast.push_back(std::move(d));
+        }
+    }
+    for (const VoiceDef& e : _corrections.voices) {
+        std::erase_if(cast, [&](const VoiceDef& v) { return v.id == e.id; });
+        cast.push_back(e);
+    }
+    return cast;
+}
+
+void ShowComposerDialog::EditVoices() {
+    if (!_analysisReport.hasLyrics) {
+        wxMessageBox(_("Analyze the song with its lyrics first: the voices come from the lyrics."), _("Voices"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    std::vector<VoicePhrase> phrases;
+    for (const AlignedPhrase& p : _analysisReport.alignment.phrases) {
+        if (p.instrumental) {
+            continue;
+        }
+        VoicePhrase v;
+        v.id = p.id;
+        v.text = p.text;
+        v.startMS = p.startMS;
+        v.endMS = p.endMS;
+        v.voices = p.voices;
+        v.spoken = p.delivery == "spoken";
+        v.words = static_cast<int>(std::count_if(_analysisReport.alignment.words.begin(), _analysisReport.alignment.words.end(), [&](const AlignedWord& w) { return w.phraseId == p.id; }));
+        phrases.push_back(std::move(v));
+    }
+    std::vector<std::string> faces;
+    for (const TargetInfo& t : _capabilities.targets) {
+        if (t.type == TargetType::Model && !t.faces.empty() && !t.Excluded()) {
+            faces.push_back(t.name);
+        }
+    }
+    VoicesDialog dialog(this, CurrentVoices(), phrases, faces, [this](int start, int length) {
+        if (_audio != nullptr && _audioOk) {
+            _audio->Stop();
+            _audio->Play(start, length);
+        }
+    });
+    if (dialog.ShowModal() == wxID_OK) {
+        ApplyVoiceEdits(dialog.Voices(), dialog.Corrections());
+    }
+}
+
+void ShowComposerDialog::ApplyVoiceEdits(const std::vector<VoiceDef>& voices, const std::vector<LyricCorrection>& corrections) {
+    CorrectionSet extra;
+    extra.voices = voices;
+    extra.lyrics = corrections;
+    MergeCorrections(_corrections, extra);
+    RefreshAll();
+}
+
+void ShowComposerDialog::ApplyMediaCorrection(const MediaCorrection& correction) {
+    UpsertMediaCorrection(_corrections.media, correction);
+    RefreshAll();
+}
+
+void ShowComposerDialog::ChangeMedia(int action) {
+    const ReportFolder& level = _levels[static_cast<int>(Level())];
+    const long selected = _cueList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    MediaRow row;
+    if (selected >= 0 && selected < static_cast<long>(_mediaRows.size())) {
+        row = _mediaRows[selected];
+    } else if (action != 0 || !level.hasPlan) {
+        wxMessageBox(_("Choose a row of the list first."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+        return;
+    } else {
+        // No row: the person picks the section.
+        wxArrayString names;
+        std::vector<const PlanSegment*> segments;
+        for (const PlanSegment& s : level.plan.segments) {
+            if (s.endMS - s.startMS >= 3000) {
+                names.Add(wxString::Format("%s - %s  %s", Time(s.startMS), Time(s.endMS), U(s.sectionKind)));
+                segments.push_back(&s);
+            }
+        }
+        wxSingleChoiceDialog pick(this, _("Where should the picture or video play?"), _("Pictures and Videos"), names);
+        if (segments.empty() || pick.ShowModal() != wxID_OK) {
+            return;
+        }
+        row.segmentId = segments[pick.GetSelection()]->id;
+        row.startMS = segments[pick.GetSelection()]->startMS;
+    }
+    if (row.segmentId.empty() && level.hasPlan) {
+        for (const PlanSegment& s : level.plan.segments) {
+            if (row.startMS >= s.startMS && row.startMS < s.endMS) {
+                row.segmentId = s.id;
+                row.startMS = s.startMS;
+            }
+        }
+    }
+    if (row.segmentId.empty()) {
+        return;
+    }
+    MediaCorrection c;
+    c.segmentId = row.segmentId;
+    c.startMS = row.startMS;
+    c.target = row.target;
+    if (action == 1) {
+        c.action = MediaCorrection::Action::Remove;
+    } else if (action == 2) {
+        if (row.mediaId.empty()) {
+            return;
+        }
+        c.action = MediaCorrection::Action::Lock;
+        c.mediaId = row.mediaId;
+        c.path = row.path;
+    } else {
+        MediaLibrary library;
+        std::string error;
+        if (!ReadMediaLibrary(MediaLibraryPath(_showDir), library, error) || library.items.empty()) {
+            wxMessageBox(_("There are no pictures or videos yet: add a folder in \"Pictures and Videos...\"."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        MediaChooserDialog chooser(this, _showDir, library);
+        if (chooser.ShowModal() != wxID_OK || chooser.Chosen().empty()) {
+            return;
+        }
+        const MediaItem* m = library.Find(chooser.Chosen());
+        c.action = MediaCorrection::Action::Assign;
+        c.mediaId = m->id;
+        c.path = m->relative.empty() ? m->path : m->relative;
+    }
+    ApplyMediaCorrection(c);
 }

@@ -126,6 +126,7 @@ private:
     std::set<std::string> _removed;              // segment ids, or "segment|target"
     std::map<std::string, std::string> _byLook;  // look key -> media id
     std::map<std::string, std::string> _lookOf;  // media id -> the look it serves
+    std::map<std::string, std::string> _targetOfLook;
 
     const SceneLook* Scene(const PlanSegment& s) const {
         return _in.direction != nullptr && _in.direction->enabled ? _in.direction->Scene(s.id) : nullptr;
@@ -411,7 +412,15 @@ private:
             }
             const TargetInfo* target = nullptr;
             std::string busy;
-            for (const TargetInfo* t : _targets) {
+            // A repeated section shows its picture where it was shown before, when it can.
+            std::vector<const TargetInfo*> order = _targets;
+            if (repeat) {
+                const auto was = _targetOfLook.find(look);
+                if (was != _targetOfLook.end()) {
+                    std::stable_partition(order.begin(), order.end(), [&](const TargetInfo* t) { return t->name == was->second; });
+                }
+            }
+            for (const TargetInfo* t : order) {
                 if (Removed(s, t->name)) {
                     continue;
                 }
@@ -480,6 +489,7 @@ private:
             }
             _byLook[look] = best->id;
             _lookOf[best->id] = look;
+            _targetOfLook.emplace(look, target->name);
             taken.insert(s.sectionIndex);
             used += length;
             _out.assignments.push_back(std::move(a));

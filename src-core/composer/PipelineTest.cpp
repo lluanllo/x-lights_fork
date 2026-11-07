@@ -1148,6 +1148,21 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     r.transcriptPath = o.transcriptPath;
     r.render = o.render;
     r.renderTimeoutMS = o.renderTimeoutMS;
+    for (size_t at = 0; at < o.mediaFolders.size();) {
+        const size_t end = std::min(o.mediaFolders.find(';', at), o.mediaFolders.size());
+        if (end > at) {
+            r.mediaFolders.push_back(o.mediaFolders.substr(at, end - at));
+        }
+        at = end + 1;
+    }
+    r.scanMedia = o.scanMedia;
+    if (o.mediaManualOnly) {
+        r.mediaAutomatic = false;
+    }
+    if (!o.mediaShare.empty()) {
+        r.mediaMaxShare = std::clamp(std::strtod(o.mediaShare.c_str(), nullptr), 0.0, 1.0);
+    }
+    r.copyMediaIntoShow = o.copyMedia;
     if (!o.level.empty()) {
         AutomationLevel level;
         if (!LevelFrom(o.level, level)) {

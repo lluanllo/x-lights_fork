@@ -1245,6 +1245,11 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "themes", "with --composer-generate: a theme catalogue JSON instead of resources/composer/themes.json" },
         { wxCMD_LINE_OPTION, "", "character", "with --composer-generate: a song description saved by the music assistant" },
         { wxCMD_LINE_OPTION, "", "transcript", "with --composer-generate: a transcription saved by the music assistant, matched to the lyrics for word times" },
+        { wxCMD_LINE_OPTION, "", "media-folders", "with --composer-generate: picture and video folders, separated by ';'" },
+        { wxCMD_LINE_SWITCH, "", "scan-media", "with --composer-generate: search the media folders again before choosing" },
+        { wxCMD_LINE_SWITCH, "", "media-manual-only", "with --composer-generate: only the pictures and videos a person assigned" },
+        { wxCMD_LINE_OPTION, "", "media-share", "with --composer-generate: at most this share of the song (0-1) with a picture or a video" },
+        { wxCMD_LINE_SWITCH, "", "copy-media", "with --composer-generate: the person agreed to copy media outside the show into its Images and Videos folders" },
         { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
@@ -2107,6 +2112,7 @@ bool xLightsApp::OnInit()
             { "cache", &command.cacheDir }, { "lyrics", &command.lyricsPath }, { "timing", &command.timingPath }, { "timing-track", &command.timingTrack }, { "lyric-session", &command.lyricSessionPath },
             { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
             { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
+            { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare },
         };
         for (const auto& [name, target] : options) {
             if (parser.Found(name, &value)) {
@@ -2114,6 +2120,9 @@ bool xLightsApp::OnInit()
             }
         }
         command.render = !parser.Found("no-render");
+        command.scanMedia = parser.Found("scan-media");
+        command.mediaManualOnly = parser.Found("media-manual-only");
+        command.copyMedia = parser.Found("copy-media");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
             spdlog::error("--composer-generate requires a show directory (-s <dir>), --name <file>.xsq and --out <folder>");
             std::exit(2);

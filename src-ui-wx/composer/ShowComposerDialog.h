@@ -23,6 +23,7 @@
 
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaDirection.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/TemplateLibrary.h"
 
@@ -130,6 +131,27 @@ public:
     [[nodiscard]] const std::string& ShowFolder() const { return _showDir; }
     [[nodiscard]] const std::vector<composer::FigureSummary>& Figures() const { return _figures; }
     void AddMusicBarAt(int ms, int beatsPerBar);
+    // Pictures and videos, and voices: what the controls of steps 1, 2 and 3 change.
+    void SetMediaFolders(const std::vector<std::string>& folders);
+    [[nodiscard]] const std::vector<std::string>& MediaFolders() const { return _mediaFolders; }
+    void SetMediaAutomatic(bool on);
+    void SetCopyMedia(bool on);
+    void ApplyVoiceEdits(const std::vector<composer::VoiceDef>& voices, const std::vector<composer::LyricCorrection>& corrections);
+    void ApplyMediaCorrection(const composer::MediaCorrection& correction);
+    struct MediaRow {
+        std::string segmentId;
+        int startMS = 0;
+        int endMS = 0;
+        std::string target;
+        std::string mediaId;
+        std::string name;
+        std::string path;
+        std::string state; // "automatic", "manual-edit", "locked"; empty for a cue without a file
+        wxString why;
+    };
+    [[nodiscard]] const std::vector<MediaRow>& MediaRows() const { return _mediaRows; }
+    // The voices and phrases the voice editor starts from, from the last analysis.
+    [[nodiscard]] std::vector<composer::VoiceDef> CurrentVoices() const;
     void OpenResult(); // what "Open the Sequence in xLights" does
     // Lets a UI test drive the window once it exists; called at the end of the constructor.
     static std::function<void(ShowComposerDialog*)>& OpenedHook();
@@ -184,8 +206,17 @@ private:
     void OnClose(wxCloseEvent& event);
     void OnTimer(wxTimerEvent& event);
     void OnFigureSelected(wxListEvent& event);
+    void EditMediaLibrary();
+    void EditVoices();
+    void ChangeMedia(int action);
 
     xLightsFrame* _frame = nullptr;
+    std::vector<std::string> _mediaFolders;
+    std::vector<MediaRow> _mediaRows;
+    wxStaticText* _mediaInfo = nullptr;
+    wxCheckBox* _mediaAuto = nullptr;
+    wxCheckBox* _copyMedia = nullptr;
+    wxStaticText* _voicesInfo = nullptr;
     Step _step = Step::Create;
     bool _testMode = false;
 

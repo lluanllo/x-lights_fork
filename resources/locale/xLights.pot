@@ -10365,3 +10365,336 @@ msgstr ""
 
 msgid "Calm, warm white and soft blue"
 msgstr ""
+
+msgid "Not usable"
+msgstr ""
+
+msgid "Format not supported"
+msgstr ""
+
+msgid "Empty file"
+msgstr ""
+
+msgid "Too large"
+msgstr ""
+
+msgid "Damaged or unreadable"
+msgstr ""
+
+msgid "Only when chosen"
+msgstr ""
+
+msgid "Ready"
+msgstr ""
+
+msgid "Categories"
+msgstr ""
+
+msgid "a whole disk is not searched; choose the folder that holds the pictures"
+msgstr ""
+
+msgid "the whole home folder is not searched; choose the folder that holds the pictures"
+msgstr ""
+
+msgid "a system folder is not searched"
+msgstr ""
+
+msgid "the folder does not exist"
+msgstr ""
+
+msgid "Christmas"
+msgstr ""
+
+msgid "Snow"
+msgstr ""
+
+msgid "Fire"
+msgstr ""
+
+msgid "Stars"
+msgstr ""
+
+msgid "Forest"
+msgstr ""
+
+msgid "Animals"
+msgstr ""
+
+msgid "Cinema"
+msgstr ""
+
+msgid "Adventure"
+msgstr ""
+
+msgid "Fantasy"
+msgstr ""
+
+msgid "Halloween"
+msgstr ""
+
+msgid "New Year"
+msgstr ""
+
+msgid "Lights"
+msgstr ""
+
+msgid "Backgrounds"
+msgstr ""
+
+msgid "Other"
+msgstr ""
+
+msgid "Lead voice"
+msgstr ""
+
+msgid "Second voice"
+msgstr ""
+
+msgid "Choir"
+msgstr ""
+
+msgid "Narrator"
+msgstr ""
+
+msgid "Dialogue"
+msgstr ""
+
+msgid "Other voice"
+msgstr ""
+
+msgid "Unknown voice"
+msgstr ""
+
+msgid "Pictures and Videos of the Show"
+msgstr ""
+
+msgid "Show Composer only reads these files: nothing is moved, renamed or deleted. A file outside the show is copied into it only if you agree when generating."
+msgstr ""
+
+msgid "Add Folder..."
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Search the Folders"
+msgstr ""
+
+msgid "Everything"
+msgstr ""
+
+msgid "Pictures and animations"
+msgstr ""
+
+msgid "Categories (they decide which songs it suits):"
+msgstr ""
+
+msgid "Your own words, separated by commas:"
+msgstr ""
+
+msgid "Only when I choose it (never automatically)"
+msgstr ""
+
+msgid "Choose a Folder of Pictures and Videos"
+msgstr ""
+
+msgid "This folder is not searched: %s."
+msgstr ""
+
+msgid "Pictures and Videos"
+msgstr ""
+
+msgid "The library could not be saved in the show's Show Composer folder."
+msgstr ""
+
+msgid "Searching the Folders"
+msgstr ""
+
+msgid "Reading the pictures and videos..."
+msgstr ""
+
+msgid "%d files read: %s"
+msgstr ""
+
+msgid "%d files: %d can be used (%d videos), %d missing."
+msgstr ""
+
+msgid "Choose a file to see it and give it categories."
+msgstr ""
+
+msgid "Categories suggested from the file's name: check them."
+msgstr ""
+
+msgid "Choose a Picture or a Video"
+msgstr ""
+
+msgid "Voices"
+msgstr ""
+
+msgid "Voices come from the lyrics' tags ([Voz: Ana], [Coro], [Narrador]) and from names before a colon. Nothing is guessed from the sound: a phrase with no voice moves no face until you give it one."
+msgstr ""
+
+msgid "Voice"
+msgstr ""
+
+msgid "Role"
+msgstr ""
+
+msgid "Role:"
+msgstr ""
+
+msgid "Chosen automatically"
+msgstr ""
+
+msgid "No face moves for this voice"
+msgstr ""
+
+msgid "New Voice..."
+msgstr ""
+
+msgid "How"
+msgstr ""
+
+msgid "Who sings the selected phrases:"
+msgstr ""
+
+msgid "Spoken, not sung"
+msgstr ""
+
+msgid "Give Them These Voices"
+msgstr ""
+
+msgid "Before word:"
+msgstr ""
+
+msgid "Split the Phrase"
+msgstr ""
+
+msgid "Join With the Next"
+msgstr ""
+
+msgid "Play the Phrase"
+msgstr ""
+
+msgid "Your changes are kept with the show and used the next time it is composed."
+msgstr ""
+
+msgid "The voice's name, as you want to see it:"
+msgstr ""
+
+msgid "New Voice"
+msgstr ""
+
+msgid "chosen automatically"
+msgstr ""
+
+msgid "no voice"
+msgstr ""
+
+msgid "spoken"
+msgstr ""
+
+msgid "sung"
+msgstr ""
+
+msgid "Pictures and videos"
+msgstr ""
+
+msgid "Pictures and Videos..."
+msgstr ""
+
+msgid "Choose pictures and videos for the show by themselves (otherwise only the ones I assign)"
+msgstr ""
+
+msgid "Copy the files that are outside the show folder into it (Images, Videos), so the show can be moved"
+msgstr ""
+
+msgid "Only your own files are used, on the matrices and mega trees, where no lyrics are shown. Originals are never moved or changed."
+msgstr ""
+
+msgid "Voices..."
+msgstr ""
+
+msgid "Pictures and videos: the ones chosen, and where one would fit if you had a file"
+msgstr ""
+
+msgid "Choose a File..."
+msgstr ""
+
+msgid "No Picture Here"
+msgstr ""
+
+msgid "Keep This One"
+msgstr ""
+
+msgid "No folder of pictures or videos: the show uses none."
+msgstr ""
+
+msgid "%d folders, %d files that can be used."
+msgstr ""
+
+msgid "One voice: every face sings the whole lyrics. Tag the lyrics ([Voz: Ana], [Coro], [Narrador]) to have several."
+msgstr ""
+
+msgid "%d voices: %s. Changes are used the next time the show is composed."
+msgstr ""
+
+msgid "theme: %s"
+msgstr ""
+
+msgid "shape %s"
+msgstr ""
+
+msgid "energy %s"
+msgstr ""
+
+msgid "same picture as the repeated section"
+msgstr ""
+
+msgid "no singing"
+msgstr ""
+
+msgid "your choice"
+msgstr ""
+
+msgid "copied into the show"
+msgstr ""
+
+msgid "a video would fit here"
+msgstr ""
+
+msgid "a picture would fit here"
+msgstr ""
+
+msgid "no file"
+msgstr ""
+
+msgid "Kept"
+msgstr ""
+
+msgid "Your choice"
+msgstr ""
+
+msgid "Automatic"
+msgstr ""
+
+msgid "no face"
+msgstr ""
+
+msgid "Voices: %s."
+msgstr ""
+
+msgid "Pictures and videos: %d, %.0f%% of the song, from your files."
+msgstr ""
+
+msgid "Analyze the song with its lyrics first: the voices come from the lyrics."
+msgstr ""
+
+msgid "Choose a row of the list first."
+msgstr ""
+
+msgid "Where should the picture or video play?"
+msgstr ""
+
+msgid "There are no pictures or videos yet: add a folder in \"Pictures and Videos...\"."
+msgstr ""
