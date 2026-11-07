@@ -12,6 +12,22 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: reference styles measured from finished shows make the whole house
+                                 move together, with a colour theme per song, scenes that keep their look when a
+                                 section repeats, and short hits on the beat
+    -enh (lluanllo)              Show Composer: find the lyrics on LRCLIB, time the words with Groq or describe
+                                 the song with Gemini; the song is only sent after you agree, and the answers are
+                                 kept with the show so it works offline afterwards
+    -enh (lluanllo)              Show Composer: drop a song, lyrics or an .xtiming on the first step; step 2 shows
+                                 doubtful lyric marks, step 3 the art direction and step 5 a comparison with the
+                                 references
+    -bug (lluanllo)              LRC lyrics: several times on one line, a byte order mark, [offset:] and wrong
+                                 times are now read and reported instead of dropped silently
+    -bug (lluanllo)              Show Composer no longer refuses lyrics whose last line is close to the end of a
+                                 song that does not end on a frame
+    -bug (lluanllo)              Show Composer prefers faces wired to a controller over faces it cannot show
+    -bug (lluanllo)              The CMake build now embeds the application manifest (UTF-8 paths, DPI awareness)
+
     -enh (lluanllo)              Show Composer window (Tools > Show Composer): choose a song, its lyrics and the
                                  installation, review the song, the lyrics and the composition, fix beats and
                                  figures by hand, generate the show and open it

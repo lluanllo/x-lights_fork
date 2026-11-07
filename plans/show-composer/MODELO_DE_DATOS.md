@@ -537,6 +537,16 @@ Al regenerar con `--previous`, se recuperan las correcciones, los bloqueos y la 
 - Un `PlanCorrection` `exclude` sin tramo saca la figura del espectáculo como lo haría `roles.json`: queda apagada y ningún grupo la enciende.
 - `<secuencia>.composer-review.json`, aparte del sidecar: lo crea el botón «Marcar como revisada y aprobada» con quién y cuándo. Es lo único que cambia el estado de revisión visual, y nunca lo escribe una prueba.
 
+### Cambios de la Fase 9
+
+- `assist` en el sidecar: `transcript` y `character`, rutas relativas al show de la transcripción (Groq) y de la descripción (Gemini) guardadas en `ShowComposer/cache/<clave>.transcript.json` y `.character.json`. La clave es `AssistCacheKey(hash del audio, hash de la letra, proveedor, modelo, versión, parámetros)`. Al regenerar desde el sidecar se reutilizan sin red. Nunca contienen claves.
+- `ensemble` en `StyleProfile`, solo cuando está activo, para que el perfil neutral conserve su JSON y su huella: cobertura por banda de energía, golpes por minuto, duración del golpe, proporción de fundidos, proporción de escenas de contraste, colores por evento, contornos en escenas tranquilas, tema por defecto y estudios de los que se midió. Los perfiles medidos van en `resources/composer/profiles/`.
+- `resources/composer/themes.json`: catálogo editable de temas con paletas `home`, `contrast`, un color `accent`, los temas de `SongCharacter` que apuntan a él y palabras clave de letra y título.
+- `visual-direction.json` en el informe: tema con su origen y confianza (interpretación), familias de figuras con los grupos que las cubren, y por segmento del plan una escena con banda, motivo, variante, colores, cobertura y golpes por minuto. `direction-metrics.json`: coherencia de paleta, concentración de tonos, cobertura, arranques compartidos, eventos por minuto, golpes, coherencia de repeticiones y diversidad.
+- Eventos de coreografía con intención `ensemble-bed` (capa 1) y `ensemble-hit` (capa 0, encima).
+- `transcript-alignment.json` en el informe: palabras de la letra oídas, extra y confianza por línea. El proveedor `transcript` del alineador da a cada palabra oída su tiempo; las no oídas solo se estiman entre anclas y quedan marcadas como estimadas.
+- Documento de letra: lista `issues` (código, línea, tiempo, texto, error o reparado).
+
 ## 9. Reparto de responsabilidades
 
 | Contrato | Responsabilidad única | Lo produce | Lo consume |
