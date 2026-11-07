@@ -4,6 +4,7 @@
 #include "composer/CompositionPlan.h"
 #include "composer/TemplateLibrary.h"
 
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
@@ -128,6 +129,7 @@ struct Choreography {
     int durationMS = 0;
     int frameMS = 25;
     std::string lyricTrack;
+    std::vector<std::string> voiceTracks; // one per voice that faces sing
     std::vector<ChoreographyEvent> events; // by start, target, layer
     std::vector<MediaCue> mediaCues;
     std::vector<ChoreographyCorrection> corrections;
@@ -146,6 +148,7 @@ struct ChoreographyInput {
     const SongAnalysis* analysis = nullptr;          // downbeats for accents and block cuts
     const LyricAlignment* alignment = nullptr;       // phrases for text, phonemes for faces
     std::string lyricTrack;                          // the Phase 4 track faces read
+    std::map<std::string, std::string> voiceTracks;  // voice id -> the track of that voice alone
     std::optional<AutomationLevel> level;            // default: the plan's
     std::optional<uint64_t> seed;                    // default: the plan's
     int frameMS = 25;

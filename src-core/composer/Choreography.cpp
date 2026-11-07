@@ -759,8 +759,32 @@ private:
             return;
         }
         // The Phase 4 track already holds the mouth; this only points the face at it,
-        // and only where it moves.
-        const bool sung = std::any_of(_in.alignment->phonemes.begin(), _in.alignment->phonemes.end(), [&](const AlignedPhoneme& p) { return p.shape != "rest" && p.startMS < s.endMS && p.endMS > s.startMS; });
+        // and only where it moves. A face of one voice reads that voice's track alone.
+        std::string track = _in.lyricTrack;
+        std::set<std::string> phrases;
+        if (!a.voice.empty()) {
+            const auto it = _in.voiceTracks.find(a.voice);
+            if (it == _in.voiceTracks.end()) {
+                _out.warnings.push_back(fmt::format("face-voice-without-track:{}:{}", a.target, a.voice));
+                return;
+            }
+            track = it->second;
+            for (const AlignedPhrase& p : _in.alignment->phrases) {
+                if (std::find(p.voices.begin(), p.voices.end(), a.voice) != p.voices.end()) {
+                    phrases.insert(p.id);
+                }
+            }
+        }
+        std::map<std::string, std::string> phraseOfWord;
+        for (const AlignedWord& w : _in.alignment->words) {
+            phraseOfWord[w.id] = w.phraseId;
+        }
+        const bool sung = std::any_of(_in.alignment->phonemes.begin(), _in.alignment->phonemes.end(), [&](const AlignedPhoneme& p) {
+            if (p.shape == "rest" || p.startMS >= s.endMS || p.endMS <= s.startMS) {
+                return false;
+            }
+            return a.voice.empty() || phrases.contains(phraseOfWord[p.wordId]);
+        });
         if (!sung || target.faces.empty()) {
             _out.warnings.push_back(fmt::format("{}:{}:{}", sung ? "face-without-definition" : "face-without-phonemes-in-segment", a.target, a.intent));
             return;
@@ -775,8 +799,11 @@ private:
         ChoreographyEvent e = Base(s, a, target, o, s.startMS, s.endMS, "0");
         SetParameters(e, *o.t, 0, key, 0);
         e.settings.emplace_back("E_CHOICE_Faces_FaceDefinition", target.faces.front());
-        e.settings.emplace_back("E_CHOICE_Faces_TimingTrack", _in.lyricTrack);
-        e.reasons.push_back({ "lyric-track", _in.lyricTrack });
+        e.settings.emplace_back("E_CHOICE_Faces_TimingTrack", track);
+        e.reasons.push_back({ "lyric-track", track });
+        if (!a.voice.empty()) {
+            e.reasons.push_back({ "voice", a.voice });
+        }
         ChoosePalette(e, *o.t, band, key, rank, 0);
         _out.events.push_back(std::move(e));
     }
@@ -1167,6 +1194,9 @@ Choreography Choreograph(const ChoreographyInput& in) {
     out.durationMS = in.plan->durationMS;
     out.frameMS = std::max(1, in.frameMS);
     out.lyricTrack = in.lyricTrack;
+    for (const auto& [voice, track] : in.voiceTracks) {
+        out.voiceTracks.push_back(track);
+    }
     if (profile.id != in.plan->profileId) {
         out.warnings.push_back("profile-differs-from-plan");
     }
@@ -1285,6 +1315,9 @@ std::string ToJson(const Choreography& c) {
     root["durationMS"] = c.durationMS;
     root["frameMS"] = c.frameMS;
     root["lyricTrack"] = c.lyricTrack;
+    if (!c.voiceTracks.empty()) {
+        root["voiceTracks"] = c.voiceTracks;
+    }
     root["warnings"] = c.warnings;
     json events = json::array();
     for (const ChoreographyEvent& e : c.events) {
@@ -1337,6 +1370,7 @@ bool FromJson(const std::string& text, Choreography& c, std::string& error) {
         out.durationMS = root.value("durationMS", 0);
         out.frameMS = root.value("frameMS", 25);
         out.lyricTrack = root.value("lyricTrack", std::string());
+        out.voiceTracks = root.value("voiceTracks", std::vector<std::string>());
         out.warnings = root.value("warnings", std::vector<std::string>());
         for (const json& e : root.value("events", json::array())) {
             out.events.push_back(EventFrom(e));

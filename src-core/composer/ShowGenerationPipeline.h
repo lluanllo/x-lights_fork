@@ -151,6 +151,8 @@ struct GenerationRun {
     LyricAlignment alignment;
     LyricSession lyricSession;
     TimingTrackSpec lyricTrack; // empty layers: nothing synchronized to write
+    VoiceCast cast;             // the voices with their faces; empty: one unnamed voice
+    std::vector<TimingTrackSpec> voiceTracks;
     bool hasLyrics = false;
 
     // Plan and choreography

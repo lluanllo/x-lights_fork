@@ -114,6 +114,7 @@ public:
         TestVisemes();
         TestDocuments();
         TestLrcFormats();
+        TestVoices();
         TestAlignmentProviders();
         TestAlignmentShapes();
         TestCorrections();
@@ -451,6 +452,127 @@ private:
             }
         }
         Check(report.ErrorCount() == 0 && lastEnd == 134050 && grid, fmt::format("song of 134072 ms: the last phrase, word and mouth shape end on the last frame ({} ms), {} errors", lastEnd, report.ErrorCount()));
+    }
+
+    static const AlignedPhrase* PhraseWith(const LyricAlignment& a, const std::string& text) {
+        for (const AlignedPhrase& p : a.phrases) {
+            if (p.text == text) {
+                return &p;
+            }
+        }
+        return nullptr;
+    }
+
+    void TestVoices() {
+        Title("Voices: who sings or speaks each line, and only that");
+        const char* PIECE = "[Narrador]\nHabía una vez una casa encendida\n\n[Voz: Ana]\nUna noche de Navidad\n\n[Voz: Luis]\nLas estrellas brillan\n\n"
+                            "[Voz: Ana y Luis]\nVuelve la Navidad\n\n[Voz: Coro]\nCanta la Navidad\n";
+        const LyricDocument d = ParsePlainLyrics(PIECE);
+        const auto roleOf = [&](const char* id) { const VoiceDef* v = d.cast.Find(id); return v != nullptr ? std::string(VoiceRoleId(v->role)) : std::string("-"); };
+        Check(d.cast.voices.size() == 4 && roleOf("v:narrador") == "narrator" && roleOf("v:ana") == "lead" && roleOf("v:luis") == "second" && roleOf("v:coro") == "chorus",
+              fmt::format("four voices from the tags: narrator, lead, second and choir ({})", d.cast.voices.size()));
+        const std::vector<const LyricLine*> lines = d.Lines();
+        if (lines.size() == 5) {
+            Check(lines[0]->delivery == Delivery::Spoken && lines[1]->delivery == Delivery::Sung, "the narrator speaks; the singers sing");
+            Check(lines[3]->voices == std::vector<std::string>({ "v:ana", "v:luis" }), "\"Ana y Luis\" is a duet: both voices on the line");
+            Check(lines[1]->text == "Una noche de Navidad", "the text is kept as written");
+        }
+        const LyricDocument talk = ParsePlainLyrics("ANA: Hola, ¿qué tal?\nLUIS: Muy bien, gracias\nDime: por qué brillas\n");
+        Check(talk.cast.voices.size() == 2 && talk.Lines().size() == 3 && talk.Lines()[0]->text == "Hola, ¿qué tal?" && talk.Lines()[0]->delivery == Delivery::Spoken &&
+                  talk.cast.voices[0].role == VoiceRole::Dialogue,
+              "a dialogue in capitals: who speaks, what they say, spoken");
+        Check(talk.Lines().size() == 3 && talk.Lines()[2]->voices.empty() && talk.Lines()[2]->text == "Dime: por qué brillas", "\"Dime: ...\" in a song is not a speaker");
+        Check(ParsePlainLyrics("Una noche de Navidad\n").cast.Empty(), "lyrics with no voices: no cast, everything as before");
+
+        AlignerInput in;
+        in.document = &d;
+        in.corrections = Marks(d, { { 1000, 5000 }, { 6000, 9000 }, { 10000, 13000 }, { 14000, 17000 }, { 18000, 21000 } });
+        in.durationMS = 30000;
+        const LyricAlignment a = AlignLyrics(in);
+        const AlignedPhrase* duet = PhraseWith(a, "Vuelve la Navidad");
+        Check(duet != nullptr && duet->voices.size() == 2 && duet->voiceSource == "lyrics", "the voices reach the aligned phrases");
+        const AlignedPhrase* spoken = PhraseWith(a, "Había una vez una casa encendida");
+        Check(spoken != nullptr && spoken->delivery == "spoken", "and so does the way they are delivered");
+        // The same words sung and spoken, in phrases of the same length.
+        const LyricDocument same = ParsePlainLyrics("[Narrador]\nla Navidad\n\n[Voz: Ana]\nla Navidad\n");
+        AlignerInput both;
+        both.document = &same;
+        both.corrections = Marks(same, { { 1000, 3000 }, { 4000, 6000 } });
+        const LyricAlignment sb = AlignLyrics(both);
+        const AlignedWord* spokenLast = nullptr;
+        const AlignedWord* sungLast = nullptr;
+        for (const AlignedWord& w : sb.words) {
+            if (w.key == "navidad") {
+                (w.startMS < 3500 ? spokenLast : sungLast) = &w;
+            }
+        }
+        Check(spokenLast != nullptr && sungLast != nullptr && (sungLast->endMS - sungLast->startMS) > (spokenLast->endMS - spokenLast->startMS),
+              "a sung line holds its last word; a spoken one does not");
+
+        const std::vector<TimingTrackSpec> tracks = BuildVoiceTracks(a, d.cast, "Letra");
+        const auto trackOf = [&](const std::string& name) -> const TimingTrackSpec* {
+            for (const TimingTrackSpec& t : tracks) {
+                if (t.name == name) {
+                    return &t;
+                }
+            }
+            return nullptr;
+        };
+        const TimingTrackSpec* ana = trackOf("Letra - Ana");
+        const TimingTrackSpec* luis = trackOf("Letra - Luis");
+        Check(tracks.size() == 4 && ana != nullptr && luis != nullptr, fmt::format("one lyrics track per voice ({})", tracks.size()));
+        if (ana != nullptr && luis != nullptr) {
+            const auto has = [](const TimingTrackSpec& t, const std::string& label) { return std::any_of(t.layers[0].begin(), t.layers[0].end(), [&](const TimingMark& m) { return m.label == label; }); };
+            Check(ana->layers[0].size() == 2 && has(*ana, "Una noche de Navidad") && has(*ana, "Vuelve la Navidad") && !has(*ana, "Las estrellas brillan"), "Ana's track: her line and the duet, nothing of Luis");
+            Check(!ana->layers[2].empty() && std::all_of(ana->layers[2].begin(), ana->layers[2].end(), [&](const TimingMark& m) {
+                      return std::any_of(ana->layers[0].begin(), ana->layers[0].end(), [&](const TimingMark& p) { return m.startMS >= p.startMS && m.endMS <= p.endMS; });
+                  }),
+                  "and her mouth shapes only inside her phrases");
+            Check(luis->layers[0].size() == 2 && has(*luis, "Vuelve la Navidad"), "the duet is in both tracks");
+        }
+
+        // A person's corrections: who sings, split, join.
+        AlignerInput fixed = in;
+        LyricCorrection voice;
+        voice.level = LyricCorrection::Level::Voice;
+        voice.targetId = lines.size() == 5 ? lines[0]->id : "";
+        voice.voices = { "v:ana" };
+        voice.delivery = "sung";
+        LyricCorrection split;
+        split.level = LyricCorrection::Level::Split;
+        split.targetId = lines.size() == 5 ? lines[1]->id : "";
+        split.wordIndex = 2;
+        LyricCorrection merge;
+        merge.level = LyricCorrection::Level::Merge;
+        merge.targetId = lines.size() == 5 ? lines[2]->id : "";
+        fixed.corrections.push_back(voice);
+        fixed.corrections.push_back(split);
+        fixed.corrections.push_back(merge);
+        const LyricAlignment f = AlignLyrics(fixed);
+        const AlignedPhrase* given = PhraseWith(f, "Había una vez una casa encendida");
+        Check(given != nullptr && given->voices == std::vector<std::string>({ "v:ana" }) && given->voiceSource == "manual" && given->delivery == "sung", "a phrase given to another voice, sung: the person wins");
+        const AlignedPhrase* first = PhraseWith(f, "Una noche");
+        const AlignedPhrase* second = PhraseWith(f, "de Navidad");
+        Check(first != nullptr && second != nullptr && first->endMS == second->startMS && second->id == split.targetId + "~2" && first->voices == second->voices,
+              "a phrase split in two before its third word: two phrases, back to back, same voice");
+        const AlignedPhrase* joined = PhraseWith(f, "Las estrellas brillan Vuelve la Navidad");
+        Check(joined != nullptr && joined->voices.size() == 2 && f.conflicts.empty(), "two phrases joined into one, with both voices");
+        LyricSession session;
+        session.corrections = fixed.corrections;
+        VoiceDef renamed = d.cast.voices[1];
+        renamed.name = "Ana María";
+        renamed.faces = { "Carita verde" };
+        VoiceDef silent = d.cast.voices[0];
+        silent.facesOff = true;
+        session.voices = { renamed, silent };
+        LyricSession back;
+        std::string error;
+        Check(FromJson(ToJson(session), back, error) && back.corrections.size() == fixed.corrections.size() && back.voices.size() == 2 && back.voices[0].faces == renamed.faces &&
+                  back.corrections.back().level == LyricCorrection::Level::Merge && back.corrections[back.corrections.size() - 2].wordIndex == 2,
+              "voices and the new corrections are kept with the marks " + error);
+        const VoiceCast cast = EffectiveCast(d.cast, back.voices);
+        Check(cast.Find("v:ana")->name == "Ana María" && cast.Find("v:narrador")->facesOff && cast.voices.size() == 4, "a person's names and faces win over the tags");
+        Check(VoiceTrackName("Letra", *cast.Find("v:ana")) == "Letra - Ana María", "the track of a voice is named after it");
     }
 
     void TestAlignmentProviders() {

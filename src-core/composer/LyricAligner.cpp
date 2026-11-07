@@ -9,6 +9,7 @@
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
+#include <deque>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -26,7 +27,7 @@ namespace composer {
 namespace {
 
 const char* const PROVIDER_IDS[] = { "auto", "existing-track", "manual-phrases", "line-times", "experimental", "transcript", "none" };
-const char* const LEVEL_IDS[] = { "phrase", "word", "phoneme" };
+const char* const LEVEL_IDS[] = { "phrase", "word", "phoneme", "voice", "split", "merge" };
 const char* const STATE_IDS[] = { "detected", "corrected", "locked", "confirmed" };
 const std::set<std::string> SHAPES = { "AI", "E", "FV", "L", "MBP", "O", "U", "WQ", "etc", "rest" };
 
@@ -238,7 +239,10 @@ public:
         _a.provider = ChooseProvider(*document);
         BuildPhrases(*document);
         TimePhrases(*document);
-        ApplyPhraseCorrections();
+        ApplyPhraseCorrections(false);
+        ApplyStructure();
+        ApplyPhraseCorrections(true);
+        ApplyVoiceCorrections();
         TimeWords();
         ShapeWords();
         ApplyPhonemeCorrections();
@@ -311,6 +315,9 @@ private:
             phrase.id = line->id;
             phrase.text = line->text;
             phrase.voice = line->voice;
+            phrase.voices = line->voices;
+            phrase.delivery = DeliveryId(line->delivery);
+            phrase.voiceSource = line->voices.empty() ? std::string() : std::string("lyrics");
             phrase.instrumental = line->instrumental;
             _a.phrases.push_back(std::move(phrase));
             _lines.push_back(line);
@@ -507,11 +514,130 @@ private:
         return nullptr;
     }
 
-    void ApplyPhraseCorrections() {
+    static std::string JoinWords(const std::vector<LyricWord>& words) {
+        std::string out;
+        for (const LyricWord& w : words) {
+            out += (out.empty() ? "" : " ") + w.text;
+        }
+        return out;
+    }
+
+    int IndexOfPhrase(const std::string& id) const {
+        for (size_t i = 0; i < _a.phrases.size(); ++i) {
+            if (_a.phrases[i].id == id) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    // A person split a phrase in two or joined it with the next: the lines are rebuilt
+    // here so words, mouths and corrections follow, and nothing else changes.
+    void ApplyStructure() {
+        for (const LyricCorrection& c : _a.corrections) {
+            if (c.level != LyricCorrection::Level::Split && c.level != LyricCorrection::Level::Merge) {
+                continue;
+            }
+            const int i = IndexOfPhrase(c.targetId);
+            if (i < 0) {
+                _a.conflicts.push_back({ c.targetId, "target-missing" });
+                continue;
+            }
+            const LyricLine& line = *_lines[i];
+            if (c.level == LyricCorrection::Level::Split) {
+                const size_t k = c.wordIndex > 0 ? static_cast<size_t>(c.wordIndex) : 0;
+                if (k == 0 || k >= line.words.size()) {
+                    _a.conflicts.push_back({ c.targetId, "split-outside-phrase" });
+                    continue;
+                }
+                LyricLine first = line;
+                LyricLine second = line;
+                first.words.assign(line.words.begin(), line.words.begin() + static_cast<std::ptrdiff_t>(k));
+                second.words.assign(line.words.begin() + static_cast<std::ptrdiff_t>(k), line.words.end());
+                first.text = JoinWords(first.words);
+                second.text = JoinWords(second.words);
+                second.id = line.id + "~" + std::to_string(k);
+                _owned.push_back(std::move(first));
+                const LyricLine* a = &_owned.back();
+                _owned.push_back(std::move(second));
+                const LyricLine* b = &_owned.back();
+                AlignedPhrase p1 = _a.phrases[i];
+                AlignedPhrase p2 = p1;
+                p1.text = a->text;
+                p2.id = b->id;
+                p2.text = b->text;
+                if (p1.startMS >= 0) {
+                    const int length = p1.endMS - p1.startMS;
+                    int cut = c.startMS > p1.startMS && c.startMS < p1.endMS ? c.startMS : p1.startMS + static_cast<int>(static_cast<long long>(length) * static_cast<long long>(k) / static_cast<long long>(line.words.size()));
+                    cut = std::clamp(ToFrame(cut, _frame), p1.startMS + _frame, p1.endMS - _frame);
+                    p1.endMS = cut;
+                    p2.startMS = cut;
+                }
+                p1.state = p2.state = c.state;
+                _a.phrases[i] = std::move(p1);
+                _a.phrases.insert(_a.phrases.begin() + i + 1, std::move(p2));
+                _lines[i] = a;
+                _lines.insert(_lines.begin() + i + 1, b);
+                continue;
+            }
+            const size_t j = static_cast<size_t>(i) + 1;
+            if (j >= _a.phrases.size() || _a.phrases[j].instrumental || line.instrumental) {
+                _a.conflicts.push_back({ c.targetId, "merge-without-next" });
+                continue;
+            }
+            LyricLine merged = line;
+            merged.words.insert(merged.words.end(), _lines[j]->words.begin(), _lines[j]->words.end());
+            merged.text = line.text + " " + _lines[j]->text;
+            for (const std::string& v : _lines[j]->voices) {
+                if (std::find(merged.voices.begin(), merged.voices.end(), v) == merged.voices.end()) {
+                    merged.voices.push_back(v);
+                }
+            }
+            _owned.push_back(std::move(merged));
+            AlignedPhrase& p = _a.phrases[i];
+            const AlignedPhrase& q = _a.phrases[j];
+            p.text = _owned.back().text;
+            p.voices = _owned.back().voices;
+            if (p.startMS >= 0 && q.startMS >= 0) {
+                p.endMS = std::max(p.endMS, q.endMS);
+            } else if (p.startMS < 0 && q.startMS >= 0) {
+                p.startMS = q.startMS;
+                p.endMS = q.endMS;
+            }
+            p.state = c.state;
+            _lines[i] = &_owned.back();
+            _a.phrases.erase(_a.phrases.begin() + static_cast<std::ptrdiff_t>(j));
+            _lines.erase(_lines.begin() + static_cast<std::ptrdiff_t>(j));
+        }
+    }
+
+    // Who sings a phrase, set by a person: it wins over the tags, and a choir or a duet
+    // is simply several voices.
+    void ApplyVoiceCorrections() {
+        for (const LyricCorrection& c : _a.corrections) {
+            if (c.level != LyricCorrection::Level::Voice) {
+                continue;
+            }
+            AlignedPhrase* phrase = FindPhrase(c.targetId);
+            if (phrase == nullptr) {
+                _a.conflicts.push_back({ c.targetId, "target-missing" });
+                continue;
+            }
+            phrase->voices = c.voices;
+            if (c.delivery == "sung" || c.delivery == "spoken") {
+                phrase->delivery = c.delivery;
+            }
+            phrase->voiceSource = "manual";
+        }
+    }
+
+    // Marks go on before a split or a join, which then share them out; a mark on the
+    // second part of a split phrase can only go on after it, in the second pass.
+    void ApplyPhraseCorrections(bool splitParts) {
         std::set<std::string> applied;
         for (auto it = _a.corrections.rbegin(); it != _a.corrections.rend(); ++it) {
             const LyricCorrection& c = *it;
-            if (c.level != LyricCorrection::Level::Phrase || !applied.insert(c.targetId).second) {
+            if (c.level != LyricCorrection::Level::Phrase || (c.targetId.find('~') != std::string::npos) != splitParts || !applied.insert(c.targetId).second) {
                 continue;
             }
             AlignedPhrase* phrase = FindPhrase(c.targetId);
@@ -575,7 +701,8 @@ private:
                 plan.pronunciation = PhonemizeSpanish(line.words[w].key, _opt.phonemizer);
                 plan.word.pronunciation = plan.pronunciation.source;
                 plan.word.phonemes = PhonemeString(plan.pronunciation);
-                plan.weight = WeightOf(plan.pronunciation, w + 1 == line.words.size(), _opt.phraseFinalHold);
+                // Speech does not hold its last syllable the way a sung line does.
+                plan.weight = WeightOf(plan.pronunciation, w + 1 == line.words.size(), phrase.delivery == "spoken" ? 1.0 : _opt.phraseFinalHold);
                 plans.push_back(std::move(plan));
             }
             if (!TimeWordsFromTrack(phrase, plans)) {
@@ -869,6 +996,7 @@ private:
     LyricAlignment& _a;
     int _frame;
     std::vector<const LyricLine*> _lines;
+    std::deque<LyricLine> _owned; // the lines of split and joined phrases
     std::map<std::string, Pronunciation> _pronunciations;
     std::set<std::string> _appliedWords;
     std::map<std::string, const WordAnchor*> _anchors;
@@ -884,7 +1012,14 @@ Provenance StateFromId(const std::string& id) {
 }
 
 json CorrectionToJson(const LyricCorrection& c) {
-    return { { "level", LEVEL_IDS[static_cast<int>(c.level)] }, { "targetId", c.targetId }, { "state", STATE_IDS[static_cast<int>(c.state)] }, { "startMS", c.startMS }, { "endMS", c.endMS }, { "shape", c.shape }, { "originalStartMS", c.originalStartMS }, { "originalEndMS", c.originalEndMS } };
+    json out = { { "level", LEVEL_IDS[static_cast<int>(c.level)] }, { "targetId", c.targetId }, { "state", STATE_IDS[static_cast<int>(c.state)] }, { "startMS", c.startMS }, { "endMS", c.endMS }, { "shape", c.shape }, { "originalStartMS", c.originalStartMS }, { "originalEndMS", c.originalEndMS } };
+    if (c.level == LyricCorrection::Level::Voice) {
+        out["voices"] = c.voices;
+        out["delivery"] = c.delivery;
+    } else if (c.level == LyricCorrection::Level::Split) {
+        out["wordIndex"] = c.wordIndex;
+    }
+    return out;
 }
 
 } // namespace
@@ -894,6 +1029,69 @@ LyricAlignment AlignLyrics(const AlignerInput& input, const AlignerOptions& opti
     Aligner aligner(input, options, alignment);
     aligner.Run();
     return alignment;
+}
+
+VoiceCast EffectiveCast(const VoiceCast& fromLyrics, const std::vector<VoiceDef>& edits) {
+    VoiceCast cast = fromLyrics;
+    for (const VoiceDef& e : edits) {
+        auto it = std::find_if(cast.voices.begin(), cast.voices.end(), [&](const VoiceDef& v) { return v.id == e.id; });
+        if (it == cast.voices.end()) {
+            cast.voices.push_back(e); // a voice a person added: an unknown one given a name
+        } else {
+            *it = e;
+        }
+    }
+    return cast;
+}
+
+std::string VoiceTrackName(const std::string& baseName, const VoiceDef& voice) {
+    std::string name = voice.name.empty() ? voice.id : voice.name;
+    name.erase(std::remove_if(name.begin(), name.end(), [](char c) { return c == '"' || c == '<' || c == '>'; }), name.end());
+    return baseName + " - " + name;
+}
+
+std::vector<TimingTrackSpec> BuildVoiceTracks(const LyricAlignment& alignment, const VoiceCast& cast, const std::string& baseName) {
+    const auto clean = [](std::string label) {
+        label.erase(std::remove_if(label.begin(), label.end(), [](char c) { return c == '"' || c == '<' || c == '>'; }), label.end());
+        return label;
+    };
+    std::vector<TimingTrackSpec> tracks;
+    for (const VoiceDef& v : cast.voices) {
+        std::set<std::string> phrases;
+        std::vector<std::pair<int, int>> spans;
+        TimingTrackSpec track;
+        track.name = VoiceTrackName(baseName, v);
+        track.layers.resize(3);
+        for (const AlignedPhrase& p : alignment.phrases) {
+            if (p.startMS >= 0 && !p.instrumental && std::find(p.voices.begin(), p.voices.end(), v.id) != p.voices.end()) {
+                phrases.insert(p.id);
+                spans.push_back({ p.startMS, p.endMS });
+                track.layers[0].push_back({ clean(p.text), p.startMS, p.endMS });
+            }
+        }
+        if (phrases.empty()) {
+            continue;
+        }
+        std::set<std::string> words;
+        for (const AlignedWord& w : alignment.words) {
+            if (phrases.contains(w.phraseId)) {
+                words.insert(w.id);
+                track.layers[1].push_back({ clean(w.text), w.startMS, w.endMS });
+            }
+        }
+        for (const AlignedPhoneme& ph : alignment.phonemes) {
+            const bool mine = !ph.wordId.empty() ? words.contains(ph.wordId)
+                                                 : std::any_of(spans.begin(), spans.end(), [&](const auto& s) { return ph.startMS >= s.first && ph.endMS <= s.second; });
+            if (mine) {
+                track.layers[2].push_back({ ph.shape, ph.startMS, ph.endMS });
+            }
+        }
+        for (auto& layer : track.layers) {
+            std::stable_sort(layer.begin(), layer.end(), [](const TimingMark& a, const TimingMark& b) { return a.startMS < b.startMS; });
+        }
+        tracks.push_back(std::move(track));
+    }
+    return tracks;
 }
 
 TimingTrackSpec BuildLyricTrack(const LyricAlignment& alignment, const std::string& trackName) {
@@ -980,7 +1178,16 @@ std::string ToJson(const LyricAlignment& a) {
     root["warnings"] = a.warnings;
     json phrases = json::array();
     for (const AlignedPhrase& p : a.phrases) {
-        phrases.push_back({ { "id", p.id }, { "text", p.text }, { "voice", p.voice }, { "startMS", p.startMS }, { "endMS", p.endMS }, { "instrumental", p.instrumental }, { "confidence", p.confidence }, { "source", p.source }, { "state", STATE_IDS[static_cast<int>(p.state)] }, { "originalStartMS", p.originalStartMS }, { "originalEndMS", p.originalEndMS } });
+        json phrase = { { "id", p.id }, { "text", p.text }, { "voice", p.voice }, { "startMS", p.startMS }, { "endMS", p.endMS }, { "instrumental", p.instrumental }, { "confidence", p.confidence }, { "source", p.source }, { "state", STATE_IDS[static_cast<int>(p.state)] }, { "originalStartMS", p.originalStartMS }, { "originalEndMS", p.originalEndMS } };
+        // Only when there is something to say, so lyrics with no voices are written as before.
+        if (!p.voices.empty()) {
+            phrase["voices"] = p.voices;
+            phrase["voiceSource"] = p.voiceSource;
+        }
+        if (p.delivery != "sung") {
+            phrase["delivery"] = p.delivery;
+        }
+        phrases.push_back(std::move(phrase));
     }
     root["phrases"] = std::move(phrases);
     json words = json::array();
@@ -1038,6 +1245,9 @@ bool FromJson(const std::string& text, LyricAlignment& alignment, std::string& e
             phrase.id = p.at("id").get<std::string>();
             phrase.text = p.value("text", std::string());
             phrase.voice = p.value("voice", std::string());
+            phrase.voices = p.value("voices", std::vector<std::string>());
+            phrase.voiceSource = p.value("voiceSource", std::string());
+            phrase.delivery = p.value("delivery", std::string("sung"));
             phrase.startMS = p.value("startMS", -1);
             phrase.endMS = p.value("endMS", -1);
             phrase.instrumental = p.value("instrumental", false);
@@ -1104,6 +1314,13 @@ std::string ToJson(const LyricSession& session) {
         corrections.push_back(CorrectionToJson(c));
     }
     root["corrections"] = std::move(corrections);
+    if (!session.voices.empty()) {
+        json voices = json::array();
+        for (const VoiceDef& v : session.voices) {
+            voices.push_back({ { "id", v.id }, { "name", v.name }, { "role", VoiceRoleId(v.role) }, { "delivery", DeliveryId(v.delivery) }, { "faces", v.faces }, { "facesOff", v.facesOff }, { "source", v.source }, { "reviewed", v.reviewed } });
+        }
+        root["voices"] = std::move(voices);
+    }
     return root.dump(1);
 }
 
@@ -1125,7 +1342,15 @@ bool FromJson(const std::string& text, LyricSession& session, std::string& error
         for (const json& c : root.value("corrections", json::array())) {
             LyricCorrection correction;
             const std::string level = c.at("level").get<std::string>();
-            correction.level = level == "word" ? LyricCorrection::Level::Word : level == "phoneme" ? LyricCorrection::Level::Phoneme : LyricCorrection::Level::Phrase;
+            correction.level = LyricCorrection::Level::Phrase;
+            for (int k = 0; k < static_cast<int>(std::size(LEVEL_IDS)); ++k) {
+                if (level == LEVEL_IDS[k]) {
+                    correction.level = static_cast<LyricCorrection::Level>(k);
+                }
+            }
+            correction.voices = c.value("voices", std::vector<std::string>());
+            correction.delivery = c.value("delivery", std::string());
+            correction.wordIndex = c.value("wordIndex", -1);
             correction.targetId = c.at("targetId").get<std::string>();
             correction.state = StateFromId(c.value("state", std::string("confirmed")));
             correction.startMS = c.value("startMS", -1);
@@ -1135,6 +1360,20 @@ bool FromJson(const std::string& text, LyricSession& session, std::string& error
             correction.originalEndMS = c.value("originalEndMS", -1);
             if (correction.state != Provenance::Detected) {
                 out.corrections.push_back(std::move(correction));
+            }
+        }
+        for (const json& v : root.value("voices", json::array())) {
+            VoiceDef d;
+            d.id = v.value("id", std::string());
+            d.name = v.value("name", d.id);
+            (void)VoiceRoleFromId(v.value("role", std::string("unknown")), d.role);
+            d.delivery = v.value("delivery", std::string("sung")) == "spoken" ? Delivery::Spoken : Delivery::Sung;
+            d.faces = v.value("faces", std::vector<std::string>());
+            d.facesOff = v.value("facesOff", false);
+            d.source = v.value("source", std::string("manual"));
+            d.reviewed = v.value("reviewed", false);
+            if (!d.id.empty()) {
+                out.voices.push_back(std::move(d));
             }
         }
         session = std::move(out);
@@ -1181,7 +1420,7 @@ bool LoadLyricSession(const std::string& path, LyricSession& session, std::strin
 
 void UpsertCorrection(std::vector<LyricCorrection>& corrections, const LyricCorrection& correction) {
     for (LyricCorrection& existing : corrections) {
-        if (existing.level == correction.level && existing.targetId == correction.targetId) {
+        if (existing.level == correction.level && existing.targetId == correction.targetId && (correction.level != LyricCorrection::Level::Split || existing.wordIndex == correction.wordIndex)) {
             const int originalStart = existing.originalStartMS;
             const int originalEnd = existing.originalEndMS;
             existing = correction;

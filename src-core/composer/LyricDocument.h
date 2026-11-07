@@ -25,6 +25,47 @@ enum class LyricBlockKind {
     Other // tagged with a name none of the above matches; `label` keeps it
 };
 
+// Sung or spoken: a spoken line keeps the rhythm of speech, with no held last syllable.
+enum class Delivery {
+    Sung,
+    Spoken
+};
+
+// What kind of voice it is, from the tags or set by hand; never guessed from the sound.
+enum class VoiceRole {
+    Lead,
+    Second,
+    Chorus,
+    Narrator,
+    Dialogue,
+    Extra,
+    Unknown
+};
+
+// One voice of the song or the piece. Its faces are empty until assigned; `facesOff`
+// says a person wants it to have none (a narrator heard but not seen, say).
+struct VoiceDef {
+    std::string id;   // "v:<name folded>", stable while the name is
+    std::string name; // as written, editable
+    VoiceRole role = VoiceRole::Unknown;
+    Delivery delivery = Delivery::Sung;
+    std::vector<std::string> faces;
+    bool facesOff = false;
+    std::string source = "lyrics"; // "lyrics", "speaker-prefix", "manual"
+    bool reviewed = false;
+};
+
+struct VoiceCast {
+    std::vector<VoiceDef> voices;
+    [[nodiscard]] const VoiceDef* Find(const std::string& id) const;
+    [[nodiscard]] bool Empty() const { return voices.empty(); }
+};
+
+[[nodiscard]] const char* VoiceRoleId(VoiceRole role);
+[[nodiscard]] bool VoiceRoleFromId(const std::string& id, VoiceRole& role);
+[[nodiscard]] const char* DeliveryId(Delivery delivery);
+[[nodiscard]] std::string VoiceIdOf(const std::string& name);
+
 struct LyricWord {
     std::string text; // as written, punctuation included
     std::string key;  // lowercase, without surrounding punctuation: what is pronounced
@@ -36,7 +77,9 @@ struct LyricLine {
     std::string id;
     std::string text;
     std::vector<LyricWord> words;
-    std::string voice;
+    std::string voice;               // the voices' names as written, for showing
+    std::vector<std::string> voices; // their ids; empty: nobody said who sings it
+    Delivery delivery = Delivery::Sung;
     bool instrumental = false; // "(instrumental)", "♪", or a blank timed line
     int startMS = -1;          // -1: the source had no time
     int endMS = -1;
@@ -69,6 +112,7 @@ struct LyricDocument {
     std::vector<LyricBlock> blocks;
     std::vector<std::string> warnings;
     std::vector<LyricIssue> issues;
+    VoiceCast cast; // the voices the text names, in order of appearance
 
     [[nodiscard]] std::vector<const LyricLine*> Lines() const;
     [[nodiscard]] int ErrorCount() const;

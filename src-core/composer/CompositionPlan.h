@@ -135,6 +135,7 @@ struct PlanAssignment {
     Role role = Role::Prop;
     Prominence prominence = Prominence::Rest;
     std::string intent; // "feature", "accompany", "beat-accent", "lyric-text", "face-sing", "rest"
+    std::string voice;  // face-sing: the voice the face sings, "" for the whole lyrics
     double intensity = 0;
     double confidence = 0;
     DecisionState state = DecisionState::Automatic;
@@ -213,9 +214,17 @@ struct PlannerInput {
     const StyleProfile* profile = nullptr;      // null: the neutral starter profile
     GenerationOptions options;
     std::vector<PlanCorrection> corrections;
+    // With voices, each face sings only its voice; without, faces sing the whole lyrics.
+    const VoiceCast* cast = nullptr;
 };
 
 [[nodiscard]] CompositionPlan PlanComposition(const PlannerInput& input);
+
+// Faces for the voices that have none and are not set to have none: the lead takes the
+// first face wired to a controller, the second voice the next, dialogue and extra voices
+// the ones after; a choir takes every face left, or all of them; a narrator gets none
+// unless a person gave it one. A voice with no face left gets none, and says so.
+void AssignVoiceFaces(VoiceCast& cast, const ModelCapabilities& capabilities, std::vector<std::string>* warnings = nullptr);
 
 [[nodiscard]] const char* ProminenceId(Prominence p);
 [[nodiscard]] const char* DecisionStateId(DecisionState s);

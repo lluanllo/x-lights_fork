@@ -74,22 +74,70 @@ bool IsTag(const std::string& trimmed) {
 struct Tag {
     bool isVoice = false;
     std::string voice;
+    std::vector<std::string> voices; // "[Voz: Ana y Luis]" is two
+    bool spoken = false;             // "[Narrador]", "[Hablado]"
+    bool sung = false;               // "[Cantado]" goes back to singing
     LyricBlockKind kind = LyricBlockKind::Other;
     std::string label;
     int number = 0;
 };
 
+// "Ana y Luis", "Ana & Luis", "Ana, Luis": the names, as written.
+std::vector<std::string> SplitNames(const std::string& names) {
+    std::vector<std::string> out;
+    std::string rest = names;
+    for (const char* sep : { " y ", " and ", " & ", ",", "/" }) {
+        std::string joined;
+        size_t at = 0;
+        std::string s = rest;
+        rest.clear();
+        while ((at = s.find(sep)) != std::string::npos) {
+            joined += s.substr(0, at) + "\x1f";
+            s = s.substr(at + std::string(sep).size());
+        }
+        rest = joined + s;
+    }
+    std::string name;
+    std::istringstream in(rest);
+    while (std::getline(in, name, '\x1f')) {
+        name = text::Trim(name);
+        if (!name.empty()) {
+            out.push_back(name);
+        }
+    }
+    return out;
+}
+
 Tag ReadTag(const std::string& trimmed) {
     Tag tag;
     tag.label = text::Trim(trimmed.substr(1, trimmed.size() - 2));
     const std::string folded = text::Fold(tag.label);
-    for (const char* prefix : { "voz", "voice" }) {
+    for (const char* prefix : { "voces", "voices", "voz", "voice", "duo", "duet" }) {
         const std::string p(prefix);
         if (folded.rfind(p, 0) == 0 && folded.size() > p.size() && (folded[p.size()] == ':' || folded[p.size()] == ' ')) {
             tag.isVoice = true;
             tag.voice = text::Trim(tag.label.substr(p.size() + 1));
+            tag.voices = SplitNames(tag.voice);
             return tag;
         }
+    }
+    // Who speaks rather than sings; a narrator is a voice of its own.
+    static const std::set<std::string> NARRATOR = { "narrador", "narradora", "narracion", "narration", "narrator" };
+    static const std::set<std::string> SPOKEN = { "hablado", "hablada", "spoken", "recitado" };
+    static const std::set<std::string> SUNG = { "cantado", "cantada", "sung" };
+    const std::string word = LettersOnly(folded);
+    if (NARRATOR.contains(word)) {
+        tag.isVoice = true;
+        tag.voice = tag.label;
+        tag.voices = { tag.label };
+        tag.spoken = true;
+        return tag;
+    }
+    if (SPOKEN.contains(word) || SUNG.contains(word)) {
+        tag.isVoice = true;
+        tag.spoken = SPOKEN.contains(word);
+        tag.sung = SUNG.contains(word);
+        return tag;
     }
     const std::string letters = LettersOnly(folded);
     for (const TagWord& word : TAG_WORDS) {
@@ -133,7 +181,92 @@ void AssignIds(LyricDocument& document) {
     }
 }
 
+// "ANA: Hola" in a dialogue: the name in capitals before a colon is who speaks. Only
+// capitals, so "Dime: ¿por qué?" in a song stays a line of the song.
+bool SpeakerPrefix(const std::string& text, std::string& speaker, std::string& rest) {
+    const size_t colon = text.find(':');
+    if (colon == std::string::npos || colon == 0 || colon > 24 || colon + 1 >= text.size()) {
+        return false;
+    }
+    const std::string name = text::Trim(text.substr(0, colon));
+    int letters = 0;
+    for (char32_t c : text::Decode(name)) {
+        if (text::IsLetter(c)) {
+            if (text::ToLower(c) == c) {
+                return false;
+            }
+            ++letters;
+        } else if (!text::IsSpace(c)) {
+            return false;
+        }
+    }
+    if (letters < 2) {
+        return false;
+    }
+    speaker = name;
+    rest = text::Trim(text.substr(colon + 1));
+    return !rest.empty();
+}
+
+// The cast from the names on the lines, in order: the first named voice leads, the
+// second answers, a choir and a narrator are what their names say.
+void BuildCast(LyricDocument& document) {
+    for (LyricBlock& block : document.blocks) {
+        for (LyricLine& line : block.lines) {
+            std::string speaker;
+            std::string rest;
+            if (!line.instrumental && line.voices.empty() && SpeakerPrefix(line.text, speaker, rest)) {
+                line.text = rest;
+                line.words = SplitLyricWords(rest);
+                line.voices = { speaker };
+                line.voice = speaker;
+                line.delivery = Delivery::Spoken;
+                line.voice += "\x1e"; // marks a dialogue speaker for the cast below
+            }
+        }
+    }
+    static const std::set<std::string> CHOIR = { "coro", "coros", "choir", "chorus", "todos", "all", "everyone" };
+    static const std::set<std::string> NARRATOR = { "narrador", "narradora", "narracion", "narration", "narrator" };
+    int named = 0;
+    for (LyricBlock& block : document.blocks) {
+        for (LyricLine& line : block.lines) {
+            const bool dialogue = !line.voice.empty() && line.voice.back() == '\x1e';
+            if (dialogue) {
+                line.voice.pop_back();
+            }
+            std::vector<std::string> ids;
+            for (const std::string& name : line.voices) {
+                const std::string id = VoiceIdOf(name);
+                ids.push_back(id);
+                if (document.cast.Find(id) != nullptr) {
+                    continue;
+                }
+                VoiceDef v;
+                v.id = id;
+                v.name = name;
+                const std::string word = LettersOnly(text::Fold(name));
+                if (CHOIR.contains(word)) {
+                    v.role = VoiceRole::Chorus;
+                } else if (NARRATOR.contains(word)) {
+                    v.role = VoiceRole::Narrator;
+                    v.delivery = Delivery::Spoken;
+                } else if (dialogue) {
+                    v.role = VoiceRole::Dialogue;
+                    v.delivery = Delivery::Spoken;
+                    v.source = "speaker-prefix";
+                } else {
+                    v.role = named == 0 ? VoiceRole::Lead : named == 1 ? VoiceRole::Second : VoiceRole::Extra;
+                    ++named;
+                }
+                document.cast.voices.push_back(std::move(v));
+            }
+            line.voices = std::move(ids);
+        }
+    }
+}
+
 void Finish(LyricDocument& document, const std::string& source) {
+    BuildCast(document);
     AssignIds(document);
     if (text::Encode(text::Decode(source)) != source) {
         document.warnings.push_back("text-not-utf8");
@@ -177,6 +310,49 @@ LyricDocument FromTimedLines(const std::string& format, std::vector<LyricLine> l
 }
 
 } // namespace
+
+const VoiceDef* VoiceCast::Find(const std::string& id) const {
+    for (const VoiceDef& v : voices) {
+        if (v.id == id) {
+            return &v;
+        }
+    }
+    return nullptr;
+}
+
+const char* VoiceRoleId(VoiceRole role) {
+    static const char* const IDS[] = { "lead", "second", "chorus", "narrator", "dialogue", "extra", "unknown" };
+    return IDS[static_cast<int>(role)];
+}
+
+bool VoiceRoleFromId(const std::string& id, VoiceRole& role) {
+    for (int i = 0; i <= static_cast<int>(VoiceRole::Unknown); ++i) {
+        if (id == VoiceRoleId(static_cast<VoiceRole>(i))) {
+            role = static_cast<VoiceRole>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+const char* DeliveryId(Delivery delivery) {
+    return delivery == Delivery::Spoken ? "spoken" : "sung";
+}
+
+std::string VoiceIdOf(const std::string& name) {
+    std::string out = "v:";
+    for (char32_t c : text::Decode(text::Fold(name))) {
+        if (text::IsLetter(c) || text::IsDigit(c)) {
+            out += text::Encode(c);
+        } else if (out.back() != '-' && out.size() > 2) {
+            out += '-';
+        }
+    }
+    while (out.size() > 2 && out.back() == '-') {
+        out.pop_back();
+    }
+    return out.size() > 2 ? out : std::string("v:unknown");
+}
 
 std::vector<const LyricLine*> LyricDocument::Lines() const {
     std::vector<const LyricLine*> lines;
@@ -306,6 +482,8 @@ LyricDocument ParsePlainLyrics(const std::string& source) {
     LyricBlock current;
     bool open = false;
     std::string voice;
+    std::vector<std::string> voices;
+    Delivery delivery = Delivery::Sung;
     const auto close = [&]() {
         if (open && (!current.lines.empty() || current.kind != LyricBlockKind::Unlabeled)) {
             document.blocks.push_back(std::move(current));
@@ -326,7 +504,14 @@ LyricDocument ParsePlainLyrics(const std::string& source) {
         if (IsTag(trimmed)) {
             const Tag tag = ReadTag(trimmed);
             if (tag.isVoice) {
-                voice = tag.voice;
+                if (!tag.voices.empty()) {
+                    voice = tag.voice;
+                    voices = tag.voices;
+                    // A narrator speaks until a tag says otherwise; a singer sings.
+                    delivery = tag.spoken ? Delivery::Spoken : Delivery::Sung;
+                } else {
+                    delivery = tag.spoken ? Delivery::Spoken : Delivery::Sung;
+                }
                 continue;
             }
             close();
@@ -337,6 +522,8 @@ LyricDocument ParsePlainLyrics(const std::string& source) {
             continue;
         }
         LyricLine line = MakeLine(raw, voice);
+        line.voices = voices; // names for now: Finish turns them into ids
+        line.delivery = delivery;
         if (line.words.empty() && !line.instrumental) {
             continue;
         }

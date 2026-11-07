@@ -1575,7 +1575,8 @@ ValidationReport ValidateChoreography(const Choreography& c, const CompositionPl
         if (!t->media.empty() && !file) {
             raise(issue::ChoreoMediaMissing, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "kind", t->media } });
         }
-        if (e.effect == "Faces" && (faceTrack.empty() || faceTrack != c.lyricTrack || std::find(target->faces.begin(), target->faces.end(), faceDefinition) == target->faces.end())) {
+        const bool knownTrack = faceTrack == c.lyricTrack || std::find(c.voiceTracks.begin(), c.voiceTracks.end(), faceTrack) != c.voiceTracks.end();
+        if (e.effect == "Faces" && (faceTrack.empty() || !knownTrack || std::find(target->faces.begin(), target->faces.end(), faceDefinition) == target->faces.end())) {
             raise(issue::ChoreoLyricsTrackMissing, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "track", faceTrack } });
         }
         if (e.effect == "Text" && text.empty()) {

@@ -106,6 +106,7 @@ public:
         TestProperties();
         TestSequenceWriter();
         TestEnsemble();
+        TestVoiceFaces();
         WriteOutputs();
         TestRealLayout();
         printf("composer-choreography-test: %d checks passed, %d failed (%s)\n", _passed, _failed, _root.string().c_str());
@@ -960,6 +961,115 @@ private:
         DirectionInput neutral = d;
         neutral.profile = nullptr;
         Check(!DirectShow(neutral).enabled, "the neutral profile asks for no direction");
+    }
+
+    void TestVoiceFaces() {
+        Title("Each face sings its voice, and only when that voice does");
+        const LyricDocument doc = ParsePlainLyrics("[Narrador]\nHabía una vez una casa encendida\n\n[Voz: Ana]\nUna noche de Navidad\n\n[Voz: Luis]\nLas estrellas brillan\n\n"
+                                                   "[Voz: Coro]\nVuelve la Navidad\n");
+        // Narrator in the intro, Ana in the verse, Luis in the second verse, the choir in the last chorus.
+        const LyricAlignment alignment = Align(doc, { { 3000, 7000 }, { 15000, 19000 }, { 47000, 51000 }, { 63000, 67000 } });
+        VoiceCast cast = doc.cast;
+        std::vector<std::string> warnings;
+        AssignVoiceFaces(cast, _caps, &warnings);
+        const VoiceDef* ana = cast.Find("v:ana");
+        const VoiceDef* luis = cast.Find("v:luis");
+        const VoiceDef* coro = cast.Find("v:coro");
+        const VoiceDef* narrator = cast.Find("v:narrador");
+        Check(ana != nullptr && luis != nullptr && ana->faces.size() == 1 && luis->faces.size() == 1 && ana->faces != luis->faces,
+              fmt::format("the lead and the second voice get a face each: {} and {}", ana != nullptr && !ana->faces.empty() ? ana->faces[0] : "-", luis != nullptr && !luis->faces.empty() ? luis->faces[0] : "-"));
+        Check(coro != nullptr && coro->faces.size() >= 2, fmt::format("the choir takes every face ({})", coro != nullptr ? coro->faces.size() : 0));
+        Check(narrator != nullptr && narrator->faces.empty(), "the narrator gets no face unless a person gives it one");
+        const auto wired = [&](const std::string& face) { const TargetInfo* t = _caps.Find(face); return t != nullptr && !t->noController; };
+        Check(ana != nullptr && std::all_of(ana->faces.begin(), ana->faces.end(), wired), "only faces with a controller are given");
+
+        PlannerInput pin;
+        pin.analysis = &_song;
+        pin.capabilities = &_caps;
+        pin.options.level = AutomationLevel::Balanced;
+        pin.options.seed = 7;
+        pin.lyrics = &doc;
+        pin.alignment = &alignment;
+        pin.cast = &cast;
+        const CompositionPlan plan = PlanComposition(pin);
+        bool rightFaces = true;
+        int sung = 0;
+        for (const PlanSegment& s : plan.segments) {
+            for (const PlanAssignment& a : s.assignments) {
+                if (a.intent != "face-sing") {
+                    continue;
+                }
+                ++sung;
+                const VoiceDef* v = cast.Find(a.voice);
+                const bool heard = std::any_of(alignment.phrases.begin(), alignment.phrases.end(), [&](const AlignedPhrase& p) {
+                    return p.startMS < s.endMS && p.endMS > s.startMS && std::find(p.voices.begin(), p.voices.end(), a.voice) != p.voices.end();
+                });
+                rightFaces = rightFaces && v != nullptr && heard && std::find(v->faces.begin(), v->faces.end(), a.target) != v->faces.end();
+            }
+        }
+        Check(sung > 0 && rightFaces, fmt::format("{} singing faces in the plan, each in a segment where its own voice is heard", sung));
+        const auto facesIn = [&](int ms) {
+            std::set<std::string> out;
+            for (const PlanSegment& s : plan.segments) {
+                if (ms >= s.startMS && ms < s.endMS) {
+                    for (const PlanAssignment& a : s.assignments) {
+                        if (a.intent == "face-sing") {
+                            out.insert(a.target);
+                        }
+                    }
+                }
+            }
+            return out;
+        };
+        Check(facesIn(4000).empty(), "while the narrator speaks, no face sings");
+        Check(ana != nullptr && luis != nullptr && facesIn(16000).contains(ana->faces[0]) && !facesIn(16000).contains(luis->faces[0]), "in Ana's verse, her face sings and Luis's does not");
+        Check(coro != nullptr && facesIn(64000).size() >= 2, "in the choir, several faces sing together");
+
+        std::map<std::string, std::string> tracks;
+        for (const TimingTrackSpec& t : BuildVoiceTracks(alignment, cast, LYRIC_TRACK)) {
+            for (const VoiceDef& v : cast.voices) {
+                if (t.name == VoiceTrackName(LYRIC_TRACK, v)) {
+                    tracks[v.id] = t.name;
+                }
+            }
+        }
+        ChoreographyInput cin;
+        cin.plan = &plan;
+        cin.capabilities = &_caps;
+        cin.library = &_library;
+        cin.analysis = &_song;
+        cin.alignment = &alignment;
+        cin.lyricTrack = LYRIC_TRACK;
+        cin.voiceTracks = tracks;
+        const Choreography c = Choreograph(cin);
+        bool ownTrack = true;
+        int faces = 0;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.effect != "Faces") {
+                continue;
+            }
+            ++faces;
+            const auto track = std::find_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first == "E_CHOICE_Faces_TimingTrack"; });
+            ownTrack = ownTrack && track != e.settings.end() && track->second != LYRIC_TRACK && std::any_of(tracks.begin(), tracks.end(), [&](const auto& kv) { return kv.second == track->second; });
+        }
+        Check(faces > 0 && ownTrack, fmt::format("{} face effects, each reading its voice's own track", faces));
+        Check(ValidateChoreography(c, plan, _caps, _library, _metadata).ErrorCount() == 0, "and the choreography passes the checks");
+        VoiceCast off = cast;
+        for (VoiceDef& v : off.voices) {
+            v.facesOff = v.id == "v:ana";
+            if (v.facesOff) {
+                v.faces.clear();
+            }
+        }
+        pin.cast = &off;
+        const CompositionPlan quiet = PlanComposition(pin);
+        bool anaSilent = true;
+        for (const PlanSegment& s : quiet.segments) {
+            for (const PlanAssignment& a : s.assignments) {
+                anaSilent = anaSilent && !(a.intent == "face-sing" && a.voice == "v:ana");
+            }
+        }
+        Check(anaSilent, "a voice set to have no face leaves every face alone");
     }
 
     CompositionPlan MakePlanWith(const StyleProfile& profile, AutomationLevel level) const {

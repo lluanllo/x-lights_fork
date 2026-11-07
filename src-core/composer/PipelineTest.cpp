@@ -131,6 +131,7 @@ public:
         TestComplete();
         TestLyrics();
         TestLrcFiles();
+        TestVoices();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -363,6 +364,64 @@ private:
     }
 
     // ------------------------------------------------------------ faces
+
+    void TestVoices() {
+        Title("A2c. Voices: a narrator, two singers and a choir, each face on its own voice");
+        const std::string text = "[Narrador]\nHabía una vez una casa encendida\n\n[Voz: Ana]\n¿Dónde está el niño?\n\n[Voz: Luis]\nPingüino en la nieve\n\n[Voz: Coro]\n¡Año nuevo, señor!\n";
+        const LyricDocument doc = ParsePlainLyrics(text);
+        LyricSession session;
+        session.trackName = "Composer Lyrics";
+        session.lyrics = text;
+        const std::vector<std::pair<int, int>> times = { { 2000, 6000 }, { 9000, 13000 }, { 13500, 17000 }, { 25000, 29000 } };
+        size_t k = 0;
+        for (const LyricLine* line : doc.Lines()) {
+            LyricCorrection mark;
+            mark.targetId = line->id;
+            mark.startMS = times[k].first;
+            mark.endMS = times[k].second;
+            session.corrections.push_back(mark);
+            ++k;
+        }
+        // The narrator is heard and not seen: a person's choice, kept with the show.
+        VoiceDef narrator = *doc.cast.Find("v:narrador");
+        narrator.facesOff = true;
+        session.voices = { narrator };
+        const fs::path sessionPath = _root / "voces-session.json";
+        std::string error;
+        Check(SaveLyricSession(sessionPath.string(), session, error), "a session with the marks and a voice choice " + error);
+        GenerationRequest r = Request("voces");
+        r.lyricSessionPath = sessionPath.string();
+        const GenerationRun run = Generate(r);
+        Check(run.ok && run.cast.voices.size() == 4 && run.voiceTracks.size() == 4, fmt::format("published with {} voices and {} voice tracks", run.cast.voices.size(), run.voiceTracks.size()));
+        const SequenceSpec read = Reopen(run);
+        const VoiceDef* ana = run.cast.Find("v:ana");
+        Check(ana != nullptr && !ana->faces.empty() && Track(read, "Composer Lyrics - Ana") != nullptr && Track(read, "Composer Lyrics - Coro") != nullptr && Track(read, "Composer Lyrics") != nullptr,
+              "the sequence has the whole lyrics track and one per voice");
+        bool ownTrack = true;
+        int faces = 0;
+        for (const EffectSpec& e : read.effects) {
+            if (e.effect != "Faces") {
+                continue;
+            }
+            ++faces;
+            const std::string track = Setting(e, "E_CHOICE_Faces_TimingTrack");
+            ownTrack = ownTrack && track.rfind("Composer Lyrics - ", 0) == 0 && Track(read, track) != nullptr;
+        }
+        Check(faces > 0 && ownTrack, fmt::format("{} face effects, each on a voice's track that is in the sequence", faces));
+        bool narratorSilent = true;
+        for (const EffectSpec& e : read.effects) {
+            narratorSilent = narratorSilent && !(e.effect == "Faces" && e.startMS < 6000 && e.endMS > 2000 && Setting(e, "E_CHOICE_Faces_TimingTrack") == "Composer Lyrics - Narrador");
+        }
+        Check(narratorSilent, "the narrator, set to have no face, moves none");
+        GenerationSidecar sidecar;
+        Check(ReadSidecar(run.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.lyrics.voices.size() == 1 && sidecar.lyrics.voices[0].facesOff, "the voice choice is in the sidecar");
+        GenerationRequest again = Request("voces-otra-vez");
+        again.previousSidecarPath = run.sidecarPath;
+        const GenerationRun second = Generate(again);
+        Check(second.ok && second.voiceTracks.size() == 4 && second.cast.Find("v:narrador") != nullptr && second.cast.Find("v:narrador")->facesOff &&
+                  second.cast.Find("v:ana")->faces == ana->faces,
+              "regenerated from the sidecar alone: the same voices, the same faces");
+    }
 
     void TestLrcFiles() {
         Title("A2b. LRC files: repaired when it is safe, refused when a time is wrong");

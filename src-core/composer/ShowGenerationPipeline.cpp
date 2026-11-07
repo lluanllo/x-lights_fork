@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <numeric>
 #include <set>
 #include <sstream>
 #include <system_error>
@@ -735,6 +736,30 @@ bool PrepareLyrics(GenerationRun& run) {
         run.lyrics = existing != nullptr ? LyricsFromTrack(*existing) : ParseLyricsFile(r.lyricsPath, text);
         if (existing != nullptr && !text.empty()) {
             Note(run, S, "lyrics-from-track", fmt::format("the track '{}' wins over the text and times given with it", existing->name));
+            // The track has the times; who sings each line is only in the text, so the
+            // voices go over to the track's lines with the same words, in order.
+            LyricDocument tagged = ParseLyricsFile(r.lyricsPath, text);
+            if (!tagged.cast.Empty()) {
+                std::vector<const LyricLine*> from = tagged.Lines();
+                size_t next = 0;
+                int matched = 0;
+                for (LyricBlock& block : run.lyrics.blocks) {
+                    for (LyricLine& line : block.lines) {
+                        for (size_t k = next; k < from.size(); ++k) {
+                            if (LyricKey(from[k]->text) == LyricKey(line.text)) {
+                                line.voices = from[k]->voices;
+                                line.voice = from[k]->voice;
+                                line.delivery = from[k]->delivery;
+                                next = k + 1;
+                                ++matched;
+                                break;
+                            }
+                        }
+                    }
+                }
+                run.lyrics.cast = tagged.cast;
+                Note(run, S, "voices-from-text", fmt::format("{} of {} lines of the track took their voices from the text", matched, run.lyrics.Lines().size()));
+            }
         }
         CheckLyricsAgainstSong(run.lyrics, run.analysis.durationMS);
         for (const LyricIssue& issue : run.lyrics.issues) {
@@ -782,6 +807,9 @@ bool PrepareLyrics(GenerationRun& run) {
         run.corrections.lyrics = corrections;
         run.lyricSession.lyrics = text.empty() && existing != nullptr ? std::string() : text;
         run.lyricSession.corrections = corrections;
+        // A person's voice names and faces come with the marks, from this session or the
+        // earlier show's.
+        run.lyricSession.voices = !session.voices.empty() ? session.voices : run.hasPrevious ? run.previous.lyrics.voices : std::vector<VoiceDef>();
 
         int synced = 0;
         for (const AlignedPhrase& p : run.alignment.phrases) {
@@ -804,6 +832,29 @@ bool PrepareLyrics(GenerationRun& run) {
             return Fail(run, S, "lyrics-invalid", fmt::format("{} errors", report.ErrorCount()));
         }
         run.lyricTrack = std::move(track);
+        run.cast = EffectiveCast(run.lyrics.cast, run.lyricSession.voices);
+        if (!run.cast.Empty()) {
+            std::vector<std::string> warnings;
+            AssignVoiceFaces(run.cast, run.capabilities, &warnings);
+            run.voiceTracks = BuildVoiceTracks(run.alignment, run.cast, r.lyricTrackName);
+            for (const VoiceDef& v : run.cast.voices) {
+                int phrases = 0;
+                for (const AlignedPhrase& p : run.alignment.phrases) {
+                    phrases += p.startMS >= 0 && std::find(p.voices.begin(), p.voices.end(), v.id) != p.voices.end() ? 1 : 0;
+                }
+                Note(run, S, "voice", fmt::format("{} ({}, {}): {} phrases, faces {}", v.name, VoiceRoleId(v.role), DeliveryId(v.delivery), phrases, v.facesOff ? std::string("off") : v.faces.empty() ? std::string("none") : std::accumulate(v.faces.begin(), v.faces.end(), std::string(), [](const std::string& a, const std::string& b) { return a.empty() ? b : a + ", " + b; })));
+            }
+            for (const std::string& w : warnings) {
+                Note(run, S, "voice-warning", w);
+            }
+            int unnamed = 0;
+            for (const AlignedPhrase& p : run.alignment.phrases) {
+                unnamed += p.startMS >= 0 && !p.instrumental && p.voices.empty() ? 1 : 0;
+            }
+            if (unnamed > 0) {
+                Note(run, S, "voice-unknown", fmt::format("{} phrases have no voice: no face sings them until one is given", unnamed));
+            }
+        }
         return true;
     });
 }
@@ -834,6 +885,7 @@ bool PlanShow(GenerationRun& run) {
         if (run.hasLyrics) {
             in.lyrics = &run.lyrics;
             in.alignment = &run.alignment;
+            in.cast = run.cast.Empty() ? nullptr : &run.cast;
         }
         in.profile = &run.profile;
         in.options.level = *run.request.level;
@@ -876,6 +928,12 @@ bool ChoreographShow(GenerationRun& run) {
         }
         // Faces only move on a track that exists: without one they are left out and said so.
         in.lyricTrack = run.lyricTrack.layers.empty() ? std::string() : run.lyricTrack.name;
+        for (const VoiceDef& v : run.cast.voices) {
+            const std::string name = VoiceTrackName(run.request.lyricTrackName, v);
+            if (std::any_of(run.voiceTracks.begin(), run.voiceTracks.end(), [&](const TimingTrackSpec& t) { return t.name == name; })) {
+                in.voiceTracks[v.id] = name;
+            }
+        }
         in.frameMS = run.request.frameMS;
         in.corrections = run.corrections.choreography;
         if (run.profile.ensemble.enabled) {
@@ -946,6 +1004,12 @@ bool BuildSequence(GenerationRun& run) {
         if (!run.lyricTrack.layers.empty()) {
             tracks.push_back(run.lyricTrack);
             run.trackNames["composer.lyrics"] = run.lyricTrack.name;
+            for (const TimingTrackSpec& t : run.voiceTracks) {
+                tracks.push_back(t);
+            }
+            for (const VoiceDef& v : run.cast.voices) {
+                run.trackNames["composer.voice." + v.id] = VoiceTrackName(run.request.lyricTrackName, v);
+            }
         }
         if (!run.choreography.mediaCues.empty()) {
             tracks.push_back({ run.request.mediaCueTrackName, CueLayers(run.choreography.mediaCues) });
@@ -1323,6 +1387,15 @@ std::string SummaryJson(const GenerationRun& run) {
     root["audio"] = run.request.audioPath;
     root["durationMS"] = run.spec.durationMS > 0 ? run.spec.durationMS : run.analysis.durationMS;
     root["lyricTrack"] = run.lyricTrack.layers.empty() ? std::string() : run.lyricTrack.name;
+    nlohmann::json voices = nlohmann::json::array();
+    for (const VoiceDef& v : run.cast.voices) {
+        int phrases = 0;
+        for (const AlignedPhrase& p : run.alignment.phrases) {
+            phrases += p.startMS >= 0 && std::find(p.voices.begin(), p.voices.end(), v.id) != p.voices.end() ? 1 : 0;
+        }
+        voices.push_back({ { "id", v.id }, { "name", v.name }, { "role", VoiceRoleId(v.role) }, { "delivery", DeliveryId(v.delivery) }, { "faces", v.faces }, { "facesOff", v.facesOff }, { "phrases", phrases } });
+    }
+    root["voices"] = std::move(voices);
     json coverage = json::array();
     for (const TargetCoverage& t : run.coverage) {
         coverage.push_back({ { "target", t.target }, { "planned", t.plannedSegments }, { "events", t.events }, { "written", t.written }, { "lit", t.effectsLit }, { "framesLit", t.framesLit }, { "note", t.note } });

@@ -604,8 +604,42 @@ private:
         }
         const std::string key = Key(s);
 
+        // With voices, a face sings when its voice does and only then; a phrase nobody
+        // was named for gives no face.
+        const bool voiced = _in.cast != nullptr && !_in.cast->Empty() && _in.alignment != nullptr && _plan.lyricsSynchronized;
+        if (voiced) {
+            std::map<std::string, int> heard;
+            for (const AlignedPhrase& p : _in.alignment->phrases) {
+                const int overlap = std::min(p.endMS, s.endMS) - std::max(p.startMS, s.startMS);
+                if (p.startMS < 0 || p.instrumental || overlap <= 0) {
+                    continue;
+                }
+                for (const std::string& v : p.voices) {
+                    heard[v] += overlap;
+                }
+            }
+            for (const auto& [id, ms] : heard) {
+                const VoiceDef* v = _in.cast->Find(id);
+                if (v == nullptr || v->facesOff || v->faces.empty()) {
+                    s.reasons.push_back({ "voice-without-face", id });
+                    continue;
+                }
+                for (const std::string& face : v->faces) {
+                    const auto c = std::find_if(_faces.begin(), _faces.end(), [&](const Candidate& f) { return _caps.targets[f.target].name == face; });
+                    if (c == _faces.end() || Conflicts(c->target, chosen)) {
+                        s.reasons.push_back({ c == _faces.end() ? "voice-face-unavailable" : "voice-face-conflict", id + ":" + face });
+                        continue;
+                    }
+                    PlanAssignment a = Make(*c, Prominence::Lead, "face-sing", s.targetIntensity);
+                    a.voice = id;
+                    a.reasons.push_back({ "voice", fmt::format("{} ({}), {} ms sung here", v->name, VoiceRoleId(v->role), ms) });
+                    a.reasons.push_back({ "face-definition", "" });
+                    take(*c, std::move(a));
+                }
+            }
+        }
         // A sung phrase gives the faces the lead, if a face can sing it.
-        const bool vocal = _plan.lyricsSynchronized && s.vocalCoverage >= 0.2;
+        const bool vocal = !voiced && _plan.lyricsSynchronized && s.vocalCoverage >= 0.2;
         if (vocal) {
             std::vector<Candidate> faces = _faces;
             // A face with no controller sings where nobody can see it: the wired ones go
@@ -1070,8 +1104,12 @@ json ReasonsJson(const std::vector<Reason>& reasons) {
 }
 
 json AssignmentJson(const PlanAssignment& a) {
-    return { { "target", a.target }, { "type", TargetTypeId(a.type) }, { "role", RoleId(a.role) }, { "prominence", ProminenceId(a.prominence) }, { "intent", a.intent }, { "intensity", a.intensity },
-             { "confidence", a.confidence }, { "state", DecisionStateId(a.state) }, { "reasons", ReasonsJson(a.reasons) } };
+    json out = { { "target", a.target }, { "type", TargetTypeId(a.type) }, { "role", RoleId(a.role) }, { "prominence", ProminenceId(a.prominence) }, { "intent", a.intent }, { "intensity", a.intensity },
+                 { "confidence", a.confidence }, { "state", DecisionStateId(a.state) }, { "reasons", ReasonsJson(a.reasons) } };
+    if (!a.voice.empty()) {
+        out["voice"] = a.voice;
+    }
+    return out;
 }
 
 template <typename E, size_t N>
@@ -1101,6 +1139,7 @@ PlanAssignment AssignmentFrom(const json& j) {
     (void)RoleFromId(j.value("role", std::string("prop")), a.role);
     (void)EnumFrom(PROMINENCE_IDS, j.value("prominence", std::string("rest")), a.prominence);
     a.intent = j.value("intent", std::string());
+    a.voice = j.value("voice", std::string());
     a.intensity = j.value("intensity", 0.0);
     a.confidence = j.value("confidence", 0.0);
     (void)EnumFrom(DECISION_IDS, j.value("state", std::string("automatic")), a.state);
@@ -1260,6 +1299,70 @@ bool FromJson(const std::string& text, StyleProfile& profile, std::string& error
         return false;
     }
     return true;
+}
+
+void AssignVoiceFaces(VoiceCast& cast, const ModelCapabilities& caps, std::vector<std::string>* warnings) {
+    std::vector<const TargetInfo*> faces;
+    for (const TargetInfo& t : caps.targets) {
+        if (t.type == TargetType::Model && !t.faces.empty() && !t.Excluded()) {
+            faces.push_back(&t);
+        }
+    }
+    // Wired faces first, then the larger ones, then by name: the same order every time.
+    std::sort(faces.begin(), faces.end(), [](const TargetInfo* a, const TargetInfo* b) {
+        if (a->noController != b->noController) {
+            return !a->noController;
+        }
+        return a->nodes != b->nodes ? a->nodes > b->nodes : a->name < b->name;
+    });
+    std::set<std::string> taken;
+    for (const VoiceDef& v : cast.voices) {
+        taken.insert(v.faces.begin(), v.faces.end());
+    }
+    const auto next = [&]() -> std::string {
+        for (const TargetInfo* f : faces) {
+            if (!taken.contains(f->name) && !f->noController) {
+                taken.insert(f->name);
+                return f->name;
+            }
+        }
+        return {};
+    };
+    static const VoiceRole ORDER[] = { VoiceRole::Lead, VoiceRole::Second, VoiceRole::Dialogue, VoiceRole::Extra, VoiceRole::Unknown };
+    for (VoiceRole role : ORDER) {
+        for (VoiceDef& v : cast.voices) {
+            if (v.role != role || v.facesOff || !v.faces.empty()) {
+                continue;
+            }
+            const std::string face = next();
+            if (face.empty()) {
+                if (warnings != nullptr) {
+                    warnings->push_back("voice-without-face:" + v.id);
+                }
+                continue;
+            }
+            v.faces.push_back(face);
+            v.source = v.source.empty() ? std::string("auto") : v.source;
+        }
+    }
+    for (VoiceDef& v : cast.voices) {
+        if (v.role != VoiceRole::Chorus || v.facesOff || !v.faces.empty()) {
+            continue;
+        }
+        for (const TargetInfo* f : faces) {
+            if (!f->noController && !taken.contains(f->name)) {
+                v.faces.push_back(f->name);
+            }
+        }
+        if (v.faces.empty()) {
+            // Every face sings in the choir when none is free for it.
+            for (const TargetInfo* f : faces) {
+                if (!f->noController) {
+                    v.faces.push_back(f->name);
+                }
+            }
+        }
+    }
 }
 
 std::string HashText(const std::string& text) {

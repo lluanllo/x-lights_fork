@@ -33,9 +33,12 @@ enum class AlignmentProvider {
 };
 
 struct AlignedPhrase {
-    std::string id; // the LyricLine id
+    std::string id; // the LyricLine id; "<id>~<word>" for the second part of a split phrase
     std::string text;
     std::string voice;
+    std::vector<std::string> voices; // voice ids; empty: nobody said who sings it
+    std::string delivery = "sung";   // "sung" or "spoken"
+    std::string voiceSource;         // "lyrics", "manual" or "" when unknown
     int startMS = -1; // -1: not synchronized
     int endMS = -1;
     bool instrumental = false;
@@ -77,7 +80,10 @@ struct LyricCorrection {
     enum class Level {
         Phrase,
         Word,
-        Phoneme
+        Phoneme,
+        Voice, // who sings the phrase, and whether it is spoken
+        Split, // the phrase becomes two, before its word `wordIndex`
+        Merge  // the phrase and the one after it become one
     };
     Level level = Level::Phrase;
     std::string targetId;
@@ -87,6 +93,9 @@ struct LyricCorrection {
     std::string shape;      // phonemes only: a replacement shape, empty to keep it
     int originalStartMS = -1; // what the person saw before changing it
     int originalEndMS = -1;
+    std::vector<std::string> voices; // Voice: the voice ids, several for a duet or a choir
+    std::string delivery;            // Voice: "sung", "spoken" or "" to keep it
+    int wordIndex = -1;              // Split
 };
 
 struct AlignmentConflict {
@@ -156,7 +165,16 @@ struct LyricSession {
     std::string trackName;
     std::string lyrics; // the text as given, in whatever format it came
     std::vector<LyricCorrection> corrections;
+    std::vector<VoiceDef> voices; // a person's names, roles and faces for the voices
 };
+
+// The voices of the lyrics with a person's changes on top: names, roles, faces.
+[[nodiscard]] VoiceCast EffectiveCast(const VoiceCast& fromLyrics, const std::vector<VoiceDef>& edits);
+
+// One lyrics track per voice that has timed phrases, named "<base> - <voice>": what a
+// face of that voice sings, and nothing of the others.
+[[nodiscard]] std::vector<TimingTrackSpec> BuildVoiceTracks(const LyricAlignment& alignment, const VoiceCast& cast, const std::string& baseName);
+[[nodiscard]] std::string VoiceTrackName(const std::string& baseName, const VoiceDef& voice);
 
 [[nodiscard]] std::string ToJson(const LyricAlignment& alignment);
 [[nodiscard]] bool FromJson(const std::string& text, LyricAlignment& alignment, std::string& error);
