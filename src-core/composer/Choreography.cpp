@@ -1,5 +1,7 @@
 #include "composer/Choreography.h"
 
+#include "composer/MediaDirection.h"
+
 #include "composer/ComposerText.h"
 #include "composer/VisualDirection.h"
 
@@ -383,6 +385,8 @@ private:
                 Face(s, *a, *target, band, key, rank++);
             } else if (a->intent == "lyric-text") {
                 Text(s, *a, *target, band, key, rank++, usedEffects);
+            } else if (a->intent == "media") {
+                Media(s, *a, *target, key, usedEffects);
             } else {
                 Visual(s, *a, *target, band, key, rank++, usedEffects);
             }
@@ -806,6 +810,59 @@ private:
         }
         ChoosePalette(e, *o.t, band, key, rank, 0);
         _out.events.push_back(std::move(e));
+    }
+
+    // A picture or a video from the show's own files, as the media plan chose it: the
+    // template gives the transitions, the plan the file and how it is fitted.
+    void Media(const PlanSegment& s, const PlanAssignment& a, const TargetInfo& target, const std::string& key, std::set<std::string>& usedEffects) {
+        const MediaAssignment* m = _in.media != nullptr ? _in.media->Find(s.id, a.target) : nullptr;
+        if (m == nullptr) {
+            _out.warnings.push_back(fmt::format("media-without-assignment:{}:{}", a.target, s.id));
+            return;
+        }
+        const EffectTemplate* chosen = nullptr;
+        CompatibilityResult compat;
+        for (const EffectTemplate& t : _lib.templates) {
+            if (t.effect != m->effect || t.media.empty() || !Has(t.intents, "media")) {
+                continue;
+            }
+            compat = EvaluateCompatibility(t, target);
+            if (compat.level != Compatibility::Incompatible) {
+                chosen = &t;
+                break;
+            }
+        }
+        if (chosen == nullptr) {
+            _out.warnings.push_back(fmt::format("no-template:{}:media", a.target));
+            return;
+        }
+        const Option o{ chosen, compat, 1.0 };
+        const int start = ToFrame(std::max(m->startMS, s.startMS), _frame);
+        const int end = ToFrame(std::min(m->endMS, s.endMS), _frame);
+        const int blocks = std::max(1, static_cast<int>(std::ceil(static_cast<double>(end - start) / chosen->maxMS)));
+        for (int b = 0; b < blocks; ++b) {
+            const int from = b == 0 ? start : ToFrame(start + static_cast<double>(end - start) * b / blocks, _frame);
+            const int to = b == blocks - 1 ? end : ToFrame(start + static_cast<double>(end - start) * (b + 1) / blocks, _frame);
+            ChoreographyEvent e = Base(s, a, target, o, from, to, fmt::format("m{}", b));
+            SetParameters(e, *chosen, 0, key, b);
+            for (const auto& [k, v] : m->settings) {
+                const auto same = std::find_if(e.settings.begin(), e.settings.end(), [&](const auto& kv) { return kv.first == k; });
+                if (same != e.settings.end()) {
+                    same->second = v;
+                } else {
+                    e.settings.emplace_back(k, v);
+                }
+            }
+            std::sort(e.settings.begin(), e.settings.end());
+            e.reasons.push_back({ "media", m->mediaId });
+            e.reasons.insert(e.reasons.end(), m->reasons.begin(), m->reasons.end());
+            e.constraints.insert(e.constraints.end(), m->constraints.begin(), m->constraints.end());
+            e.state = m->state;
+            e.provenance = m->state == DecisionState::Automatic ? e.provenance : std::string("manual");
+            e.needsReview = true; // how a picture reads on the lights is only judged by eye
+            _out.events.push_back(std::move(e));
+        }
+        usedEffects.insert(chosen->effect);
     }
 
     void Cue(const PlanSegment& s, const PlanAssignment& a, const TargetInfo& target) {

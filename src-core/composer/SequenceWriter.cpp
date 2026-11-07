@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <list>
 #include <memory>
+#include <set>
 #include <system_error>
 
 namespace fs = std::filesystem;
@@ -153,10 +154,10 @@ void VerifyTimingTracks(SequenceElements& elements, const SequenceSpec& spec, st
     }
 }
 
-// The track reference is drawn by the panel's custom row, so it has no property
-// of its own in the effect metadata.
+// The track reference and the picture or video file are drawn by the panel's custom
+// rows, so they have no property of their own in the effect metadata.
 bool IsCustomRowSetting(const std::string& id) {
-    return id == "Faces_TimingTrack";
+    return id == "Faces_TimingTrack" || id == "Pictures_Filename" || id == "Video_Filename";
 }
 
 void VerifySettingAgainstMetadata(const RenderableEffect& renderable, const EffectSpec& effect, const std::string& key, const std::string& value, std::vector<std::string>& problems) {
@@ -289,11 +290,20 @@ void VerifyEffects(xLightsShowContext& ctx, const SequenceSpec& spec, std::vecto
 void VerifyNothingExtra(SequenceElements& elements, const SequenceSpec& spec, std::vector<std::string>& problems) {
     size_t timing = 0;
     size_t effects = 0;
+    // A picture or a video only where the spec put one: never one nobody chose.
+    std::set<std::string> media;
+    for (const EffectSpec& e : spec.effects) {
+        if (e.effect == "Video" || e.effect == "Pictures") {
+            media.insert(fmt::format("{}|{}|{}", e.subModel.empty() ? e.target : e.subModel, e.effect, e.startMS));
+        }
+    }
     const auto countLayers = [&](const Element& el) {
         for (size_t l = 0; l < el.GetEffectLayerCount(); ++l) {
             for (Effect* effect : el.GetEffectLayer(static_cast<int>(l))->GetEffects()) {
                 ++effects;
-                if (effect->GetEffectName() == "Video" || effect->GetEffectName() == "Pictures") {
+                const bool file = effect->GetEffectName() == "Video" || effect->GetEffectName() == "Pictures";
+                const std::string name = el.GetName().substr(el.GetName().rfind('/') == std::string::npos ? 0 : el.GetName().rfind('/') + 1);
+                if (file && !media.contains(fmt::format("{}|{}|{}", name, effect->GetEffectName(), effect->GetStartTimeMS()))) {
                     problems.push_back(fmt::format("hay un efecto {} no previsto en '{}'", effect->GetEffectName(), el.GetName()));
                 }
             }

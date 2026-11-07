@@ -22,7 +22,7 @@ namespace composer {
 
 namespace {
 
-const std::set<std::string> INTENTS = { "feature", "accompany", "beat-accent", "lyric-text", "face-sing", "ensemble-bed", "ensemble-hit" };
+const std::set<std::string> INTENTS = { "feature", "accompany", "beat-accent", "lyric-text", "face-sing", "ensemble-bed", "ensemble-hit", "media" };
 const std::set<std::string> BINDINGS = { "", "lyrics-phrase", "face-track" };
 const std::set<std::string> RHYTHMS = { "", "downbeat" };
 const std::set<std::string> MEDIA = { "", "image", "video" };
@@ -184,7 +184,7 @@ std::string CheckSetting(const json& metadata, const std::string& key, const std
     }
     const std::string id = key.substr(controlEnd + 1);
     // Rows the effect panel draws itself; their values are checked by the validator.
-    if (id == "Faces_TimingTrack" || id == "Text_File" || id == "Pictures_Filename" || id == "State_State") {
+    if (id == "Faces_TimingTrack" || id == "Text_File" || id == "Pictures_Filename" || id == "Video_Filename" || id == "State_State") {
         return "";
     }
     const json* p = FindProperty(metadata, id);

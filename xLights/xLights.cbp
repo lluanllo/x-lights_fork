@@ -570,6 +570,8 @@
 		<Unit filename="../src-core/composer/ComposerReview.h" />
 		<Unit filename="../src-core/composer/PipelineTest.cpp" />
 		<Unit filename="../src-core/composer/PipelineTest.h" />
+		<Unit filename="../src-core/composer/MediaDirection.cpp" />
+		<Unit filename="../src-core/composer/MediaDirection.h" />
 		<Unit filename="../src-core/composer/MediaTest.cpp" />
 		<Unit filename="../src-core/composer/MediaTest.h" />
 		<Unit filename="../src-core/composer/MediaLibrary.cpp" />

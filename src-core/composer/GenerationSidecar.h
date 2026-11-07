@@ -3,6 +3,7 @@
 #include "composer/Choreography.h"
 #include "composer/CompositionPlan.h"
 #include "composer/LyricAligner.h"
+#include "composer/MediaDirection.h"
 #include "composer/SongAnalysis.h"
 
 #include <cstdint>
@@ -60,6 +61,8 @@ struct GenerationSidecar {
     // regeneration finds them with no network. Relative to the show folder.
     std::string transcriptCache;
     std::string characterCache;
+    // The media folders, a person's picture and video choices, and what plays where.
+    MediaSession media;
 };
 
 enum class SidecarStatus {
@@ -86,6 +89,7 @@ struct CorrectionSet {
     std::vector<ChoreographyCorrection> choreography;
     std::vector<LyricCorrection> lyrics;
     AnalysisCorrections analysis;
+    std::vector<MediaCorrection> media;
 
     [[nodiscard]] bool Empty() const;
 };

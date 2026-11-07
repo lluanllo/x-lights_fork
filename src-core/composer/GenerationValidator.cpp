@@ -461,7 +461,7 @@ private:
     // These have no property of their own in the metadata although the effect
     // reads them: the panel draws them in a custom row.
     static bool IsCustomRowSetting(const std::string& id) {
-        return id == "Faces_TimingTrack" || id == "State_State" || id == "Text_File" || id == "Pictures_Filename";
+        return id == "Faces_TimingTrack" || id == "State_State" || id == "Text_File" || id == "Pictures_Filename" || id == "Video_Filename";
     }
 
     void CheckSettingAgainstMetadata(const RenderableEffect& renderable, const EffectSpec& effect, const std::string& key, const std::string& value) {
@@ -1429,7 +1429,7 @@ ValidationReport ValidateCompositionPlan(const CompositionPlan& plan, const Mode
             if (caps.LightsExcluded(a.target)) {
                 raise(issue::PlanTargetExcluded, IssueSeverity::Error, IssueCategory::Configuration, a.target, s.startMS, s.endMS, where);
             }
-            const Capability needed = a.intent == "face-sing" ? Capability::Face : a.intent == "lyric-text" ? Capability::Text : Capability::Geometric;
+            const Capability needed = a.intent == "face-sing" ? Capability::Face : a.intent == "lyric-text" ? Capability::Text : a.intent == "media" ? Capability::Image : Capability::Geometric;
             const Support support = t->Can(needed).support;
             if (support == Support::No) {
                 raise(issue::PlanRoleIncompatible, IssueSeverity::Error, IssueCategory::Configuration, a.target, s.startMS, s.endMS, { { "segment", s.id }, { "intent", a.intent }, { "capability", CapabilityId(needed) } });

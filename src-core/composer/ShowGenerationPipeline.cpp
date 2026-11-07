@@ -367,6 +367,8 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.choreographyCorrections = run.corrections.choreography;
     s.analysisCorrections = run.corrections.analysis;
     s.lyrics = run.lyricSession;
+    s.media = run.mediaSession;
+    s.media.corrections = run.corrections.media;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
                                           LevelId(s.level), s.seed, s.frameMS, s.pipelineVersion, s.plannerVersion, s.choreographerVersion, ToJson(run.corrections)));
     const ValidationReport& v = run.write.validation;
@@ -513,6 +515,7 @@ bool CheckInputs(GenerationRun& run) {
             run.corrections.choreography = run.previous.choreographyCorrections;
             run.corrections.lyrics = run.previous.lyrics.corrections;
             run.corrections.analysis = run.previous.analysisCorrections;
+            run.corrections.media = run.previous.media.corrections;
             // The assistant's answers the earlier show used, from the cache: no network.
             for (const auto& [kept, given, what] : { std::tuple<const std::string*, std::string*, const char*>{ &run.previous.transcriptCache, &run.request.transcriptPath, "transcript" },
                                                      { &run.previous.characterCache, &run.request.characterPath, "song description" } }) {
@@ -914,6 +917,130 @@ bool PlanShow(GenerationRun& run) {
     });
 }
 
+namespace {
+
+// The show's pictures and videos, chosen once the scenes are known and before the
+// choreography: the figure that shows one takes the "media" intent in the plan.
+void PlanShowMedia(GenerationRun& run, GenerationStage S) {
+    const GenerationRequest& r = run.request;
+    MediaSession& session = run.mediaSession;
+    session = run.hasPrevious ? run.previous.media : MediaSession();
+    session.used.clear();
+    if (!r.mediaFolders.empty()) {
+        session.folders.clear();
+        for (const std::string& f : r.mediaFolders) {
+            const std::string relative = MediaRelativePath(f, r.showDir);
+            session.folders.push_back(relative.empty() ? f : relative);
+        }
+    }
+    if (r.mediaAutomatic) {
+        session.automatic = *r.mediaAutomatic;
+    }
+    if (r.mediaMaxShare) {
+        session.maxShare = *r.mediaMaxShare;
+    }
+    // Media only for a show that asked for it, with its folders or a person's choices.
+    if (session.folders.empty() && run.corrections.media.empty()) {
+        return;
+    }
+    const std::string libraryPath = r.mediaLibraryPath.empty() ? MediaLibraryPath(r.showDir) : r.mediaLibraryPath;
+    MediaLibrary saved;
+    std::string error;
+    const bool exists = FileExists(libraryPath);
+    const bool hasSaved = exists && ReadMediaLibrary(libraryPath, saved, error);
+    if (exists && !hasSaved) {
+        Note(run, S, "media-library-unreadable", libraryPath + ": " + error);
+    }
+    std::vector<std::string> folders;
+    for (const std::string& f : session.folders) {
+        folders.push_back(MediaAbsolutePath(f, r.showDir));
+    }
+    if (!folders.empty() && (r.scanMedia || !hasSaved)) {
+        MediaScanOptions o;
+        o.showDir = r.showDir;
+        o.folders = folders;
+        o.cancelled = r.cancel;
+        run.mediaLibrary = ScanMediaFolders(o, hasSaved ? &saved : nullptr);
+        if (!SaveMediaLibrary(libraryPath, run.mediaLibrary, error)) {
+            Note(run, S, "media-library-not-saved", error);
+        }
+        Note(run, S, "media-scan", fmt::format("{} files in {} folders", run.mediaLibrary.items.size(), run.mediaLibrary.folders.size()));
+        for (const std::string& w : run.mediaLibrary.warnings) {
+            Note(run, S, "media-scan-warning", w);
+        }
+    } else if (hasSaved) {
+        run.mediaLibrary = std::move(saved);
+        // A file can have gone since the library was made: then it is not used.
+        int gone = 0;
+        for (MediaItem& m : run.mediaLibrary.items) {
+            if (m.status == MediaStatus::Ok && !FileExists(m.path)) {
+                m.status = MediaStatus::Missing;
+                m.problem = "missing";
+                ++gone;
+            }
+        }
+        Note(run, S, "media-library", fmt::format("{} files, {} gone since it was searched", run.mediaLibrary.items.size(), gone));
+    }
+    MediaPlanInput in;
+    in.plan = &run.plan;
+    in.capabilities = &run.capabilities;
+    in.library = &run.mediaLibrary;
+    in.metadata = &run.metadata;
+    in.direction = run.direction.enabled ? &run.direction : nullptr;
+    if (run.direction.enabled) {
+        for (const ThemeDef& t : run.themes.themes) {
+            if (t.id == run.direction.themeId) {
+                in.themeCategories = t.mediaCategories;
+            }
+        }
+    }
+    in.showDir = r.showDir;
+    in.options.automatic = session.automatic;
+    in.options.maxShare = session.maxShare;
+    in.corrections = run.corrections.media;
+    run.media = PlanMedia(in);
+    for (MediaAssignment& a : run.media.assignments) {
+        const auto outside = std::find(a.constraints.begin(), a.constraints.end(), "outside-show");
+        if (outside == a.constraints.end()) {
+            continue;
+        }
+        if (!r.copyMediaIntoShow) {
+            Note(run, S, "media-outside-show", a.path);
+            continue;
+        }
+        const MediaItem* m = run.mediaLibrary.Find(a.mediaId);
+        std::string copied;
+        if (m == nullptr || !CopyMediaIntoShow(*m, r.showDir, a.effect == "Video" ? "Videos" : "Images", copied, error)) {
+            Note(run, S, "media-copy-failed", fmt::format("{}: {}", a.path, error));
+            continue;
+        }
+        const std::string relative = MediaRelativePath(copied, r.showDir);
+        for (auto& [key, value] : a.settings) {
+            if (value == a.path) {
+                value = relative;
+            }
+        }
+        a.path = relative;
+        a.constraints.erase(outside);
+        a.reasons.push_back({ "copied-into-show", relative });
+        Note(run, S, "media-copied", relative);
+    }
+    ApplyMediaPlan(run.plan, run.media, run.capabilities);
+    for (const MediaAssignment& a : run.media.assignments) {
+        session.used.push_back({ a.segmentId, a.target, a.startMS, a.endMS, a.mediaId, a.path, a.effect, a.state });
+        Note(run, S, "media", fmt::format("{} {}-{} ms on {}: {} ({})", a.effect, a.startMS, a.endMS, a.target, a.name, DecisionStateId(a.state)));
+    }
+    for (const std::string& w : run.media.warnings) {
+        Note(run, S, "media-warning", w);
+    }
+    if (!run.media.assignments.empty() || !run.mediaLibrary.items.empty()) {
+        Note(run, S, "media-plan", fmt::format("{} pictures and videos, {:.0f}% of the song (at most {:.0f}%), {} usable files", run.media.assignments.size(), run.media.share * 100, run.media.maxShare * 100,
+                                               run.media.usableItems));
+    }
+}
+
+} // namespace
+
 bool ChoreographShow(GenerationRun& run) {
     return RunStage(run, GenerationStage::Choreography, [&]() {
         const GenerationStage S = GenerationStage::Choreography;
@@ -963,6 +1090,8 @@ bool ChoreographShow(GenerationRun& run) {
             Note(run, S, "visual-direction", fmt::format("theme {} from {} ({:.2f}), {} families, {} scenes", run.direction.themeId, run.direction.themeSource, run.direction.themeConfidence,
                                                          run.direction.families.size(), run.direction.scenes.size()));
         }
+        PlanShowMedia(run, S);
+        in.media = &run.media;
         run.choreography = Choreograph(in);
         if (run.direction.enabled) {
             run.directionMetrics = MeasureDirection(run.direction, run.choreography, run.capabilities);
@@ -1267,6 +1396,10 @@ void WriteDiagnostics(GenerationRun& run) {
             ok &= WriteText(report / "visual-direction-report.txt", DirectionReport(run.direction));
             ok &= WriteText(report / "direction-metrics.json", ToJson(run.directionMetrics));
         }
+        if (!run.mediaLibrary.items.empty() || !run.media.assignments.empty() || !run.media.warnings.empty()) {
+            ok &= WriteText(report / "media-plan.json", ToJson(run.media));
+            ok &= WriteText(report / "media-report.txt", MediaReport(run.media));
+        }
     }
     if (!run.transcriptAlignment.anchors.empty()) {
         nlohmann::json lines = nlohmann::json::array();
@@ -1396,6 +1529,12 @@ std::string SummaryJson(const GenerationRun& run) {
         voices.push_back({ { "id", v.id }, { "name", v.name }, { "role", VoiceRoleId(v.role) }, { "delivery", DeliveryId(v.delivery) }, { "faces", v.faces }, { "facesOff", v.facesOff }, { "phrases", phrases } });
     }
     root["voices"] = std::move(voices);
+    nlohmann::json media = nlohmann::json::array();
+    for (const MediaAssignment& a : run.media.assignments) {
+        media.push_back({ { "segment", a.segmentId }, { "target", a.target }, { "startMS", a.startMS }, { "endMS", a.endMS }, { "media", a.mediaId }, { "name", a.name }, { "path", a.path },
+                          { "effect", a.effect }, { "state", DecisionStateId(a.state) }, { "constraints", a.constraints } });
+    }
+    root["media"] = { { "assignments", std::move(media) }, { "share", run.media.share }, { "maxShare", run.media.maxShare }, { "usable", run.media.usableItems }, { "library", run.mediaLibrary.items.size() } };
     json coverage = json::array();
     for (const TargetCoverage& t : run.coverage) {
         coverage.push_back({ { "target", t.target }, { "planned", t.plannedSegments }, { "events", t.events }, { "written", t.written }, { "lit", t.effectsLit }, { "framesLit", t.framesLit }, { "note", t.note } });

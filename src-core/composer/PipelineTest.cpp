@@ -6,6 +6,9 @@
 
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaLibrary.h"
+#include "composer/MediaTest.h"
+#include "composer/TemplateLibrary.h"
 #include "composer/PlanTest.h"
 #include "composer/SequenceWriter.h"
 #include "composer/ShowGenerationPipeline.h"
@@ -132,6 +135,7 @@ public:
         TestLyrics();
         TestLrcFiles();
         TestVoices();
+        TestMedia();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -421,6 +425,218 @@ private:
         Check(second.ok && second.voiceTracks.size() == 4 && second.cast.Find("v:narrador") != nullptr && second.cast.Find("v:narrador")->facesOff &&
                   second.cast.Find("v:ana")->faces == ana->faces,
               "regenerated from the sidecar alone: the same voices, the same faces");
+    }
+
+    static std::string FullName(const EffectSpec& e) {
+        return e.subModel.empty() ? e.target : e.target + "/" + e.subModel;
+    }
+
+    static bool HasReason(const MediaAssignment& a, const char* code) {
+        return std::any_of(a.reasons.begin(), a.reasons.end(), [&](const Reason& r) { return r.code == code; });
+    }
+
+    static const RenderMetric* Metric(const GenerationRun& run, const EffectSpec& e) {
+        for (const RenderMetric& m : run.renderValidation.metrics) {
+            if (m.target == FullName(e) && m.effect == e.effect && m.startMS == e.startMS) {
+                return &m;
+            }
+        }
+        return nullptr;
+    }
+
+    void TestMedia() {
+        Title("A2d. Pictures and videos from the show's own files, with two voices, a choir, a narrator and the words");
+        const fs::path media = _show / "Medios";
+        const fs::path outside = _root / "medios fuera";
+        std::string error;
+        Check(WriteMediaFixtures(media.string(), error), "original pictures, a GIF, an SVG and a video, made by the test, in the show " + error);
+        std::error_code ec;
+        fs::create_directories(outside, ec);
+        fs::copy_file(media / "panorama luces.png", outside / "luces de fuera.png", fs::copy_options::overwrite_existing, ec);
+        const std::string text = "[Narrador]\nHabía una vez una casa encendida\n\n[Voz: Ana]\n¿Dónde está el niño?\n\n[Voz: Luis]\nPingüino en la nieve\n\n[Voz: Coro]\n¡Año nuevo, señor!\n";
+        const LyricDocument doc = ParsePlainLyrics(text);
+        LyricSession session;
+        session.trackName = "Composer Lyrics";
+        session.lyrics = text;
+        const std::vector<std::pair<int, int>> times = { { 2000, 6000 }, { 9000, 13000 }, { 13500, 17000 }, { 25000, 29000 } };
+        size_t k = 0;
+        for (const LyricLine* line : doc.Lines()) {
+            LyricCorrection mark;
+            mark.targetId = line->id;
+            mark.startMS = times[k].first;
+            mark.endMS = times[k].second;
+            session.corrections.push_back(mark);
+            ++k;
+        }
+        const fs::path sessionPath = _root / "medios-session.json";
+        Check(SaveLyricSession(sessionPath.string(), session, error), "the lyrics, marked " + error);
+        const std::string profile = (fs::path(DefaultTemplateDirectory()).parent_path() / "profiles" / "reference-winter-cinematic.json").string();
+        GenerationRequest r = Request("medios");
+        r.lyricSessionPath = sessionPath.string();
+        r.profilePath = profile;
+        r.mediaFolders = { media.string(), outside.string() };
+        r.scanMedia = true;
+        const GenerationRun run = Generate(r);
+        Check(run.ok, "published with the media library searched");
+        if (!run.ok) {
+            return;
+        }
+        Check(FileExists(MediaLibraryPath(_show.string())) && run.mediaLibrary.items.size() == 8, fmt::format("the library has the {} files and is kept in the show", run.mediaLibrary.items.size()));
+        Check(!run.media.assignments.empty(), fmt::format("{} pictures or videos chosen by themselves, theme {}", run.media.assignments.size(), run.media.themeId));
+        Check(run.media.share <= run.media.maxShare + 0.001, fmt::format("{:.0f}% of the song, within {:.0f}%", run.media.share * 100, run.media.maxShare * 100));
+        std::map<std::string, std::set<std::string>> looks;
+        bool explained = true;
+        bool onScreen = true;
+        for (const MediaAssignment& a : run.media.assignments) {
+            const SceneLook* scene = run.direction.Scene(a.segmentId);
+            looks[a.mediaId].insert(scene != nullptr ? scene->lookKey : a.segmentId);
+            explained = explained && HasReason(a, "aspect") && (HasReason(a, "theme-category") || HasReason(a, "repeat-keeps-media"));
+            const TargetInfo* t = run.capabilities.Find(a.target);
+            onScreen = onScreen && t != nullptr && t->Can(Capability::Image).support == Support::Yes;
+        }
+        Check(explained && onScreen, "each says why: its theme category, its shape against the figure's; each on a figure that shows pictures");
+        Check(std::all_of(looks.begin(), looks.end(), [](const auto& kv) { return kv.second.size() == 1; }), "no file shown in two different scenes");
+        const SequenceSpec read = Reopen(run);
+        int files = 0;
+        bool relative = true;
+        bool apart = true;
+        bool lit = true;
+        for (const EffectSpec& e : read.effects) {
+            if (e.effect != "Pictures" && e.effect != "Video") {
+                continue;
+            }
+            ++files;
+            const std::string file = Setting(e, e.effect == "Video" ? "E_FILEPICKERCTRL_Video_Filename" : "E_TEXTCTRL_Pictures_Filename");
+            relative = relative && !fs::path(fs::u8path(file)).is_absolute() && FileExists(MediaAbsolutePath(file, _show.string()));
+            for (const EffectSpec& t : read.effects) {
+                apart = apart && !(t.effect == "Text" && FullName(t) == FullName(e) && t.startMS < e.endMS && t.endMS > e.startMS);
+            }
+            const RenderMetric* m = Metric(run, e);
+            lit = lit && m != nullptr && m->framesWithLight > 0;
+        }
+        Check(files > 0 && relative, fmt::format("{} native picture and video effects, each pointing at its file by a path relative to the show", files));
+        Check(apart, "never words and a picture on the same figure at once");
+        Check(lit, "each one lights its figure in the render");
+        Check(Count(read, "Faces") > 0 && Count(read, "Text") > 0 && Track(read, "Composer Lyrics - Ana") != nullptr, "with faces on their voices' tracks and the words on the display");
+        GenerationSidecar sidecar;
+        Check(ReadSidecar(run.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.media.folders.size() == 2 && sidecar.media.folders[0] == "Medios" && sidecar.media.used.size() == run.media.assignments.size(),
+              "the sidecar keeps the folders (relative inside the show) and what plays where");
+
+        Title("A2e. A person's choices: no picture here, this video there, and it stays");
+        const MediaAssignment removed = run.media.assignments.front();
+        const MediaItem* video = nullptr;
+        for (const MediaItem& m : run.mediaLibrary.items) {
+            video = m.kind == MediaKind::Video && m.Usable() ? &m : video;
+        }
+        const PlanSegment* free = nullptr;
+        for (const PlanSegment& seg : run.plan.segments) {
+            const bool hasMedia = std::any_of(run.media.assignments.begin(), run.media.assignments.end(), [&](const MediaAssignment& a) { return a.segmentId == seg.id; });
+            const bool words = std::any_of(seg.assignments.begin(), seg.assignments.end(), [](const PlanAssignment& a) { return a.intent == "lyric-text" && a.target == "Matriz Prueba"; });
+            if (free == nullptr && !hasMedia && !words && seg.priority > 0 && seg.endMS - seg.startMS >= 4000) {
+                free = &seg;
+            }
+        }
+        Check(video != nullptr && free != nullptr, "a video in the library, and a segment with nothing on the matrix to put it in");
+        if (video == nullptr || free == nullptr) {
+            return;
+        }
+        GenerationRequest again = Request("medios-elegidos");
+        again.previousSidecarPath = run.sidecarPath;
+        MediaCorrection none;
+        none.action = MediaCorrection::Action::Remove;
+        none.segmentId = removed.segmentId;
+        none.startMS = removed.startMS;
+        MediaCorrection lock;
+        lock.action = MediaCorrection::Action::Lock;
+        lock.segmentId = free->id;
+        lock.startMS = free->startMS;
+        lock.target = "Matriz Prueba";
+        lock.mediaId = video->id;
+        lock.path = video->relative;
+        // The automatic picture a person liked, kept as it is.
+        MediaCorrection keep;
+        keep.action = MediaCorrection::Action::Lock;
+        for (const MediaAssignment& a : run.media.assignments) {
+            if (a.effect == "Pictures" && a.segmentId != removed.segmentId) {
+                keep.segmentId = a.segmentId;
+                keep.startMS = a.startMS;
+                keep.target = a.target;
+                keep.mediaId = a.mediaId;
+                keep.path = a.path;
+            }
+        }
+        again.corrections.media = { none, lock };
+        if (!keep.segmentId.empty()) {
+            again.corrections.media.push_back(keep);
+        }
+        const GenerationRun second = Generate(again);
+        const MediaAssignment* locked = second.media.Find(free->id, "Matriz Prueba");
+        Check(second.ok && locked != nullptr && locked->mediaId == video->id && locked->state == DecisionState::Locked, "the video plays where the person put it, locked");
+        Check(std::none_of(second.media.assignments.begin(), second.media.assignments.end(), [&](const MediaAssignment& a) { return a.segmentId == removed.segmentId; }), "and nothing plays where they took it out");
+        const SequenceSpec chosen = Reopen(second);
+        bool videoMoves = false;
+        for (const EffectSpec& e : chosen.effects) {
+            const RenderMetric* m = e.effect == "Video" ? Metric(second, e) : nullptr;
+            videoMoves = videoMoves || (m != nullptr && m->distinctFrames > 1);
+        }
+        Check(Count(chosen, "Video") > 0 && Count(chosen, "Pictures") + Count(chosen, "Video") >= 2 && Count(chosen, "Faces") > 0 && Count(chosen, "Text") > 0 && videoMoves,
+              fmt::format("two voices, a choir, a narrator, words, {} pictures and {} videos, the video moving in the render", Count(chosen, "Pictures"), Count(chosen, "Video")));
+        GenerationRequest third = Request("medios-otra-vez");
+        third.previousSidecarPath = second.sidecarPath;
+        const GenerationRun again3 = Generate(third);
+        const MediaAssignment* kept = again3.media.Find(free->id, "Matriz Prueba");
+        Check(again3.ok && kept != nullptr && kept->mediaId == video->id && kept->state == DecisionState::Locked && again3.media.Find(removed.segmentId, removed.target) == nullptr,
+              "made again from the sidecar alone, offline: the same choices");
+
+        Title("A2f. A file outside the show: used where it is, copied only when the person agrees");
+        const MediaItem* far = run.mediaLibrary.FindByPath((outside / "luces de fuera.png").string());
+        const PlanSegment* other = nullptr;
+        for (const PlanSegment& seg : run.plan.segments) {
+            const bool used = std::any_of(second.media.assignments.begin(), second.media.assignments.end(), [&](const MediaAssignment& a) { return a.segmentId == seg.id; });
+            if (other == nullptr && !used && &seg != free && seg.id != removed.segmentId && seg.priority > 0 && seg.endMS - seg.startMS >= 4000) {
+                other = &seg;
+            }
+        }
+        Check(far != nullptr && far->relative.empty() && other != nullptr, "the outside file is in the library, with no path relative to the show");
+        if (far == nullptr || other == nullptr) {
+            return;
+        }
+        MediaCorrection put;
+        put.action = MediaCorrection::Action::Assign;
+        put.segmentId = other->id;
+        put.startMS = other->startMS;
+        put.target = "Matriz Prueba";
+        put.mediaId = far->id;
+        put.path = far->path;
+        GenerationRequest asked = Request("medios-fuera");
+        asked.previousSidecarPath = second.sidecarPath;
+        asked.corrections.media = { put };
+        const GenerationRun noCopy = Generate(asked);
+        const MediaAssignment* where = noCopy.media.Find(other->id, "Matriz Prueba");
+        Check(noCopy.ok && where != nullptr && where->path == far->path && HasNote(noCopy, GenerationStage::Choreography, "media-outside-show") && !FileExists((_show / "Images" / "luces de fuera.png").string()),
+              "without consent: used from where it is, said so, nothing copied");
+        asked.sequenceName = "medios-copiados.xsq";
+        asked.reportDir = (_root / "reports" / "medios-copiados").string();
+        asked.copyMediaIntoShow = true;
+        const GenerationRun copied = Generate(asked);
+        const MediaAssignment* inShow = copied.media.Find(other->id, "Matriz Prueba");
+        Check(copied.ok && inShow != nullptr && inShow->path == "Images/luces de fuera.png" && FileExists((_show / "Images" / "luces de fuera.png").string()) && FileExists(far->path),
+              "with consent: copied into the show's Images folder, the original left where it was");
+
+        Title("A2g. A file that went missing");
+        const fs::path moved = _root / "video apartado.mp4";
+        fs::rename(fs::u8path(video->path), moved, ec);
+        GenerationRequest gone = Request("medios-sin-video");
+        gone.previousSidecarPath = second.sidecarPath;
+        const GenerationRun lost = Generate(gone);
+        const SequenceSpec lostRead = Reopen(lost);
+        Check(lost.ok && Count(lostRead, "Video") == 0 && std::any_of(lost.media.warnings.begin(), lost.media.warnings.end(), [](const std::string& w) { return w.rfind("media-missing:", 0) == 0; }),
+              "the sequence is still made, with no effect pointing at a missing file, and it says which");
+        GenerationSidecar keptChoice;
+        Check(ReadSidecar(lost.sidecarPath, keptChoice, error) == SidecarStatus::Ok &&
+                  std::any_of(keptChoice.media.corrections.begin(), keptChoice.media.corrections.end(), [&](const MediaCorrection& c) { return c.mediaId == video->id && c.action == MediaCorrection::Action::Lock; }),
+              "the person's choice is kept, to play again once the file is back");
+        fs::rename(moved, fs::u8path(video->path), ec);
     }
 
     void TestLrcFiles() {

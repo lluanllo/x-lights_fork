@@ -10,7 +10,8 @@
     "model"
   ],
   "intents": [
-    "feature"
+    "feature",
+    "media"
   ],
   "prominence": [
     "lead"
@@ -25,8 +26,8 @@
   ],
   "intensity": 0.7,
   "durationMS": [
-    4000,
-    16000
+    3000,
+    30000
   ],
   "maxPerMinute": 3,
   "transitions": [

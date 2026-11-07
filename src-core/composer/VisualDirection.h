@@ -31,6 +31,7 @@ struct ThemeDef {
     std::string accent = "#FFFFFF";
     std::vector<std::string> characterThemes; // SongCharacter themes that point here
     std::vector<std::string> keywords;        // lowercase words or phrases in lyrics or title
+    std::vector<std::string> mediaCategories; // media library categories that suit it, best first
 };
 
 struct ThemeCatalog {

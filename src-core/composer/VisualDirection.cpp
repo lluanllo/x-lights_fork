@@ -166,6 +166,7 @@ bool ParseThemeCatalog(const std::string& text, ThemeCatalog& catalog, std::stri
         d.measuredFrom = t.value("measuredFrom", std::vector<std::string>());
         d.accent = t.value("accent", std::string("#FFFFFF"));
         d.characterThemes = t.value("characterThemes", std::vector<std::string>());
+        d.mediaCategories = t.value("mediaCategories", std::vector<std::string>());
         for (const std::string& k : t.value("keywords", std::vector<std::string>())) {
             d.keywords.push_back(LowerFolded(k));
         }

@@ -6,6 +6,8 @@
 #include "composer/ComposerTypes.h"
 #include "composer/CompositionPlan.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaDirection.h"
+#include "composer/MediaLibrary.h"
 #include "composer/GenerationValidator.h"
 #include "composer/LyricAligner.h"
 #include "composer/LyricDocument.h"
@@ -89,6 +91,15 @@ struct GenerationRequest {
     CorrectionSet corrections; // added to the files' and the previous sidecar's
     std::string lyricTrackName = "Composer Lyrics";
     std::string mediaCueTrackName = "Composer Media Cues";
+    // The show's pictures and videos. The saved library is used as it is, so a generation
+    // needs no network and no folder that is not there; it is searched again only when
+    // asked, or when there is none yet.
+    std::string mediaLibraryPath;          // empty: <showDir>/ShowComposer/media-library.json
+    std::vector<std::string> mediaFolders; // empty: the previous show's
+    bool scanMedia = false;
+    std::optional<bool> mediaAutomatic;    // default: on, or the previous show's
+    std::optional<double> mediaMaxShare;   // default: by level, or the previous show's
+    bool copyMediaIntoShow = false;        // a person agreed: files outside the show are copied into Images or Videos
     CancelCheck cancel;
     std::function<void(GenerationStage stage, const std::string& what)> progress;
 };
@@ -164,6 +175,9 @@ struct GenerationRun {
     bool hasCharacter = false;
     Transcript transcript;
     TranscriptAlignment transcriptAlignment;
+    MediaLibrary mediaLibrary;
+    MediaPlan media;
+    MediaSession mediaSession;
     Choreography choreography;
     ValidationReport planValidation;
     ValidationReport choreographyValidation;

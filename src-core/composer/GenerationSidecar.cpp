@@ -123,6 +123,9 @@ std::string ToJson(const GenerationSidecar& s) {
     if (!s.transcriptCache.empty() || !s.characterCache.empty()) {
         root["assist"] = { { "transcript", s.transcriptCache }, { "character", s.characterCache } };
     }
+    if (!s.media.Empty()) {
+        root["media"] = MediaSessionJson(s.media);
+    }
     return root.dump(1);
 }
 
@@ -196,6 +199,9 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         const json assist = root.value("assist", json::object());
         s.transcriptCache = assist.value("transcript", std::string());
         s.characterCache = assist.value("character", std::string());
+        if (root.contains("media") && !MediaSessionFrom(root["media"], s.media, error)) {
+            return SidecarStatus::Damaged;
+        }
         sidecar = std::move(s);
     } catch (const json::exception& e) {
         error = e.what();
@@ -240,7 +246,7 @@ std::string SidecarPathFor(const std::string& sequencePath) {
 }
 
 bool CorrectionSet::Empty() const {
-    return plan.empty() && choreography.empty() && lyrics.empty() && analysis.events.empty() && analysis.sections.empty() && analysis.bar.firstDownbeatMS < 0;
+    return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && analysis.events.empty() && analysis.sections.empty() && analysis.bar.firstDownbeatMS < 0;
 }
 
 void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra) {
@@ -258,6 +264,9 @@ void MergeCorrections(CorrectionSet& into, const CorrectionSet& extra) {
         UpsertCorrection(into.lyrics, c);
     }
     MergeAnalysisCorrections(into.analysis, extra.analysis);
+    for (const MediaCorrection& c : extra.media) {
+        UpsertMediaCorrection(into.media, c);
+    }
 }
 
 std::string ToJson(const CorrectionSet& c) {
@@ -267,6 +276,9 @@ std::string ToJson(const CorrectionSet& c) {
     root["choreography"] = ChoreographyCorrectionsJson(c.choreography);
     root["lyrics"] = LyricCorrectionsJson(c.lyrics);
     root["analysis"] = AnalysisCorrectionsJson(c.analysis);
+    if (!c.media.empty()) {
+        root["media"] = MediaCorrectionsJson(c.media);
+    }
     return root.dump(1);
 }
 
@@ -282,7 +294,8 @@ bool FromJson(const std::string& text, CorrectionSet& corrections, std::string& 
     }
     CorrectionSet out;
     if ((root.contains("plan") && !PlanCorrectionsFrom(root["plan"], out.plan, error)) || (root.contains("choreography") && !ChoreographyCorrectionsFrom(root["choreography"], out.choreography, error)) ||
-        (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error)) || (root.contains("analysis") && !AnalysisCorrectionsFrom(root["analysis"], out.analysis, error))) {
+        (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error)) || (root.contains("analysis") && !AnalysisCorrectionsFrom(root["analysis"], out.analysis, error)) ||
+        (root.contains("media") && !MediaCorrectionsFrom(root["media"], out.media, error))) {
         return false;
     }
     corrections = std::move(out);

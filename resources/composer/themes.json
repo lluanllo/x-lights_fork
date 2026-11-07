@@ -63,6 +63,13 @@
         "mistletoe",
         "reindeer",
         "reno"
+      ],
+      "mediaCategories": [
+        "christmas",
+        "snow",
+        "stars",
+        "lights",
+        "forest"
       ]
     },
     {
@@ -113,6 +120,12 @@
         "candy",
         "sweet",
         "want for christmas"
+      ],
+      "mediaCategories": [
+        "christmas",
+        "lights",
+        "fantasy",
+        "snow"
       ]
     },
     {
@@ -162,6 +175,13 @@
         "ice",
         "frozen",
         "train"
+      ],
+      "mediaCategories": [
+        "snow",
+        "stars",
+        "forest",
+        "christmas",
+        "lights"
       ]
     },
     {
@@ -214,6 +234,12 @@
         "life",
         "king",
         "lion"
+      ],
+      "mediaCategories": [
+        "forest",
+        "fire",
+        "animals",
+        "adventure"
       ]
     },
     {
@@ -264,6 +290,12 @@
         "party",
         "disco",
         "play me"
+      ],
+      "mediaCategories": [
+        "lights",
+        "backgrounds",
+        "new-year",
+        "cinema"
       ]
     },
     {
@@ -308,6 +340,13 @@
         "magic",
         "dream",
         "dreams"
+      ],
+      "mediaCategories": [
+        "fantasy",
+        "stars",
+        "lights",
+        "cinema",
+        "adventure"
       ]
     },
     {
@@ -346,6 +385,11 @@
         "pumpkin",
         "ghost",
         "spooky"
+      ],
+      "mediaCategories": [
+        "halloween",
+        "fire",
+        "fantasy"
       ]
     },
     {
@@ -383,6 +427,12 @@
         "new year",
         "cheers",
         "midnight"
+      ],
+      "mediaCategories": [
+        "new-year",
+        "lights",
+        "stars",
+        "fire"
       ]
     },
     {
@@ -422,6 +472,13 @@
         "calm",
         "lullaby",
         "holy"
+      ],
+      "mediaCategories": [
+        "backgrounds",
+        "stars",
+        "snow",
+        "forest",
+        "animals"
       ]
     }
   ]

@@ -139,6 +139,7 @@ struct Choreography {
 };
 
 struct ShowVisualDirection;
+struct MediaPlan;
 
 struct ChoreographyInput {
     const CompositionPlan* plan = nullptr;           // required
@@ -156,6 +157,8 @@ struct ChoreographyInput {
     // With a direction whose ensemble is on, every family of figures follows the scene:
     // its colours, its kind of movement and how much of the display it lights.
     const ShowVisualDirection* direction = nullptr;
+    // The pictures and videos chosen for the plan's "media" figures.
+    const MediaPlan* media = nullptr;
 };
 
 [[nodiscard]] Choreography Choreograph(const ChoreographyInput& input);
