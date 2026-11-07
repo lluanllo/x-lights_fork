@@ -36,6 +36,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/textdlg.h>
+#include <wx/dcclient.h>
 #include <wx/utils.h>
 
 #include <algorithm>
@@ -44,6 +45,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <numeric>
 #include <set>
 #include <sstream>
 
@@ -52,7 +54,10 @@
 #include <spdlog/spdlog.h>
 
 #include "ComposerTimeline.h"
+#include "ai/WxServiceSettingsStore.h"
 #include "composer/LyricDocument.h"
+#include "composer/MusicAssist.h"
+#include "composer/VisualDirection.h"
 #include "composer/SequenceWriter.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "media/AudioManager.h"
@@ -107,6 +112,10 @@ enum {
     ID_REVIEW_AGAIN,
     ID_ANOTHER,
     ID_APPROVE,
+    ID_LRCLIB,
+    ID_TRANSCRIBE,
+    ID_DESCRIBE,
+    ID_AI_KEYS,
 };
 
 constexpr int FRAME_MS = 25;
@@ -264,6 +273,104 @@ wxString ConflictText(const std::string& reason) {
     return wxString::Format(_("A decision could not be applied (%s)."), U(reason));
 }
 
+// The names of the themes that ship, so they read in the person's language; a theme
+// added or renamed in themes.json shows its name as written.
+const char* const THEME_NAMES[] = { COMPOSER_TEXT("Christmas, red and green"), COMPOSER_TEXT("Candy cane, red and white"), COMPOSER_TEXT("Winter night, blue and white"),
+                                    COMPOSER_TEXT("Sunset and savanna, gold and green"), COMPOSER_TEXT("Party, magenta, lime and violet"), COMPOSER_TEXT("Magic, red and white with a rainbow"),
+                                    COMPOSER_TEXT("Halloween, orange and violet"), COMPOSER_TEXT("New year, gold and white"), COMPOSER_TEXT("Calm, warm white and soft blue") };
+
+wxString ThemeName(const std::string& name) {
+    for (const char* known : THEME_NAMES) {
+        if (name == known) {
+            return wxGetTranslation(known);
+        }
+    }
+    return U(name);
+}
+
+wxString ThemeSource(const std::string& source) {
+    return source == "song-character" ? _("from the song's description") : source == "lyrics" ? _("from the words of the lyrics") : _("the profile's, as nothing else pointed to one");
+}
+
+// The visual direction in words, from visual-direction.json.
+wxString DirectionText(const nlohmann::json& d) {
+    const nlohmann::json& theme = d.value("interpretation", nlohmann::json::object());
+    const std::string source = theme.value("source", std::string());
+    wxString text = wxString::Format(_("Theme: %s, %s (confidence %.2f). It is an interpretation; the analysis is untouched."), ThemeName(theme.value("themeName", std::string())), ThemeSource(source), theme.value("confidence", 0.0));
+    const std::vector<std::string> evidence = theme.value("evidence", std::vector<std::string>());
+    if (source == "lyrics" && !evidence.empty()) {
+        text += " " + wxString::Format(_("Words found: %s."), U(std::accumulate(evidence.begin(), evidence.end(), std::string(), [](const std::string& a, const std::string& b) { return a.empty() ? b : a + ", " + b; })));
+    }
+    static const std::map<std::string, const char*> FAMILIES = { { "outline", COMPOSER_TEXT("outline") }, { "windows", COMPOSER_TEXT("windows") }, { "arches", COMPOSER_TEXT("arches") },
+                                                                 { "snowflakes", COMPOSER_TEXT("snowflakes") }, { "trees", COMPOSER_TEXT("small trees") }, { "stars", COMPOSER_TEXT("stars") },
+                                                                 { "mega-tree", COMPOSER_TEXT("mega tree") }, { "props", COMPOSER_TEXT("props") }, { "figures", COMPOSER_TEXT("figures") },
+                                                                 { "matrix", COMPOSER_TEXT("matrix") }, { "faces", COMPOSER_TEXT("faces") } };
+    wxString families;
+    for (const nlohmann::json& f : d.value("families", nlohmann::json::array())) {
+        const auto name = FAMILIES.find(f.value("id", std::string()));
+        const nlohmann::json targets = f.value("targets", nlohmann::json::array());
+        const bool group = targets.size() == 1 && targets[0].value("type", std::string()) == "group";
+        families += (families.IsEmpty() ? "" : ", ") + (name != FAMILIES.end() ? wxGetTranslation(name->second) : U(f.value("id", std::string()))) +
+                    (group ? wxString::Format(" (%s)", U(targets[0].value("target", std::string()))) : wxString());
+    }
+    text += "\n" + wxString::Format(_("Families that move together: %s."), families);
+    static const std::map<std::string, const char*> BANDS = { { "rest", COMPOSER_TEXT("pause") }, { "low", COMPOSER_TEXT("calm") }, { "mid", COMPOSER_TEXT("moving") }, { "high", COMPOSER_TEXT("intense") }, { "climax", COMPOSER_TEXT("climax") } };
+    static const std::map<std::string, const char*> MOTIFS = { { "rest", COMPOSER_TEXT("dark") }, { "glow", COMPOSER_TEXT("soft glow") }, { "flow", COMPOSER_TEXT("flowing") }, { "drive", COMPOSER_TEXT("driving") }, { "burst", COMPOSER_TEXT("burst") } };
+    static const std::map<std::string, const char*> KINDS = { { "home", COMPOSER_TEXT("home colours") }, { "contrast", COMPOSER_TEXT("contrast colours") }, { "climax", COMPOSER_TEXT("home colours and the accent") } };
+    const auto word = [](const std::map<std::string, const char*>& m, const std::string& k) { const auto it = m.find(k); return it != m.end() ? wxGetTranslation(it->second) : U(k); };
+    for (const nlohmann::json& s : d.value("scenes", nlohmann::json::array())) {
+        const std::vector<std::string> colors = s.value("colors", std::vector<std::string>());
+        text += "\n" + wxString::Format("%s-%s  %s, %s%s%s", Time(s.value("startMS", 0)), Time(s.value("endMS", 0)), word(BANDS, s.value("band", std::string())), word(MOTIFS, s.value("motif", std::string())),
+                                        colors.empty() ? wxString() : ", " + word(KINDS, s.value("paletteKind", std::string())) + " ",
+                                        U(std::accumulate(colors.begin(), colors.end(), std::string(), [](const std::string& a, const std::string& b) { return a.empty() ? b : a + " " + b; })));
+    }
+    return text;
+}
+
+// What went wrong asking a service, for the person who asked.
+wxString AssistErrorText(const std::string& id, int retryAfterS) {
+    if (id == "no-consent") {
+        return _("Nothing was sent: the song is only sent when you agree.");
+    }
+    if (id == "no-credentials") {
+        return _("There is no key for that service. Add one with \"AI Keys...\" or set GROQ_API_KEY / GEMINI_API_KEY.");
+    }
+    if (id == "file-too-large" || id == "too-large") {
+        return _("The song is too large for that service. A shorter or more compressed file would fit.");
+    }
+    if (id == "unsupported-file") {
+        return _("That service does not take this kind of audio file.");
+    }
+    if (id == "unauthorized") {
+        return _("The service did not accept the key: it may be wrong or expired.");
+    }
+    if (id == "forbidden") {
+        return _("The key cannot use that service or model.");
+    }
+    if (id == "rate-limited") {
+        return retryAfterS > 0 ? wxString::Format(_("The service asks to wait %d seconds before trying again."), retryAfterS) : _("The service is busy: try again in a while.");
+    }
+    if (id == "server-error") {
+        return _("The service failed on its side: try again later.");
+    }
+    if (id == "network") {
+        return _("There is no connection to the service. Everything else keeps working without it.");
+    }
+    if (id == "not-found") {
+        return _("LRCLIB has no lyrics for that song.");
+    }
+    return wxString::Format(_("The service gave an answer that could not be used (%s)."), U(id));
+}
+
+std::string SafeFileName(std::string s) {
+    for (char& ch : s) {
+        if (std::string("\\/:*?\"<>|").find(ch) != std::string::npos) {
+            ch = '_';
+        }
+    }
+    return s.size() > 60 ? s.substr(0, 60) : s;
+}
+
 wxString LyricIssueText(const LyricIssue& issue) {
     const wxString line = issue.line > 0 ? wxString::Format(_("line %d"), issue.line) : wxString();
     const wxString text = U(issue.text);
@@ -371,12 +478,14 @@ ShowComposerDialog::ShowComposerDialog(xLightsFrame* frame) :
     wxDialog(frame, wxID_ANY, _("Show Composer"), wxDefaultPosition, wxSize(1180, 780), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxMAXIMIZE_BOX),
     _frame(frame),
     _job([this](const ComposerJob::Update& u) { OnJob(u); }),
+    _assistJob([this](const ComposerJob::Update& u) { OnAssistJob(u); }),
     _timer(this) {
     _showDir = _frame->GetShowDirectory();
     const auto stamp = std::chrono::system_clock::now().time_since_epoch().count();
     _workDir = (fs::path(S(wxFileName::GetTempDir())) / "xLights-ShowComposer" / std::to_string(stamp)).string();
     BuildControls();
     LoadShowInfo();
+    RefreshStyle();
     LoadLibrary();
     Bind(wxEVT_TIMER, &ShowComposerDialog::OnTimer, this);
     Bind(wxEVT_CLOSE_WINDOW, &ShowComposerDialog::OnClose, this);
@@ -520,6 +629,13 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     lyrics->Add(mark, 0, wxEXPAND | wxALL, 4);
     _lyricsInfo = new wxStaticText(lyrics->GetStaticBox(), wxID_ANY, "");
     lyrics->Add(_lyricsInfo, 0, wxLEFT | wxRIGHT | wxBOTTOM, 6);
+    auto* assist = new wxBoxSizer(wxHORIZONTAL);
+    assist->Add(new wxButton(lyrics->GetStaticBox(), ID_LRCLIB, _("Find the Lyrics Online (LRCLIB)...")), 0, wxRIGHT, 4);
+    assist->Add(new wxButton(lyrics->GetStaticBox(), ID_TRANSCRIBE, _("Time the Words with AI (Groq)...")), 0, wxRIGHT, 4);
+    assist->Add(new wxButton(lyrics->GetStaticBox(), ID_AI_KEYS, _("AI Keys...")), 0);
+    lyrics->Add(assist, 0, wxALL, 4);
+    _assistInfo = Muted(lyrics->GetStaticBox(), _("Optional: lyrics from LRCLIB are only read, never published; a song is only sent to an AI service after you say yes, and its answer is kept with the show so it works offline afterwards."));
+    lyrics->Add(_assistInfo, 0, wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
     wxStaticBoxSizer* style = box(_("Style and automation"));
     auto* styleRow = new wxBoxSizer(wxHORIZONTAL);
@@ -536,6 +652,30 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     _level->SetSelection(1);
     style->Add(_level, 0, wxEXPAND | wxALL, 4);
     style->Add(Muted(style->GetStaticBox(), _("The same song, installation, lyrics, level and seed always give the same show.")), 0, wxLEFT | wxBOTTOM, 6);
+    auto* look = new wxBoxSizer(wxHORIZONTAL);
+    _swatch = new wxPanel(style->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(220, 26), wxBORDER_SIMPLE);
+    _swatch->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+        wxPaintDC dc(_swatch);
+        const wxSize size = _swatch->GetClientSize();
+        if (_styleColors.empty()) {
+            dc.SetBrush(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE)));
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.DrawRectangle(0, 0, size.x, size.y);
+            return;
+        }
+        const int w = std::max(1, size.x / static_cast<int>(_styleColors.size()));
+        for (size_t i = 0; i < _styleColors.size(); ++i) {
+            const wxColour colour(U(_styleColors[i]));
+            dc.SetBrush(wxBrush(colour));
+            dc.SetPen(wxPen(colour));
+            dc.DrawRectangle(static_cast<int>(i) * w, 0, i + 1 == _styleColors.size() ? size.x - static_cast<int>(i) * w : w, size.y);
+        }
+    });
+    look->Add(_swatch, 0, wxRIGHT, 8);
+    _styleInfo = new wxStaticText(style->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1));
+    look->Add(_styleInfo, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+    look->Add(new wxButton(style->GetStaticBox(), ID_DESCRIBE, _("Describe the Song with AI (Gemini)...")), 0, wxALIGN_CENTER_VERTICAL);
+    style->Add(look, 0, wxEXPAND | wxALL, 4);
 
     wxStaticBoxSizer* output = box(_("Sequence"));
     auto* nameRow = new wxBoxSizer(wxHORIZONTAL);
@@ -586,6 +726,37 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         }
     }, ID_LYRICS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SetLyrics(""); }, ID_LYRICS_CLEAR);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (!_audioOk) {
+            ShowError(_("Choose a song that can be played first."), _("The search uses its name and its length."));
+            return;
+        }
+        const LrclibQuery guess = GuessLrclibQuery(_audioPath, _durationMS / 1000.0);
+        wxString query = U(guess.artist.empty() ? guess.track : guess.artist + " - " + guess.track);
+        if (!_testMode) {
+            wxTextEntryDialog ask(this, _("Artist and title, as \"Artist - Title\". Both orders are searched. Nothing is published to LRCLIB."), _("Find the Lyrics Online"), query);
+            if (ask.ShowModal() != wxID_OK) {
+                return;
+            }
+            query = ask.GetValue();
+        }
+        StartAssist("lrclib", false, S(query));
+    }, ID_LRCLIB);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (!_audioOk) {
+            ShowError(_("Choose a song that can be played first."), wxString());
+            return;
+        }
+        StartAssist("transcribe", AskConsent("Groq (api.groq.com)", _("to hear which word is sung when; the lyrics you gave stay the text")));
+    }, ID_TRANSCRIBE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (!_audioOk) {
+            ShowError(_("Choose a song that can be played first."), wxString());
+            return;
+        }
+        StartAssist("describe", AskConsent("Google Gemini (generativelanguage.googleapis.com)", _("to describe its genre, mood and energy; it is only a suggestion and never changes the analysis")));
+    }, ID_DESCRIBE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         wxFileDialog dialog(this, _("Choose the Synchronization"), U(_showDir), "", _("xLights timing (*.xtiming)|*.xtiming"), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
         if (dialog.ShowModal() == wxID_OK) {
@@ -649,6 +820,7 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     _profile->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         const int i = _profile->GetSelection();
         _profilePath = i > 0 && i < static_cast<int>(_profilePaths.size()) ? _profilePaths[i] : "";
+        RefreshStyle();
         RefreshAll();
     });
     _render->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { _renderCheck = _render->GetValue(); });
@@ -667,7 +839,9 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     _analysisInfo = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_analysisInfo, 0, wxEXPAND | wxBOTTOM, 4);
     _lyricsSync = new wxStaticText(page, wxID_ANY, "");
-    sizer->Add(_lyricsSync, 0, wxEXPAND | wxBOTTOM, 6);
+    sizer->Add(_lyricsSync, 0, wxEXPAND | wxBOTTOM, 2);
+    _alignmentInfo = new wxStaticText(page, wxID_ANY, "");
+    sizer->Add(_alignmentInfo, 0, wxEXPAND | wxBOTTOM, 6);
 
     auto* play = new wxBoxSizer(wxHORIZONTAL);
     play->Add(new wxButton(page, ID_PLAY, _("Play / Pause")), 0, wxRIGHT, 4);
@@ -811,6 +985,37 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     _compositionInfo = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_compositionInfo, 0, wxEXPAND | wxBOTTOM, 6);
 
+    auto* art = new wxStaticBoxSizer(wxVERTICAL, page, _("Art direction: theme, colours and scenes"));
+    _sceneView = new wxPanel(art->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(-1, 30), wxBORDER_SIMPLE);
+    _sceneView->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+        wxPaintDC dc(_sceneView);
+        const wxSize size = _sceneView->GetClientSize();
+        dc.SetBrush(wxBrush(wxColour(16, 16, 20)));
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.DrawRectangle(0, 0, size.x, size.y);
+        if (_sceneStripEnd <= 0) {
+            return;
+        }
+        for (size_t i = 0; i < _sceneStrip.size(); ++i) {
+            const int from = _sceneStrip[i].first;
+            const int to = i + 1 < _sceneStrip.size() ? _sceneStrip[i + 1].first : _sceneStripEnd;
+            const int x0 = static_cast<int>(static_cast<long long>(from) * size.x / _sceneStripEnd);
+            const int x1 = static_cast<int>(static_cast<long long>(to) * size.x / _sceneStripEnd);
+            const auto& colors = _sceneStrip[i].second;
+            for (size_t k = 0; k < colors.size(); ++k) {
+                const wxColour colour(U(colors[k]));
+                dc.SetBrush(wxBrush(colour));
+                const int y0 = static_cast<int>(size.y * k / colors.size());
+                const int y1 = static_cast<int>(size.y * (k + 1) / colors.size());
+                dc.DrawRectangle(x0, y0, std::max(1, x1 - x0 - 1), y1 - y0);
+            }
+        }
+    });
+    art->Add(_sceneView, 0, wxEXPAND | wxALL, 4);
+    _directionText = new wxTextCtrl(art->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(-1, 90), wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);
+    art->Add(_directionText, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 4);
+    sizer->Add(art, 0, wxEXPAND | wxBOTTOM, 8);
+
     _levelList = new wxListCtrl(page, wxID_ANY, wxDefaultPosition, wxSize(-1, 96), wxLC_REPORT | wxLC_SINGLE_SEL);
     for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("Level"), 120 }, { _("Effects"), 65 }, { _("Figures lit"), 125 }, { _("In the plan"), 85 }, { _("Accents"), 70 }, { _("Techniques"), 80 }, { _("Faces singing"), 105 }, { _("Text"), 55 }, { _("Mean intensity"), 115 }, { _("To review"), 90 } }) {
         _levelList->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
@@ -939,6 +1144,9 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
         }
         sizer->Add(ctrl, height > 100 ? 1 : 0, wxEXPAND | wxBOTTOM, 6);
     };
+    sizer->Add(new wxStaticText(page, wxID_ANY, _("How it compares with the reference shows (measures, not a judgement)")), 0, wxBOTTOM, 2);
+    _coherenceText = new wxTextCtrl(page, wxID_ANY, "", wxDefaultPosition, wxSize(-1, 88), wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);
+    sizer->Add(_coherenceText, 0, wxEXPAND | wxBOTTOM, 6);
     list(_("Points that need your attention"), _warningList, { { _("What"), 760 } }, 110);
     list(_("Figures in the plan that stayed dark"), _quietList, { { _("Figure"), 220 }, { _("Why"), 560 } }, 120);
     list(_("Suggested pictures and videos"), _resultCues, { { _("From"), 80 }, { _("To"), 80 }, { _("Figure"), 220 }, { _("Kind"), 90 }, { _("State"), 110 } }, 80);
@@ -1085,6 +1293,226 @@ void ShowComposerDialog::DropFiles(const std::vector<std::string>& paths) {
     }
 }
 
+bool ShowComposerDialog::AskConsent(const wxString& service, const wxString& why) {
+    if (_testMode) {
+        return _testConsent;
+    }
+    std::error_code ec;
+    const auto bytes = fs::file_size(fs::path(_audioPath), ec);
+    const wxString message = wxString::Format(_("The song \"%s\" (%.1f MB) will be sent to %s %s.\n\nOnly this song, only now. Its answer is kept with this show, so it is not sent again. Send it?"),
+                                              U(fs::path(_audioPath).filename().string()), ec ? 0.0 : bytes / 1048576.0, service, why);
+    return wxMessageBox(message, _("Send the song?"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) == wxYES;
+}
+
+void ShowComposerDialog::StartAssist(const std::string& action, bool consent, const std::string& query) {
+    if (_assistJob.Running()) {
+        ShowError(_("The assistant is still working on the last request."), wxString());
+        return;
+    }
+    if (!consent && action != "lrclib") {
+        _assistExit = 2;
+        _assistMessage = S(AssistErrorText("no-consent", -1));
+        _assistInfo->SetLabel(U(_assistMessage));
+        return;
+    }
+    _assistAction = action;
+    const std::string dir = NewWorkFolder("assist");
+    _assistResultPath = (fs::path(dir) / (action + ".json")).string();
+    std::vector<std::string> args = { "--composer-assist", action, "--audio", _audioPath, "-s", _showDir, "--out", _assistResultPath };
+    if (consent) {
+        args.push_back("--allow-upload");
+    }
+    if (!query.empty()) {
+        args.push_back("--query");
+        args.push_back(query);
+    }
+    if (_durationMS > 0) {
+        args.push_back("--duration");
+        args.push_back(fmt::format("{:.1f}", _durationMS / 1000.0));
+    }
+    std::string error;
+    _assistExit = -1;
+    if (!_assistJob.Start(args, (fs::path(dir) / "cancel").string(), error)) {
+        ShowError(_("The assistant could not be started."), U(error));
+        return;
+    }
+    _assistInfo->SetLabel(action == "lrclib" ? _("Searching LRCLIB...") : action == "transcribe" ? _("Sending the song to Groq and waiting for the words...") : _("Sending the song to Gemini and waiting for its description..."));
+}
+
+void ShowComposerDialog::OnAssistJob(const ComposerJob::Update& u) {
+    if (u.kind == ComposerJob::Update::Kind::Finished) {
+        AssistFinished(u.exitCode);
+    }
+}
+
+void ShowComposerDialog::AssistFinished(int exitCode) {
+    _assistExit = exitCode;
+    const nlohmann::json answer = nlohmann::json::parse(ReadFile(fs::path(_assistResultPath)), nullptr, false);
+    if (answer.is_discarded()) {
+        _assistMessage = S(_("The assistant gave no answer."));
+        _assistInfo->SetLabel(U(_assistMessage));
+        return;
+    }
+    if (answer.value("ok", true) == false) {
+        _assistMessage = S(AssistErrorText(answer.value("error", std::string()), answer.value("retryAfterS", -1)));
+        SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    if (_assistAction == "lrclib") {
+        const nlohmann::json matches = answer.value("matches", nlohmann::json::array());
+        wxArrayString choices;
+        int first = -1;
+        for (size_t i = 0; i < matches.size(); ++i) {
+            const nlohmann::json& m = matches[i];
+            const bool plausible = m.value("plausible", false);
+            first = first < 0 && plausible ? static_cast<int>(i) : first;
+            const double length = m.value("durationS", 0.0);
+            const wxString kind = !m.value("syncedLyrics", std::string()).empty() ? _("with times") : m.value("instrumental", false) ? _("instrumental") : _("text only");
+            choices.Add(wxString::Format("%s  %s - %s  (%s)  %d:%02d  %s", plausible ? wxString::FromUTF8("\xE2\x9C\x94") : wxString::FromUTF8("\xE2\x80\x93"), U(m.value("artistName", std::string())),
+                                         U(m.value("trackName", std::string())), U(m.value("albumName", std::string())), static_cast<int>(length) / 60, static_cast<int>(length) % 60, kind));
+        }
+        int pick = first;
+        if (!_testMode && !matches.empty()) {
+            wxSingleChoiceDialog choose(this, _("Pick the right song. A tick means title, artist and length (within 2 seconds) agree."), _("Lyrics from LRCLIB"), choices);
+            choose.SetSelection(std::max(0, first));
+            pick = choose.ShowModal() == wxID_OK ? choose.GetSelection() : -1;
+        }
+        if (pick < 0) {
+            _assistMessage = S(matches.empty() ? AssistErrorText("not-found", -1) : _("No lyrics chosen."));
+            SetWrapped(_assistInfo, U(_assistMessage));
+            return;
+        }
+        const nlohmann::json& m = matches[static_cast<size_t>(pick)];
+        const std::string synced = m.value("syncedLyrics", std::string());
+        const std::string plain = m.value("plainLyrics", std::string());
+        if (synced.empty() && plain.empty()) {
+            _assistMessage = S(_("That song is instrumental on LRCLIB: no lyrics."));
+            SetWrapped(_assistInfo, U(_assistMessage));
+            return;
+        }
+        // Saved in the show's own Show Composer folder, under a name of its own.
+        const fs::path folder = fs::path(_showDir) / "ShowComposer" / "lyrics";
+        std::error_code ec;
+        fs::create_directories(folder, ec);
+        const std::string stem = SafeFileName(m.value("artistName", std::string()) + " - " + m.value("trackName", std::string())) + fmt::format(" (LRCLIB {})", m.value("id", 0LL));
+        const fs::path file = folder / fs::u8path(stem + (synced.empty() ? ".txt" : ".lrc"));
+        if (!FileExists(file.string())) {
+            std::ofstream(file, std::ios::binary) << (synced.empty() ? plain : synced);
+        }
+        const std::u8string utf8 = file.u8string();
+        SetLyrics(std::string(utf8.begin(), utf8.end()));
+        _assistMessage = S(wxString::Format(_("Lyrics from LRCLIB (%s), saved with the show. Check them: the lyrics stay yours to correct."), synced.empty() ? _("text only") : _("with line times")));
+        SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    if (_assistAction == "transcribe") {
+        Transcript t;
+        std::string error;
+        if (!FromJson(ReadFile(fs::path(_assistResultPath)), t, error)) {
+            _assistMessage = S(_("The transcription could not be read."));
+        } else {
+            SetTranscript(_assistResultPath);
+            _assistMessage = S(wxString::Format(_("%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."), static_cast<int>(t.words.size()), U(t.model)));
+        }
+        SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    SongCharacter ch;
+    std::string error;
+    if (!FromJson(ReadFile(fs::path(_assistResultPath)), ch, error)) {
+        _assistMessage = S(_("The description could not be read."));
+    } else {
+        SetCharacter(_assistResultPath);
+        _assistMessage = S(wxString::Format(_("Gemini hears %s, energy %s, voice %s; theme %s (%.2f). An interpretation: it only helps choose colours."), U(ch.genre), U(ch.energy), U(ch.vocalPresence),
+                                            U(ch.suggestedTheme), ch.themeConfidence));
+    }
+    SetWrapped(_styleInfo, U(_assistMessage));
+}
+
+void ShowComposerDialog::SetTranscript(const std::string& path) {
+    _transcriptPath = path;
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetCharacter(const std::string& path) {
+    _characterPath = path;
+    RefreshStyle();
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetProfile(const std::string& path) {
+    const auto at = std::find(_profilePaths.begin(), _profilePaths.end(), path);
+    const int index = at == _profilePaths.end() ? 0 : static_cast<int>(at - _profilePaths.begin());
+    _profile->SetSelection(index);
+    _profilePath = index > 0 ? _profilePaths[index] : "";
+    RefreshStyle();
+    RefreshAll();
+}
+
+void ShowComposerDialog::EditKeys() {
+    WxServiceSettingsStore store;
+    for (const auto& [service, env] : { std::pair<const char*, const char*>{ "Groq", "GROQ_API_KEY" }, { "Gemini", "GEMINI_API_KEY" } }) {
+        const ApiKey current = ResolveApiKey(&store, service, env);
+        const wxString state = current.source == "secure-store" ? _("one is saved in the system's secure store") : current.source == "environment" ? wxString::Format(_("one comes from %s"), env) : _("none yet");
+        wxPasswordEntryDialog ask(this, wxString::Format(_("%s key (%s). It is kept in the system's secure store, never in the show or in a log. Leave it empty to keep the current one."), service, state),
+                                  _("AI Keys"));
+        if (ask.ShowModal() != wxID_OK) {
+            return;
+        }
+        const std::string key = S(ask.GetValue());
+        if (!key.empty()) {
+            store.setSecret(SecretStoreName(service), key);
+        }
+    }
+}
+
+void ShowComposerDialog::RefreshStyle() {
+    if (_styleInfo == nullptr) {
+        return;
+    }
+    StyleProfile p = NeutralStarterProfile();
+    std::string error;
+    if (!_profilePath.empty()) {
+        (void)FromJson(ReadFile(fs::path(_profilePath)), p, error);
+    }
+    _styleColors.clear();
+    _styleTheme.clear();
+    if (!p.ensemble.enabled) {
+        SetWrapped(_styleInfo, _("Figures take turns as leads and support; no colour theme for the whole house."));
+        _swatch->Refresh();
+        return;
+    }
+    ThemeCatalog themes;
+    (void)LoadThemeCatalog(DefaultThemeCatalogPath(), themes, error);
+    std::string themeId = p.ensemble.defaultTheme;
+    wxString source = _("the profile's");
+    if (!_characterPath.empty()) {
+        SongCharacter ch;
+        if (FromJson(ReadFile(fs::path(_characterPath)), ch, error) && ch.suggestedTheme != "uncertain" && ch.themeConfidence >= 0.5) {
+            for (const ThemeDef& t : themes.themes) {
+                if (std::find(t.characterThemes.begin(), t.characterThemes.end(), ch.suggestedTheme) != t.characterThemes.end()) {
+                    themeId = t.id;
+                    source = _("from the song's description");
+                }
+            }
+        }
+    }
+    if (const ThemeDef* t = themes.Find(themeId)) {
+        _styleTheme = t->id;
+        for (size_t i = 0; i < t->home.size() && i < 3; ++i) {
+            for (const std::string& col : t->home[i]) {
+                if (std::find(_styleColors.begin(), _styleColors.end(), col) == _styleColors.end()) {
+                    _styleColors.push_back(col);
+                }
+            }
+        }
+        _styleColors.push_back(t->accent);
+        SetWrapped(_styleInfo, wxString::Format(_("The whole house moves together in the colours of \"%s\" (%s; the lyrics may point to another). Measured from: %s."), ThemeName(t->name), source,
+                                                U(std::accumulate(p.ensemble.sources.begin(), p.ensemble.sources.end(), std::string(), [](const std::string& a, const std::string& b) { return a.empty() ? b : a + ", " + b; }))));
+    }
+    _swatch->Refresh();
+}
+
 void ShowComposerDialog::SetShowFolder(const std::string& path) {
     _showDir = path;
     _profilePath.clear();
@@ -1187,7 +1615,24 @@ void ShowComposerDialog::LoadShowInfo() {
     if (_profile != nullptr) {
         _profile->Clear();
         _profile->Append(_("Neutral starting profile (not your style yet)"));
+        // The styles measured from reference shows, as they ship.
+        const fs::path builtIn = fs::path(DefaultTemplateDirectory()).parent_path() / "profiles";
         std::error_code ec;
+        std::vector<fs::path> shipped;
+        for (const auto& entry : fs::directory_iterator(builtIn, ec)) {
+            if (entry.path().extension() == ".json") {
+                shipped.push_back(entry.path());
+            }
+        }
+        std::sort(shipped.begin(), shipped.end());
+        for (const fs::path& file : shipped) {
+            StyleProfile p;
+            std::string error;
+            if (FromJson(ReadFile(file), p, error)) {
+                _profilePaths.push_back(file.string());
+                _profile->Append(U(p.name));
+            }
+        }
         const fs::path profiles = fs::path(_showDir) / "ShowComposer" / "profiles";
         if (fs::is_directory(profiles, ec)) {
             for (const auto& entry : fs::directory_iterator(profiles, ec)) {
@@ -1345,6 +1790,8 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     add("--profile", _profilePath);
     add("--templates", _templatesDir);
     add("--roles", _rolesPath);
+    add("--transcript", _transcriptPath);
+    add("--character", _characterPath);
     add("--stop-after", stopAfter);
     if (!_corrections.Empty()) {
         const fs::path file = fs::path(reportDir).parent_path() / (fs::path(reportDir).filename().string() + ".corrections.json");
@@ -1358,8 +1805,8 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
 }
 
 std::string ShowComposerDialog::InputsKey() const {
-    return fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", _audioPath, _showDir, _lyricsPath, _timingPath, _sessionPath.empty() ? std::string() : ReadFile(fs::path(_sessionPath)), _profilePath, _templatesDir, _rolesPath,
-                       _seed->GetValue(), ToJson(_corrections));
+    return fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", _audioPath, _showDir, _lyricsPath, _timingPath, _sessionPath.empty() ? std::string() : ReadFile(fs::path(_sessionPath)), _profilePath, _templatesDir, _rolesPath,
+                       _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath);
 }
 
 void ShowComposerDialog::RunNext() {
@@ -1956,6 +2403,49 @@ void ShowComposerDialog::RefreshAnalysis() {
                                               : wxString::Format(_("Lyrics synchronized: %d phrases, %d words and %d mouth shapes."), synced, static_cast<int>(l.words.size()), static_cast<int>(l.phonemes.size())));
         }
     }
+    // How sure each mark is, and which ones to listen to first.
+    wxString sure;
+    const LyricAlignment& al = _analysisReport.alignment;
+    if (_analysisReport.hasLyrics && !al.words.empty()) {
+        double sum = 0;
+        int timed = 0;
+        for (const AlignedPhrase& p : al.phrases) {
+            if (p.startMS >= 0 && !p.instrumental) {
+                sum += p.confidence;
+                ++timed;
+            }
+        }
+        std::vector<const AlignedWord*> doubtful;
+        for (const AlignedWord& w : al.words) {
+            if (w.confidence < 0.5 && w.state == Provenance::Detected) {
+                doubtful.push_back(&w);
+            }
+        }
+        sure = wxString::Format(_("Confidence of the phrases %.2f on average (%s). %d of %d words are doubtful (below 0.5): listen to them first."), timed > 0 ? sum / timed : 0.0, U(al.quality),
+                                static_cast<int>(doubtful.size()), static_cast<int>(al.words.size()));
+        wxString list;
+        int shown = 0;
+        int lastPhraseStart = -1;
+        for (const AlignedWord* w : doubtful) {
+            const auto phrase = std::find_if(al.phrases.begin(), al.phrases.end(), [&](const AlignedPhrase& p) { return p.id == w->phraseId; });
+            if (phrase == al.phrases.end() || phrase->startMS == lastPhraseStart || shown >= 4) {
+                continue;
+            }
+            lastPhraseStart = phrase->startMS;
+            list += wxString::Format(" %s \u00AB%s\u00BB;", Time(phrase->startMS), U(phrase->text.substr(0, 32)));
+            ++shown;
+        }
+        if (!list.IsEmpty()) {
+            sure += " " + _("First doubtful phrases:") + list;
+        }
+        const nlohmann::json ta = nlohmann::json::parse(_analysisReport.transcriptAlignment.empty() ? std::string("{}") : _analysisReport.transcriptAlignment, nullptr, false);
+        if (!ta.is_discarded() && ta.contains("coverage")) {
+            sure += " " + wxString::Format(_("The transcription heard %d of %d lyric words (%.0f%%); the rest keep estimated times."), ta.value("matchedWords", 0), ta.value("lyricWords", 0), ta.value("coverage", 0.0) * 100);
+        }
+    } else if (!_transcriptPath.empty()) {
+        sure = _("A transcription is ready: it gives the words their times when the song is analyzed.");
+    }
+    SetWrapped(_alignmentInfo, sure);
     const int cursor = _timeline->Cursor();
     wxString at;
     for (const SongSection& s : a.sections) {
@@ -1979,6 +2469,29 @@ void ShowComposerDialog::RefreshComposition() {
     if (_levelList == nullptr) {
         return;
     }
+    const ReportFolder& shown = _levels[static_cast<int>(Level())];
+    _sceneStrip.clear();
+    _sceneStripEnd = 0;
+    const nlohmann::json dir = nlohmann::json::parse(shown.direction.empty() ? std::string("{}") : shown.direction, nullptr, false);
+    if (!dir.is_discarded() && dir.value("enabled", false)) {
+        for (const nlohmann::json& scene : dir.value("scenes", nlohmann::json::array())) {
+            std::vector<std::string> colors = scene.value("colors", std::vector<std::string>());
+            _sceneStrip.push_back({ scene.value("startMS", 0), colors });
+            _sceneStripEnd = std::max(_sceneStripEnd, scene.value("endMS", 0));
+        }
+        wxString text = DirectionText(dir);
+        const nlohmann::json m = nlohmann::json::parse(shown.directionMetrics.empty() ? std::string("{}") : shown.directionMetrics, nullptr, false);
+        if (!m.is_discarded() && m.contains("coverageMean")) {
+            text = wxString::Format(_("Display lit %.0f%% of the time with music, %.0f events a minute, %d hits on the beat; colours always the scene's: %.0f%%."), m.value("coverageMean", 0.0) * 100,
+                                    m.value("eventsPerMinute", 0.0), m.value("hits", 0), m.value("paletteCoherence", 0.0) * 100) +
+                   "\n" + text;
+        }
+        _directionText->ChangeValue(text);
+    } else {
+        _directionText->ChangeValue(shown.folder.empty() ? wxString(_("The art direction appears once the composition is worked out."))
+                                                         : wxString(_("This profile does not direct the whole house: figures take turns. Choose a \"Reference\" style on the first step for themes, scenes and the ensemble.")));
+    }
+    _sceneView->Refresh();
     const bool stale = !_levelsKey.empty() && _levelsKey != InputsKey();
     if (_job.Running() && _purpose == Purpose::Composition) {
         _compositionInfo->SetLabel(wxString::Format(_("Working out level %d of 3..."), _jobLevel + 1));
@@ -2148,6 +2661,21 @@ void ShowComposerDialog::RefreshResult() {
         return;
     }
     const json s = json::parse(_resultSummary, nullptr, false);
+    if (!s.is_discarded() && s.contains("direction")) {
+        const json& d = s["direction"];
+        // The references' ranges, from the reference study, beside this show's numbers.
+        _coherenceText->ChangeValue(wxString::Format(_("Theme: %s (%s, %.2f)\n"
+                                                       "Display under an effect: %.0f%%   (references 87-99%%)\n"
+                                                       "Events a minute: %.0f   (references 344-1974)\n"
+                                                       "Starts shared by three or more figures: %.0f%%   (references 62-74%%)\n"
+                                                       "Colour time in the two main hues: %.0f%%   (references 47-90%%); in the scene's colours: %.0f%%\n"
+                                                       "Repeated sections that kept their look: %.0f%%; distinct looks over sections heard once: %.0f%%"),
+                                                     ThemeName(d.value("themeName", std::string())), ThemeSource(d.value("source", std::string())), d.value("confidence", 0.0), d.value("coverage", 0.0) * 100,
+                                                     d.value("eventsPerMinute", 0.0), d.value("startsTogether", 0.0) * 100, d.value("hueConcentration", 0.0) * 100, d.value("paletteCoherence", 0.0) * 100,
+                                                     d.value("repeatConsistency", 0.0) * 100, d.value("lookDiversity", 0.0) * 100));
+    } else {
+        _coherenceText->ChangeValue(_("This show was made without a visual direction (the neutral profile), so there is nothing to compare with the references."));
+    }
     if (s.is_discarded()) {
         return;
     }

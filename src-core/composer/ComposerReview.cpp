@@ -70,6 +70,10 @@ bool LoadReportFolder(const std::string& folder, ReportFolder& out, std::string&
         }
         r.hasCapabilities = true;
     }
+    (void)ReadIfThere(dir / "visual-direction-report.txt", r.directionReport);
+    (void)ReadIfThere(dir / "visual-direction.json", r.direction);
+    (void)ReadIfThere(dir / "direction-metrics.json", r.directionMetrics);
+    (void)ReadIfThere(dir / "transcript-alignment.json", r.transcriptAlignment);
     if (ReadIfThere(dir / "summary.json", r.summary)) {
         r.hasSummary = true;
     }

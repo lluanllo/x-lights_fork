@@ -120,6 +120,9 @@ std::string ToJson(const GenerationSidecar& s) {
     root["corrections"] = { { "plan", PlanCorrectionsJson(s.planCorrections) }, { "choreography", ChoreographyCorrectionsJson(s.choreographyCorrections) }, { "analysis", AnalysisCorrectionsJson(s.analysisCorrections) } };
     root["lyrics"] = json::parse(ToJson(s.lyrics));
     root["validation"] = { { "errors", s.validationErrors }, { "warnings", s.validationWarnings }, { "rendered", s.rendered }, { "visualReview", s.visualReview } };
+    if (!s.transcriptCache.empty() || !s.characterCache.empty()) {
+        root["assist"] = { { "transcript", s.transcriptCache }, { "character", s.characterCache } };
+    }
     return root.dump(1);
 }
 
@@ -190,6 +193,9 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         s.validationWarnings = validation.value("warnings", 0);
         s.rendered = validation.value("rendered", false);
         s.visualReview = validation.value("visualReview", std::string("not-reviewed"));
+        const json assist = root.value("assist", json::object());
+        s.transcriptCache = assist.value("transcript", std::string());
+        s.characterCache = assist.value("character", std::string());
         sidecar = std::move(s);
     } catch (const json::exception& e) {
         error = e.what();

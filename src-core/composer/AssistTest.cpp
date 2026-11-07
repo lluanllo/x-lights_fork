@@ -5,6 +5,7 @@
 #include "composer/LyricDocument.h"
 #include "composer/MusicAssist.h"
 #include "composer/GenerationValidator.h"
+#include "utils/ExternalHooks.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -16,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -132,6 +134,7 @@ public:
         TestCacheAndFiles();
         TestTranscriptAlignment();
         TestExport();
+        TestCommand();
         printf("composer-assist-test: %d checks passed, %d failed (%s)\n", _passed, _failed, _root.string().c_str());
         printf("composer-assist-test: every service was a stand-in; no real request was made and no key was used\n");
         return _failed == 0 ? 0 : 1;
@@ -484,6 +487,59 @@ private:
               "sorted, two decimals, untimed lines left out");
         const LyricDocument back = ParseLyricsFile("x.lrc", lrc);
         Check(back.Lines().size() == 2 && back.Lines()[1]->startMS == 4500 && back.ErrorCount() == 0, "and read back unchanged");
+    }
+
+    static std::string Read(const fs::path& path) {
+        std::ifstream in(path, std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        return text.str();
+    }
+
+    void TestCommand() {
+        Title("The command the window runs: consent, keys, cache and offline");
+        const fs::path show = _root / "show";
+        std::error_code ec;
+        fs::create_directories(show, ec);
+        const fs::path song = _root / "cancion.wav";
+        AssistCommandOptions o;
+        o.audioPath = song.string();
+        o.showDir = show.string();
+        o.action = "transcribe";
+        o.outPath = (_root / "out-1.json").string();
+        MemoryStore keys;
+        keys.setSecret(SecretStoreName("Groq"), FakeKey("gsk_", 24));
+        StandIn s;
+        s.Answer(200, WHISPER);
+        Check(RunAssistCommand(o, s, &keys, Policy()) == 2 && s.requests.empty() && Read(o.outPath).find("no-consent") != std::string::npos, "without the person's yes: refused, nothing sent, and said in the answer");
+        o.allowUpload = true;
+        Check(RunAssistCommand(o, s, &keys, Policy()) == 0 && s.requests.size() == 1, "with it: transcribed");
+        Transcript t;
+        std::string error;
+        Check(FromJson(Read(o.outPath), t, error) && t.words.size() == 7 && !t.cacheKey.empty(), "the answer is a transcript, with its cache key");
+        const std::string cached = AssistCachePath(show.string(), t.cacheKey, "transcript");
+        Check(FileExists(cached) && Read(cached).find(FakeKey("gsk_", 24)) == std::string::npos, "kept in the show's cache, with no key in it");
+        StandIn offline;
+        o.outPath = (_root / "out-2.json").string();
+        Check(RunAssistCommand(o, offline, nullptr, Policy()) == 0 && offline.requests.empty() && FromJson(Read(o.outPath), t, error), "the same song again: from the cache, with no network and no key");
+
+        AssistCommandOptions d = o;
+        d.action = "describe";
+        d.outPath = (_root / "out-3.json").string();
+        StandIn none;
+        Check(RunAssistCommand(d, none, &keys, Policy()) == 2 && none.requests.empty() && Read(d.outPath).find("no-credentials") != std::string::npos, "no Gemini key: refused before sending");
+
+        AssistCommandOptions l;
+        l.action = "lrclib";
+        l.audioPath = (_root / "Coro Niño - Canción de Año.mp3").string();
+        l.durationS = 201.4;
+        l.outPath = (_root / "out-4.json").string();
+        StandIn lrclib;
+        lrclib.Answer(200, R"json({"id":11,"trackName":"Canción de Año","artistName":"Coro Niño","albumName":"","duration":200,"instrumental":false,"hasWordSync":false,"plainLyrics":"Una","syncedLyrics":"[00:01.00]Una","lyricsfile":""})json");
+        const int code = RunAssistCommand(l, lrclib, nullptr, Policy());
+        const nlohmann::json answer = nlohmann::json::parse(Read(l.outPath), nullptr, false);
+        Check(code == 0 && !answer.is_discarded() && answer["matches"].size() == 1 && answer["matches"][0].value("plausible", false) && answer["matches"][0].value("syncedLyrics", std::string()) == "[00:01.00]Una",
+              "LRCLIB from the file name: one plausible match, its lyrics in the answer for the person to pick");
     }
 
     fs::path _root;

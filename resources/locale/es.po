@@ -9761,3 +9761,609 @@ msgstr "Otras %d tienen cara pero no controlador, así que el render no puede mo
 
 msgid "It will be saved in the show folder as %s, next to its other sequences. Nothing existing is replaced."
 msgstr "Se guardará en la carpeta del show como %s, junto a sus demás secuencias. No se sustituye nada de lo que ya existe."
+
+msgid "Nothing was sent: the song is only sent when you agree."
+msgstr "No se ha enviado nada: la canción solo se envía cuando tú lo aceptas."
+
+msgid "There is no key for that service. Add one with \"AI Keys...\" or set GROQ_API_KEY / GEMINI_API_KEY."
+msgstr "No hay clave para ese servicio. Añade una con «Claves de IA...» o define GROQ_API_KEY / GEMINI_API_KEY."
+
+msgid "The song is too large for that service. A shorter or more compressed file would fit."
+msgstr "La canción es demasiado grande para ese servicio. Cabría un archivo más corto o más comprimido."
+
+msgid "That service does not take this kind of audio file."
+msgstr "Ese servicio no admite este tipo de archivo de audio."
+
+msgid "The service did not accept the key: it may be wrong or expired."
+msgstr "El servicio no ha aceptado la clave: puede ser incorrecta o haber caducado."
+
+msgid "The key cannot use that service or model."
+msgstr "La clave no permite usar ese servicio o modelo."
+
+msgid "The service asks to wait %d seconds before trying again."
+msgstr "El servicio pide esperar %d segundos antes de volver a intentarlo."
+
+msgid "The service is busy: try again in a while."
+msgstr "El servicio está saturado: vuelve a intentarlo dentro de un rato."
+
+msgid "The service failed on its side: try again later."
+msgstr "El servicio ha fallado por su parte: vuelve a intentarlo más tarde."
+
+msgid "There is no connection to the service. Everything else keeps working without it."
+msgstr "No hay conexión con el servicio. Todo lo demás sigue funcionando sin él."
+
+msgid "LRCLIB has no lyrics for that song."
+msgstr "LRCLIB no tiene letra para esa canción."
+
+msgid "The service gave an answer that could not be used (%s)."
+msgstr "El servicio ha dado una respuesta que no se puede usar (%s)."
+
+msgid "line %d"
+msgstr "la línea %d"
+
+msgid "%s has a time that is not minutes:seconds (%s)."
+msgstr "%s tiene un tiempo que no es minutos:segundos (%s)."
+
+msgid "%s would start before the song (%s)."
+msgstr "%s empezaría antes que la canción (%s)."
+
+msgid "\"%s\" starts at %s, after the end of the song: is it the right song?"
+msgstr "«%s» empieza en %s, después del final de la canción: ¿es la canción correcta?"
+
+msgid "the file is empty."
+msgstr "el archivo está vacío."
+
+msgid "it is an LRC file without a single time."
+msgstr "es un archivo LRC sin ningún tiempo."
+
+msgid "%s was out of order and was moved to its time."
+msgstr "%s estaba desordenada y se ha movido a su tiempo."
+
+msgid "%s had the same time as the line before and was joined to it."
+msgstr "%s tenía el mismo tiempo que la línea anterior y se ha unido a ella."
+
+msgid "the file's [offset:] of %s ms was applied."
+msgstr "se ha aplicado el [offset:] del archivo, de %s ms."
+
+msgid "Some times in the lyrics file cannot be used: a time that is not minutes:seconds, one before the song, or a line after its end. The first step says which."
+msgstr "Algunos tiempos del archivo de letra no se pueden usar: un tiempo que no es minutos:segundos, uno anterior a la canción o una línea después de su final. El primer paso dice cuáles."
+
+msgid "The lyrics file is empty."
+msgstr "El archivo de letra está vacío."
+
+msgid "Find the Lyrics Online (LRCLIB)..."
+msgstr "Buscar la letra en internet (LRCLIB)..."
+
+msgid "Time the Words with AI (Groq)..."
+msgstr "Sincronizar las palabras con IA (Groq)..."
+
+msgid "AI Keys..."
+msgstr "Claves de IA..."
+
+msgid "Optional: lyrics from LRCLIB are only read, never published; a song is only sent to an AI service after you say yes, and its answer is kept with the show so it works offline afterwards."
+msgstr "Opcional: de LRCLIB solo se lee la letra, nunca se publica nada; la canción solo se envía a un servicio de IA después de que digas que sí, y su respuesta se guarda con el show para que luego funcione sin conexión."
+
+msgid "Describe the Song with AI (Gemini)..."
+msgstr "Describir la canción con IA (Gemini)..."
+
+msgid "The search uses its name and its length."
+msgstr "La búsqueda usa su nombre y su duración."
+
+msgid "Artist and title, as \"Artist - Title\". Both orders are searched. Nothing is published to LRCLIB."
+msgstr "Artista y título, como «Artista - Título». Se buscan los dos órdenes. No se publica nada en LRCLIB."
+
+msgid "Find the Lyrics Online"
+msgstr "Buscar la letra en internet"
+
+msgid "to hear which word is sung when; the lyrics you gave stay the text"
+msgstr "para saber qué palabra se canta en cada momento; la letra que diste sigue siendo el texto"
+
+msgid "to describe its genre, mood and energy; it is only a suggestion and never changes the analysis"
+msgstr "para describir su género, su ambiente y su energía; es solo una sugerencia y nunca cambia el análisis"
+
+msgid "Art direction: theme, colours and scenes"
+msgstr "Dirección artística: tema, colores y escenas"
+
+msgid "How it compares with the reference shows (measures, not a judgement)"
+msgstr "Cómo se compara con los shows de referencia (medidas, no un juicio)"
+
+msgid "Drop it to use it: a song, lyrics or an .xtiming. The file stays where it is."
+msgstr "Suéltalo para usarlo: una canción, una letra o un .xtiming. El archivo se queda donde está."
+
+msgid "Wait until the generator finishes to change the song."
+msgstr "Espera a que termine el generador para cambiar la canción."
+
+msgid "Or drag the song here from the file explorer. Lyrics (.txt, .lrc, .srt) and .xtiming files can be dropped too."
+msgstr "O arrastra aquí la canción desde el explorador de archivos. También se pueden soltar letras (.txt, .lrc, .srt) y archivos .xtiming."
+
+msgid "The generator is working."
+msgstr "El generador está trabajando."
+
+msgid "Wait until it finishes, or cancel it, to change the song."
+msgstr "Espera a que termine, o cancélalo, para cambiar la canción."
+
+msgid "Several songs were dropped. Which one is the show for?"
+msgstr "Has soltado varias canciones. ¿Para cuál es el espectáculo?"
+
+msgid "That is not a song xLights can play."
+msgstr "Eso no es una canción que xLights pueda reproducir."
+
+msgid "Drop an audio file (mp3, wav, m4a, ogg, flac, aac, wma or aiff), lyrics (.txt, .lrc, .srt) or an .xtiming file."
+msgstr "Suelta un archivo de audio (mp3, wav, m4a, ogg, flac, aac, wma o aiff), una letra (.txt, .lrc, .srt) o un archivo .xtiming."
+
+msgid "The song \"%s\" (%.1f MB) will be sent to %s %s.\n\nOnly this song, only now. Its answer is kept with this show, so it is not sent again. Send it?"
+msgstr "La canción «%s» (%.1f MB) se enviará a %s %s.\n\nSolo esta canción y solo ahora. Su respuesta se guarda con este show, así que no se vuelve a enviar. ¿La envío?"
+
+msgid "Send the song?"
+msgstr "¿Enviar la canción?"
+
+msgid "The assistant is still working on the last request."
+msgstr "El asistente todavía está con la petición anterior."
+
+msgid "The assistant could not be started."
+msgstr "No se ha podido iniciar el asistente."
+
+msgid "Searching LRCLIB..."
+msgstr "Buscando en LRCLIB..."
+
+msgid "Sending the song to Groq and waiting for the words..."
+msgstr "Enviando la canción a Groq y esperando las palabras..."
+
+msgid "Sending the song to Gemini and waiting for its description..."
+msgstr "Enviando la canción a Gemini y esperando su descripción..."
+
+msgid "The assistant gave no answer."
+msgstr "El asistente no ha dado respuesta."
+
+msgid "with times"
+msgstr "con tiempos"
+
+msgid "instrumental"
+msgstr "instrumental"
+
+msgid "text only"
+msgstr "solo texto"
+
+msgid "Pick the right song. A tick means title, artist and length (within 2 seconds) agree."
+msgstr "Elige la canción correcta. Una marca significa que coinciden el título, el artista y la duración (con menos de 2 segundos de diferencia)."
+
+msgid "Lyrics from LRCLIB"
+msgstr "Letra de LRCLIB"
+
+msgid "No lyrics chosen."
+msgstr "No se ha elegido ninguna letra."
+
+msgid "That song is instrumental on LRCLIB: no lyrics."
+msgstr "En LRCLIB esa canción es instrumental: no tiene letra."
+
+msgid "Lyrics from LRCLIB (%s), saved with the show. Check them: the lyrics stay yours to correct."
+msgstr "Letra de LRCLIB (%s), guardada con el show. Revísala: la letra sigue siendo tuya para corregirla."
+
+msgid "with line times"
+msgstr "con tiempos por línea"
+
+msgid "The transcription could not be read."
+msgstr "No se ha podido leer la transcripción."
+
+msgid "%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."
+msgstr "Se han oído %d palabras con %s. Dan los tiempos a las palabras; tu letra sigue siendo el texto, y las palabras no oídas no reciben tiempos inventados."
+
+msgid "The description could not be read."
+msgstr "No se ha podido leer la descripción."
+
+msgid "Gemini hears %s, energy %s, voice %s; theme %s (%.2f). An interpretation: it only helps choose colours."
+msgstr "Gemini oye %s, energía %s, voz %s; tema %s (%.2f). Es una interpretación: solo ayuda a elegir colores."
+
+msgid "one is saved in the system's secure store"
+msgstr "hay una guardada en el almacén seguro del sistema"
+
+msgid "one comes from %s"
+msgstr "se toma de %s"
+
+msgid "none yet"
+msgstr "todavía ninguna"
+
+msgid "%s key (%s). It is kept in the system's secure store, never in the show or in a log. Leave it empty to keep the current one."
+msgstr "Clave de %s (%s). Se guarda en el almacén seguro del sistema, nunca en el show ni en un registro. Déjala vacía para conservar la actual."
+
+msgid "AI Keys"
+msgstr "Claves de IA"
+
+msgid "Figures take turns as leads and support; no colour theme for the whole house."
+msgstr "Las figuras se turnan como protagonistas y acompañamiento; no hay un tema de color para toda la casa."
+
+msgid "the profile's"
+msgstr "el del perfil"
+
+msgid "from the song's description"
+msgstr "según la descripción de la canción"
+
+msgid "The whole house moves together in the colours of \"%s\" (%s; the lyrics may point to another). Measured from: %s."
+msgstr "Toda la casa se mueve a la vez con los colores de «%s» (%s; la letra puede indicar otro). Medido de: %s."
+
+msgid "The lyrics file has %d times that cannot be used, so no show can be made from it until it is fixed. The first: %s"
+msgstr "El archivo de letra tiene %d tiempos que no se pueden usar, así que no se puede hacer un show con él hasta que se corrija. El primero: %s"
+
+msgid "%d things in the file were put right: %s"
+msgstr "Se han arreglado %d cosas del archivo: %s"
+
+msgid "Confidence of the phrases %.2f on average (%s). %d of %d words are doubtful (below 0.5): listen to them first."
+msgstr "Confianza media de las frases %.2f (%s). %d de %d palabras son dudosas (menos de 0,5): escúchalas primero."
+
+msgid "First doubtful phrases:"
+msgstr "Primeras frases dudosas:"
+
+msgid "The transcription heard %d of %d lyric words (%.0f%%); the rest keep estimated times."
+msgstr "La transcripción ha oído %d de %d palabras de la letra (%.0f%%); las demás conservan tiempos estimados."
+
+msgid "A transcription is ready: it gives the words their times when the song is analyzed."
+msgstr "Hay una transcripción lista: dará los tiempos a las palabras cuando se analice la canción."
+
+msgid "Display lit %.0f%% of the time with music, %.0f events a minute, %d hits on the beat; colours always the scene's: %.0f%%."
+msgstr "Instalación encendida el %.0f%% del tiempo con música, %.0f eventos por minuto, %d golpes al pulso; colores siempre de la escena: %.0f%%."
+
+msgid "The art direction appears once the composition is worked out."
+msgstr "La dirección artística aparece cuando se calcula la composición."
+
+msgid "This profile does not direct the whole house: figures take turns. Choose a \"Reference\" style on the first step for themes, scenes and the ensemble."
+msgstr "Este perfil no dirige toda la casa: las figuras se turnan. Elige un estilo de «Referencia» en el primer paso para tener temas, escenas y conjunto."
+
+msgid "Theme: %s (%s, %.2f)\nDisplay under an effect: %.0f%%   (references 87-99%%)\nEvents a minute: %.0f   (references 344-1974)\nStarts shared by three or more figures: %.0f%%   (references 62-74%%)\nColour time in the two main hues: %.0f%%   (references 47-90%%); in the scene's colours: %.0f%%\nRepeated sections that kept their look: %.0f%%; distinct looks over sections heard once: %.0f%%"
+msgstr "Tema: %s (%s, %.2f)\nInstalación bajo un efecto: %.0f%%   (referencias 87-99%%)\nEventos por minuto: %.0f   (referencias 344-1974)\nArranques compartidos por tres o más figuras: %.0f%%   (referencias 62-74%%)\nTiempo de color en los dos tonos principales: %.0f%%   (referencias 47-90%%); en los colores de la escena: %.0f%%\nSecciones repetidas que conservaron su aspecto: %.0f%%; aspectos distintos en las secciones que suenan una vez: %.0f%%"
+
+msgid "This show was made without a visual direction (the neutral profile), so there is nothing to compare with the references."
+msgstr "Este show se hizo sin dirección visual (con el perfil neutral), así que no hay nada que comparar con las referencias."
+
+msgid "The model \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."
+msgstr "El modelo «{model}» no existe en el layout de la carpeta del show elegida, «{showFolder}»."
+
+msgid "Open the sequence with the show folder it was created for, or restore this model in the layout."
+msgstr "Abre la secuencia con la carpeta del show para la que se creó, o recupera este modelo en el layout."
+
+msgid "The group \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."
+msgstr "El grupo «{model}» no existe en el layout de la carpeta del show elegida, «{showFolder}»."
+
+msgid "Choose an existing group or create this one in the layout."
+msgstr "Elige un grupo que exista o crea este en el layout."
+
+msgid "The model \"{parent}\" has no submodel called \"{subModel}\"."
+msgstr "El modelo «{parent}» no tiene ningún submodelo llamado «{subModel}»."
+
+msgid "Choose an existing submodel or create this one on the model."
+msgstr "Elige un submodelo que exista o crea este en el modelo."
+
+msgid "\"{model}\" exists, but it is not a {expected} as the plan expected."
+msgstr "«{model}» existe, pero no es un {expected} como esperaba el plan."
+
+msgid "Check that the layout is the one the plan was made for."
+msgstr "Comprueba que el layout es aquel para el que se hizo el plan."
+
+msgid "The group \"{model}\" refers to members that do not exist: {members}."
+msgstr "El grupo «{model}» hace referencia a miembros que no existen: {members}."
+
+msgid "Remove those members from the group or restore the models."
+msgstr "Quita esos miembros del grupo o recupera los modelos."
+
+msgid "The group \"{model}\" has no valid members, so nothing can light up."
+msgstr "El grupo «{model}» no tiene ningún miembro válido, así que no se puede encender nada."
+
+msgid "Add at least one existing model to the group."
+msgstr "Añade al grupo al menos un modelo que exista."
+
+msgid "This sequence does not match the layout of the show folder \"{showFolder}\" (reason: {reason}). Missing {missing} of {total} targets: {names}."
+msgstr "Esta secuencia no corresponde al layout de la carpeta del show «{showFolder}» (motivo: {reason}). Faltan {missing} de {total} destinos: {names}."
+
+msgid "Select the show folder this sequence was generated for before opening it."
+msgstr "Elige la carpeta del show para la que se generó esta secuencia antes de abrirla."
+
+msgid "The sequence belongs to the show folder \"{sequenceFolder}\", but the selected show folder is \"{showFolder}\"."
+msgstr "La secuencia pertenece a la carpeta del show «{sequenceFolder}», pero la elegida es «{showFolder}»."
+
+msgid "Select \"{sequenceFolder}\" as the show folder and open the sequence again."
+msgstr "Elige «{sequenceFolder}» como carpeta del show y vuelve a abrir la secuencia."
+
+msgid "The sequence file \"{file}\" cannot be read."
+msgstr "No se puede leer el archivo de secuencia «{file}»."
+
+msgid "Generate the sequence again."
+msgstr "Vuelve a generar la secuencia."
+
+msgid "The saved sequence differs from what was planned: {detail}."
+msgstr "La secuencia guardada no coincide con lo planeado: {detail}."
+
+msgid "Generate the sequence again and report the problem if it repeats."
+msgstr "Vuelve a generar la secuencia y avisa del problema si se repite."
+
+msgid "The effect \"{effect}\" on \"{model}\" does not exist in this version of xLights, and would be dropped."
+msgstr "El efecto «{effect}» de «{model}» no existe en esta versión de xLights y se descartaría."
+
+msgid "Choose another effect."
+msgstr "Elige otro efecto."
+
+msgid "The effect \"{effect}\" on \"{model}\" has invalid times for a sequence of {duration} ms."
+msgstr "El efecto «{effect}» de «{model}» tiene tiempos no válidos para una secuencia de {duration} ms."
+
+msgid "Correct its start and end so that they fall inside the song."
+msgstr "Corrige su inicio y su final para que caigan dentro de la canción."
+
+msgid "Two effects overlap on layer {layer} of \"{model}\"."
+msgstr "Dos efectos se solapan en la capa {layer} de «{model}»."
+
+msgid "The mark \"{label}\" of the track \"{track}\" has invalid times or overlaps the previous one."
+msgstr "La marca «{label}» de la pista «{track}» tiene tiempos no válidos o se solapa con la anterior."
+
+msgid "Correct the times of that mark."
+msgstr "Corrige los tiempos de esa marca."
+
+msgid "\"{label}\" does not start or end on a frame, so xLights will move it slightly."
+msgstr "«{label}» no empieza o no termina en un frame, así que xLights lo moverá un poco."
+
+msgid "Align it with the sequence's frames."
+msgstr "Alinéalo con los frames de la secuencia."
+
+msgid "The effect \"{effect}\" on \"{model}\" has an invalid setting {key}={value}: {reason}."
+msgstr "El efecto «{effect}» de «{model}» tiene un ajuste no válido {key}={value}: {reason}."
+
+msgid "Correct that setting in the effect."
+msgstr "Corrige ese ajuste en el efecto."
+
+msgid "The effect \"{effect}\" on \"{model}\" has a setting xLights does not know: {key}."
+msgstr "El efecto «{effect}» de «{model}» tiene un ajuste que xLights no conoce: {key}."
+
+msgid "Remove that setting."
+msgstr "Quita ese ajuste."
+
+msgid "xLights warns about the effect \"{effect}\" on \"{model}\": {reason}."
+msgstr "xLights avisa sobre el efecto «{effect}» de «{model}»: {reason}."
+
+msgid "Check that it looks as you expect."
+msgstr "Comprueba que se ve como esperas."
+
+msgid "Colour {slot} of the effect \"{effect}\" on \"{model}\" is not valid: {value}."
+msgstr "El color {slot} del efecto «{effect}» de «{model}» no es válido: {value}."
+
+msgid "Choose the colour again."
+msgstr "Vuelve a elegir el color."
+
+msgid "The effect \"{effect}\" on \"{model}\" has no visible colour selected, so it may stay dark."
+msgstr "El efecto «{effect}» de «{model}» no tiene ningún color visible seleccionado, así que puede quedarse apagado."
+
+msgid "Select at least one colour other than black."
+msgstr "Selecciona al menos un color que no sea negro."
+
+msgid "The model \"{model}\" does not support the render style \"{style}\"."
+msgstr "El modelo «{model}» no admite el estilo de render «{style}»."
+
+msgid "Choose one of the styles the model offers."
+msgstr "Elige uno de los estilos que ofrece el modelo."
+
+msgid "The effect \"{effect}\" on \"{model}\" needs a file that cannot be found: \"{file}\"."
+msgstr "El efecto «{effect}» de «{model}» necesita un archivo que no se encuentra: «{file}»."
+
+msgid "Add the file to the show folder, or remove the effect until you have it."
+msgstr "Añade el archivo a la carpeta del show, o quita el efecto hasta que lo tengas."
+
+msgid "Generate the phonemes for that part of the song."
+msgstr "Genera los fonemas de esa parte de la canción."
+
+msgid "Add the words so that the mouth movements can be reviewed."
+msgstr "Añade las palabras para poder revisar los movimientos de la boca."
+
+msgid "Replace it with a valid phoneme."
+msgstr "Sustitúyelo por un fonema válido."
+
+msgid "Remove that phoneme or adjust the word's times."
+msgstr "Quita ese fonema o ajusta los tiempos de la palabra."
+
+msgid "The model \"{model}\" has no face called \"{definition}\", and xLights would silently use \"{substitute}\"."
+msgstr "El modelo «{model}» no tiene ninguna cara llamada «{definition}», y xLights usaría sin avisar «{substitute}»."
+
+msgid "Choose one of the model's faces."
+msgstr "Elige una de las caras del modelo."
+
+msgid "The face \"{definition}\" of type {type} cannot be drawn on the group \"{model}\", so it will not light up."
+msgstr "La cara «{definition}» de tipo {type} no se puede dibujar en el grupo «{model}», así que no se encenderá."
+
+msgid "Apply the face to the model itself, or use an image face on the group."
+msgstr "Aplica la cara al propio modelo, o usa una cara de imágenes en el grupo."
+
+msgid "The face \"{definition}\" on \"{model}\" defines no mouth, so nothing will move."
+msgstr "La cara «{definition}» de «{model}» no define ninguna boca, así que no se moverá nada."
+
+msgid "Define the mouth shapes of that face."
+msgstr "Define las formas de la boca de esa cara."
+
+msgid "The face \"{definition}\" on \"{model}\" needs {count} images that cannot be found, and xLights would fill the model with red: {files}."
+msgstr "La cara «{definition}» de «{model}» necesita {count} imágenes que no se encuentran, y xLights llenaría el modelo de rojo: {files}."
+
+msgid "Add the images to the show folder or choose a face that does not need them."
+msgstr "Añade las imágenes a la carpeta del show o elige una cara que no las necesite."
+
+msgid "The text effect on \"{model}\" has nothing to show."
+msgstr "El efecto de texto de «{model}» no tiene nada que mostrar."
+
+msgid "The text effect on \"{model}\" cannot show its text correctly with the font \"{font}\" (reason: {reason})."
+msgstr "El efecto de texto de «{model}» no puede mostrar bien su texto con la fuente «{font}» (motivo: {reason})."
+
+msgid "Use an operating system font, which can draw accented letters."
+msgstr "Usa una fuente del sistema operativo, que pueda dibujar letras con tilde."
+
+msgid "\"{model}\" and \"{over}\" are active at the same time on the same lights ({classification})."
+msgstr "«{model}» y «{over}» están activos a la vez sobre las mismas luces ({classification})."
+
+msgid "Check that the result is what you want; if \"{model}\" must be seen, move it or change how they mix."
+msgstr "Comprueba que el resultado es el que quieres; si «{model}» se tiene que ver, muévelo o cambia cómo se mezclan."
+
+msgid "The pending resource {id} has invalid times or refers to \"{model}\", which does not exist."
+msgstr "El recurso pendiente {id} tiene tiempos no válidos o hace referencia a «{model}», que no existe."
+
+msgid "Correct the marker."
+msgstr "Corrige el marcador."
+
+msgid "The pending resource {id} on \"{model}\" should stay dark, but it is lit by {by}."
+msgstr "El recurso pendiente {id} de «{model}» debería quedarse apagado, pero lo enciende {by}."
+
+msgid "Remove what lights it, or supply the resource."
+msgstr "Quita lo que lo enciende, o aporta el recurso."
+
+msgid "The rendered file \"{file}\" cannot be read."
+msgstr "No se puede leer el archivo renderizado «{file}»."
+
+msgid "Render the sequence again."
+msgstr "Vuelve a renderizar la secuencia."
+
+msgid "The render has {frames} frames of {step} ms, and {expectedFrames} of {expectedStep} ms were expected."
+msgstr "El render tiene {frames} frames de {step} ms, y se esperaban {expectedFrames} de {expectedStep} ms."
+
+msgid "Part of \"{model}\" is beyond the {fileChannels} channels of the rendered file and could not be checked."
+msgstr "Parte de «{model}» queda más allá de los {fileChannels} canales del archivo renderizado y no se ha podido comprobar."
+
+msgid "Check that the render includes all models."
+msgstr "Comprueba que el render incluye todos los modelos."
+
+msgid "\"{model}\" stayed dark while its effect \"{effect}\" should have been lighting it."
+msgstr "«{model}» se ha quedado apagado cuando su efecto «{effect}» debería encenderlo."
+
+msgid "Review the effect's settings and colours, and whether another model covers it."
+msgstr "Revisa los ajustes y colores del efecto, y si otro modelo lo tapa."
+
+msgid "Some members of \"{model}\" stayed dark during \"{effect}\": {members}."
+msgstr "Algunos miembros de «{model}» se han quedado apagados durante «{effect}»: {members}."
+
+msgid "Check the group's render style and those models."
+msgstr "Revisa el estilo de render del grupo y esos modelos."
+
+msgid "\"{model}\" is filled with one pure colour during \"{effect}\", which is what xLights does when an image is missing."
+msgstr "«{model}» se llena de un único color puro durante «{effect}», que es lo que hace xLights cuando falta una imagen."
+
+msgid "Check the effect's images."
+msgstr "Revisa las imágenes del efecto."
+
+msgid "\"{model}\" lit up for {frames} frames when no effect should have been lighting it."
+msgstr "«{model}» se ha encendido durante {frames} frames cuando ningún efecto debería encenderlo."
+
+msgid "Find the effect that reaches those lights."
+msgstr "Busca el efecto que llega a esas luces."
+
+msgid "The mouth on \"{model}\" does not change across {phonemes} different phonemes."
+msgstr "La boca de «{model}» no cambia en {phonemes} fonemas distintos."
+
+msgid "The mouth on \"{model}\" does not show \"{phoneme}\" as defined: {lit} lights on instead of {expected}."
+msgstr "La boca de «{model}» no muestra «{phoneme}» como está definido: {lit} luces encendidas en vez de {expected}."
+
+msgid "Check the face definition, and whether another effect covers it."
+msgstr "Revisa la definición de la cara, y si otro efecto la tapa."
+
+msgid "The mouth on \"{model}\" is not at rest during a pause: {lit} lights on instead of {expected}."
+msgstr "La boca de «{model}» no está en reposo durante una pausa: {lit} luces encendidas en vez de {expected}."
+
+msgid "from the words of the lyrics"
+msgstr "según las palabras de la letra"
+
+msgid "the profile's, as nothing else pointed to one"
+msgstr "el del perfil, porque nada más apuntaba a uno"
+
+msgid "Theme: %s, %s (confidence %.2f). It is an interpretation; the analysis is untouched."
+msgstr "Tema: %s, %s (confianza %.2f). Es una interpretación; el análisis no se toca."
+
+msgid "Words found: %s."
+msgstr "Palabras encontradas: %s."
+
+msgid "outline"
+msgstr "contorno"
+
+msgid "windows"
+msgstr "ventanas"
+
+msgid "arches"
+msgstr "arcos"
+
+msgid "snowflakes"
+msgstr "copos"
+
+msgid "small trees"
+msgstr "árboles pequeños"
+
+msgid "stars"
+msgstr "estrellas"
+
+msgid "mega tree"
+msgstr "megaárbol"
+
+msgid "props"
+msgstr "elementos"
+
+msgid "figures"
+msgstr "figuras"
+
+msgid "matrix"
+msgstr "matriz"
+
+msgid "faces"
+msgstr "caras"
+
+msgid "Families that move together: %s."
+msgstr "Familias que se mueven juntas: %s."
+
+msgid "pause"
+msgstr "pausa"
+
+msgid "calm"
+msgstr "tranquila"
+
+msgid "moving"
+msgstr "en movimiento"
+
+msgid "intense"
+msgstr "intensa"
+
+msgid "dark"
+msgstr "a oscuras"
+
+msgid "soft glow"
+msgstr "brillo suave"
+
+msgid "flowing"
+msgstr "fluida"
+
+msgid "driving"
+msgstr "enérgica"
+
+msgid "burst"
+msgstr "estallido"
+
+msgid "home colours"
+msgstr "colores de la casa"
+
+msgid "contrast colours"
+msgstr "colores de contraste"
+
+msgid "home colours and the accent"
+msgstr "colores de la casa y el acento"
+
+msgid "Christmas, red and green"
+msgstr "Navidad, rojo y verde"
+
+msgid "Candy cane, red and white"
+msgstr "Bastón de caramelo, rojo y blanco"
+
+msgid "Winter night, blue and white"
+msgstr "Noche de invierno, azul y blanco"
+
+msgid "Sunset and savanna, gold and green"
+msgstr "Atardecer y sabana, oro y verde"
+
+msgid "Party, magenta, lime and violet"
+msgstr "Fiesta, magenta, lima y violeta"
+
+msgid "Magic, red and white with a rainbow"
+msgstr "Magia, rojo y blanco con un arcoíris"
+
+msgid "Halloween, orange and violet"
+msgstr "Halloween, naranja y violeta"
+
+msgid "New year, gold and white"
+msgstr "Año nuevo, oro y blanco"
+
+msgid "Calm, warm white and soft blue"
+msgstr "Calma, blanco cálido y azul suave"

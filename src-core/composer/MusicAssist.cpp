@@ -3,6 +3,7 @@
 #include "ai/IServiceSettingsStore.h"
 #include "composer/ComposerText.h"
 #include "composer/CompositionPlan.h"
+#include "composer/SongAnalysis.h"
 #include "utils/ExternalHooks.h"
 
 #include <curl/curl.h>
@@ -1179,6 +1180,115 @@ std::string Base64Encode(const std::string& bytes) {
         out += '=';
     }
     return out;
+}
+
+// ------------------------------------------------------------- the command
+
+namespace {
+
+bool WriteJson(const std::string& path, const std::string& text) {
+    std::error_code ec;
+    fs::create_directories(fs::path(path).parent_path(), ec);
+    std::ofstream out(fs::path(path), std::ios::binary | std::ios::trunc);
+    out << text;
+    out.close();
+    return !out.fail();
+}
+
+int Refused(const AssistCommandOptions& o, const AssistFailure& f) {
+    const json root = { { "kind", "composer-assist-result" }, { "action", o.action }, { "ok", false }, { "error", AssistErrorId(f.error) }, { "message", f.message }, { "status", f.status },
+                        { "retryAfterS", f.retryAfterS } };
+    (void)WriteJson(o.outPath, root.dump(1));
+    printf("composer-assist: %s: %s %s\n", o.action.c_str(), AssistErrorId(f.error), f.message.c_str());
+    const bool before = f.error == AssistError::NoConsent || f.error == AssistError::NoCredentials || f.error == AssistError::FileTooLarge || f.error == AssistError::UnsupportedFile;
+    return before ? 2 : 1;
+}
+
+} // namespace
+
+int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const IServiceSettingsStore* keys, const RetryPolicy& policy) {
+    if (o.outPath.empty()) {
+        printf("composer-assist: --out is needed\n");
+        return 2;
+    }
+    if (o.action == "lrclib") {
+        LrclibQuery q = GuessLrclibQuery(o.audioPath, o.durationS);
+        if (!o.query.empty()) {
+            const size_t dash = o.query.find(" - ");
+            q.artist = dash == std::string::npos ? std::string() : text::Trim(o.query.substr(0, dash));
+            q.track = text::Trim(dash == std::string::npos ? o.query : o.query.substr(dash + 3));
+        }
+        const LrclibResult r = LookupLrclib(client, q, policy);
+        json matches = json::array();
+        for (const LrclibMatch& m : r.matches) {
+            matches.push_back({ { "id", m.record.id }, { "trackName", m.record.trackName }, { "artistName", m.record.artistName }, { "albumName", m.record.albumName },
+                                { "durationS", m.record.durationS }, { "durationDiffS", m.durationDiffS }, { "titleMatches", m.titleMatches }, { "artistMatches", m.artistMatches },
+                                { "albumMatches", m.albumMatches }, { "durationMatches", m.durationMatches }, { "plausible", m.Plausible() }, { "instrumental", m.record.instrumental },
+                                { "hasWordSync", m.record.hasWordSync }, { "syncedLyrics", m.record.syncedLyrics }, { "plainLyrics", m.record.plainLyrics } });
+        }
+        const json root = { { "kind", "composer-assist-result" }, { "action", "lrclib" }, { "ok", !r.matches.empty() }, { "via", r.via }, { "query", { { "track", q.track }, { "artist", q.artist } } },
+                            { "matches", matches }, { "error", AssistErrorId(r.failure.error) }, { "message", r.failure.message } };
+        (void)WriteJson(o.outPath, root.dump(1));
+        printf("composer-assist: lrclib: %zu matches via %s (%s)\n", r.matches.size(), r.via.empty() ? "-" : r.via.c_str(), AssistErrorId(r.failure.error));
+        return r.matches.empty() ? 1 : 0;
+    }
+    if (o.action != "transcribe" && o.action != "describe") {
+        printf("composer-assist: unknown action '%s' (lrclib, transcribe, describe)\n", o.action.c_str());
+        return 2;
+    }
+    const bool transcribe = o.action == "transcribe";
+    const std::string provider = transcribe ? "groq" : "gemini";
+    const std::string model = transcribe ? o.groqModel : o.geminiModel;
+    const std::string kind = transcribe ? "transcript" : "character";
+    if (!FileExists(o.audioPath)) {
+        return Refused(o, { AssistError::UnsupportedFile, 0, -1, 0, "the song does not exist" });
+    }
+    // Offline first: the same song with the same service and settings was answered before.
+    const std::string audioHash = Sha256OfFile(o.audioPath);
+    const std::string key = AssistCacheKey(audioHash, "", provider, model, transcribe ? o.language : "character-v1");
+    const std::string cached = o.showDir.empty() ? std::string() : AssistCachePath(o.showDir, key, kind);
+    if (!cached.empty() && FileExists(cached)) {
+        std::ifstream in(fs::path(cached), std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        std::string error;
+        Transcript t;
+        SongCharacter c;
+        if ((transcribe && FromJson(text.str(), t, error)) || (!transcribe && FromJson(text.str(), c, error))) {
+            (void)WriteJson(o.outPath, text.str());
+            printf("composer-assist: %s: from the cache, nothing sent (%s)\n", o.action.c_str(), cached.c_str());
+            return 0;
+        }
+    }
+    const ApiKey apiKey = ResolveApiKey(keys, transcribe ? "Groq" : "Gemini", transcribe ? "GROQ_API_KEY" : "GEMINI_API_KEY");
+    AssistFailure failure;
+    std::string out;
+    if (transcribe) {
+        TranscribeOptions options;
+        options.model = o.groqModel;
+        options.language = o.language;
+        Transcript t;
+        if (!TranscribeWithGroq(client, o.audioPath, apiKey, o.allowUpload, options, policy, t, failure)) {
+            return Refused(o, failure);
+        }
+        t.cacheKey = key;
+        out = ToJson(t);
+        printf("composer-assist: transcribe: %zu words, %zu segments, language %s, key from %s\n", t.words.size(), t.segments.size(), t.language.c_str(), apiKey.source.c_str());
+    } else {
+        CharacterOptions options;
+        options.model = o.geminiModel;
+        SongCharacter c;
+        if (!DescribeWithGemini(client, o.audioPath, apiKey, o.allowUpload, options, policy, c, failure)) {
+            return Refused(o, failure);
+        }
+        c.cacheKey = key;
+        out = ToJson(c);
+        printf("composer-assist: describe: genre %s, theme %s (%.2f), key from %s\n", c.genre.c_str(), c.suggestedTheme.c_str(), c.themeConfidence, apiKey.source.c_str());
+    }
+    if (!cached.empty()) {
+        (void)WriteJson(cached, out);
+    }
+    return WriteJson(o.outPath, out) ? 0 : 1;
 }
 
 } // namespace composer

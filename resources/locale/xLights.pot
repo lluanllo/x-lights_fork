@@ -9759,3 +9759,609 @@ msgstr ""
 
 msgid "It will be saved in the show folder as %s, next to its other sequences. Nothing existing is replaced."
 msgstr ""
+
+msgid "Nothing was sent: the song is only sent when you agree."
+msgstr ""
+
+msgid "There is no key for that service. Add one with \"AI Keys...\" or set GROQ_API_KEY / GEMINI_API_KEY."
+msgstr ""
+
+msgid "The song is too large for that service. A shorter or more compressed file would fit."
+msgstr ""
+
+msgid "That service does not take this kind of audio file."
+msgstr ""
+
+msgid "The service did not accept the key: it may be wrong or expired."
+msgstr ""
+
+msgid "The key cannot use that service or model."
+msgstr ""
+
+msgid "The service asks to wait %d seconds before trying again."
+msgstr ""
+
+msgid "The service is busy: try again in a while."
+msgstr ""
+
+msgid "The service failed on its side: try again later."
+msgstr ""
+
+msgid "There is no connection to the service. Everything else keeps working without it."
+msgstr ""
+
+msgid "LRCLIB has no lyrics for that song."
+msgstr ""
+
+msgid "The service gave an answer that could not be used (%s)."
+msgstr ""
+
+msgid "line %d"
+msgstr ""
+
+msgid "%s has a time that is not minutes:seconds (%s)."
+msgstr ""
+
+msgid "%s would start before the song (%s)."
+msgstr ""
+
+msgid "\"%s\" starts at %s, after the end of the song: is it the right song?"
+msgstr ""
+
+msgid "the file is empty."
+msgstr ""
+
+msgid "it is an LRC file without a single time."
+msgstr ""
+
+msgid "%s was out of order and was moved to its time."
+msgstr ""
+
+msgid "%s had the same time as the line before and was joined to it."
+msgstr ""
+
+msgid "the file's [offset:] of %s ms was applied."
+msgstr ""
+
+msgid "Some times in the lyrics file cannot be used: a time that is not minutes:seconds, one before the song, or a line after its end. The first step says which."
+msgstr ""
+
+msgid "The lyrics file is empty."
+msgstr ""
+
+msgid "Find the Lyrics Online (LRCLIB)..."
+msgstr ""
+
+msgid "Time the Words with AI (Groq)..."
+msgstr ""
+
+msgid "AI Keys..."
+msgstr ""
+
+msgid "Optional: lyrics from LRCLIB are only read, never published; a song is only sent to an AI service after you say yes, and its answer is kept with the show so it works offline afterwards."
+msgstr ""
+
+msgid "Describe the Song with AI (Gemini)..."
+msgstr ""
+
+msgid "The search uses its name and its length."
+msgstr ""
+
+msgid "Artist and title, as \"Artist - Title\". Both orders are searched. Nothing is published to LRCLIB."
+msgstr ""
+
+msgid "Find the Lyrics Online"
+msgstr ""
+
+msgid "to hear which word is sung when; the lyrics you gave stay the text"
+msgstr ""
+
+msgid "to describe its genre, mood and energy; it is only a suggestion and never changes the analysis"
+msgstr ""
+
+msgid "Art direction: theme, colours and scenes"
+msgstr ""
+
+msgid "How it compares with the reference shows (measures, not a judgement)"
+msgstr ""
+
+msgid "Drop it to use it: a song, lyrics or an .xtiming. The file stays where it is."
+msgstr ""
+
+msgid "Wait until the generator finishes to change the song."
+msgstr ""
+
+msgid "Or drag the song here from the file explorer. Lyrics (.txt, .lrc, .srt) and .xtiming files can be dropped too."
+msgstr ""
+
+msgid "The generator is working."
+msgstr ""
+
+msgid "Wait until it finishes, or cancel it, to change the song."
+msgstr ""
+
+msgid "Several songs were dropped. Which one is the show for?"
+msgstr ""
+
+msgid "That is not a song xLights can play."
+msgstr ""
+
+msgid "Drop an audio file (mp3, wav, m4a, ogg, flac, aac, wma or aiff), lyrics (.txt, .lrc, .srt) or an .xtiming file."
+msgstr ""
+
+msgid "The song \"%s\" (%.1f MB) will be sent to %s %s.\n\nOnly this song, only now. Its answer is kept with this show, so it is not sent again. Send it?"
+msgstr ""
+
+msgid "Send the song?"
+msgstr ""
+
+msgid "The assistant is still working on the last request."
+msgstr ""
+
+msgid "The assistant could not be started."
+msgstr ""
+
+msgid "Searching LRCLIB..."
+msgstr ""
+
+msgid "Sending the song to Groq and waiting for the words..."
+msgstr ""
+
+msgid "Sending the song to Gemini and waiting for its description..."
+msgstr ""
+
+msgid "The assistant gave no answer."
+msgstr ""
+
+msgid "with times"
+msgstr ""
+
+msgid "instrumental"
+msgstr ""
+
+msgid "text only"
+msgstr ""
+
+msgid "Pick the right song. A tick means title, artist and length (within 2 seconds) agree."
+msgstr ""
+
+msgid "Lyrics from LRCLIB"
+msgstr ""
+
+msgid "No lyrics chosen."
+msgstr ""
+
+msgid "That song is instrumental on LRCLIB: no lyrics."
+msgstr ""
+
+msgid "Lyrics from LRCLIB (%s), saved with the show. Check them: the lyrics stay yours to correct."
+msgstr ""
+
+msgid "with line times"
+msgstr ""
+
+msgid "The transcription could not be read."
+msgstr ""
+
+msgid "%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."
+msgstr ""
+
+msgid "The description could not be read."
+msgstr ""
+
+msgid "Gemini hears %s, energy %s, voice %s; theme %s (%.2f). An interpretation: it only helps choose colours."
+msgstr ""
+
+msgid "one is saved in the system's secure store"
+msgstr ""
+
+msgid "one comes from %s"
+msgstr ""
+
+msgid "none yet"
+msgstr ""
+
+msgid "%s key (%s). It is kept in the system's secure store, never in the show or in a log. Leave it empty to keep the current one."
+msgstr ""
+
+msgid "AI Keys"
+msgstr ""
+
+msgid "Figures take turns as leads and support; no colour theme for the whole house."
+msgstr ""
+
+msgid "the profile's"
+msgstr ""
+
+msgid "from the song's description"
+msgstr ""
+
+msgid "The whole house moves together in the colours of \"%s\" (%s; the lyrics may point to another). Measured from: %s."
+msgstr ""
+
+msgid "The lyrics file has %d times that cannot be used, so no show can be made from it until it is fixed. The first: %s"
+msgstr ""
+
+msgid "%d things in the file were put right: %s"
+msgstr ""
+
+msgid "Confidence of the phrases %.2f on average (%s). %d of %d words are doubtful (below 0.5): listen to them first."
+msgstr ""
+
+msgid "First doubtful phrases:"
+msgstr ""
+
+msgid "The transcription heard %d of %d lyric words (%.0f%%); the rest keep estimated times."
+msgstr ""
+
+msgid "A transcription is ready: it gives the words their times when the song is analyzed."
+msgstr ""
+
+msgid "Display lit %.0f%% of the time with music, %.0f events a minute, %d hits on the beat; colours always the scene's: %.0f%%."
+msgstr ""
+
+msgid "The art direction appears once the composition is worked out."
+msgstr ""
+
+msgid "This profile does not direct the whole house: figures take turns. Choose a \"Reference\" style on the first step for themes, scenes and the ensemble."
+msgstr ""
+
+msgid "Theme: %s (%s, %.2f)\nDisplay under an effect: %.0f%%   (references 87-99%%)\nEvents a minute: %.0f   (references 344-1974)\nStarts shared by three or more figures: %.0f%%   (references 62-74%%)\nColour time in the two main hues: %.0f%%   (references 47-90%%); in the scene's colours: %.0f%%\nRepeated sections that kept their look: %.0f%%; distinct looks over sections heard once: %.0f%%"
+msgstr ""
+
+msgid "This show was made without a visual direction (the neutral profile), so there is nothing to compare with the references."
+msgstr ""
+
+msgid "The model \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."
+msgstr ""
+
+msgid "Open the sequence with the show folder it was created for, or restore this model in the layout."
+msgstr ""
+
+msgid "The group \"{model}\" does not exist in the layout of the selected show folder \"{showFolder}\"."
+msgstr ""
+
+msgid "Choose an existing group or create this one in the layout."
+msgstr ""
+
+msgid "The model \"{parent}\" has no submodel called \"{subModel}\"."
+msgstr ""
+
+msgid "Choose an existing submodel or create this one on the model."
+msgstr ""
+
+msgid "\"{model}\" exists, but it is not a {expected} as the plan expected."
+msgstr ""
+
+msgid "Check that the layout is the one the plan was made for."
+msgstr ""
+
+msgid "The group \"{model}\" refers to members that do not exist: {members}."
+msgstr ""
+
+msgid "Remove those members from the group or restore the models."
+msgstr ""
+
+msgid "The group \"{model}\" has no valid members, so nothing can light up."
+msgstr ""
+
+msgid "Add at least one existing model to the group."
+msgstr ""
+
+msgid "This sequence does not match the layout of the show folder \"{showFolder}\" (reason: {reason}). Missing {missing} of {total} targets: {names}."
+msgstr ""
+
+msgid "Select the show folder this sequence was generated for before opening it."
+msgstr ""
+
+msgid "The sequence belongs to the show folder \"{sequenceFolder}\", but the selected show folder is \"{showFolder}\"."
+msgstr ""
+
+msgid "Select \"{sequenceFolder}\" as the show folder and open the sequence again."
+msgstr ""
+
+msgid "The sequence file \"{file}\" cannot be read."
+msgstr ""
+
+msgid "Generate the sequence again."
+msgstr ""
+
+msgid "The saved sequence differs from what was planned: {detail}."
+msgstr ""
+
+msgid "Generate the sequence again and report the problem if it repeats."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" does not exist in this version of xLights, and would be dropped."
+msgstr ""
+
+msgid "Choose another effect."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" has invalid times for a sequence of {duration} ms."
+msgstr ""
+
+msgid "Correct its start and end so that they fall inside the song."
+msgstr ""
+
+msgid "Two effects overlap on layer {layer} of \"{model}\"."
+msgstr ""
+
+msgid "The mark \"{label}\" of the track \"{track}\" has invalid times or overlaps the previous one."
+msgstr ""
+
+msgid "Correct the times of that mark."
+msgstr ""
+
+msgid "\"{label}\" does not start or end on a frame, so xLights will move it slightly."
+msgstr ""
+
+msgid "Align it with the sequence's frames."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" has an invalid setting {key}={value}: {reason}."
+msgstr ""
+
+msgid "Correct that setting in the effect."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" has a setting xLights does not know: {key}."
+msgstr ""
+
+msgid "Remove that setting."
+msgstr ""
+
+msgid "xLights warns about the effect \"{effect}\" on \"{model}\": {reason}."
+msgstr ""
+
+msgid "Check that it looks as you expect."
+msgstr ""
+
+msgid "Colour {slot} of the effect \"{effect}\" on \"{model}\" is not valid: {value}."
+msgstr ""
+
+msgid "Choose the colour again."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" has no visible colour selected, so it may stay dark."
+msgstr ""
+
+msgid "Select at least one colour other than black."
+msgstr ""
+
+msgid "The model \"{model}\" does not support the render style \"{style}\"."
+msgstr ""
+
+msgid "Choose one of the styles the model offers."
+msgstr ""
+
+msgid "The effect \"{effect}\" on \"{model}\" needs a file that cannot be found: \"{file}\"."
+msgstr ""
+
+msgid "Add the file to the show folder, or remove the effect until you have it."
+msgstr ""
+
+msgid "Generate the phonemes for that part of the song."
+msgstr ""
+
+msgid "Add the words so that the mouth movements can be reviewed."
+msgstr ""
+
+msgid "Replace it with a valid phoneme."
+msgstr ""
+
+msgid "Remove that phoneme or adjust the word's times."
+msgstr ""
+
+msgid "The model \"{model}\" has no face called \"{definition}\", and xLights would silently use \"{substitute}\"."
+msgstr ""
+
+msgid "Choose one of the model's faces."
+msgstr ""
+
+msgid "The face \"{definition}\" of type {type} cannot be drawn on the group \"{model}\", so it will not light up."
+msgstr ""
+
+msgid "Apply the face to the model itself, or use an image face on the group."
+msgstr ""
+
+msgid "The face \"{definition}\" on \"{model}\" defines no mouth, so nothing will move."
+msgstr ""
+
+msgid "Define the mouth shapes of that face."
+msgstr ""
+
+msgid "The face \"{definition}\" on \"{model}\" needs {count} images that cannot be found, and xLights would fill the model with red: {files}."
+msgstr ""
+
+msgid "Add the images to the show folder or choose a face that does not need them."
+msgstr ""
+
+msgid "The text effect on \"{model}\" has nothing to show."
+msgstr ""
+
+msgid "The text effect on \"{model}\" cannot show its text correctly with the font \"{font}\" (reason: {reason})."
+msgstr ""
+
+msgid "Use an operating system font, which can draw accented letters."
+msgstr ""
+
+msgid "\"{model}\" and \"{over}\" are active at the same time on the same lights ({classification})."
+msgstr ""
+
+msgid "Check that the result is what you want; if \"{model}\" must be seen, move it or change how they mix."
+msgstr ""
+
+msgid "The pending resource {id} has invalid times or refers to \"{model}\", which does not exist."
+msgstr ""
+
+msgid "Correct the marker."
+msgstr ""
+
+msgid "The pending resource {id} on \"{model}\" should stay dark, but it is lit by {by}."
+msgstr ""
+
+msgid "Remove what lights it, or supply the resource."
+msgstr ""
+
+msgid "The rendered file \"{file}\" cannot be read."
+msgstr ""
+
+msgid "Render the sequence again."
+msgstr ""
+
+msgid "The render has {frames} frames of {step} ms, and {expectedFrames} of {expectedStep} ms were expected."
+msgstr ""
+
+msgid "Part of \"{model}\" is beyond the {fileChannels} channels of the rendered file and could not be checked."
+msgstr ""
+
+msgid "Check that the render includes all models."
+msgstr ""
+
+msgid "\"{model}\" stayed dark while its effect \"{effect}\" should have been lighting it."
+msgstr ""
+
+msgid "Review the effect's settings and colours, and whether another model covers it."
+msgstr ""
+
+msgid "Some members of \"{model}\" stayed dark during \"{effect}\": {members}."
+msgstr ""
+
+msgid "Check the group's render style and those models."
+msgstr ""
+
+msgid "\"{model}\" is filled with one pure colour during \"{effect}\", which is what xLights does when an image is missing."
+msgstr ""
+
+msgid "Check the effect's images."
+msgstr ""
+
+msgid "\"{model}\" lit up for {frames} frames when no effect should have been lighting it."
+msgstr ""
+
+msgid "Find the effect that reaches those lights."
+msgstr ""
+
+msgid "The mouth on \"{model}\" does not change across {phonemes} different phonemes."
+msgstr ""
+
+msgid "The mouth on \"{model}\" does not show \"{phoneme}\" as defined: {lit} lights on instead of {expected}."
+msgstr ""
+
+msgid "Check the face definition, and whether another effect covers it."
+msgstr ""
+
+msgid "The mouth on \"{model}\" is not at rest during a pause: {lit} lights on instead of {expected}."
+msgstr ""
+
+msgid "from the words of the lyrics"
+msgstr ""
+
+msgid "the profile's, as nothing else pointed to one"
+msgstr ""
+
+msgid "Theme: %s, %s (confidence %.2f). It is an interpretation; the analysis is untouched."
+msgstr ""
+
+msgid "Words found: %s."
+msgstr ""
+
+msgid "outline"
+msgstr ""
+
+msgid "windows"
+msgstr ""
+
+msgid "arches"
+msgstr ""
+
+msgid "snowflakes"
+msgstr ""
+
+msgid "small trees"
+msgstr ""
+
+msgid "stars"
+msgstr ""
+
+msgid "mega tree"
+msgstr ""
+
+msgid "props"
+msgstr ""
+
+msgid "figures"
+msgstr ""
+
+msgid "matrix"
+msgstr ""
+
+msgid "faces"
+msgstr ""
+
+msgid "Families that move together: %s."
+msgstr ""
+
+msgid "pause"
+msgstr ""
+
+msgid "calm"
+msgstr ""
+
+msgid "moving"
+msgstr ""
+
+msgid "intense"
+msgstr ""
+
+msgid "dark"
+msgstr ""
+
+msgid "soft glow"
+msgstr ""
+
+msgid "flowing"
+msgstr ""
+
+msgid "driving"
+msgstr ""
+
+msgid "burst"
+msgstr ""
+
+msgid "home colours"
+msgstr ""
+
+msgid "contrast colours"
+msgstr ""
+
+msgid "home colours and the accent"
+msgstr ""
+
+msgid "Christmas, red and green"
+msgstr ""
+
+msgid "Candy cane, red and white"
+msgstr ""
+
+msgid "Winter night, blue and white"
+msgstr ""
+
+msgid "Sunset and savanna, gold and green"
+msgstr ""
+
+msgid "Party, magenta, lime and violet"
+msgstr ""
+
+msgid "Magic, red and white with a rainbow"
+msgstr ""
+
+msgid "Halloween, orange and violet"
+msgstr ""
+
+msgid "New year, gold and white"
+msgstr ""
+
+msgid "Calm, warm white and soft blue"
+msgstr ""

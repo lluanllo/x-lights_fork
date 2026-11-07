@@ -56,6 +56,10 @@ struct GenerationSidecar {
     int validationWarnings = 0;
     bool rendered = false;
     std::string visualReview = "not-reviewed"; // only a person changes it
+    // Answers of the music assistant this show used, kept in the show's cache so a
+    // regeneration finds them with no network. Relative to the show folder.
+    std::string transcriptCache;
+    std::string characterCache;
 };
 
 enum class SidecarStatus {

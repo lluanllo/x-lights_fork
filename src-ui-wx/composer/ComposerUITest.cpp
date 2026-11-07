@@ -187,7 +187,7 @@ private:
                               std::ofstream(other, std::ios::binary) << "no";
                               const std::string before = _dialog->AudioPath();
                               _dialog->DropFiles({ other.string() });
-                              Check(_dialog->ErrorShown() == "That is not a song xLights can play." && _dialog->AudioPath() == before, "a file that is not a song: explained, and the song chosen stays");
+                              Check(_dialog->ErrorShown() == std::string(wxGetTranslation("That is not a song xLights can play.").ToUTF8()) && _dialog->AudioPath() == before, "a file that is not a song: explained, and the song chosen stays");
                               // A name with accents, a dash and CJK letters, as Windows explorers hand them over.
                               const fs::path song = drops / fs::path(u8"Canción ñandú — 漢字.wav");
                               const fs::path second = drops / "otra.wav";
@@ -217,6 +217,29 @@ private:
                               return true;
                           },
                            20 });
+        _steps.push_back({ "the music assistant", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->SetAudio(_o.audio);
+                                  // Never a yes in a test: with a key saved, a yes would send the song.
+                                  _dialog->SetTestConsent(false);
+                                  _dialog->StartAssist("transcribe", false);
+                                  Check(_dialog->AssistExitCode() == 2 && !_dialog->AssistRunning() && !_dialog->AssistMessage().empty(),
+                                        "without a yes nothing is started, and the window says so: " + _dialog->AssistMessage());
+                                  // LRCLIB only reads; an invented title finds nothing, or there is no network.
+                                  _dialog->StartAssist("lrclib", false, "Juajilandia Pruebas - Cancion inventada zqxw");
+                                  Check(_dialog->AssistRunning(), "the LRCLIB search runs apart from the window");
+                                  return false;
+                              }
+                              if (_dialog->AssistRunning() || !Waited(0.5)) {
+                                  return false;
+                              }
+                              _started = false;
+                              Check(_dialog->AssistExitCode() >= 0 && !_dialog->AssistMessage().empty(), fmt::format("and it ends with something to read ({}): {}", _dialog->AssistExitCode(), _dialog->AssistMessage()));
+                              Capture(_dialog, "asistente-musical");
+                              return true;
+                          },
+                           90 });
         _steps.push_back({ "song and lyrics", [this, out]() {
                               _dialog->SetAudio(_o.audio);
                               Check(_dialog->AudioOk(), "the demo song is readable");
@@ -250,6 +273,14 @@ private:
                               _dialog->SetLyrics(_o.lyrics);
                               Check(_dialog->LyricsState() == "lines", "LRC lyrics: synchronized by line");
                               _dialog->SetLevel(AutomationLevel::Balanced);
+                              std::string reference;
+                              for (const std::string& path : _dialog->ProfilePaths()) {
+                                  reference = path.find("reference-all.json") != std::string::npos ? path : reference;
+                              }
+                              Check(!reference.empty(), "the reference styles are offered with the show's own profiles");
+                              _dialog->SetProfile(reference);
+                              Check(!_dialog->StyleColors().empty() && !_dialog->StyleTheme().empty(), fmt::format("the reference style shows its theme {} and {} colours", _dialog->StyleTheme(), _dialog->StyleColors().size()));
+                              Capture(_dialog, "estilo-referencias");
                               _dialog->SetSequenceName("demo-ui.xsq");
                               Check(_dialog->CanGoTo(ShowComposerDialog::Step::Analysis) && _dialog->CanGoTo(ShowComposerDialog::Step::Generate), "with a song, the next steps open");
                               Capture(_dialog, "crear-completo");
@@ -263,7 +294,7 @@ private:
                                   Check(_dialog->JobRunning(), "going to Analysis starts the analysis in the generator");
                                   const std::string song = _dialog->AudioPath();
                                   _dialog->DropFiles({ song });
-                                  Check(!_dialog->AcceptsDrops() && _dialog->ErrorShown() == "The generator is working." && _dialog->AudioPath() == song && _dialog->JobRunning(),
+                                  Check(!_dialog->AcceptsDrops() && _dialog->ErrorShown() == std::string(wxGetTranslation("The generator is working.").ToUTF8()) && _dialog->AudioPath() == song && _dialog->JobRunning(),
                                         "a song dropped while the generator works is refused, and the work goes on");
                                   return false;
                               }
@@ -319,6 +350,9 @@ private:
                               const LevelSummary b = SummarizeLevel(_dialog->LevelReport(AutomationLevel::Balanced));
                               Check(all, "the three levels compared from their own choreographies:" + numbers);
                               Check(b.faces > 0 && b.texts > 0 && b.accents > 0, "balanced: faces sing, a matrix shows the lyrics, and the hand-made bar gives accents");
+                              const ReportFolder& balanced = _dialog->LevelReport(AutomationLevel::Balanced);
+                              Check(balanced.directionReport.find("Theme:") != std::string::npos && balanced.direction.find("\"scenes\"") != std::string::npos,
+                                    "the art direction is shown: theme, colours and scenes");
                               Capture(_dialog, "composicion");
                               return true;
                           },
@@ -424,6 +458,7 @@ private:
                               Check(_dialog->LastExitCode() == 0 && FileExists(_dialog->ResultSequence()) && _dialog->CurrentStep() == ShowComposerDialog::Step::Result, "generated, saved, and the result step is shown");
                               Check(r.hasSummary && r.summary.find("\"faceTargets\": [") != std::string::npos && r.summary.find("\"faceTargets\": []") == std::string::npos && r.summary.find("\"textTargets\": []") == std::string::npos,
                                     "the result names the singing faces and the matrix with lyrics");
+                              Check(r.summary.find("\"direction\"") != std::string::npos && r.summary.find("\"paletteCoherence\"") != std::string::npos, "the result compares the show with the references");
                               Capture(_dialog, "resultado");
                               return true;
                           },

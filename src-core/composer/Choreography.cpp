@@ -445,6 +445,7 @@ private:
         const double wanted = _scene->coverage * scale * static_cast<double>(total);
         std::map<std::string, std::vector<std::string>> bedTargets;
         std::vector<std::string> familyOrder;
+        std::vector<std::string> ensembleTargets;
         for (const VisualFamily* f : order) {
             if (total > 0 && static_cast<double>(covered) >= wanted) {
                 break;
@@ -472,10 +473,14 @@ private:
                     }
                     // Lights shared with a figure the plan uses (a face's channels wired
                     // into a window, say) stay with that figure.
-                    if (std::any_of(claimedTargets.begin(), claimedTargets.end(), [&](const std::string& c) { return _caps.Overlap(c, name); })) {
+                    // So do lights shared by two families (a wiring the layout reports): the
+                    // first one lit keeps them, as both cannot show at once.
+                    const auto shares = [&](const std::string& c) { return c != name && _caps.Overlap(c, name); };
+                    if (std::any_of(claimedTargets.begin(), claimedTargets.end(), shares) || std::any_of(ensembleTargets.begin(), ensembleTargets.end(), shares)) {
                         _out.warnings.push_back(fmt::format("ensemble-shares-lights:{}:{}", name, s.id));
                         continue;
                     }
+                    ensembleTargets.push_back(name);
                     PlanAssignment a;
                     a.target = name;
                     a.type = info->type;

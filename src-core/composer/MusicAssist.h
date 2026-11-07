@@ -287,4 +287,26 @@ struct TimedLine {
 
 [[nodiscard]] std::string Base64Encode(const std::string& bytes);
 
+// ------------------------------------------------------------- the command
+
+// What the window asks a child process for, so a slow or absent network never
+// freezes it. The answer goes to `outPath` as JSON; a transcription or description is
+// also kept in the show's cache, where a later generation finds it offline.
+struct AssistCommandOptions {
+    std::string action;   // "lrclib", "transcribe" or "describe"
+    std::string audioPath;
+    std::string showDir;  // for the cache; empty: no cache
+    std::string outPath;
+    std::string query;    // lrclib: "Artist - Title"; empty: guessed from the file name
+    double durationS = 0; // lrclib: the song's length, to check a match
+    bool allowUpload = false; // the person said yes to sending this song, in the window
+    std::string groqModel = "whisper-large-v3";
+    std::string geminiModel = "gemini-3.8-flash";
+    std::string language = "es";
+};
+
+// 0 answered, 1 failed (the reason in the JSON and on stdout), 2 refused before
+// sending anything (no consent, no key, a file too large or of the wrong kind).
+[[nodiscard]] int RunAssistCommand(const AssistCommandOptions& options, IHttpClient& client, const IServiceSettingsStore* keys, const RetryPolicy& policy = {});
+
 } // namespace composer

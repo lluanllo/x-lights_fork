@@ -82,6 +82,21 @@ public:
     void ShowDropState(bool over);
     [[nodiscard]] bool AcceptsDrops() const { return !_job.Running() && _queue.empty(); }
     void SetLevel(composer::AutomationLevel level);
+    // The music assistant, run apart like the generator. Nothing leaves this computer
+    // unless `consent` is true, which only the person's yes in a dialog makes it.
+    void StartAssist(const std::string& action, bool consent, const std::string& query = "");
+    void SetTranscript(const std::string& path);
+    void SetCharacter(const std::string& path);
+    void SetProfile(const std::string& path);
+    [[nodiscard]] bool AssistRunning() const { return _assistJob.Running(); }
+    [[nodiscard]] int AssistExitCode() const { return _assistExit; }
+    [[nodiscard]] const std::string& AssistMessage() const { return _assistMessage; }
+    [[nodiscard]] const std::string& TranscriptPath() const { return _transcriptPath; }
+    [[nodiscard]] const std::string& CharacterPath() const { return _characterPath; }
+    [[nodiscard]] const std::vector<std::string>& ProfilePaths() const { return _profilePaths; }
+    [[nodiscard]] const std::vector<std::string>& StyleColors() const { return _styleColors; }
+    [[nodiscard]] const std::string& StyleTheme() const { return _styleTheme; }
+    void SetTestConsent(bool yes) { _testConsent = yes; }
     void SetSequenceName(const std::string& name);
     void GoTo(Step step);
     void StartAnalysis();
@@ -207,6 +222,23 @@ private:
 
     // Results of the generator
     ComposerJob _job;
+    ComposerJob _assistJob;
+    std::string _assistAction;
+    std::string _assistResultPath;
+    std::string _assistMessage;
+    int _assistExit = -1;
+    bool _testConsent = false;
+    std::string _transcriptPath;
+    std::string _characterPath;
+    std::vector<std::string> _styleColors;
+    std::string _styleTheme;
+    std::vector<std::pair<int, std::vector<std::string>>> _sceneStrip; // scene start, colours
+    int _sceneStripEnd = 0;
+    void OnAssistJob(const ComposerJob::Update& u);
+    void AssistFinished(int exitCode);
+    bool AskConsent(const wxString& service, const wxString& where);
+    void EditKeys();
+    void RefreshStyle();
     Purpose _purpose = Purpose::None;
     std::vector<std::pair<Purpose, std::vector<std::string>>> _queue;
     std::vector<std::string> _queueDirs;
@@ -255,6 +287,13 @@ private:
     wxStaticText* _lyricsName = nullptr;
     wxStaticText* _timingName = nullptr;
     wxStaticText* _lyricsInfo = nullptr;
+    wxStaticText* _assistInfo = nullptr;
+    wxPanel* _swatch = nullptr;
+    wxStaticText* _styleInfo = nullptr;
+    wxStaticText* _alignmentInfo = nullptr;
+    wxPanel* _sceneView = nullptr;
+    wxTextCtrl* _directionText = nullptr;
+    wxTextCtrl* _coherenceText = nullptr;
     wxChoice* _profile = nullptr;
     std::vector<std::string> _profilePaths;
     wxRadioBox* _level = nullptr;

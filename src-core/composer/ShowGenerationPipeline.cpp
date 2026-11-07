@@ -20,6 +20,7 @@
 #include <set>
 #include <sstream>
 #include <system_error>
+#include <tuple>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -511,6 +512,19 @@ bool CheckInputs(GenerationRun& run) {
             run.corrections.choreography = run.previous.choreographyCorrections;
             run.corrections.lyrics = run.previous.lyrics.corrections;
             run.corrections.analysis = run.previous.analysisCorrections;
+            // The assistant's answers the earlier show used, from the cache: no network.
+            for (const auto& [kept, given, what] : { std::tuple<const std::string*, std::string*, const char*>{ &run.previous.transcriptCache, &run.request.transcriptPath, "transcript" },
+                                                     { &run.previous.characterCache, &run.request.characterPath, "song description" } }) {
+                if (given->empty() && !kept->empty()) {
+                    const fs::path cached = fs::path(r.showDir) / fs::u8path(*kept);
+                    if (FileExists(cached.string())) {
+                        *given = cached.string();
+                        Note(run, S, "assist-from-cache", fmt::format("{} {}", what, *kept));
+                    } else {
+                        Note(run, S, "assist-cache-missing", fmt::format("{} {}", what, *kept));
+                    }
+                }
+            }
             Note(run, S, "previous-sidecar", fmt::format("{}: {} plan, {} choreography, {} lyric and {} music corrections kept", run.previous.sequenceFile, run.corrections.plan.size(), run.corrections.choreography.size(),
                                                          run.corrections.lyrics.size(), run.corrections.analysis.events.size() + run.corrections.analysis.sections.size() + (run.corrections.analysis.bar.firstDownbeatMS >= 0 ? 1 : 0)));
             run.Stage(S).status = StageStatus::Ok;
@@ -1058,6 +1072,25 @@ bool WriteAndPublish(GenerationRun& run) {
             }
             run.write.validation = result.validation;
             run.sidecar = MakeSidecar(run);
+            // The assistant's answers go in the show's cache, so the sidecar can name them.
+            const auto keep = [&](const std::string& source, const std::string& key, const char* kind) -> std::string {
+                if (source.empty()) {
+                    return {};
+                }
+                const fs::path target = AssistCachePath(r.showDir, key.empty() ? HashText(source) : key, kind);
+                std::error_code ec;
+                if (fs::weakly_canonical(fs::path(source), ec) != fs::weakly_canonical(target, ec)) {
+                    fs::create_directories(target.parent_path(), ec);
+                    fs::copy_file(fs::path(source), target, fs::copy_options::overwrite_existing, ec);
+                    if (ec) {
+                        return {};
+                    }
+                }
+                const std::u8string relative = fs::relative(target, fs::path(r.showDir), ec).generic_u8string();
+                return std::string(relative.begin(), relative.end());
+            };
+            run.sidecar.transcriptCache = run.transcript.words.empty() ? std::string() : keep(r.transcriptPath, run.transcript.cacheKey, "transcript");
+            run.sidecar.characterCache = run.hasCharacter ? keep(r.characterPath, run.character.cacheKey, "character") : std::string();
             std::string error;
             if (!PublishNewFile(run.sidecarPath, ToJson(run.sidecar), error)) {
                 result.problems.push_back("sidecar: " + error);

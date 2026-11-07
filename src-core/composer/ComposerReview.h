@@ -31,6 +31,10 @@ struct ReportFolder {
     Choreography choreography;
     ModelCapabilities capabilities;
     std::string summary; // summary.json as written
+    std::string directionReport;      // visual-direction-report.txt, when the profile asked for one
+    std::string direction;            // visual-direction.json as written
+    std::string directionMetrics;     // direction-metrics.json as written
+    std::string transcriptAlignment;  // transcript-alignment.json as written
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

@@ -75,7 +75,9 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "shared/utils/BitmapCache.h"
 #include "composer/AnalyzerTest.h"
 #include "composer/ChoreographyTest.h"
+#include "ai/WxServiceSettingsStore.h"
 #include "composer/AssistTest.h"
+#include "composer/MusicAssist.h"
 #include "composer/LyricTest.h"
 #include "composer/ReferenceStudy.h"
 #include "composer/VisualDirection.h"
@@ -1088,7 +1090,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
             headlessArg = true;
             break;
         }
@@ -1247,6 +1249,10 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
+        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, answer to --out, and exit; nothing is sent without --allow-upload" },
+        { wxCMD_LINE_SWITCH, "", "allow-upload", "with --composer-assist: the person agreed in the window to send this song to the service" },
+        { wxCMD_LINE_OPTION, "", "query", "with --composer-assist lrclib: \"Artist - Title\"" },
+        { wxCMD_LINE_OPTION, "", "duration", "with --composer-assist lrclib: the song's length in seconds" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-profile", "internal tool: write a style profile measured from --studies (study folders separated by ';') to --out, named --study-id, and exit" },
         { wxCMD_LINE_OPTION, "", "studies", "with --composer-reference-profile: study folders written by --composer-reference-study, separated by ';'" },
         { wxCMD_LINE_OPTION, "", "study-id", "with --composer-reference-study: a short name for the reports" },
@@ -2105,6 +2111,30 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunGenerateCommand(command));
+    }
+
+    if (parser.Found("composer-assist")) {
+        composer::AssistCommandOptions options;
+        wxString value;
+        parser.Found("composer-assist", &value);
+        options.action = value.ToStdString(wxConvUTF8);
+        if (parser.Found("audio", &value)) {
+            options.audioPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("out", &value)) {
+            options.outPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("query", &value)) {
+            options.query = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("duration", &value)) {
+            options.durationS = std::strtod(value.ToStdString().c_str(), nullptr);
+        }
+        options.showDir = showDir.ToStdString(wxConvUTF8);
+        options.allowUpload = parser.Found("allow-upload");
+        WxServiceSettingsStore keys;
+        std::unique_ptr<composer::IHttpClient> client = composer::MakeCurlHttpClient();
+        std::exit(composer::RunAssistCommand(options, *client, &keys));
     }
 
     if (parser.Found("composer-reference-profile")) {
