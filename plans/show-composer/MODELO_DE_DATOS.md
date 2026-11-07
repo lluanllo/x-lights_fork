@@ -547,6 +547,16 @@ Al regenerar con `--previous`, se recuperan las correcciones, los bloqueos y la 
 - `transcript-alignment.json` en el informe: palabras de la letra oídas, extra y confianza por línea. El proveedor `transcript` del alineador da a cada palabra oída su tiempo; las no oídas solo se estiman entre anclas y quedan marcadas como estimadas.
 - Documento de letra: lista `issues` (código, línea, tiempo, texto, error o reparado).
 
+### Cambios de la Fase 10
+
+- Voces en el documento de letra: `cast` con `VoiceDef` (`id` `v:<nombre plegado>`, nombre, papel `lead`/`second`/`chorus`/`narrator`/`dialogue`/`extra`/`unknown`, `delivery` `sung`/`spoken`, caras, `facesOff`, origen `lyrics`/`speaker-prefix`/`manual`/`auto`, `reviewed`). Cada línea lleva sus `voices` y su `delivery`. Una voz que no se puede identificar queda sin cara.
+- `LyricCorrection` gana los niveles `voice` (voces y forma de una frase), `split` (antes de la palabra `wordIndex`; la segunda parte se llama `<id>~<k>`) y `merge`. `LyricSession.voices` y `CorrectionSet.voices` guardan los nombres, papeles y caras que puso una persona.
+- Una pista de tiempos por voz, `<pista de letra> - <voz>`, con las tres capas; las caras leen la de su voz. `PlanAssignment.voice` dice qué voz canta una cara.
+- `ShowComposer/media-library.json` (formato `xjuanjilights-media-library`, versión 1): carpetas, y por archivo id `m:<hash del contenido>` (un archivo movido conserva id y etiquetas), ruta absoluta y relativa al show, tipo `image`/`animation`/`video`/`unsupported`, estado `ok`/`missing`/`unreadable`/`unsupported` con el motivo, tamaño, dimensiones, duración, fotogramas, aspecto, hash, categorías fijas, etiquetas, origen de las categorías, miniatura en `ShowComposer/media-cache/<hash>.png`, brillo, color medio, `disabled` y `reviewed`.
+- `media-plan.json` en el informe: tema y sus categorías de medios, cuota máxima y usada, y por elección segmento, figura, tramo, archivo, efecto `Pictures` o `Video`, ajustes (claves validadas con la metadata del efecto), estado, puntuación, motivos y restricciones (`cropped`, `letterboxed`, `outside-show`, `loops`).
+- `media` en el sidecar: carpetas (relativas al show si están dentro), automático o no, cuota, correcciones `assign`/`lock`/`remove` por segmento y figura, y lo que suena dónde (`used`). `resources/composer/themes.json` gana `mediaCategories` por tema.
+- Intención de plan y coreografía `media`; plantillas `matrix-picture` y `matrix-video` con esa intención.
+
 ## 9. Reparto de responsabilidades
 
 | Contrato | Responsabilidad única | Lo produce | Lo consume |

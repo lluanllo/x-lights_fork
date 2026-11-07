@@ -12,6 +12,11 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: several voices, a choir, a narrator and dialogue from the lyrics'
+                                 tags, each face singing only its own voice; a voice editor to fix who sings what
+    -enh (lluanllo)              Show Composer: a library of your own pictures and videos; the show places them on
+                                 matrices and mega trees as native Pictures and Video effects, saying why, and you
+                                 can choose, remove or keep each one
     -enh (lluanllo)              Show Composer: reference styles measured from finished shows make the whole house
                                  move together, with a colour theme per song, scenes that keep their look when a
                                  section repeats, and short hits on the beat
