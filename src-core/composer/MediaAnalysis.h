@@ -16,7 +16,7 @@ class xlImage;
 // only marked, with the reason.
 namespace composer {
 
-inline constexpr const char* MEDIA_ANALYZER_VERSION = "1";
+inline constexpr const char* MEDIA_ANALYZER_VERSION = "2";
 
 class VisualModel;
 struct ConceptIndex;

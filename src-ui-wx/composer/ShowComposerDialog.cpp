@@ -3251,7 +3251,8 @@ std::string ShowComposerDialog::VisualModelDir() const {
 }
 
 bool ShowComposerDialog::MediaAnalysisRunning() const {
-    return _analysisRunner != nullptr && _analysisRunner->Running();
+    // Until the timer has collected its result, so the summary read next is this run's.
+    return _analysisRunner != nullptr;
 }
 
 void ShowComposerDialog::StartMediaAnalysis() {

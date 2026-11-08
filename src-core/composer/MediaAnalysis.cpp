@@ -229,7 +229,7 @@ void RuleConcepts(MediaAnalysis& a, const VisualConcepts* concepts) {
             blue += c.share;
         }
     }
-    if (a.dark >= 0.45 && a.brightness < 0.25 && a.highlights >= 0.001 && a.highlights < 0.12 && a.complexity < 0.35 && a.colorfulness < 0.35) {
+    if (a.dark >= 0.45 && a.brightness < 0.25 && a.highlights >= 0.001 && a.highlights < 0.2 && a.complexity < 0.35 && a.colorfulness < 0.35) {
         found.emplace_back("stars", 0.3);
     }
     if (a.white >= 0.25 && a.saturation < 0.25 && a.contrast >= 0.03) {
@@ -663,7 +663,7 @@ void AnalyzePicture(const xlImage& picture, MediaAnalysis& a) {
         ssum += sat;
         dark += p.y[i] < 0.06 ? 1 : 0;
         white += p.y[i] > 0.9 && sat < 0.12 ? 1 : 0;
-        lit += p.y[i] > 0.35 ? 1 : 0;
+        lit += p.y[i] > 0.18 ? 1 : 0;
         const double rg = p.r[i] - p.g[i];
         const double yb = 0.5 * (p.r[i] + p.g[i]) - p.b[i];
         rgm += rg;
