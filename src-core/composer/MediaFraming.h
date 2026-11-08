@@ -30,6 +30,20 @@ struct FrameTarget {
     double wrapAspect = 0;  // wrapping trees: the circumference over the height
     double pixelAspect = 1; // real width of one buffer pixel over its real height
     std::vector<std::string> assumptions; // what had to be guessed about the figure
+    // Wrapping trees: where the front face's centre column is, as a share of the
+    // buffer's width (0.25 puts the two faces on the buffer's two halves), and which
+    // way a turn goes (1 or -1).
+    double frontOffset = 0.25;
+    int turn = 1;
+};
+
+// A part of a video drawn on some of a tree's columns: `x0`..`x1` of the buffer's width
+// show `cropX0`..`cropX1` of the frame's width.
+struct FramePiece {
+    double x0 = 0;
+    double x1 = 1;
+    double cropX0 = 0;
+    double cropX1 = 1;
 };
 
 [[nodiscard]] FrameTarget FrameTargetOf(const TargetInfo& target);
@@ -54,6 +68,19 @@ struct MediaFraming {
     std::vector<std::string> constraints; // "cropped", "letterboxed", "pans", "zooms", "turns", "derived"
     double score = 0;
     std::string why;
+    // Videos on a wrapping tree: the pieces that draw them, each its own effect.
+    std::vector<FramePiece> pieces;
+    // Still pictures moving slowly on a flat figure: a short clip with a soft start and
+    // end, drawn from the original between two views (fractions of the picture).
+    bool motionClip = false;
+    double fromX = 0, fromY = 0, fromW = 1, fromH = 1;
+    double toX = 0, toY = 0, toW = 1, toH = 1;
+    int clipWi = 0;
+    int clipHt = 0;
+    std::vector<std::pair<std::string, std::string>> clipSettings; // for the Video effect
+    double roll = 0; // trees: the derived picture turned by this share of the width
+
+    [[nodiscard]] std::string ClipName(const MediaItem& item, int durationMS) const;
 
     [[nodiscard]] std::string DerivedName(const MediaItem& item) const;
 };
@@ -68,5 +95,17 @@ struct MediaFraming {
 // Makes the derived picture the framing needs (once: an existing one is reused) and
 // returns its path relative to the show folder.
 bool MakeDerivedPicture(const MediaItem& item, const MediaFraming& framing, const std::string& showDir, std::string& relative, std::string& error);
+
+// Makes the framing's motion clip (once: an existing one is reused): an H.264 video of
+// `durationMS` at 20 frames a second through xLights' own VideoWriter.
+bool MakeMotionClip(const MediaItem& item, const MediaFraming& framing, int durationMS, const std::string& showDir, std::string& relative, std::string& error);
+
+// The pieces that put `cropX0`..`cropX1` of a frame on `width` of a wrapping buffer
+// starting at `start` (shares of the width), split where the buffer's ends meet.
+[[nodiscard]] std::vector<FramePiece> SpreadOnColumns(double start, double width, double cropX0, double cropX1);
+
+// Removes derived pictures and clips no generation has used for `maxAgeDays`, keeping
+// the ones in `keep` (file names); returns how many were removed.
+int PruneMediaDerived(const std::string& showDir, const std::vector<std::string>& keep, int maxAgeDays);
 
 } // namespace composer

@@ -2,13 +2,16 @@
 
 #include "composer/MediaAnalysis.h"
 #include "composer/MediaFraming.h"
+#include "composer/LyricAligner.h"
 #include "composer/SongAnalysis.h"
 #include "composer/VisualDirection.h"
+#include "composer/VisualModel.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <map>
 #include <numeric>
@@ -169,6 +172,7 @@ struct Writer {
 struct Planned {
     StoryboardShot shot;
     std::vector<std::pair<std::string, std::string>> settings;
+    std::vector<MediaPiece> pieces;
 };
 
 class Director {
@@ -195,6 +199,10 @@ public:
             }
         }
         _sb.analysisMode = analysed == 0 ? "none" : semantic == 0 ? "basic" : semantic == analysed ? "semantic" : "mixed";
+        {
+            std::string error;
+            (void)ReadVisualConcepts(DefaultVisualConceptsPath(), _concepts, error);
+        }
         BuildScenes();
         FindLanes();
         BuildCandidates();
@@ -221,6 +229,11 @@ private:
         double usedMS = 0;
         bool main = true;
         std::string reason;
+        std::string screen = "media"; // its role as a screen
+        bool gapsOnly = false;        // shows words: pictures only between its phrases
+        bool phraseLevel = false;     // words keep only their phrases, not the whole segment
+        std::vector<std::string> sharesWith; // figures on the same channels
+        int complexAgo = 99;          // shots since its last zoom or wipe
     };
     struct Scene {
         const PlanSegment* seg = nullptr;
@@ -260,6 +273,7 @@ private:
     std::map<std::string, std::set<std::string>> _sceneUses; // media -> scenes it plays in
     std::map<std::string, std::set<int>> _fragmentUses;      // media -> fragments used
     std::map<std::string, std::string> _firstOnLook;         // "look|lane" -> media
+    VisualConcepts _concepts;                                // what the concepts are, for relations
 
     const SceneLook* LookOf(const PlanSegment& s) const {
         return _in.direction != nullptr && _in.direction->enabled ? _in.direction->Scene(s.id) : nullptr;
@@ -363,80 +377,163 @@ private:
         }
     }
 
+    // How much of its free time each kind of screen aims to fill.
+    double GoalOf(const Lane& l) const {
+        const int level = _plan.level == AutomationLevel::Conservative ? 0 : _plan.level == AutomationLevel::Creative ? 2 : 1;
+        if (l.screen == "secondary") {
+            return std::array<double, 3>{ 0.3, 0.5, 0.7 }[level];
+        }
+        if (l.screen == "media") {
+            return std::array<double, 3>{ 0.25, 0.4, 0.6 }[level];
+        }
+        if (l.screen == "lyrics") {
+            return std::array<double, 3>{ 0.4, 0.6, 0.8 }[level];
+        }
+        return Goal(l.role);
+    }
+
     Lane MakeLane(const TargetInfo& t, double freeMS, bool main) const {
         Lane l;
         l.t = &t;
         l.frame = FrameTargetOf(t);
         const RoleAssignment* role = t.PrimaryRole();
-        l.role = role != nullptr && role->role == Role::MegaTree ? "mega-tree" : "matrix";
+        l.role = (role != nullptr && role->role == Role::MegaTree) || l.frame.tree ? "mega-tree" : "matrix";
         l.freeMS = freeMS;
         l.main = main;
+        Budget(l);
+        return l;
+    }
+
+    void Budget(Lane& l) const {
         const double duration = std::max(1, _plan.durationMS);
-        l.budgetMS = Goal(l.role) * freeMS;
+        l.budgetMS = GoalOf(l) * l.freeMS;
         if (_in.options.maxShare >= 0) {
             l.budgetMS = std::min(l.budgetMS, std::min(1.0, _in.options.maxShare) * duration);
         }
         l.reserveMS = 0.15 * l.budgetMS;
-        return l;
     }
 
-    // The main matrix and the mega tree: the largest, the ones wired to a controller,
-    // and the ones most often free of words and faces.
+    // Whether the figure shows words in the segment.
+    bool Words(const PlanSegment& s, const TargetInfo& t) const {
+        return std::any_of(s.assignments.begin(), s.assignments.end(), [&](const PlanAssignment& a) { return a.target == t.name && a.intent == "lyric-text" && a.prominence != Prominence::Rest; });
+    }
+
+    // Where in the scene this screen can show a picture: all of it, nothing, or, on a
+    // screen with words and phrase-level sharing, the stretches between its phrases.
+    std::vector<std::pair<int, int>> Windows(const Scene& sc, const Lane& l, std::string& why) const {
+        const PlanSegment& s = *sc.seg;
+        const int start = sc.info.startMS, end = sc.info.endMS;
+        // A figure sharing its lights must be dark for a picture to show.
+        for (const PlanAssignment& a : s.assignments) {
+            if (a.prominence != Prominence::Rest && Has(l.sharesWith, a.target)) {
+                why = "shares-lights-with:" + a.target;
+                return {};
+            }
+        }
+        const std::string busy = Busy(s, *l.t);
+        const bool words = busy == "lyrics-text-here";
+        if (!busy.empty() && !words) {
+            why = busy;
+            return {};
+        }
+        if (!words) {
+            return { { start, end } };
+        }
+        if (!l.phraseLevel) {
+            why = busy;
+            return {};
+        }
+        std::vector<std::pair<int, int>> taken;
+        if (_in.alignment != nullptr) {
+            for (const AlignedPhrase& p : _in.alignment->phrases) {
+                if (p.startMS < 0 || p.instrumental || p.endMS <= start || p.startMS >= end) {
+                    continue;
+                }
+                taken.emplace_back(p.startMS - 600, p.endMS + 600);
+            }
+        }
+        std::sort(taken.begin(), taken.end());
+        std::vector<std::pair<int, int>> out;
+        int at = start;
+        for (const auto& [a, b] : taken) {
+            if (a - at >= 3000) {
+                out.emplace_back(at, a);
+            }
+            at = std::max(at, b);
+        }
+        if (end - at >= 3000) {
+            out.emplace_back(at, end);
+        }
+        if (out.empty()) {
+            why = "no-pause-between-phrases";
+        }
+        return out;
+    }
+
+    // The screens from the display's surfaces and their roles: the main screen, the mega
+    // tree, a second screen, extra media screens, and, when words and pictures share a
+    // screen, the screen with words between its phrases.
     void FindLanes() {
-        struct Option {
-            const TargetInfo* t;
-            double free;
-            double score;
-            bool tree;
+        const ScreenSettings settings = _in.screens != nullptr ? *_in.screens : ScreenSettings();
+        _out.surfaces = PlanSurfaces(_caps, &_plan, settings);
+        _sb.lyricsMode = LyricsModeId(settings.mode);
+        const auto rank = [](SurfaceRole r) {
+            switch (r) {
+            case SurfaceRole::Main: return 0;
+            case SurfaceRole::Tree: return 1;
+            case SurfaceRole::Secondary: return 2;
+            case SurfaceRole::Media: return 3;
+            case SurfaceRole::Lyrics: return 4;
+            default: return 9;
+            }
         };
-        std::vector<Option> options;
-        for (const TargetInfo& t : _caps.targets) {
-            if (!ImageCapable(t)) {
+        std::vector<const Surface*> order;
+        for (const Surface& s : _out.surfaces.surfaces) {
+            order.push_back(&s);
+        }
+        std::stable_sort(order.begin(), order.end(), [&](const Surface* a, const Surface* b) { return rank(a->role) < rank(b->role); });
+        const double songMS = std::max(1, _plan.durationMS);
+        for (const Surface* s : order) {
+            if (rank(s->role) == 9 || (s->role == SurfaceRole::Lyrics && settings.mode != LyricsMode::Smart)) {
                 continue;
+            }
+            const TargetInfo* t = _caps.Find(s->target);
+            if (t == nullptr || !s->nativeOk) {
+                continue;
+            }
+            Lane l = MakeLane(*t, 0, true);
+            l.screen = SurfaceRoleId(s->role);
+            l.gapsOnly = s->role == SurfaceRole::Lyrics;
+            l.sharesWith = s->conflicts;
+            l.phraseLevel = settings.mode != LyricsMode::LyricsFirst;
+            if (const ScreenChoice* c = settings.Find(s->target); c != nullptr) {
+                if (c->frontOffset >= 0) {
+                    l.frame.frontOffset = c->frontOffset;
+                }
+                if (c->turn != 0) {
+                    l.frame.turn = c->turn;
+                }
             }
             double free = 0;
             for (const Scene& sc : _scenes) {
-                if (Busy(*sc.seg, t).empty()) {
-                    free += sc.info.endMS - sc.info.startMS;
+                std::string why;
+                for (const auto& [a, b] : Windows(sc, l, why)) {
+                    free += b - a;
                 }
             }
-            const RoleAssignment* role = t.PrimaryRole();
-            const double share = free / std::max(1, _plan.durationMS);
-            options.push_back({ &t, free, t.nodes * (0.3 + share) * (t.noController ? 0.8 : 1.0), role->role == Role::MegaTree });
-        }
-        std::sort(options.begin(), options.end(), [](const Option& a, const Option& b) { return a.score != b.score ? a.score > b.score : a.t->name < b.t->name; });
-        std::vector<const Option*> chosen;
-        for (bool tree : { false, true }) {
-            const auto it = std::find_if(options.begin(), options.end(), [&](const Option& o) { return o.tree == tree; });
-            if (it != options.end()) {
-                chosen.push_back(&*it);
-            }
-        }
-        for (const Option& o : options) {
-            if (static_cast<int>(chosen.size()) >= _in.options.maxTargets) {
-                break;
-            }
-            if (std::find(chosen.begin(), chosen.end(), &o) == chosen.end()) {
-                chosen.push_back(&o);
-            }
-        }
-        if (static_cast<int>(chosen.size()) > _in.options.maxTargets) {
-            chosen.resize(static_cast<size_t>(std::max(0, _in.options.maxTargets)));
-        }
-        const double songMS = std::max(1, _plan.durationMS);
-        for (const Option* o : chosen) {
-            Lane l = MakeLane(*o->t, o->free, true);
-            l.reason = fmt::format("{} lights, free {:.0f}% of the song", o->t->nodes, o->free / songMS * 100);
-            for (const Option& other : options) {
-                if (other.tree == o->tree && other.t != o->t && std::find(chosen.begin(), chosen.end(), &other) == chosen.end()) {
-                    l.reason += fmt::format("; {}: {} lights, free {:.0f}%{}", other.t->name, other.t->nodes, other.free / songMS * 100, other.t->noController ? ", no controller" : "");
+            l.freeMS = free;
+            Budget(l);
+            l.reason = fmt::format("{} ({}): {} lights, seen {:.0f}%, free {:.0f}% of the song{}", SurfaceRoleId(s->role), s->roleSource, s->pixels, s->visibility * 100, free / songMS * 100,
+                                   l.gapsOnly ? ", between its phrases" : "");
+            for (const Surface& other : _out.surfaces.surfaces) {
+                if (other.target != s->target && (other.kind == s->kind) && std::none_of(order.begin(), order.end(), [&](const Surface* o) { return o == &other && rank(o->role) < 9; })) {
+                    l.reason += fmt::format("; {}: {}", other.target, SurfaceRoleId(other.role));
                 }
             }
             _lanes.push_back(std::move(l));
         }
-        const double duration = std::max(1, _plan.durationMS);
         for (const Lane& l : _lanes) {
-            _out.maxShare = std::max(_out.maxShare, R3((l.budgetMS + l.reserveMS) / duration));
+            _out.maxShare = std::max(_out.maxShare, R3((l.budgetMS + l.reserveMS) / songMS));
         }
     }
 
@@ -605,6 +702,125 @@ private:
         return std::clamp(q, 0.0, 1.0);
     }
 
+    // How two files relate: the concepts they show and the categories they share, and
+    // what kind of relation it is. 1 is the same file.
+    double Relation(const MediaItem& a, const MediaItem& b, std::string& kind) const {
+        kind.clear();
+        if (a.id == b.id) {
+            kind = "same";
+            return 1;
+        }
+        const auto weight = [](const MediaConcept& c) { return c.level == "strong" ? 1.0 : c.level == "probable" ? 0.6 : 0.25; };
+        std::map<std::string, double> va, vb;
+        for (const MediaConcept& c : a.analysis.concepts) {
+            va[c.id] = std::max(va[c.id], weight(c));
+        }
+        for (const MediaConcept& c : b.analysis.concepts) {
+            vb[c.id] = std::max(vb[c.id], weight(c));
+        }
+        double dot = 0, na = 0, nb = 0;
+        for (const auto& [k, x] : va) {
+            na += x * x;
+            const auto it = vb.find(k);
+            if (it != vb.end()) {
+                dot += x * it->second;
+            }
+        }
+        for (const auto& [k, y] : vb) {
+            nb += y * y;
+        }
+        const double cosine = na > 0 && nb > 0 ? dot / std::sqrt(na * nb) : 0;
+        const std::vector<std::string> ca = EffectiveCategories(a), cb = EffectiveCategories(b);
+        int shared = 0;
+        for (const std::string& c : ca) {
+            shared += Has(cb, c) ? 1 : 0;
+        }
+        const size_t all = ca.size() + cb.size() - static_cast<size_t>(shared);
+        const double jaccard = all > 0 ? static_cast<double>(shared) / all : 0;
+        const double sim = R3(0.6 * cosine + 0.4 * jaccard);
+        const auto sharedGroup = [&](const char* group) {
+            for (const MediaConcept& x : a.analysis.concepts) {
+                if (x.level == "weak") {
+                    continue;
+                }
+                const VisualConceptDef* d = _concepts.Find(x.id);
+                if (d == nullptr || d->group != group) {
+                    continue;
+                }
+                for (const MediaConcept& y : b.analysis.concepts) {
+                    if (y.id == x.id && y.level != "weak") {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        if (sharedGroup("scene")) {
+            kind = "same-ambience";
+        } else if (sharedGroup("subject")) {
+            kind = "same-motif";
+        } else if (sim >= 0.3) {
+            kind = "related";
+        } else if (sim >= 0.15 && ComplementaryHues(a, b)) {
+            kind = "complementary";
+        }
+        return sim;
+    }
+
+    static bool HueOf(const MediaItem& m, double& h) {
+        if (m.analysis.colors.empty()) {
+            return false;
+        }
+        const long x = std::strtol(m.analysis.colors.front().hex.c_str() + 1, nullptr, 16);
+        const double r = (x >> 16) & 255, g = (x >> 8) & 255, bl = x & 255;
+        const double mx = std::max({ r, g, bl }), mn = std::min({ r, g, bl }), d = mx - mn;
+        if (mx <= 0 || d / mx < 0.2) {
+            return false;
+        }
+        h = mx == r ? 60.0 * std::fmod((g - bl) / d, 6.0) : mx == g ? 60.0 * ((bl - r) / d + 2.0) : 60.0 * ((r - g) / d + 4.0);
+        h = h < 0 ? h + 360 : h;
+        return true;
+    }
+
+    static bool ComplementaryHues(const MediaItem& a, const MediaItem& b) {
+        double ha = 0, hb = 0;
+        if (!HueOf(a, ha) || !HueOf(b, hb)) {
+            return false;
+        }
+        const double d = std::fabs(ha - hb) > 180 ? 360 - std::fabs(ha - hb) : std::fabs(ha - hb);
+        return d > 150 && d < 210;
+    }
+
+    // The shot placed on this screen nearest before `ms`.
+    const Planned* Before(const Lane& lane, int ms) const {
+        const Planned* best = nullptr;
+        for (const Planned& p : _planned) {
+            if (p.shot.lane == lane.t->name && p.shot.endMS <= ms + 1 && (best == nullptr || p.shot.endMS > best->shot.endMS)) {
+                best = &p;
+            }
+        }
+        return best;
+    }
+
+    // The screen's opening shot, for an ending that answers it.
+    const Planned* Opening(const Lane& lane) const {
+        const Planned* best = nullptr;
+        for (const Planned& p : _planned) {
+            const Scene* sc = nullptr;
+            for (const Scene& x : _scenes) {
+                sc = x.info.id == p.shot.sceneId ? &x : sc;
+            }
+            if (p.shot.lane == lane.t->name && sc != nullptr && sc->info.role == "establish" && (best == nullptr || p.shot.startMS < best->shot.startMS)) {
+                best = &p;
+            }
+        }
+        return best;
+    }
+
+    const MediaItem* ItemById(const std::string& id) const {
+        return _in.library != nullptr ? _in.library->Find(id) : nullptr;
+    }
+
     // Where a scene sits among the others, to know its neighbours.
     int IndexOf(const std::string& sceneId) const {
         for (size_t i = 0; i < _scenes.size(); ++i) {
@@ -632,12 +848,12 @@ private:
         return all - (it != _fragmentUses.end() ? static_cast<int>(it->second.size()) : 0);
     }
 
-    Eval Evaluate(const Cand& c, const Scene& sc, const Lane& lane, int shotMS, const std::string& otherLaneMedia, bool sameSceneAgain) const {
+    Eval Evaluate(const Cand& c, const Scene& sc, const Lane& lane, int shotMS, const std::set<std::string>& otherScreens, bool sameSceneAgain, int atMS = -1) const {
         Eval e;
         e.c = &c;
         const MediaItem& m = *c.m;
-        if (m.id == otherLaneMedia) {
-            return e; // the two screens of a scene never show the same file
+        if (otherScreens.contains(m.id)) {
+            return e; // the screens of a scene never show the same file
         }
         const auto uses = _sceneUses.find(m.id);
         const bool usedBefore = uses != _sceneUses.end() && !uses->second.empty();
@@ -675,8 +891,36 @@ private:
         energy = std::clamp(energy, 0.0, 1.0);
         const double role = RoleFit(c, sc, lane);
         const double quality = Quality(c, sc, shotMS);
-        double score = 0.30 * c.theme + 0.20 * fit + 0.15 * energy + 0.20 * role + 0.15 * quality + repeat + (continuity ? 0.15 : 0) + 0.01 * Unit(_seed, sc.info.id + "/" + lane.t->name + "/" + m.id);
+        // The story on this screen: a file related to the shot before carries it on, one
+        // nearly the same adds nothing, and the ending answers the opening.
+        double story = 0;
+        std::string relation;
+        if (const Planned* before = Before(lane, atMS >= 0 ? atMS : sc.info.startMS); before != nullptr && before->shot.mediaId != m.id) {
+            if (const MediaItem* b = ItemById(before->shot.mediaId); b != nullptr) {
+                const double sim = Relation(*b, m, relation);
+                story += relation == "same-ambience" || relation == "same-motif" || relation == "related" ? 0.06 : relation == "complementary" ? 0.03 : 0;
+                story -= sim > 0.85 ? 0.05 : 0;
+                if (sc.info.role == "bridge") {
+                    story = -story / 2; // the bridge changes the air
+                }
+            }
+        }
+        if (sc.info.role == "ending") {
+            if (const Planned* opening = Opening(lane); opening != nullptr && opening->shot.mediaId != m.id) {
+                if (const MediaItem* o = ItemById(opening->shot.mediaId); o != nullptr) {
+                    std::string k;
+                    if (Relation(*o, m, k) >= 0.3 || !k.empty()) {
+                        story += 0.08;
+                        relation = "answers-the-opening";
+                    }
+                }
+            }
+        }
+        double score = 0.30 * c.theme + 0.20 * fit + 0.15 * energy + 0.20 * role + 0.15 * quality + repeat + story + (continuity ? 0.15 : 0) + 0.01 * Unit(_seed, sc.info.id + "/" + lane.t->name + "/" + m.id);
         e.score = R3(std::clamp(score, 0.0, 1.0));
+        if (!relation.empty() && story > 0) {
+            e.why.push_back({ "story", relation });
+        }
         e.why.push_back({ "theme-category", c.themeWhy == "no-theme" || c.themeWhy == "neutral" ? c.themeWhy : fmt::format("{} ({})", c.themeWhy, _out.themeId) });
         std::string seen;
         for (const std::string& id : m.analysis.description) {
@@ -699,13 +943,13 @@ private:
         return e;
     }
 
-    std::vector<Eval> Ranked(const Scene& sc, const Lane& lane, int shotMS, const std::string& otherLaneMedia, const std::set<std::string>& exclude, bool sameScene) {
+    std::vector<Eval> Ranked(const Scene& sc, const Lane& lane, int shotMS, const std::set<std::string>& otherScreens, const std::set<std::string>& exclude, bool sameScene, int atMS = -1) {
         std::vector<Eval> out;
         for (Cand& c : _cands) {
             if (exclude.contains(c.m->id)) {
                 continue;
             }
-            Eval e = Evaluate(c, sc, lane, shotMS, otherLaneMedia, sameScene);
+            Eval e = Evaluate(c, sc, lane, shotMS, otherScreens, sameScene, atMS);
             c.best = std::max(c.best, e.score);
             if (e.score >= _minScore) {
                 out.push_back(std::move(e));
@@ -723,6 +967,9 @@ private:
             shared = shared || Has(b.c->categories, cat);
         }
         v += shared ? 0.06 : (a.c->theme > 0.35 && b.c->theme > 0.35 ? 0.02 : 0);
+        std::string kind;
+        (void)Relation(*a.c->m, *b.c->m, kind);
+        v += kind == "same-ambience" || kind == "same-motif" ? 0.05 : kind == "complementary" ? 0.03 : 0;
         if (a.c->m->analysis.orientation != b.c->m->analysis.orientation) {
             v += 0.02;
         }
@@ -829,7 +1076,21 @@ private:
         s.reasons = std::move(why);
         s.constraints = framing.constraints;
         s.path = s.source;
-        if (framing.derived) {
+        bool clip = false;
+        if (framing.motionClip) {
+            std::string relative = "ShowComposer/media-derived/" + framing.ClipName(m, end - start), error;
+            if (!_in.options.writeDerived || _in.showDir.empty() || MakeMotionClip(m, framing, end - start, _in.showDir, relative, error)) {
+                clip = true;
+                s.path = relative;
+                s.effect = "Video";
+                s.constraints.push_back("motion-clip");
+                s.reasons.push_back({ "motion-clip", relative });
+            } else {
+                _out.warnings.push_back(fmt::format("media-clip-failed:{}:{}:{}", sc.info.id, m.name, error));
+            }
+        }
+        if (clip) {
+        } else if (framing.derived) {
             std::string relative, error;
             relative = "ShowComposer/media-derived/" + framing.DerivedName(m);
             if (_in.options.writeDerived && !_in.showDir.empty() && !MakeDerivedPicture(m, framing, _in.showDir, relative, error)) {
@@ -848,10 +1109,31 @@ private:
             return false;
         }
         w.Raw(s.effect == "Video" ? "E_FILEPICKERCTRL_Video_Filename" : "E_TEXTCTRL_Pictures_Filename", s.path);
-        for (const auto& [id, value] : framing.settings) {
+        for (const auto& [id, value] : clip ? framing.clipSettings : framing.settings) {
             w.Set(id, value);
         }
-        if (s.kind == MediaKind::Video) {
+        // A video on a wrapping tree: one effect per piece of its columns.
+        out.pieces.clear();
+        const bool whole = framing.pieces.size() == 1 && framing.pieces.front().x0 <= 1e-6 && framing.pieces.front().x1 >= 1 - 1e-6;
+        if (!clip && s.kind == MediaKind::Video && !framing.pieces.empty() && lane.frame.wraps && !whole) {
+            for (const FramePiece& fp : framing.pieces) {
+                Writer pw;
+                pw.md = w.md;
+                pw.Set("Video_CropLeft", fmt::format("{}", static_cast<int>(std::lround(fp.cropX0 * 100))));
+                pw.Set("Video_CropRight", fmt::format("{}", static_cast<int>(std::lround(fp.cropX1 * 100))));
+                for (const std::string& problem : pw.problems) {
+                    w.problems.push_back(problem);
+                }
+                out.pieces.push_back({ fmt::format("{:.2f}x0.00x{:.2f}x100.00", fp.x0 * 100, fp.x1 * 100), pw.settings });
+            }
+            s.pieces = static_cast<int>(out.pieces.size());
+        }
+        if (whole && !clip && s.kind == MediaKind::Video) {
+            // All the way round in one piece: the frame's crop is the shot's own.
+            w.Set("Video_CropLeft", fmt::format("{}", static_cast<int>(std::lround(framing.pieces.front().cropX0 * 100))));
+            w.Set("Video_CropRight", fmt::format("{}", static_cast<int>(std::lround(framing.pieces.front().cropX1 * 100))));
+        }
+        if (s.kind == MediaKind::Video && !clip) {
             s.fragmentScene = fragment.first;
             s.fragmentStartMS = std::max(0, fragment.second);
             if (m.durationMS > 0 && s.fragmentStartMS >= m.durationMS - 100) {
@@ -958,6 +1240,7 @@ private:
             Lane* lane = LaneOf(t->name);
             if (lane == nullptr) {
                 _lanes.push_back(MakeLane(*t, 0, false));
+                _lanes.back().screen = "media";
                 lane = &_lanes.back();
             }
             const MediaItem* m = ItemFor(c);
@@ -1001,83 +1284,99 @@ private:
         }
     }
 
-    int MaxShot(const Scene& sc) const {
+    // How long a shot of this file should last in this scene: long enough to be
+    // understood, shorter when it moves a lot, longer when it is very good.
+    int ShotTarget(const Scene& sc, const Cand* c, double score) const {
         const std::string& r = sc.info.role;
-        int m = r == "climax" ? 6000 : r == "chorus" || r == "instrumental" ? 8000 : r == "establish" ? 16000 : r == "ending" || r == "breath" ? 14000 : r == "bridge" ? 10000 : 12000;
+        double ms = r == "climax" ? 6000 : r == "chorus" || r == "instrumental" ? 8000 : r == "establish" ? 14000 : r == "ending" || r == "breath" ? 14000 : r == "bridge" ? 10000 : 12000;
         if (sc.info.band == "high") {
-            m = std::min(m, 8000);
+            ms = std::min(ms, 8000.0);
         }
-        return m;
+        if (c != nullptr) {
+            const MediaAnalysis& a = c->m->analysis;
+            if (score >= 0.8) {
+                ms *= 1.25;
+            }
+            if (c->m->kind != MediaKind::Image && a.video.motion > 0.5) {
+                ms *= 0.8;
+            }
+            if (a.complexity > 0.35) {
+                ms *= 1.15;
+            }
+        }
+        return static_cast<int>(std::max(3500.0, ms));
     }
 
-    // Places the scene's shots on a lane: the chosen file first, then, in a long scene,
-    // other files or other parts of the same video, cut on the downbeats.
-    void PlaceShots(const Scene& sc, Lane& lane, const Eval& first, const std::string& otherLaneMedia) {
-        const int start = sc.info.startMS;
-        const int end = sc.info.endMS;
-        const int len = end - start;
+    // Places a screen's shots in the scene's windows: the chosen file first, then, in a
+    // long window, other parts of the same video or other files, cut on the beats; a
+    // shot that still works is not cut just because a bar went by.
+    void PlaceShots(const Scene& sc, Lane& lane, const Eval& first, std::set<std::string>& inScene, const std::vector<std::pair<int, int>>& windows) {
         const int minShot = _in.options.minShotMS;
-        int n = std::max(1, static_cast<int>(std::ceil(static_cast<double>(len) / MaxShot(sc))));
-        n = std::max(1, std::min(n, len / std::max(1, minShot)));
-        std::vector<int> cuts = { start };
-        for (int k = 1; k < n; ++k) {
-            const int want = start + static_cast<int>(static_cast<long long>(len) * k / n);
-            const int at = Snap(want, cuts.back() + minShot, end - minShot);
-            if (at - cuts.back() >= minShot && end - at >= minShot) {
-                cuts.push_back(at);
-            }
-        }
-        cuts.push_back(end);
-        std::set<std::string> inScene = { otherLaneMedia };
+        const bool overlay = Words(*sc.seg, *lane.t);
+        bool firstUsed = false;
         const MediaItem* previous = nullptr;
-        for (size_t k = 0; k + 1 < cuts.size(); ++k) {
-            const int from = cuts[k];
-            int to = cuts[k + 1];
-            const int shotMS = to - from;
-            Eval chosen;
-            if (k == 0) {
-                chosen = first;
-                // Framed for the shot's real length: a camera movement depends on it.
-                chosen.framing = PlanFraming(*first.c->m, lane.frame, shotMS, sc.info.energy, sc.info.role, _seed ^ Hash(sc.info.id + lane.t->name + first.c->m->id));
-            } else {
-                // Another part of the same video when it has one that suits, else the
-                // next best file for this screen; if none, the shot before goes on.
-                if (previous != nullptr && previous->kind == MediaKind::Video && FreeFragments(*previous) > 0) {
-                    const auto c = std::find_if(_cands.begin(), _cands.end(), [&](const Cand& x) { return x.m == previous; });
-                    if (c != _cands.end()) {
-                        chosen = Evaluate(*c, sc, lane, shotMS, otherLaneMedia, true);
+        for (const auto& [start, end] : windows) {
+            const int len = end - start;
+            const int target = ShotTarget(sc, firstUsed ? nullptr : first.c, first.score);
+            int n = len > target * 13 / 10 ? static_cast<int>(std::lround(static_cast<double>(len) / target)) : 1;
+            n = std::max(1, std::min(n, len / std::max(1, minShot)));
+            std::vector<int> cuts = { start };
+            for (int k = 1; k < n; ++k) {
+                const int want = start + static_cast<int>(static_cast<long long>(len) * k / n);
+                const int at = Snap(want, cuts.back() + minShot, end - minShot);
+                if (at - cuts.back() >= minShot && end - at >= minShot) {
+                    cuts.push_back(at);
+                }
+            }
+            cuts.push_back(end);
+            for (size_t k = 0; k + 1 < cuts.size(); ++k) {
+                const int from = cuts[k];
+                const int to = cuts[k + 1];
+                const int shotMS = to - from;
+                Eval chosen;
+                if (!firstUsed) {
+                    chosen = first;
+                    // Framed for the shot's real length: a camera movement depends on it.
+                    chosen.framing = PlanFraming(*first.c->m, lane.frame, shotMS, sc.info.energy, sc.info.role, _seed ^ Hash(sc.info.id + lane.t->name + first.c->m->id));
+                    firstUsed = true;
+                } else {
+                    if (previous != nullptr && previous->kind == MediaKind::Video && FreeFragments(*previous) > 0) {
+                        const auto c = std::find_if(_cands.begin(), _cands.end(), [&](const Cand& x) { return x.m == previous; });
+                        if (c != _cands.end()) {
+                            chosen = Evaluate(*c, sc, lane, shotMS, {}, true, from);
+                        }
+                    }
+                    if (chosen.c == nullptr || chosen.score < _minScore) {
+                        std::vector<Eval> ranked = Ranked(sc, lane, shotMS, inScene, {}, false, from);
+                        chosen = ranked.empty() ? Eval() : ranked.front();
+                    }
+                    if (chosen.c == nullptr || chosen.score < _minScore) {
+                        if (!_planned.empty() && _planned.back().shot.lane == lane.t->name && _planned.back().shot.sceneId == sc.info.id && _planned.back().shot.endMS == from) {
+                            _planned.back().shot.endMS = to;
+                            lane.usedMS += shotMS;
+                        }
+                        continue;
                     }
                 }
-                if (chosen.c == nullptr || chosen.score < _minScore) {
-                    std::set<std::string> exclude = inScene;
-                    std::vector<Eval> ranked = Ranked(sc, lane, shotMS, otherLaneMedia, exclude, false);
-                    chosen = ranked.empty() ? Eval() : ranked.front();
-                }
-                if (chosen.c == nullptr || chosen.score < _minScore) {
-                    if (!_planned.empty() && _planned.back().shot.lane == lane.t->name && _planned.back().shot.sceneId == sc.info.id) {
-                        Planned& last = _planned.back();
-                        last.shot.endMS = to;
-                        lane.usedMS += shotMS;
-                    }
+                const MediaItem& m = *chosen.c->m;
+                const std::pair<int, int> fragment = Fragment(m, shotMS, sc.info.energy);
+                Planned p;
+                if (!Make(sc, lane, m, from, to, chosen.framing, fragment, DecisionState::Automatic, chosen.score, chosen.why, p)) {
                     continue;
                 }
+                p.shot.overlay = overlay;
+                p.shot.reasons.push_back({ overlay ? "between-phrases" : "no-lyrics-text", lane.t->name });
+                p.shot.reasons.push_back({ "screen", fmt::format("{} ({})", lane.screen, lane.t->name) });
+                p.shot.reasons.push_back({ "share", fmt::format("{:.0f}% of the figure's free time used of {:.0f}%", (lane.usedMS + shotMS) * 100.0 / std::max(1.0, lane.freeMS), GoalOf(lane) * 100) });
+                if (sc.seg->vocalCoverage < 0.2) {
+                    p.shot.reasons.push_back({ "instrumental", fmt::format("{:.2f}", sc.seg->vocalCoverage) });
+                }
+                lane.usedMS += shotMS;
+                Record(p, sc);
+                inScene.insert(m.id);
+                previous = &m;
+                _planned.push_back(std::move(p));
             }
-            const MediaItem& m = *chosen.c->m;
-            const std::pair<int, int> fragment = Fragment(m, shotMS, sc.info.energy);
-            Planned p;
-            if (!Make(sc, lane, m, from, to, chosen.framing, fragment, DecisionState::Automatic, chosen.score, chosen.why, p)) {
-                continue;
-            }
-            p.shot.reasons.push_back({ "no-lyrics-text", lane.t->name });
-            p.shot.reasons.push_back({ "share", fmt::format("{:.0f}% of the figure's free time used of {:.0f}%", (lane.usedMS + shotMS) * 100.0 / std::max(1.0, lane.freeMS), Goal(lane.role) * 100) });
-            if (sc.seg->vocalCoverage < 0.2) {
-                p.shot.reasons.push_back({ "instrumental", fmt::format("{:.2f}", sc.seg->vocalCoverage) });
-            }
-            lane.usedMS += shotMS;
-            Record(p, sc);
-            inScene.insert(m.id);
-            previous = &m;
-            _planned.push_back(std::move(p));
         }
     }
 
@@ -1102,8 +1401,17 @@ private:
         });
         for (Scene* scp : order) {
             const Scene& sc = *scp;
-            const int len = sc.info.endMS - sc.info.startMS;
-            std::vector<Lane*> free;
+            // Files a person put on a screen of this scene.
+            std::set<std::string> inScene;
+            for (const Planned& p : _planned) {
+                if (p.shot.sceneId == sc.info.id) {
+                    inScene.insert(p.shot.mediaId);
+                }
+            }
+            // Every screen at once, the main one first: each picks the file that suits
+            // the scene and sits best with what the screens before it chose.
+            std::vector<Eval> chosen;
+            std::string firstName;
             for (Lane& l : _lanes) {
                 if (!l.main) {
                     continue;
@@ -1116,119 +1424,150 @@ private:
                     _noFit[key] = "removed";
                     continue;
                 }
-                const std::string busy = Busy(*sc.seg, *l.t);
-                if (!busy.empty()) {
-                    _noFit[key] = busy;
+                std::string why;
+                const std::vector<std::pair<int, int>> windows = Windows(sc, l, why);
+                if (windows.empty()) {
+                    _noFit[key] = why;
                     continue;
                 }
+                int len = 0;
+                for (const auto& [a, b] : windows) {
+                    len += b - a;
+                }
                 const bool bookend = sc.info.role == "establish" || sc.info.role == "ending";
-                if (l.usedMS + len > l.budgetMS + (bookend ? l.reserveMS : 0)) {
+                // The pauses between phrases are what a screen with words is there for: the
+                // louder scenes, which choose first, cannot spend them.
+                const bool pauses = l.gapsOnly && Words(*sc.seg, *l.t);
+                if (!pauses && l.usedMS + len > l.budgetMS + (bookend ? l.reserveMS : 0)) {
                     _noFit[key] = "goal-reached";
                     continue;
                 }
-                free.push_back(&l);
-            }
-            if (free.empty()) {
-                continue;
-            }
-            // Media a person put on the other screen of this scene.
-            std::string manualOther;
-            for (const Planned& p : _planned) {
-                if (p.shot.sceneId == sc.info.id) {
-                    manualOther = p.shot.mediaId;
+                const int firstLen = windows.front().second - windows.front().first;
+                std::vector<Eval> ranked = Ranked(sc, l, std::min(firstLen, ShotTarget(sc, nullptr, 0)), inScene, {}, false, windows.front().first);
+                if (ranked.size() > 6) {
+                    ranked.resize(6);
                 }
-            }
-            std::vector<std::vector<Eval>> ranked;
-            for (Lane* l : free) {
-                std::vector<Eval> r = Ranked(sc, *l, std::min(len, MaxShot(sc)), manualOther, {}, false);
-                if (r.size() > 6) {
-                    r.resize(6);
-                }
-                if (r.empty()) {
-                    _noFit[sc.info.id + "|" + l->t->name] = "no-media-fits";
-                }
-                ranked.push_back(std::move(r));
-            }
-            // Both screens at once: the pair that suits the scene best, either may rest.
-            const Eval* bestA = nullptr;
-            const Eval* bestB = nullptr;
-            double best = 0;
-            const std::vector<Eval>& A = ranked[0];
-            const std::vector<Eval> emptyList;
-            const std::vector<Eval>& B = ranked.size() > 1 ? ranked[1] : emptyList;
-            for (size_t i = 0; i <= A.size(); ++i) {
-                const Eval* a = i < A.size() ? &A[i] : nullptr;
-                for (size_t k = 0; k <= B.size(); ++k) {
-                    const Eval* b = k < B.size() ? &B[k] : nullptr;
-                    if (a != nullptr && b != nullptr && a->c->m->id == b->c->m->id) {
-                        continue;
+                const Eval* best = nullptr;
+                double bestValue = -1;
+                for (const Eval& e : ranked) {
+                    double v = e.score;
+                    for (const Eval& o : chosen) {
+                        v += Complement(e, o, sc);
                     }
-                    const double v = (a != nullptr ? a->score : 0) + (b != nullptr ? b->score : 0) + (a != nullptr && b != nullptr ? Complement(*a, *b, sc) : 0);
-                    if (v > best + 1e-9) {
-                        best = v;
-                        bestA = a;
-                        bestB = b;
+                    if (v > bestValue + 1e-9) {
+                        bestValue = v;
+                        best = &e;
                     }
                 }
-            }
-            if (bestA != nullptr) {
-                PlaceShots(sc, *free[0], *bestA, bestB != nullptr ? bestB->c->m->id : manualOther);
-            }
-            if (bestB != nullptr && free.size() > 1) {
-                const Eval keep = *bestB;
-                PlaceShots(sc, *free[1], keep, bestA != nullptr ? bestA->c->m->id : manualOther);
-                if (bestA != nullptr) {
-                    for (Planned& p : _planned) {
-                        if (p.shot.sceneId == sc.info.id) {
-                            p.shot.reasons.push_back({ "pair", fmt::format("{} with {}", bestA->c->m->name, keep.c->m->name) });
-                        }
-                    }
+                if (best == nullptr) {
+                    _noFit[key] = "no-media-fits";
+                    continue;
                 }
+                const Eval keep = *best;
+                const size_t before = _planned.size();
+                PlaceShots(sc, l, keep, inScene, windows);
+                if (!firstName.empty()) {
+                    for (size_t i = before; i < _planned.size(); ++i) {
+                        _planned[i].shot.reasons.push_back({ "pair", fmt::format("{} with {}", firstName, keep.c->m->name) });
+                    }
+                } else {
+                    firstName = keep.c->m->name;
+                }
+                chosen.push_back(keep);
             }
         }
     }
 
-    // A cut on the beat where the music is strong, a fade where it is calm, and a soft
-    // start and end next to the lights.
+    bool OnBeat(int ms) const {
+        if (_in.analysis == nullptr) {
+            return false;
+        }
+        return std::any_of(_in.analysis->events.begin(), _in.analysis->events.end(),
+                           [&](const MusicalEvent& e) { return (e.type == MusicalEventType::Downbeat || e.type == MusicalEventType::Beat) && std::abs(e.timeMS - ms) <= 30; });
+    }
+
+    // How each shot comes in, from the music and the shots: a cut on the beat when the
+    // music is strong, a cross-fade between related pictures or in the calm, a zoom into
+    // the climax, a wipe now and then at a change of scene, a plain fade otherwise, and a
+    // long rest before the lights take over. A complex one is never used twice in a row.
     void Transitions() {
         std::stable_sort(_planned.begin(), _planned.end(), [](const Planned& a, const Planned& b) { return a.shot.lane != b.shot.lane ? a.shot.lane < b.shot.lane : a.shot.startMS < b.shot.startMS; });
+        std::map<std::string, int> sinceComplex;
         for (size_t i = 0; i < _planned.size(); ++i) {
             StoryboardShot& s = _planned[i].shot;
             const Scene* sc = SceneById(s.sceneId);
             const double energy = sc != nullptr ? sc->info.energy : 0.5;
             const int len = s.endMS - s.startMS;
-            const StoryboardShot* prev = i > 0 && _planned[i - 1].shot.lane == s.lane ? &_planned[i - 1].shot : nullptr;
+            StoryboardShot* prev = i > 0 && _planned[i - 1].shot.lane == s.lane ? &_planned[i - 1].shot : nullptr;
             const StoryboardShot* next = i + 1 < _planned.size() && _planned[i + 1].shot.lane == s.lane ? &_planned[i + 1].shot : nullptr;
-            const bool touchBefore = prev != nullptr && prev->endMS == s.startMS;
-            const bool touchAfter = next != nullptr && next->startMS == s.endMS;
-            if (touchBefore) {
-                if (energy >= 0.6) {
+            int& since = sinceComplex[s.lane];
+            ++since;
+            const bool touch = prev != nullptr && prev->endMS == s.startMS;
+            if (!touch) {
+                s.transition = "fade";
+                s.transitionIn = "Fade";
+                s.fadeInMS = energy >= 0.6 ? 200 : 700;
+            } else {
+                const Scene* psc = SceneById(prev->sceneId);
+                const bool sceneChange = prev->sceneId != s.sceneId;
+                std::string relation;
+                const MediaItem* a = ItemById(prev->mediaId);
+                const MediaItem* b = ItemById(s.mediaId);
+                const double sim = a != nullptr && b != nullptr ? Relation(*a, *b, relation) : 0;
+                const bool related = sim >= 0.3 || relation == "same-ambience" || relation == "same-motif";
+                const int plen = prev->endMS - prev->startMS;
+                if (energy >= 0.65 && OnBeat(s.startMS)) {
+                    s.transition = "cut";
+                } else if (sceneChange && sc != nullptr && sc->info.role == "climax" && since >= 3) {
+                    s.transition = "zoom";
+                } else if (!s.overlay && !prev->overlay && energy < 0.6 && (related || energy < 0.4 || !sceneChange)) {
+                    s.transition = "crossfade";
+                } else if (sceneChange && since >= 4 && energy >= 0.4 && psc != nullptr && psc->info.role != sc->info.role) {
+                    s.transition = "wipe";
+                } else {
+                    s.transition = "fade";
+                }
+                if (s.transition == "cut") {
                     s.transitionIn.clear();
                     s.fadeInMS = 0;
+                    prev->transitionOut.clear();
+                    prev->fadeOutMS = 0;
+                } else if (s.transition == "crossfade") {
+                    // Both on screen for a moment, on two layers: the old fades as the new comes.
+                    const int overlap = std::clamp(std::min(plen, len) / 5, 400, 1500);
+                    s.layer = prev->layer == 0 ? 3 : 0;
+                    prev->overlapMS = overlap;
+                    prev->transitionOut = "Fade";
+                    prev->fadeOutMS = overlap;
+                    s.transitionIn = "Fade";
+                    s.fadeInMS = overlap;
+                } else if (s.transition == "zoom" || s.transition == "wipe") {
+                    s.transitionIn = s.transition == "zoom" ? "Zoom" : "Wipe";
+                    s.fadeInMS = s.transition == "zoom" ? 300 : 400;
+                    prev->transitionOut.clear();
+                    prev->fadeOutMS = 0;
+                    since = 0;
                 } else {
                     s.transitionIn = "Fade";
                     s.fadeInMS = std::clamp(len / 8, 300, 1000);
+                    prev->transitionOut = "Fade";
+                    prev->fadeOutMS = std::clamp(plen / 8, 300, 1000);
                 }
-            } else {
-                s.transitionIn = "Fade";
-                s.fadeInMS = energy >= 0.6 ? 200 : 700;
             }
-            if (touchAfter) {
-                const Scene* nsc = SceneById(next->sceneId);
-                const double ne = nsc != nullptr ? nsc->info.energy : energy;
-                if (ne >= 0.6) {
-                    s.transitionOut.clear();
-                    s.fadeOutMS = 0;
-                } else {
-                    s.transitionOut = "Fade";
-                    s.fadeOutMS = std::clamp(len / 8, 300, 1000);
-                }
-            } else {
+            if (next == nullptr || next->startMS > s.endMS) {
+                // The lights take over: a long rest when the music is calm.
+                const bool rest = energy < 0.4 && (next == nullptr || next->startMS - s.endMS > 8000);
                 s.transitionOut = "Fade";
-                s.fadeOutMS = energy >= 0.6 ? 300 : 800;
+                s.fadeOutMS = rest ? 1500 : energy >= 0.6 ? 300 : 800;
+                if (rest) {
+                    s.constraints.push_back("rests");
+                }
             }
-            s.fadeInMS = std::min(s.fadeInMS, len / 4);
-            s.fadeOutMS = std::min(s.fadeOutMS, len / 4);
+            const int cap = s.transition == "crossfade" ? len / 3 : len / 4;
+            s.fadeInMS = std::min(s.fadeInMS, cap);
+            if (s.overlapMS <= 0) {
+                s.fadeOutMS = std::min(s.fadeOutMS, (s.endMS - s.startMS) / 3);
+            }
             if (s.fadeInMS <= 0) {
                 s.transitionIn.clear();
             }
@@ -1245,6 +1584,9 @@ private:
                     continue;
                 }
                 const bool covered = std::any_of(_planned.begin(), _planned.end(), [&](const Planned& p) { return p.shot.sceneId == sc.info.id && p.shot.lane == l.t->name; });
+                if (l.gapsOnly && !covered && _noFit.find(sc.info.id + "|" + l.t->name) == _noFit.end()) {
+                    continue; // the screen with words just shows them
+                }
                 if (covered) {
                     continue;
                 }
@@ -1264,8 +1606,10 @@ private:
             out.faceAspect = R3(l.frame.faceAspect);
             out.degrees = l.t->degrees;
             out.freeShare = R3(l.freeMS / std::max(1, _plan.durationMS));
-            out.goal = l.main ? Goal(l.role) : 0;
+            out.goal = l.main ? GoalOf(l) : 0;
             out.reason = l.main ? l.reason : std::string("a person's choice");
+            out.screen = l.screen;
+            out.gapsOnly = l.gapsOnly;
             out.assumptions = l.frame.assumptions;
             _sb.lanes.push_back(std::move(out));
         }
@@ -1281,7 +1625,8 @@ private:
             a.segmentId = p.shot.sceneId;
             a.target = p.shot.lane;
             a.startMS = p.shot.startMS;
-            a.endMS = p.shot.endMS;
+            a.endMS = p.shot.endMS + p.shot.overlapMS;
+            a.overlapMS = p.shot.overlapMS;
             a.mediaId = p.shot.mediaId;
             a.path = p.shot.path;
             a.name = p.shot.name;
@@ -1296,6 +1641,10 @@ private:
             a.source = p.shot.source;
             a.framing = p.shot.framing;
             a.fragmentStartMS = p.shot.fragmentStartMS;
+            a.layer = p.shot.layer;
+            a.overlay = p.shot.overlay;
+            a.transition = p.shot.transition;
+            a.pieces = p.pieces;
             a.transitionIn = p.shot.transitionIn;
             a.fadeInMS = p.shot.fadeInMS;
             a.transitionOut = p.shot.transitionOut;
@@ -1313,6 +1662,43 @@ private:
         }
         std::sort(_sb.discarded.begin(), _sb.discarded.end(), [](const StoryboardDiscard& a, const StoryboardDiscard& b) { return a.name != b.name ? a.name < b.name : a.mediaId < b.mediaId; });
         _sb.warnings = _out.warnings;
+        // The story the screens tell: how each shot relates to the one before on its
+        // screen, and the screens to each other at the same moment.
+        double along = 0, across = 0;
+        int nAlong = 0, nAcross = 0;
+        for (size_t i = 0; i < _sb.shots.size(); ++i) {
+            StoryboardShot& sh = _sb.shots[i];
+            const MediaItem* m = ItemById(sh.mediaId);
+            for (size_t k = i; k-- > 0;) {
+                const StoryboardShot& b = _sb.shots[k];
+                if (b.lane != sh.lane) {
+                    break;
+                }
+                if (b.mediaId != sh.mediaId) {
+                    const MediaItem* o = ItemById(b.mediaId);
+                    if (m != nullptr && o != nullptr) {
+                        std::string kind;
+                        along += Relation(*o, *m, kind);
+                        ++nAlong;
+                        sh.relation = kind;
+                    }
+                    break;
+                }
+            }
+            for (size_t k = 0; k < i; ++k) {
+                const StoryboardShot& b = _sb.shots[k];
+                if (b.lane != sh.lane && b.startMS < sh.endMS && b.endMS > sh.startMS && b.mediaId != sh.mediaId) {
+                    const MediaItem* o = ItemById(b.mediaId);
+                    if (m != nullptr && o != nullptr) {
+                        std::string kind;
+                        across += Relation(*o, *m, kind);
+                        ++nAcross;
+                    }
+                }
+            }
+        }
+        _sb.stats.coherence = nAlong > 0 ? R3(along / nAlong) : 0;
+        _sb.stats.crossScreen = nAcross > 0 ? R3(across / nAcross) : 0;
         ComputeStoryboardStats(_sb, _plan.durationMS);
         _sb.hash = StoryboardHash(_sb);
         double share = 0;
@@ -1359,6 +1745,9 @@ MediaPlan PlanMedia(const MediaPlanInput& input) {
 
 void ApplyMediaPlan(CompositionPlan& plan, const MediaPlan& media, const ModelCapabilities& caps) {
     for (const MediaAssignment& m : media.assignments) {
+        if (m.overlay) {
+            continue; // between the phrases of a screen that keeps its words
+        }
         const auto s = std::find_if(plan.segments.begin(), plan.segments.end(), [&](const PlanSegment& p) { return p.id == m.segmentId; });
         const TargetInfo* t = caps.Find(m.target);
         if (s == plan.segments.end() || t == nullptr) {
@@ -1487,6 +1876,42 @@ std::vector<MediaCorrection> LockStoryboardScene(const VisualMediaStoryboard& b,
     return out;
 }
 
+std::vector<MediaCorrection> LockStoryboardLane(const VisualMediaStoryboard& b, const std::string& lane) {
+    std::vector<MediaCorrection> out;
+    if (b.Lane(lane) == nullptr) {
+        return out;
+    }
+    for (const StoryboardScene& sc : b.scenes) {
+        bool any = false;
+        for (const StoryboardShot& s : b.shots) {
+            if (s.sceneId != sc.id || s.lane != lane) {
+                continue;
+            }
+            MediaCorrection c;
+            c.action = MediaCorrection::Action::Lock;
+            c.segmentId = sc.id;
+            c.startMS = sc.startMS;
+            c.target = lane;
+            c.mediaId = s.mediaId;
+            c.path = s.source;
+            c.shotStartMS = s.startMS;
+            c.shotEndMS = s.endMS;
+            c.fragmentStartMS = s.kind == MediaKind::Video ? s.fragmentStartMS : -1;
+            UpsertMediaCorrection(out, c);
+            any = true;
+        }
+        if (!any) {
+            MediaCorrection c;
+            c.action = MediaCorrection::Action::Remove;
+            c.segmentId = sc.id;
+            c.startMS = sc.startMS;
+            c.target = lane;
+            UpsertMediaCorrection(out, c);
+        }
+    }
+    return out;
+}
+
 json MediaCorrectionsJson(const std::vector<MediaCorrection>& list) {
     json out = json::array();
     for (const MediaCorrection& c : list) {
@@ -1568,6 +1993,9 @@ json MediaSessionJson(const MediaSession& s) {
     if (!s.storyboardHash.empty()) {
         root["storyboard"] = s.storyboardHash;
     }
+    if (!s.screens.Empty()) {
+        root["screens"] = ScreenSettingsJson(s.screens);
+    }
     if (!s.history.empty()) {
         json history = json::array();
         for (const StoryboardVersion& v : s.history) {
@@ -1606,6 +2034,9 @@ bool MediaSessionFrom(const json& j, MediaSession& s, std::string& error) {
         m.fragmentStartMS = u.value("fragmentStartMS", -1);
         m.framing = u.value("framing", std::string());
         s.used.push_back(std::move(m));
+    }
+    if (j.contains("screens") && !ScreenSettingsFrom(j["screens"], s.screens, error)) {
+        return false;
     }
     for (const json& v : j.value("history", json::array())) {
         s.history.push_back(StoryboardVersionFrom(v));

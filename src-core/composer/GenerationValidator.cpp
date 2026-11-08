@@ -1574,6 +1574,20 @@ ValidationReport ValidateChoreography(const Choreography& c, const CompositionPl
             } else if (key == "T_TEXTCTRL_Fadein" || key == "T_TEXTCTRL_Fadeout") {
                 const double seconds = std::strtod(value.c_str(), nullptr);
                 problem = seconds < 0 || seconds * 1000 > length ? "fade longer than the event" : "";
+            } else if (key == "B_CUSTOM_SubBuffer" && e.intent == "media") {
+                // A piece of a picture or video on part of a figure: four percentages.
+                int parts = 0;
+                bool ok = true;
+                for (size_t at = 0; at <= value.size();) {
+                    const size_t end = std::min(value.find('x', at), value.size());
+                    char* stop = nullptr;
+                    const std::string part = value.substr(at, end - at);
+                    const double v = std::strtod(part.c_str(), &stop);
+                    ok = ok && !part.empty() && stop != part.c_str() && *stop == '\0' && v >= 0 && v <= 100;
+                    ++parts;
+                    at = end + 1;
+                }
+                problem = ok && parts == 4 ? "" : "a sub-buffer is four percentages";
             } else {
                 problem = "not a setting the choreography may write";
             }

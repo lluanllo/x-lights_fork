@@ -385,6 +385,13 @@ private:
                 Face(s, *a, *target, band, key, rank++);
             } else if (a->intent == "lyric-text") {
                 Text(s, *a, *target, band, key, rank++, usedEffects);
+                // Pictures the storyboard put between this screen's phrases.
+                if (_in.media != nullptr && !_in.media->FindAll(s.id, a->target).empty()) {
+                    PlanAssignment between = *a;
+                    between.intent = "media";
+                    between.prominence = Prominence::Lead;
+                    Media(s, between, *target, key, usedEffects);
+                }
             } else if (a->intent == "media") {
                 Media(s, *a, *target, key, usedEffects);
             } else {
@@ -839,18 +846,34 @@ private:
                 continue;
             }
             const Option o{ chosen, compat, 1.0 };
-            const int start = ToFrame(std::max(m->startMS, s.startMS), _frame);
-            const int end = ToFrame(std::min(m->endMS, s.endMS), _frame);
+            // A shot may reach into the next segment by its cross-fade.
+            const int start = ToFrame(m->startMS, _frame);
+            const int end = ToFrame(m->endMS, _frame);
             if (end <= start) {
                 continue;
             }
             const int blocks = std::max(1, static_cast<int>(std::ceil(static_cast<double>(end - start) / chosen->maxMS)));
+            const size_t pieces = std::max<size_t>(1, m->pieces.size());
             for (int b = 0; b < blocks; ++b) {
+              for (size_t piece = 0; piece < pieces; ++piece) {
                 const int from = b == 0 ? start : ToFrame(start + static_cast<double>(end - start) * b / blocks, _frame);
                 const int to = b == blocks - 1 ? end : ToFrame(start + static_cast<double>(end - start) * (b + 1) / blocks, _frame);
-                ChoreographyEvent e = Base(s, a, target, o, from, to, shots.size() > 1 ? fmt::format("m{}.{}", shot, b) : fmt::format("m{}", b));
+                std::string id = shots.size() > 1 ? fmt::format("m{}.{}", shot, b) : fmt::format("m{}", b);
+                if (pieces > 1) {
+                    id += fmt::format("p{}", piece);
+                }
+                ChoreographyEvent e = Base(s, a, target, o, from, to, id);
+                e.layer = m->layer + static_cast<int>(piece);
                 SetParameters(e, *chosen, 0, key, b);
-                for (const auto& [k, v] : m->settings) {
+                std::vector<std::pair<std::string, std::string>> settings = m->settings;
+                if (!m->pieces.empty()) {
+                    // One piece of a video spread over a tree's columns.
+                    for (const auto& [k, v] : m->pieces[piece].settings) {
+                        settings.emplace_back(k, v);
+                    }
+                    settings.emplace_back("B_CUSTOM_SubBuffer", m->pieces[piece].subBuffer);
+                }
+                for (const auto& [k, v] : settings) {
                     const auto same = std::find_if(e.settings.begin(), e.settings.end(), [&](const auto& kv) { return kv.first == k; });
                     if (same != e.settings.end()) {
                         same->second = v;
@@ -872,6 +895,7 @@ private:
                 e.transitionOut = b == blocks - 1 ? m->transitionOut : std::string();
                 e.fadeOutMS = b == blocks - 1 ? m->fadeOutMS : 0;
                 _out.events.push_back(std::move(e));
+              }
             }
             usedEffects.insert(chosen->effect);
         }

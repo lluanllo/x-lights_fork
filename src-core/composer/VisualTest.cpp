@@ -1,6 +1,7 @@
 #include "composer/VisualTest.h"
 
 #include "composer/MediaAnalysis.h"
+#include "composer/MediaFraming.h"
 #include "composer/MediaLibrary.h"
 #include "composer/MediaTest.h"
 #include "composer/VisualModel.h"
@@ -393,6 +394,7 @@ public:
         TestVideos();
         TestDuplicatesAndIssues();
         TestCache();
+        TestDirector();
         TestModel();
         return Summary();
     }
@@ -612,6 +614,98 @@ private:
         MediaLibrary copy = _lib;
         const MediaAnalysisSummary stopped = AnalyzeMediaLibrary(copy, cancel);
         Check(stopped.cancelled && stopped.analysed < _summary.usable, "an analysis can be cancelled");
+    }
+
+    // Phase 12: videos drawn by pieces round a tree, a still picture made into a slow
+    // moving clip once and reused, and derived files nothing uses going away.
+    void TestDirector() {
+        Title("trees, moving clips and derived files");
+        const auto near = [](double a, double b) { return std::fabs(a - b) < 1e-6; };
+        const std::vector<FramePiece> one = SpreadOnColumns(0.1, 0.4, 0, 1);
+        Check(one.size() == 1 && near(one[0].x0, 0.1) && near(one[0].x1, 0.5) && near(one[0].cropX1, 1), "a face inside the buffer is one piece");
+        const std::vector<FramePiece> two = SpreadOnColumns(0.75, 0.5, 0, 1);
+        Check(two.size() == 2 && near(two[0].x0, 0.75) && near(two[0].x1, 1) && near(two[0].cropX1, 0.5) && near(two[1].x0, 0) && near(two[1].x1, 0.25) && near(two[1].cropX0, 0.5),
+              "a face across the seam is two pieces that join the frame where the strings meet");
+
+        const MediaItem* video = Item("poco movimiento.mp4");
+        if (video == nullptr) {
+            Check(false, "the video for the tree tests");
+            return;
+        }
+        FrameTarget round;
+        round.name = "Arbol";
+        round.tree = true;
+        round.wraps = true;
+        round.bufferWi = 32;
+        round.bufferHt = 64;
+        round.faceAspect = 0.6;
+        round.wrapAspect = 1.2;
+        const MediaFraming faces = PlanFraming(*video, round, 8000, 0.5, "verse", 7);
+        bool halves = faces.pieces.size() == 2;
+        for (const FramePiece& p : faces.pieces) {
+            halves = halves && near(p.x1 - p.x0, 0.5) && near(p.cropX0, faces.cropX) && near(p.cropX1, faces.cropX + faces.cropW);
+        }
+        Check(faces.strategy == "video-faces" && halves, fmt::format("a video on a round tree: the same picture on both faces ({}, {} pieces)", faces.strategy, faces.pieces.size()));
+        round.frontOffset = 0.5;
+        const MediaFraming turned = PlanFraming(*video, round, 8000, 0.5, "verse", 7);
+        double columns = 0;
+        for (const FramePiece& p : turned.pieces) {
+            columns += p.x1 - p.x0;
+        }
+        Check(turned.pieces.size() == 3 && near(columns, 1.0), fmt::format("with the front a quarter turn on, one face crosses the seam: {} pieces covering every column once", turned.pieces.size()));
+        round.frontOffset = 0.25;
+        MediaItem panorama = *video;
+        panorama.aspect = 3.2;
+        const MediaFraming wrap = PlanFraming(panorama, round, 8000, 0.5, "verse", 7);
+        Check(wrap.strategy == "video-wrap" && wrap.pieces.size() == 1, "a real panorama goes all the way round, in one piece from the front");
+        FrameTarget half = round;
+        half.wraps = false;
+        half.wrapAspect = 0;
+        const MediaFraming flat = PlanFraming(*video, half, 8000, 0.5, "verse", 7);
+        Check(flat.pieces.size() <= 1 && flat.strategy != "video-faces" && flat.strategy != "video-wrap", fmt::format("a tree that does not go round is one face: {}", flat.strategy));
+
+        const MediaItem* picture = Item("paisaje montañas panorámico.png");
+        if (picture == nullptr) {
+            Check(false, "the picture for the moving clip");
+            return;
+        }
+        MediaFraming pan;
+        pan.strategy = "pan-x";
+        pan.moves = true;
+        pan.motionClip = true;
+        pan.fromX = 0;
+        pan.fromY = 0;
+        pan.fromW = 0.4;
+        pan.fromH = 1;
+        pan.toX = 0.6;
+        pan.toY = 0;
+        pan.toW = 0.4;
+        pan.toH = 1;
+        pan.clipWi = 96;
+        pan.clipHt = 40;
+        std::string rel, error;
+        const auto t0 = std::chrono::steady_clock::now();
+        const bool made = MakeMotionClip(*picture, pan, 3000, S(_show), rel, error);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+        const fs::path clip = _show / P(rel);
+        std::error_code ec;
+        Check(made && fs::is_regular_file(clip, ec) && fs::file_size(clip, ec) > 0, fmt::format("a slow pan made into a clip with xLights' own video writer ({} ms){}", ms, error.empty() ? "" : ": " + error));
+        const auto written = fs::last_write_time(clip, ec);
+        std::string again;
+        Check(MakeMotionClip(*picture, pan, 3000, S(_show), again, error) && again == rel && fs::last_write_time(clip, ec) == written, "asked again, the same clip is reused, not written again");
+        MediaFraming slower = pan;
+        slower.toX = 0.5;
+        Check(slower.ClipName(*picture, 3000) != pan.ClipName(*picture, 3000) && pan.ClipName(*picture, 4000) != pan.ClipName(*picture, 3000), "another movement or length is another clip");
+
+        const fs::path derived = P(MediaDerivedDir(S(_show)));
+        {
+            std::ofstream(derived / "viejo.png", std::ios::binary) << "x";
+            std::ofstream(derived / "index.json", std::ios::binary) << R"({"viejo.png": "2020-01-01"})";
+        }
+        const std::string keep = clip.filename().string();
+        const int pruned = PruneMediaDerived(S(_show), { keep }, 60);
+        Check(pruned == 1 && !fs::exists(derived / "viejo.png", ec) && fs::exists(clip, ec), fmt::format("a derived file unused for years goes, the one in use stays ({} removed)", pruned));
+        Check(PruneMediaDerived(S(_show), {}, 60) == 0 && fs::exists(clip, ec), "and a file used today is kept even when nothing asks for it");
     }
 
     void TestModel() {

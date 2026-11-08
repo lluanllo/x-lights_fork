@@ -91,6 +91,7 @@ struct CorrectionSet {
     AnalysisCorrections analysis;
     std::vector<MediaCorrection> media;
     std::vector<VoiceDef> voices; // a person's names, roles and faces for the voices
+    ScreenSettings screens;       // a person's screens and how words and pictures share them
 
     [[nodiscard]] bool Empty() const;
 };

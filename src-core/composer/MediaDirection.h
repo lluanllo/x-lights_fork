@@ -3,6 +3,7 @@
 #include "composer/CompositionPlan.h"
 #include "composer/MediaLibrary.h"
 #include "composer/MediaStoryboard.h"
+#include "composer/MediaSurfaces.h"
 #include "composer/TemplateLibrary.h"
 
 #include <string>
@@ -19,7 +20,15 @@
 // can say after watching it.
 namespace composer {
 
-inline constexpr const char* MEDIA_DIRECTOR_VERSION = "2.0.0";
+inline constexpr const char* MEDIA_DIRECTOR_VERSION = "3.0.0";
+
+// One effect of a shot that needs several: a video on both faces of a mega tree is
+// drawn by two or three Video effects, each on a sub-buffer of the tree's columns with
+// the part of the frame that face shows, all starting together so they stay in step.
+struct MediaPiece {
+    std::string subBuffer; // B_CUSTOM_SubBuffer: "left x bottom x right x top", percentages
+    std::vector<std::pair<std::string, std::string>> settings; // replace the shot's ones
+};
 
 struct MediaCorrection {
     enum class Action {
@@ -64,6 +73,11 @@ struct MediaAssignment {
     std::string transitionOut;
     int fadeOutMS = 0;
     std::string level; // "very-suitable", "acceptable", "doubtful"
+    int layer = 0;
+    int overlapMS = 0;    // included in endMS: the cross-fade under the next shot
+    bool overlay = false; // between the phrases of a screen showing words
+    std::string transition;
+    std::vector<MediaPiece> pieces; // empty: one effect
 };
 
 struct MediaOptions {
@@ -88,6 +102,7 @@ struct MediaPlan {
     std::vector<std::string> warnings;
     std::vector<Reason> reasons;
     VisualMediaStoryboard storyboard;
+    SurfacePlan surfaces;
 
     // The first shot of the segment on the target.
     [[nodiscard]] const MediaAssignment* Find(const std::string& segmentId, const std::string& target) const;
@@ -105,6 +120,8 @@ struct MediaPlanInput {
     const MetadataLookup* metadata = nullptr;        // required to write settings
     const ShowVisualDirection* direction = nullptr;  // the scenes and the theme, if any
     const SongAnalysis* analysis = nullptr;          // downbeats to cut shots on
+    const LyricAlignment* alignment = nullptr;       // the phrases a screen with words must keep
+    const ScreenSettings* screens = nullptr;         // a person's screens and lyrics mode
     std::vector<std::string> themeCategories;        // the theme's media categories, best first
     std::string showDir;
     MediaOptions options;
@@ -140,9 +157,10 @@ struct MediaSession {
     std::vector<MediaCorrection> corrections;
     std::vector<MediaUse> used;
     std::string storyboardHash;
+    ScreenSettings screens;
     std::vector<StoryboardVersion> history; // earlier storyboards, newest last, at most five
 
-    [[nodiscard]] bool Empty() const { return folders.empty() && automatic && maxShare < 0 && variant == 0 && corrections.empty() && used.empty() && history.empty(); }
+    [[nodiscard]] bool Empty() const { return folders.empty() && automatic && maxShare < 0 && variant == 0 && corrections.empty() && used.empty() && history.empty() && screens.Empty(); }
 };
 
 inline constexpr size_t STORYBOARD_HISTORY = 5;
@@ -152,6 +170,9 @@ inline constexpr size_t STORYBOARD_HISTORY = 5;
 [[nodiscard]] std::vector<MediaCorrection> RestoreStoryboard(const StoryboardVersion& version, const VisualMediaStoryboard& current);
 // The corrections that keep one scene exactly as it is now.
 [[nodiscard]] std::vector<MediaCorrection> LockStoryboardScene(const VisualMediaStoryboard& storyboard, const std::string& sceneId);
+// The corrections that keep one screen exactly as it is now, through the whole song;
+// the other screens are still chosen again when the montage is rebuilt.
+[[nodiscard]] std::vector<MediaCorrection> LockStoryboardLane(const VisualMediaStoryboard& storyboard, const std::string& lane);
 
 // A later choice for the same segment, figure and shot replaces the earlier one; a choice
 // for the whole segment replaces its shots; removing a segment's media replaces every

@@ -27,6 +27,7 @@
 #include "utils/ExternalHooks.h"
 
 #include <nlohmann/json.hpp>
+#include <pugixml.hpp>
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
@@ -142,6 +143,7 @@ public:
         TestVoices();
         TestMedia();
         TestStoryboard();
+        TestScreens();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -557,7 +559,7 @@ private:
             levels = levels && !s.level.empty() && s.score > 0 && s.score <= 1;
             if (s.lane == "Arbol Grande") {
                 treeFramings.insert(s.framing);
-                frames = frames && (s.framing.rfind("tree-", 0) == 0 || s.framing == "video-wrap" || s.framing.rfind("gif-", 0) == 0);
+                frames = frames && (s.framing.rfind("tree-", 0) == 0 || s.framing == "video-wrap" || s.framing == "video-faces" || s.framing.rfind("gif-", 0) == 0);
             } else {
                 frames = frames && s.framing.rfind("tree-", 0) != 0;
             }
@@ -776,6 +778,268 @@ private:
         Check(restored.ok && was == now, fmt::format("the earlier version comes back shot by shot ({} and {} shots)", was.size(), now.size()));
     }
 
+    // The fixture show with more screens: a second matrix, one with no controller, one
+    // sharing another's channels, and a tree that goes half way round.
+    static bool WriteScreensShow(const fs::path& folder) {
+        if (!WritePlanFixture(folder.string())) {
+            return false;
+        }
+        pugi::xml_document doc;
+        if (!doc.load_file((folder / "xlights_rgbeffects.xml").wstring().c_str())) {
+            return false;
+        }
+        pugi::xml_node models = doc.child("xrgb").child("models");
+        const auto add = [&](const char* name, const char* displayAs, int channel, std::initializer_list<std::pair<const char*, std::string>> attrs) {
+            pugi::xml_node m = models.append_child("model");
+            m.append_attribute("name") = name;
+            m.append_attribute("DisplayAs") = displayAs;
+            m.append_attribute("StringType") = "RGB Nodes";
+            m.append_attribute("LayoutGroup") = "Default";
+            m.append_attribute("StartSide") = "B";
+            m.append_attribute("Dir") = "L";
+            m.append_attribute("versionNumber") = "8";
+            m.append_attribute("StartChannel") = std::to_string(channel).c_str();
+            for (const auto& [k, v] : attrs) {
+                m.append_attribute(k) = v.c_str();
+            }
+        };
+        add("Matriz Dos", "Matrix", 20001, { { "NumStrings", "1" }, { "NodesPerString", "512" }, { "StrandsPerString", "16" }, { "Vertical", "false" }, { "AlternateNodes", "false" }, { "NoZig", "false" } });
+        add("Matriz Compartida", "Matrix", 20001, { { "NumStrings", "1" }, { "NodesPerString", "256" }, { "StrandsPerString", "16" }, { "Vertical", "false" }, { "AlternateNodes", "false" }, { "NoZig", "false" } });
+        add("Matriz Sin Controlador", "Matrix", 30001,
+            { { "NumStrings", "1" }, { "NodesPerString", "288" }, { "StrandsPerString", "12" }, { "Vertical", "false" }, { "AlternateNodes", "false" }, { "NoZig", "false" }, { "Controller", "No Controller" } });
+        add("Arbol Medio", "Tree", 40001, { { "NumStrings", "12" }, { "NodesPerString", "30" }, { "StrandsPerString", "1" }, { "TreeType", "0" }, { "TreeDegrees", "180" }, { "TreeBottomTopRatio", "6" }, { "TreePerspective", "0.2" } });
+        return doc.save_file((folder / "xlights_rgbeffects.xml").wstring().c_str());
+    }
+
+    void TestScreens() {
+        Title("A2k. Screens: who shows the words, who the pictures, and the trees");
+        const fs::path show = _root / "pantallas" / "show";
+        Check(WriteScreensShow(show), "a show with two more matrices (one with no controller, one sharing channels) and a 180 degree tree");
+        const fs::path folder = _show / "Medios Fase 11";
+        const fs::path song = _root / "montaje.wav";
+        const fs::path lrc = _root / "pantallas.lrc";
+        Check(WriteText(lrc, "[00:09.00]Nieve en la ventana\n[00:11.50]\n[00:33.00]Estrellas de invierno\n[00:35.50]\n"), "lyrics with pauses between their phrases");
+        const std::string profile = (fs::path(DefaultTemplateDirectory()).parent_path() / "profiles" / "reference-winter-cinematic.json").string();
+        const std::vector<std::pair<int, SectionKind>> layout = { { 0, SectionKind::Intro }, { 8000, SectionKind::Verse }, { 20000, SectionKind::Chorus }, { 32000, SectionKind::Verse },
+                                                                  { 44000, SectionKind::Chorus }, { 56000, SectionKind::Bridge }, { 64000, SectionKind::Instrumental }, { 76000, SectionKind::Chorus },
+                                                                  { 88000, SectionKind::Outro } };
+        int n = 0;
+        const auto request = [&](const std::string& name, const ScreenSettings& screens) {
+            GenerationRequest r;
+            r.audioPath = song.string();
+            r.showDir = show.string();
+            r.sequenceName = name + ".xsq";
+            r.reportDir = (_root / "reports" / name).string();
+            r.level = AutomationLevel::Balanced;
+            r.seed = 7;
+            r.lyricsPath = lrc.string();
+            r.profilePath = profile;
+            r.mediaFolders = { folder.string() };
+            r.scanMedia = n++ == 0;
+            for (size_t i = 0; i < layout.size(); ++i) {
+                SectionCorrection c;
+                c.startMS = layout[i].first;
+                c.endMS = i + 1 < layout.size() ? layout[i + 1].first : 96000;
+                c.kind = layout[i].second;
+                r.corrections.analysis.sections.push_back(c);
+            }
+            r.corrections.screens = screens;
+            return r;
+        };
+        const auto lane = [](const VisualMediaStoryboard& b, const std::string& target) {
+            const auto it = std::find_if(b.lanes.begin(), b.lanes.end(), [&](const StoryboardLane& l) { return l.target == target; });
+            return it != b.lanes.end() ? &*it : nullptr;
+        };
+        const auto shotsOn = [](const VisualMediaStoryboard& b, const std::string& target) {
+            return static_cast<int>(std::count_if(b.shots.begin(), b.shots.end(), [&](const StoryboardShot& s) { return s.lane == target; }));
+        };
+        // Words and pictures never share a moment on a figure.
+        const auto apart = [&](const GenerationRun& run) {
+            const SequenceSpec read = Reopen(run);
+            for (const EffectSpec& e : read.effects) {
+                if (e.effect != "Pictures" && e.effect != "Video") {
+                    continue;
+                }
+                for (const EffectSpec& t : read.effects) {
+                    if (t.effect == "Text" && FullName(t) == FullName(e) && t.startMS < e.endMS && t.endMS > e.startMS) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        };
+        const auto lit = [&](const GenerationRun& run) {
+            const SequenceSpec read = Reopen(run);
+            int all = 0, ok = 0;
+            for (const EffectSpec& e : read.effects) {
+                if (e.effect == "Pictures" || e.effect == "Video") {
+                    ++all;
+                    const RenderMetric* m = Metric(run, e);
+                    ok += m != nullptr && m->framesWithLight > 0 ? 1 : 0;
+                }
+            }
+            return std::make_pair(ok, all);
+        };
+
+        ScreenSettings smart;
+        smart.set = true;
+        smart.mode = LyricsMode::Smart;
+        const GenerationRun a = Generate(request("pantallas-inteligente", smart));
+        Check(a.ok, "published with the words shared smartly");
+        if (!a.ok) {
+            return;
+        }
+        printf("%s", SurfaceReport(a.media.surfaces).c_str());
+        const Surface* lyrics = a.media.surfaces.Find("Matriz Prueba");
+        const Surface* main = nullptr;
+        for (const Surface& s : a.media.surfaces.surfaces) {
+            main = s.role == SurfaceRole::Main ? &s : main;
+        }
+        const Surface* shared = a.media.surfaces.Find("Matriz Compartida");
+        const Surface* loose = a.media.surfaces.Find("Matriz Sin Controlador");
+        Check(a.media.surfaces.surfaces.size() >= 6, fmt::format("{} surfaces found from the models' properties, not their names", a.media.surfaces.surfaces.size()));
+        Check(lyrics != nullptr && lyrics->role == SurfaceRole::Lyrics && main != nullptr && main->target == "Matriz Dos", fmt::format("the matrix with words keeps them; the main screen is {}", main ? main->target : "none"));
+        Check(shared != nullptr && !shared->conflicts.empty() && shared->role != SurfaceRole::Main, "a matrix sharing another's channels is seen and never the main screen");
+        Check(loose != nullptr && loose->noController && loose->role != SurfaceRole::Main, "a matrix with no controller is seen as such, and is not the main screen");
+        const VisualMediaStoryboard& b = a.media.storyboard;
+        const StoryboardLane* gl = lane(b, "Matriz Prueba");
+        Check(gl != nullptr && gl->gapsOnly && lane(b, "Matriz Dos") != nullptr && lane(b, "Arbol Grande") != nullptr, fmt::format("{} screens in the montage: the main matrix, the tree and the matrix with words between its phrases", b.lanes.size()));
+        const int between = static_cast<int>(std::count_if(b.shots.begin(), b.shots.end(), [](const StoryboardShot& s) { return s.overlay; }));
+        Check(between > 0, fmt::format("{} pictures between the phrases of the matrix with words", between));
+        Check(apart(a), "and never over a phrase");
+        // Continuity: the calm breathes, the strong music cuts, and nothing changes for nothing.
+        {
+            double calmMS = 0, strongMS = 0;
+            int calm = 0, strong = 0, shortShots = 0, badCuts = 0, badFades = 0;
+            for (const StoryboardShot& s : b.shots) {
+                const StoryboardScene* sc = b.Scene(s.sceneId);
+                if (sc == nullptr) {
+                    continue;
+                }
+                const bool loud = sc->energy >= 0.65 || sc->role == "climax";
+                const bool quiet = sc->energy < 0.45 && sc->role != "climax";
+                (loud ? strongMS : calmMS) += loud || quiet ? s.endMS - s.startMS : 0;
+                strong += loud ? 1 : 0;
+                calm += quiet ? 1 : 0;
+                shortShots += s.endMS - s.startMS < 2000 ? 1 : 0;
+                badCuts += s.transition == "cut" && sc->energy < 0.65 ? 1 : 0;
+                badFades += s.transition == "crossfade" && sc->energy >= 0.6 && sc->role == "climax" ? 1 : 0;
+            }
+            const double calmMean = calm > 0 ? calmMS / calm : 0, strongMean = strong > 0 ? strongMS / strong : 0;
+            Check(calm == 0 || strong == 0 || calmMean > strongMean, fmt::format("calm scenes keep a shot longer ({:.1f} s) than strong ones ({:.1f} s)", calmMean / 1000, strongMean / 1000));
+            Check(shortShots == 0, fmt::format("{} shots too short to be seen", shortShots));
+            Check(badCuts == 0 && badFades == 0, fmt::format("a cut on the beat only in strong music ({} elsewhere), no cross-fade into the climax ({})", badCuts, badFades));
+            Check(b.stats.coherence >= 0 && b.stats.coherence <= 1 && b.stats.crossScreen >= 0 && b.stats.crossScreen <= 1 && !b.stats.transitions.empty(),
+                  fmt::format("how the shots follow each other ({:.2f}) and sit together on the screens ({:.2f}) is measured", b.stats.coherence, b.stats.crossScreen));
+        }
+        const auto [okA, allA] = lit(a);
+        Check(allA > 0 && okA == allA, fmt::format("each of the {} picture and video effects lights its figure", allA));
+
+        ScreenSettings first;
+        first.set = true;
+        first.mode = LyricsMode::LyricsFirst;
+        const GenerationRun c = Generate(request("pantallas-letra-primero", first));
+        Check(c.ok && shotsOn(c.media.storyboard, "Matriz Prueba") == 0 && lane(c.media.storyboard, "Matriz Prueba") == nullptr, "words first: the matrix with words shows only words");
+
+        ScreenSettings free;
+        free.set = true;
+        free.mode = LyricsMode::Free;
+        ScreenChoice m1;
+        m1.target = "Matriz Prueba";
+        m1.role = SurfaceRole::Main;
+        m1.roleSet = true;
+        ScreenChoice off;
+        off.target = "Matriz Dos";
+        off.role = SurfaceRole::Off;
+        off.roleSet = true;
+        free.screens = { m1, off };
+        const GenerationRun d = Generate(request("pantallas-libre", free));
+        const Surface* chosen = d.media.surfaces.Find("Matriz Prueba");
+        Check(d.ok && chosen != nullptr && chosen->role == SurfaceRole::Main && chosen->roleSource == "person" && shotsOn(d.media.storyboard, "Matriz Dos") == 0 && shotsOn(d.media.storyboard, "Matriz Prueba") > 0,
+              "free: the person's roles stand, a screen turned off shows nothing");
+        Check(d.ok && apart(d), "and still no picture over a phrase");
+
+        ScreenSettings half;
+        half.set = true;
+        ScreenChoice t180;
+        t180.target = "Arbol Medio";
+        t180.role = SurfaceRole::Tree;
+        t180.roleSet = true;
+        ScreenChoice bigOff;
+        bigOff.target = "Arbol Grande";
+        bigOff.role = SurfaceRole::Off;
+        bigOff.roleSet = true;
+        half.screens = { t180, bigOff };
+        const GenerationRun e = Generate(request("pantallas-arbol-180", half));
+        const StoryboardLane* l180 = e.ok ? lane(e.media.storyboard, "Arbol Medio") : nullptr;
+        bool flat = true;
+        for (const StoryboardShot& s : e.media.storyboard.shots) {
+            if (s.lane == "Arbol Medio") {
+                flat = flat && s.framing.rfind("tree-", 0) != 0 && s.pieces == 1 && s.framing != "video-faces";
+            }
+        }
+        Check(l180 != nullptr && l180->degrees >= 179 && l180->degrees <= 181 && shotsOn(e.media.storyboard, "Arbol Medio") > 0 && flat,
+              fmt::format("a 180 degree tree: {} shots framed for its one face, never wrapped round", shotsOn(e.media.storyboard, "Arbol Medio")));
+        const auto [okE, allE] = lit(e);
+        Check(allE > 0 && okE == allE, "and they light it");
+
+        ScreenSettings turned;
+        turned.set = true;
+        ScreenChoice front;
+        front.target = "Arbol Grande";
+        front.frontOffset = 0.5;
+        front.turn = -1;
+        turned.screens = { front };
+        GenerationRequest turnedRequest = request("pantallas-arbol-girado", turned);
+        // A video a person puts on the tree, so the faces are seen whatever the montage picks.
+        const MediaItem* clip = nullptr;
+        for (const MediaItem& m : a.mediaLibrary.items) {
+            clip = clip == nullptr && m.name == "poco movimiento.mp4" ? &m : clip;
+        }
+        for (const StoryboardScene& s : a.media.storyboard.scenes) {
+            if (clip != nullptr && s.startMS == 20000) {
+                MediaCorrection put;
+                put.action = MediaCorrection::Action::Assign;
+                put.segmentId = s.id;
+                put.startMS = s.startMS;
+                put.target = "Arbol Grande";
+                put.mediaId = clip->id;
+                put.path = clip->relative.empty() ? clip->path : clip->relative;
+                UpsertMediaCorrection(turnedRequest.corrections.media, put);
+            }
+        }
+        Check(!turnedRequest.corrections.media.empty(), "a video put on the tree by hand");
+        const GenerationRun f = Generate(turnedRequest);
+        int three = 0;
+        bool synced = true;
+        const SequenceSpec read = Reopen(f);
+        std::map<int, std::vector<const EffectSpec*>> byStart;
+        for (const EffectSpec& x : read.effects) {
+            if (FullName(x) == "Arbol Grande" && x.effect == "Video" && !Setting(x, "B_CUSTOM_SubBuffer").empty()) {
+                byStart[x.startMS].push_back(&x);
+            }
+        }
+        for (const auto& [start, pieces] : byStart) {
+            three += pieces.size() == 3 ? 1 : 0;
+            for (const EffectSpec* x : pieces) {
+                synced = synced && x->endMS == pieces.front()->endMS && Setting(*x, "E_TEXTCTRL_Video_Starttime") == Setting(*pieces.front(), "E_TEXTCTRL_Video_Starttime") &&
+                         Setting(*x, "E_FILEPICKERCTRL_Video_Filename") == Setting(*pieces.front(), "E_FILEPICKERCTRL_Video_Filename");
+            }
+        }
+        Check(f.ok && !byStart.empty() && synced, fmt::format("a video on both faces of the tree: {} shots drawn by pieces that start, end and read the video together", byStart.size()));
+        Check(three > 0, "with the front turned half way round, a face crosses the tree's seam and takes two pieces (three in all)");
+        bool rolled = false;
+        for (const StoryboardShot& s : f.media.storyboard.shots) {
+            for (const StoryboardShot& o : a.media.storyboard.shots) {
+                rolled = rolled || (s.lane == "Arbol Grande" && o.lane == s.lane && s.mediaId == o.mediaId && s.framing == o.framing && s.effect == "Pictures" && s.path != o.path);
+            }
+        }
+        Check(rolled || std::none_of(f.media.storyboard.shots.begin(), f.media.storyboard.shots.end(), [](const StoryboardShot& s) { return s.lane == "Arbol Grande" && s.effect == "Pictures"; }),
+              "a picture on the tree is prepared turned to the new front");
+        const auto [okF, allF] = lit(f);
+        Check(allF > 0 && okF == allF, "everything lights its figure");
+    }
+
     void TestMedia() {
         Title("A2d. Pictures and videos from the show's own files, with two voices, a choir, a narrator and the words");
         const fs::path media = _show / "Medios";
@@ -983,7 +1247,15 @@ private:
         gone.previousSidecarPath = second.sidecarPath;
         const GenerationRun lost = Generate(gone);
         const SequenceSpec lostRead = Reopen(lost);
-        Check(lost.ok && Count(lostRead, "Video") == 0 && std::any_of(lost.media.warnings.begin(), lost.media.warnings.end(), [](const std::string& w) { return w.rfind("media-missing:", 0) == 0; }),
+        // No effect reads the missing file (motion clips made from pictures are Video effects too).
+        bool noneMissing = true;
+        for (const EffectSpec& e : lostRead.effects) {
+            if (e.effect == "Video" || e.effect == "Pictures") {
+                const std::string file = Setting(e, e.effect == "Video" ? "E_FILEPICKERCTRL_Video_Filename" : "E_TEXTCTRL_Pictures_Filename");
+                noneMissing = noneMissing && FileExists(MediaAbsolutePath(file, _show.string())) && file.find("video estrellas") == std::string::npos;
+            }
+        }
+        Check(lost.ok && noneMissing && std::any_of(lost.media.warnings.begin(), lost.media.warnings.end(), [](const std::string& w) { return w.rfind("media-missing:", 0) == 0; }),
               "the sequence is still made, with no effect pointing at a missing file, and it says which");
         GenerationSidecar keptChoice;
         Check(ReadSidecar(lost.sidecarPath, keptChoice, error) == SidecarStatus::Ok &&
@@ -1520,6 +1792,31 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     r.visionModelDir = o.visionModel;
     if (!o.mediaVariant.empty()) {
         r.mediaVariant = static_cast<int>(std::strtol(o.mediaVariant.c_str(), nullptr, 10));
+    }
+    if (!o.lyricsMode.empty() || !o.screens.empty()) {
+        ScreenSettings ss;
+        ss.set = true;
+        if (!o.lyricsMode.empty() && !LyricsModeFromId(o.lyricsMode, ss.mode)) {
+            printf("composer-generate: REFUSED: unknown lyrics mode '%s' (lyrics-first, smart or free)\n", o.lyricsMode.c_str());
+            return 2;
+        }
+        for (size_t at = 0; at < o.screens.size();) {
+            const size_t end = std::min(o.screens.find(';', at), o.screens.size());
+            const std::string item = o.screens.substr(at, end - at);
+            const size_t eq = item.find('=');
+            if (eq != std::string::npos) {
+                ScreenChoice c;
+                c.target = item.substr(0, eq);
+                if (!SurfaceRoleFromId(item.substr(eq + 1), c.role)) {
+                    printf("composer-generate: REFUSED: unknown screen role in '%s'\n", item.c_str());
+                    return 2;
+                }
+                c.roleSet = true;
+                ss.screens.push_back(c);
+            }
+            at = end + 1;
+        }
+        MergeScreenSettings(r.corrections.screens, ss);
     }
     if (!o.level.empty()) {
         AutomationLevel level;

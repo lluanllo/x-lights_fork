@@ -1,7 +1,12 @@
 #include "composer/MediaFraming.h"
 
 #include "composer/MediaAnalysis.h"
+#include "media/VideoWriter.h"
 #include "utils/xlImage.h"
+
+#include <nlohmann/json.hpp>
+#include <chrono>
+#include <ctime>
 
 #include <spdlog/fmt/fmt.h>
 
@@ -116,9 +121,33 @@ FrameTarget FrameTargetOf(const TargetInfo& t) {
 }
 
 std::string MediaFraming::DerivedName(const MediaItem& item) const {
-    const std::string params = fmt::format("{}|{}|{}x{}|{:.4f},{:.4f},{:.4f},{:.4f}|{:.4f}{}", MEDIA_FRAMING_VERSION, layout, derivedWi, derivedHt, cropX, cropY, cropW, cropH, coverage,
-                                           bandsAcross ? "a" : "s");
+    std::string params = fmt::format("{}|{}|{}x{}|{:.4f},{:.4f},{:.4f},{:.4f}|{:.4f}{}", MEDIA_FRAMING_VERSION, layout, derivedWi, derivedHt, cropX, cropY, cropW, cropH, coverage,
+                                     bandsAcross ? "a" : "s");
+    if (std::fabs(roll) > 1e-6) {
+        params += fmt::format("|roll{:.4f}", roll); // unchanged name for the pictures made before
+    }
     return fmt::format("{}-{:016x}.png", item.hash.empty() ? std::string("0") : item.hash, Fnv(params));
+}
+
+std::string MediaFraming::ClipName(const MediaItem& item, int durationMS) const {
+    const std::string params = fmt::format("clip{}|{}x{}|{:.4f},{:.4f},{:.4f},{:.4f}>{:.4f},{:.4f},{:.4f},{:.4f}|{}", MEDIA_FRAMING_VERSION, clipWi, clipHt, fromX, fromY, fromW, fromH, toX, toY, toW, toH,
+                                           durationMS / 50);
+    return fmt::format("{}-{:016x}.mp4", item.hash.empty() ? std::string("0") : item.hash, Fnv(params));
+}
+
+std::vector<FramePiece> SpreadOnColumns(double start, double width, double cropX0, double cropX1) {
+    std::vector<FramePiece> out;
+    start = start - std::floor(start);
+    width = std::clamp(width, 0.0, 1.0);
+    if (start + width <= 1.0 + 1e-9) {
+        out.push_back({ start, std::min(1.0, start + width), cropX0, cropX1 });
+        return out;
+    }
+    const double first = 1.0 - start;
+    const double split = cropX0 + (cropX1 - cropX0) * first / width;
+    out.push_back({ start, 1.0, cropX0, split });
+    out.push_back({ 0.0, start + width - 1.0, split, cropX1 });
+    return out;
 }
 
 std::string MediaDerivedDir(const std::string& showDir) {
@@ -165,13 +194,38 @@ MediaFraming PlanFraming(const MediaItem& item, const FrameTarget& t, int durati
                 Set(f, "Video_AspectRatio", "1");
             }
         }
-        f.score = Score(f, false);
-        if (t.wraps && ai < want * 0.6) {
-            // A narrow video round a whole tree is stretched sideways.
-            f.score = std::round(f.score * 0.6 * 1000.0) / 1000.0;
-            f.constraints.push_back("stretched");
+        if (t.wraps) {
+            // Round a whole tree a video is drawn by pieces on the columns: a panorama
+            // all the way round, anything else on both faces, so it is seen from any side
+            // and never stretched; the pieces start together and stay in step.
+            f.settings.clear();
+            f.constraints.clear();
+            // Only a real panorama goes round: anything else is seen whole from either side.
+            const bool round = ai >= std::max(1.9, t.wrapAspect * 1.4);
+            Crop(ai, round ? t.wrapAspect : t.faceAspect, px, py, f);
+            f.strategy = round ? "video-wrap" : "video-faces";
+            f.coverage = 1;
+            f.poiKept = Inside(f, px, py);
+            const double shift = t.frontOffset - 0.25;
+            if (round) {
+                f.pieces = SpreadOnColumns(shift, 1.0, f.cropX, f.cropX + f.cropW);
+            } else {
+                for (double face : { 0.0, 0.5 }) {
+                    for (const FramePiece& p : SpreadOnColumns(shift + face, 0.5, f.cropX, f.cropX + f.cropW)) {
+                        f.pieces.push_back(p);
+                    }
+                }
+                f.constraints.push_back("two-faces");
+            }
+            Set(f, "Video_AspectRatio", "0");
+            Set(f, "Video_CropTop", Int((1.0 - f.cropY) * 100));
+            Set(f, "Video_CropBottom", Int((1.0 - f.cropY - f.cropH) * 100));
+            if (f.kept < 0.999) {
+                f.constraints.push_back("cropped");
+            }
         }
-        f.why = fmt::format("{} {:.2f} on {:.2f}", f.strategy, ai, want);
+        f.score = Score(f, false);
+        f.why = fmt::format("{} {:.2f} on {:.2f}{}", f.strategy, ai, want, f.pieces.size() > 1 ? fmt::format(" in {} pieces", f.pieces.size()) : std::string());
         return f;
     }
 
@@ -203,6 +257,7 @@ MediaFraming PlanFraming(const MediaItem& item, const FrameTarget& t, int durati
     f.constraints.push_back("derived");
     Set(f, "Scaling", "No Scaling");
     if (t.tree && t.wraps) {
+        f.roll = t.frontOffset - 0.25;
         if (ai >= t.wrapAspect * 0.8) {
             // A panorama goes all the way round and turns slowly.
             f.strategy = "tree-wrap";
@@ -216,7 +271,7 @@ MediaFraming PlanFraming(const MediaItem& item, const FrameTarget& t, int durati
                 const double turn = std::min(1.0, durationMS / 20000.0);
                 Set(f, "Pictures_Direction", "vector");
                 Set(f, "PicturesXC", "0");
-                Set(f, "PicturesEndXC", Int((seed % 2 == 0 ? -100.0 : 100.0) * turn));
+                Set(f, "PicturesEndXC", Int((t.turn < 0 ? 100.0 : t.turn > 0 && seed % 2 != 0 ? -100.0 : seed % 2 == 0 ? -100.0 : 100.0) * turn));
                 f.constraints.push_back("turns");
             }
         } else {
@@ -232,7 +287,7 @@ MediaFraming PlanFraming(const MediaItem& item, const FrameTarget& t, int durati
                 f.moves = true;
                 Set(f, "Pictures_Direction", "vector");
                 Set(f, "PicturesXC", "0");
-                Set(f, "PicturesEndXC", Int(-100.0 * std::min(0.5, durationMS / 16000.0)));
+                Set(f, "PicturesEndXC", Int((t.turn < 0 ? 100.0 : -100.0) * std::min(0.5, durationMS / 16000.0)));
                 f.constraints.push_back("turns");
             } else {
                 f.strategy = "tree-faces";
@@ -350,6 +405,53 @@ MediaFraming PlanFraming(const MediaItem& item, const FrameTarget& t, int durati
             f.constraints.push_back("zooms");
         }
         f.poiKept = Inside(f, px, py);
+        // The same movement as a clip that eases in and out: the "vector" movement is
+        // linear, and its scale steps in whole percents.
+        double vw = 1, vh = 1;
+        if (ai >= A) {
+            vw = A / ai;
+        } else {
+            vh = ai / A;
+        }
+        const auto clampC = [](double c, double size) { return std::clamp(c, size / 2, 1.0 - size / 2); };
+        double fx = 0.5, fy = 0.5, tx = 0.5, ty = 0.5, fw = vw, fh = vh, tw = vw, th = vh;
+        if (pick == "pan-x" || pick == "pan-y") {
+            const bool x = pick == "pan-x";
+            const double size = x ? vw : vh;
+            const double end = clampC(x ? px : py, size);
+            double start = end >= 0.5 ? size / 2 : 1.0 - size / 2;
+            if (std::fabs(end - start) < (1.0 - size) * 0.25) {
+                start = 1.0 - start;
+            }
+            const double travel = size * std::max(1.0, durationMS / 5000.0);
+            if (std::fabs(end - start) > travel) {
+                start = end + (start > end ? travel : -travel);
+            }
+            (x ? fx : fy) = start;
+            (x ? tx : ty) = end;
+        } else {
+            const double z = 1.0 + std::clamp(0.12 + durationMS / 60000.0, 0.12, 0.3);
+            const bool in = pick == "zoom-in";
+            const double zw = vw / z, zh = vh / z;
+            const double cx = clampC(px, zw), cy = clampC(py, zh);
+            (in ? tw : fw) = zw;
+            (in ? th : fh) = zh;
+            (in ? tx : fx) = cx;
+            (in ? ty : fy) = cy;
+        }
+        f.motionClip = true;
+        f.fromW = fw;
+        f.fromH = fh;
+        f.fromX = clampC(fx, fw) - fw / 2;
+        f.fromY = clampC(fy, fh) - fh / 2;
+        f.toW = tw;
+        f.toH = th;
+        f.toX = clampC(tx, tw) - tw / 2;
+        f.toY = clampC(ty, th) - th / 2;
+        const int k = std::clamp(320 / std::max(1, W), 2, 6);
+        f.clipWi = (W * k + 1) / 2 * 2;
+        f.clipHt = (H * k + 1) / 2 * 2;
+        f.clipSettings = { { "Video_DurationTreatment", "Normal" }, { "Video_AspectRatio", "0" } };
     }
     // A plain fill or fit on a figure with square lights needs nothing derived: the
     // effect reads the person's own file and scales it itself, unless the file is
@@ -462,6 +564,18 @@ bool MakeDerivedPicture(const MediaItem& item, const MediaFraming& f, const std:
         error = "layout";
         return false;
     }
+    // A tree's front is wherever a person put it: the picture turns with it.
+    const int shift = static_cast<int>(std::lround(f.roll * W));
+    if (shift % W != 0) {
+        xlImage turned(W, H);
+        for (int y = 0; y < H; ++y) {
+            for (int x = 0; x < W; ++x) {
+                const int sx = ((x - shift) % W + W) % W;
+                std::copy_n(out.GetData() + (static_cast<size_t>(y) * W + sx) * 4, 4, turned.GetData() + (static_cast<size_t>(y) * W + x) * 4);
+            }
+        }
+        out = std::move(turned);
+    }
     std::vector<uint8_t> png;
     if (!out.SaveAsPNG(png)) {
         error = "encode";
@@ -487,4 +601,166 @@ bool MakeDerivedPicture(const MediaItem& item, const MediaFraming& f, const std:
     return true;
 }
 
+namespace {
+
+// Starts and ends slowly, as a camera operator would.
+double Ease(double t) {
+    t = std::clamp(t, 0.0, 1.0);
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+fs::path IndexPath(const std::string& showDir) {
+    return P(MediaDerivedDir(showDir)) / "index.json";
+}
+
+std::string Today() {
+    const std::time_t now = std::time(nullptr);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &now);
+#else
+    gmtime_r(&now, &tm);
+#endif
+    return fmt::format("{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+}
+
+} // namespace
+
+bool MakeMotionClip(const MediaItem& item, const MediaFraming& f, int durationMS, const std::string& showDir, std::string& relative, std::string& error) {
+    relative.clear();
+    if (!f.motionClip || f.clipWi < 2 || f.clipHt < 2 || durationMS <= 0) {
+        error = "no-clip";
+        return false;
+    }
+    const std::string name = f.ClipName(item, durationMS);
+    const fs::path dir = P(MediaDerivedDir(showDir));
+    const fs::path file = dir / name;
+    relative = "ShowComposer/media-derived/" + name;
+    std::error_code ec;
+    if (fs::is_regular_file(file, ec) && fs::file_size(file, ec) > 0) {
+        return true;
+    }
+    xlImage original;
+    if (!LoadMediaPicture(item, 2048, original) || !original.IsOk()) {
+        error = "original-unreadable";
+        return false;
+    }
+    fs::create_directories(dir, ec);
+    const int ow = original.GetWidth();
+    const int oh = original.GetHeight();
+    const uint8_t* src = original.GetData();
+    const int W = f.clipWi;
+    const int H = f.clipHt;
+    const int frames = std::max(2, (durationMS + 49) / 50);
+    const fs::path tmp = dir / (name + ".tmp.mp4");
+    VideoWriterParams params;
+    params.width = W;
+    params.height = H;
+    params.fps = 20;
+    params.audioSampleRate = 0;
+    params.inputChannels = 3;
+    params.cpuFrames = true;
+    params.videoCodec = "H.264";
+    try {
+        VideoWriter writer(S(tmp), params, true);
+        writer.setGetVideoCallback([&](VideoWriterFrame& vf, unsigned index) {
+            const double e = Ease(frames > 1 ? static_cast<double>(std::min<unsigned>(index, frames - 1)) / (frames - 1) : 0);
+            const double vx = f.fromX + (f.toX - f.fromX) * e;
+            const double vy = f.fromY + (f.toY - f.fromY) * e;
+            const double vw = f.fromW + (f.toW - f.fromW) * e;
+            const double vh = f.fromH + (f.toH - f.fromH) * e;
+            for (int y = 0; y < H; ++y) {
+                const double gy = std::clamp((vy + vh * (y + 0.5) / H) * oh - 0.5, 0.0, oh - 1.0);
+                const int iy = static_cast<int>(gy);
+                const int jy = std::min(oh - 1, iy + 1);
+                const double ty = gy - iy;
+                for (int x = 0; x < W; ++x) {
+                    const double gx = std::clamp((vx + vw * (x + 0.5) / W) * ow - 0.5, 0.0, ow - 1.0);
+                    const int ix = static_cast<int>(gx);
+                    const int jx = std::min(ow - 1, ix + 1);
+                    const double tx = gx - ix;
+                    uint8_t* px = vf.rgbBuffer + (static_cast<size_t>(y) * W + x) * 3;
+                    for (int c = 0; c < 3; ++c) {
+                        const auto at = [&](int xx, int yy) { return src[(static_cast<size_t>(yy) * ow + xx) * 4 + c] * (src[(static_cast<size_t>(yy) * ow + xx) * 4 + 3] / 255.0); };
+                        const double a = at(ix, iy) * (1 - tx) + at(jx, iy) * tx;
+                        const double b = at(ix, jy) * (1 - tx) + at(jx, jy) * tx;
+                        px[c] = static_cast<uint8_t>(std::clamp(std::lround(a * (1 - ty) + b * ty), 0L, 255L));
+                    }
+                }
+            }
+            return true;
+        });
+        writer.initialize();
+        writer.exportFrames(frames);
+        writer.completeExport();
+    } catch (const std::exception& e) {
+        fs::remove(tmp, ec);
+        error = std::string("clip-write:") + e.what();
+        return false;
+    }
+    if (!fs::is_regular_file(tmp, ec) || fs::file_size(tmp, ec) == 0) {
+        fs::remove(tmp, ec);
+        error = "clip-write";
+        return false;
+    }
+    fs::rename(tmp, file, ec);
+    if (ec) {
+        fs::remove(tmp, ec);
+        error = "clip-write";
+        return false;
+    }
+    return true;
+}
+
+int PruneMediaDerived(const std::string& showDir, const std::vector<std::string>& keep, int maxAgeDays) {
+    const fs::path dir = P(MediaDerivedDir(showDir));
+    std::error_code ec;
+    if (!fs::is_directory(dir, ec)) {
+        return 0;
+    }
+    nlohmann::json index = nlohmann::json::object();
+    if (std::ifstream in(IndexPath(showDir), std::ios::binary); in) {
+        index = nlohmann::json::parse(in, nullptr, false);
+        if (!index.is_object()) {
+            index = nlohmann::json::object();
+        }
+    }
+    const std::string today = Today();
+    for (const std::string& k : keep) {
+        index[k] = today;
+    }
+    // Days since a "YYYY-MM-DD" date, by its days since the year 0 (good enough here).
+    const auto days = [](const std::string& d) {
+        const int y = std::atoi(d.substr(0, 4).c_str()), m = std::atoi(d.substr(5, 2).c_str()), dd = std::atoi(d.substr(8, 2).c_str());
+        return y * 372 + m * 31 + dd;
+    };
+    int removed = 0;
+    for (const auto& e : fs::directory_iterator(dir, ec)) {
+        if (!e.is_regular_file(ec)) {
+            continue;
+        }
+        const std::string name = S(e.path().filename());
+        if (name == "index.json" || std::find(keep.begin(), keep.end(), name) != keep.end()) {
+            continue;
+        }
+        if (!index.contains(name)) {
+            index[name] = today; // first seen now: kept for a while
+            continue;
+        }
+        const std::string last = index[name].get<std::string>();
+        if (days(today) - days(last) >= maxAgeDays) {
+            if (fs::remove(e.path(), ec)) {
+                ++removed;
+                index.erase(name);
+            }
+        }
+    }
+    {
+        std::ofstream out(IndexPath(showDir), std::ios::binary | std::ios::trunc);
+        out << index.dump(1);
+    }
+    return removed;
+}
+
 } // namespace composer
+

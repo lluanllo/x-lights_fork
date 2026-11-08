@@ -1,6 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
 #include "composer/SequenceWriter.h"
+#include "composer/MediaFraming.h"
 #include "composer/VisualModel.h"
 #include "effects/EffectManager.h"
 #include "render/FSEQFile.h"
@@ -947,6 +948,7 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
     if (r.mediaVariant) {
         session.variant = *r.mediaVariant;
     }
+    MergeScreenSettings(session.screens, run.corrections.screens);
     // Media only for a show that asked for it, with its folders or a person's choices.
     if (session.folders.empty() && run.corrections.media.empty()) {
         return;
@@ -1027,6 +1029,10 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
     in.library = &run.mediaLibrary;
     in.analysis = &run.analysis;
     in.options.variant = session.variant;
+    in.screens = &session.screens;
+    if (run.hasLyrics) {
+        in.alignment = &run.alignment;
+    }
     in.metadata = &run.metadata;
     in.direction = run.direction.enabled ? &run.direction : nullptr;
     if (run.direction.enabled) {
@@ -1085,6 +1091,27 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
         }
     }
     session.storyboardHash = board.hash;
+    for (const Surface& sf : run.media.surfaces.surfaces) {
+        if (sf.role != SurfaceRole::Support && sf.role != SurfaceRole::Off) {
+            Note(run, S, "screen", fmt::format("{}: {} ({}), {} lights, words {:.0f}%, free {:.0f}%", sf.target, SurfaceRoleId(sf.role), sf.roleSource, sf.pixels, sf.lyricShare * 100, sf.freeShare * 100));
+        }
+    }
+    for (const std::string& w : run.media.surfaces.warnings) {
+        Note(run, S, "screen-warning", w);
+    }
+    // Derived pictures and clips nothing has used for two months go.
+    if (!r.showDir.empty()) {
+        std::vector<std::string> keep;
+        for (const MediaAssignment& a : run.media.assignments) {
+            if (a.path.rfind("ShowComposer/media-derived/", 0) == 0) {
+                keep.push_back(a.path.substr(std::string("ShowComposer/media-derived/").size()));
+            }
+        }
+        const int pruned = PruneMediaDerived(r.showDir, keep, 60);
+        if (pruned > 0) {
+            Note(run, S, "media-derived-pruned", fmt::format("{} files unused for 60 days", pruned));
+        }
+    }
     if (!board.lanes.empty()) {
         Note(run, S, "storyboard", fmt::format("{} shots on {} screens, {} files ({} images, {} videos), {} derived, {} repeats ({} by the music), {} gaps, mean {:.2f}, analysis {}, hash {}", board.stats.shots,
                                                board.lanes.size(), board.stats.distinctFiles, board.stats.images + board.stats.animations, board.stats.videos, board.stats.derived, board.stats.repeats,
@@ -1094,7 +1121,7 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
         }
     }
     for (const MediaAssignment& a : run.media.assignments) {
-        MediaUse use{ a.segmentId, a.target, a.startMS, a.endMS, a.mediaId, a.path, a.effect, a.state };
+        MediaUse use{ a.segmentId, a.target, a.startMS, a.endMS - a.overlapMS, a.mediaId, a.path, a.effect, a.state };
         use.source = a.source.empty() ? a.path : a.source;
         use.fragmentStartMS = a.kind == MediaKind::Video ? a.fragmentStartMS : -1;
         use.framing = a.framing;
@@ -1471,6 +1498,10 @@ void WriteDiagnostics(GenerationRun& run) {
             ok &= WriteText(report / "media-plan.json", ToJson(run.media));
             ok &= WriteText(report / "media-report.txt", MediaReport(run.media));
         }
+        if (!run.media.surfaces.surfaces.empty()) {
+            ok &= WriteText(report / "screens.json", SurfacePlanJson(run.media.surfaces).dump(2));
+            ok &= WriteText(report / "screens-report.txt", SurfaceReport(run.media.surfaces));
+        }
         if (!run.media.storyboard.lanes.empty()) {
             ok &= WriteText(report / "storyboard.json", StoryboardJson(run.media.storyboard).dump(2));
             ok &= WriteText(report / "storyboard-report.txt", StoryboardReport(run.media.storyboard));
@@ -1619,9 +1650,14 @@ std::string SummaryJson(const GenerationRun& run) {
         for (const StoryboardLaneStats& l : st.lanes) {
             lanes.push_back({ { "lane", l.lane }, { "shots", l.shots }, { "coverage", l.coverage }, { "ofFree", l.ofFree } });
         }
+        nlohmann::json screens = nlohmann::json::array();
+        for (const StoryboardLane& l : run.media.storyboard.lanes) {
+            screens.push_back({ { "target", l.target }, { "screen", l.screen }, { "gapsOnly", l.gapsOnly } });
+        }
         root["storyboard"] = { { "hash", run.media.storyboard.hash }, { "analysis", run.media.storyboard.analysisMode }, { "shots", st.shots }, { "files", st.distinctFiles }, { "images", st.images + st.animations },
                                { "videos", st.videos }, { "derived", st.derived }, { "repeats", st.repeats }, { "repeatsByMusic", st.repeatsByMusic }, { "gaps", st.gaps }, { "meanScore", st.meanScore },
-                               { "lanes", std::move(lanes) } };
+                               { "lanes", std::move(lanes) }, { "screens", std::move(screens) }, { "lyricsMode", run.media.storyboard.lyricsMode }, { "meanShotMS", st.meanShotMS },
+                               { "transitions", st.transitions }, { "coherence", st.coherence }, { "crossScreen", st.crossScreen }, { "overlays", st.overlays }, { "motionClips", st.motionClips } };
     }
     json coverage = json::array();
     for (const TargetCoverage& t : run.coverage) {

@@ -59,6 +59,11 @@ const StoryboardScene* VisualMediaStoryboard::Scene(const std::string& id) const
     return it != scenes.end() ? &*it : nullptr;
 }
 
+const StoryboardLane* VisualMediaStoryboard::Lane(const std::string& target) const {
+    const auto it = std::find_if(lanes.begin(), lanes.end(), [&](const StoryboardLane& l) { return l.target == target; });
+    return it != lanes.end() ? &*it : nullptr;
+}
+
 const char* MediaShotLevel(double score) {
     return score >= 0.7 ? "very-suitable" : score >= 0.55 ? "acceptable" : "doubtful";
 }
@@ -121,6 +126,16 @@ void ComputeStoryboardStats(VisualMediaStoryboard& b, int durationMS) {
         s.doubtful += level == "doubtful" ? 1 : 0;
         sum += sh->score;
     }
+    long long totalMS = 0;
+    for (const StoryboardShot& sh : b.shots) {
+        totalMS += sh.endMS - sh.startMS;
+        s.transitions[sh.transition.empty() ? std::string("fade") : sh.transition]++;
+        s.overlays += sh.overlay ? 1 : 0;
+        s.motionClips += std::find(sh.constraints.begin(), sh.constraints.end(), "motion-clip") != sh.constraints.end() ? 1 : 0;
+    }
+    s.meanShotMS = s.shots > 0 ? static_cast<int>(totalMS / s.shots) : 0;
+    s.coherence = b.stats.coherence;
+    s.crossScreen = b.stats.crossScreen;
     s.distinctFiles = static_cast<int>(files.size());
     s.gaps = static_cast<int>(b.gaps.size());
     s.missing = static_cast<int>(std::count_if(b.warnings.begin(), b.warnings.end(), [](const std::string& w) { return w.rfind("media-missing", 0) == 0; }));
@@ -132,7 +147,7 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
     json lanes = json::array();
     for (const StoryboardLane& l : b.lanes) {
         lanes.push_back({ { "target", l.target }, { "role", l.role }, { "buffer", { l.bufferWi, l.bufferHt } }, { "faceAspect", l.faceAspect }, { "degrees", l.degrees }, { "freeShare", l.freeShare },
-                          { "goal", l.goal }, { "reason", l.reason }, { "assumptions", l.assumptions } });
+                          { "goal", l.goal }, { "reason", l.reason }, { "assumptions", l.assumptions }, { "screen", l.screen }, { "gapsOnly", l.gapsOnly } });
     }
     json scenes = json::array();
     for (const StoryboardScene& s : b.scenes) {
@@ -144,7 +159,8 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
         json j = { { "id", s.id }, { "scene", s.sceneId }, { "lane", s.lane }, { "startMS", s.startMS }, { "endMS", s.endMS }, { "media", s.mediaId }, { "name", s.name },
                    { "kind", MediaKindId(s.kind) }, { "effect", s.effect }, { "path", s.path }, { "source", s.source }, { "framing", s.framing }, { "transitionIn", s.transitionIn },
                    { "fadeInMS", s.fadeInMS }, { "transitionOut", s.transitionOut }, { "fadeOutMS", s.fadeOutMS }, { "score", s.score }, { "level", s.level },
-                   { "state", DecisionStateId(s.state) }, { "reasons", ReasonsJson(s.reasons) }, { "constraints", s.constraints } };
+                   { "state", DecisionStateId(s.state) }, { "reasons", ReasonsJson(s.reasons) }, { "constraints", s.constraints }, { "layer", s.layer }, { "transition", s.transition },
+                   { "overlay", s.overlay }, { "pieces", s.pieces }, { "relation", s.relation }, { "overlapMS", s.overlapMS } };
         if (s.kind == MediaKind::Video) {
             j["fragment"] = { { "startMS", s.fragmentStartMS }, { "scene", s.fragmentScene } };
         }
@@ -166,8 +182,9 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
     json stats = { { "lanes", std::move(lanesStats) }, { "shots", st.shots }, { "images", st.images }, { "animations", st.animations }, { "videos", st.videos },
                    { "distinctFiles", st.distinctFiles }, { "repeats", st.repeats }, { "repeatsByMusic", st.repeatsByMusic }, { "consecutiveRepeats", st.consecutiveRepeats },
                    { "derived", st.derived }, { "gaps", st.gaps }, { "missing", st.missing }, { "verySuitable", st.veryGood }, { "acceptable", st.acceptable },
-                   { "doubtful", st.doubtful }, { "meanScore", st.meanScore } };
-    return { { "format", "xjuanjilights-storyboard" }, { "version", b.version }, { "seed", b.seed }, { "variant", b.variant }, { "level", b.level }, { "theme", b.themeId },
+                   { "doubtful", st.doubtful }, { "meanScore", st.meanScore }, { "meanShotMS", st.meanShotMS }, { "transitions", st.transitions }, { "coherence", st.coherence },
+                   { "crossScreen", st.crossScreen }, { "overlays", st.overlays }, { "motionClips", st.motionClips } };
+    return { { "format", "xjuanjilights-storyboard" }, { "version", b.version }, { "seed", b.seed }, { "variant", b.variant }, { "level", b.level }, { "theme", b.themeId }, { "lyricsMode", b.lyricsMode },
              { "analysis", b.analysisMode }, { "lanes", std::move(lanes) }, { "scenes", std::move(scenes) }, { "shots", std::move(shots) }, { "gaps", std::move(gaps) },
              { "discarded", std::move(discarded) }, { "stats", std::move(stats) }, { "warnings", b.warnings }, { "hash", b.hash } };
 }
@@ -184,6 +201,7 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
     b.level = j.value("level", std::string());
     b.themeId = j.value("theme", std::string());
     b.analysisMode = j.value("analysis", std::string());
+    b.lyricsMode = j.value("lyricsMode", std::string());
     for (const json& l : j.value("lanes", json::array())) {
         StoryboardLane lane;
         lane.target = l.value("target", std::string());
@@ -197,6 +215,8 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         lane.freeShare = l.value("freeShare", 0.0);
         lane.goal = l.value("goal", 0.0);
         lane.reason = l.value("reason", std::string());
+        lane.screen = l.value("screen", std::string());
+        lane.gapsOnly = l.value("gapsOnly", false);
         lane.assumptions = l.value("assumptions", std::vector<std::string>());
         b.lanes.push_back(std::move(lane));
     }
@@ -237,6 +257,12 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         sh.state = StateFrom(s.value("state", std::string()));
         sh.reasons = ReasonsFrom(s.value("reasons", json::array()));
         sh.constraints = s.value("constraints", std::vector<std::string>());
+        sh.layer = s.value("layer", 0);
+        sh.transition = s.value("transition", std::string());
+        sh.overlay = s.value("overlay", false);
+        sh.pieces = s.value("pieces", 1);
+        sh.relation = s.value("relation", std::string());
+        sh.overlapMS = s.value("overlapMS", 0);
         if (s.contains("fragment") && s["fragment"].is_object()) {
             sh.fragmentStartMS = s["fragment"].value("startMS", 0);
             sh.fragmentScene = s["fragment"].value("scene", -1);
@@ -269,6 +295,12 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         b.stats.acceptable = s.value("acceptable", 0);
         b.stats.doubtful = s.value("doubtful", 0);
         b.stats.meanScore = s.value("meanScore", 0.0);
+        b.stats.meanShotMS = s.value("meanShotMS", 0);
+        b.stats.transitions = s.value("transitions", std::map<std::string, int>());
+        b.stats.coherence = s.value("coherence", 0.0);
+        b.stats.crossScreen = s.value("crossScreen", 0.0);
+        b.stats.overlays = s.value("overlays", 0);
+        b.stats.motionClips = s.value("motionClips", 0);
     }
     b.warnings = j.value("warnings", std::vector<std::string>());
     b.hash = j.value("hash", std::string());
@@ -279,8 +311,8 @@ std::string StoryboardHash(const VisualMediaStoryboard& b) {
     // What decides the show: the shots and their settings' inputs, not the wording.
     std::string key = fmt::format("{}|{}|{}", b.version, b.seed, b.variant);
     for (const StoryboardShot& s : b.shots) {
-        key += fmt::format("|{}:{}:{}-{}:{}:{}:{}:{}:{}{}/{}{}", s.lane, s.sceneId, s.startMS, s.endMS, s.mediaId, s.path, s.fragmentStartMS, s.framing, s.transitionIn, s.fadeInMS, s.transitionOut,
-                           s.fadeOutMS);
+        key += fmt::format("|{}:{}:{}-{}:{}:{}:{}:{}:{}{}/{}{}:{}{}{}{}", s.lane, s.sceneId, s.startMS, s.endMS, s.mediaId, s.path, s.fragmentStartMS, s.framing, s.transitionIn, s.fadeInMS, s.transitionOut,
+                           s.fadeOutMS, s.layer, s.transition, s.overlay ? "o" : "", s.pieces);
     }
     return fmt::format("{:016x}", Fnv(key));
 }
@@ -290,6 +322,12 @@ std::string StoryboardReport(const VisualMediaStoryboard& b) {
                                   b.version, b.themeId.empty() ? std::string("none") : b.themeId, b.level, b.analysisMode, b.variant, b.stats.shots, b.stats.distinctFiles, b.stats.images, b.stats.animations,
                                   b.stats.videos, b.stats.derived, b.stats.repeats, b.stats.repeatsByMusic, b.stats.consecutiveRepeats, b.stats.gaps, b.stats.meanScore, b.stats.veryGood, b.stats.acceptable,
                                   b.stats.doubtful, b.hash);
+    std::string kinds;
+    for (const auto& [k, n] : b.stats.transitions) {
+        kinds += fmt::format("{}{} {}", kinds.empty() ? "" : ", ", n, k);
+    }
+    out += fmt::format("words and pictures: {}; mean shot {:.1f} s; transitions: {}; continuity on a screen {:.2f}, between screens {:.2f}; {} between phrases, {} motion clips\n",
+                       b.lyricsMode.empty() ? std::string("-") : b.lyricsMode, b.stats.meanShotMS / 1000.0, kinds, b.stats.coherence, b.stats.crossScreen, b.stats.overlays, b.stats.motionClips);
     for (const StoryboardLane& l : b.lanes) {
         const auto st = std::find_if(b.stats.lanes.begin(), b.stats.lanes.end(), [&](const StoryboardLaneStats& s) { return s.lane == l.target; });
         out += fmt::format("lane {} ({}, {}x{}, real shape {:.2f}{}): free {:.0f}% of the song, goal {:.0f}% of that, {} shots, {:.0f}% of the song, {:.0f}% of its free time\n", l.target, l.role, l.bufferWi,
@@ -309,10 +347,15 @@ std::string StoryboardReport(const VisualMediaStoryboard& b) {
             if (sh.sceneId != s.id) {
                 continue;
             }
-            out += fmt::format("  {} {}-{}: {} ({} {}{}), {}, in {}{} out {}{}, {:.2f} {} [{}]", sh.lane, Clock(sh.startMS), Clock(sh.endMS), sh.name, sh.effect, sh.framing,
-                               sh.kind == MediaKind::Video ? fmt::format(" from {:.1f} s", sh.fragmentStartMS / 1000.0) : std::string(), sh.path, sh.transitionIn.empty() ? "cut" : sh.transitionIn,
+            out += fmt::format("  {}{} {}-{}: {} ({} {}{}), {}, {} in {}{} out {}{}, layer {}{}, {:.2f} {} [{}]", sh.lane, sh.overlay ? " (between phrases)" : "", Clock(sh.startMS), Clock(sh.endMS), sh.name, sh.effect, sh.framing,
+                               sh.kind == MediaKind::Video ? fmt::format(" from {:.1f} s", sh.fragmentStartMS / 1000.0) : std::string(), sh.path, sh.transition.empty() ? std::string("fade") : sh.transition,
+                               sh.transitionIn.empty() ? "cut" : sh.transitionIn,
                                sh.fadeInMS > 0 ? fmt::format(" {} ms", sh.fadeInMS) : std::string(), sh.transitionOut.empty() ? "cut" : sh.transitionOut,
-                               sh.fadeOutMS > 0 ? fmt::format(" {} ms", sh.fadeOutMS) : std::string(), sh.score, sh.level, DecisionStateId(sh.state));
+                               sh.fadeOutMS > 0 ? fmt::format(" {} ms", sh.fadeOutMS) : std::string(), sh.layer, sh.pieces > 1 ? fmt::format(", {} pieces", sh.pieces) : std::string(), sh.score, sh.level,
+                               DecisionStateId(sh.state));
+            if (!sh.relation.empty()) {
+                out += "; relation " + sh.relation;
+            }
             for (const Reason& r : sh.reasons) {
                 out += fmt::format("; {} {}", r.code, r.detail);
             }

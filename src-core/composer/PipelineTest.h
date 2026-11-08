@@ -39,6 +39,8 @@ struct GenerateCommandOptions {
     bool analyzeMedia = false; // look at the files again before planning
     std::string visionModel;   // the image-text model's folder, for --analyze-media
     std::string mediaVariant;  // another montage from the same files
+    std::string lyricsMode;    // "lyrics-first", "smart" or "free"
+    std::string screens;       // "Name=role;Name=role", roles as in screens.json
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

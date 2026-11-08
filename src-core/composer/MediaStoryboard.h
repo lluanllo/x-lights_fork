@@ -5,6 +5,7 @@
 
 #include <nlohmann/json_fwd.hpp>
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -30,6 +31,8 @@ struct StoryboardLane {
     double goal = 0;      // share of that free time the montage aims to fill
     std::string reason;   // why this figure, and what the others had
     std::vector<std::string> assumptions;
+    std::string screen;   // its role as a screen: "main", "secondary", "tree", "media", "lyrics"
+    bool gapsOnly = false; // a screen showing words: pictures only between its phrases
 };
 
 struct StoryboardScene {
@@ -70,6 +73,12 @@ struct StoryboardShot {
     DecisionState state = DecisionState::Automatic;
     std::vector<Reason> reasons;
     std::vector<std::string> constraints;
+    int layer = 0;            // the effect layer (two alternate for a cross-fade)
+    std::string transition;   // how it comes in: "cut", "fade", "crossfade", "zoom", "wipe", "rest"
+    bool overlay = false;     // between the phrases of a screen showing words
+    int pieces = 1;           // effects that draw it (a video on both faces of a tree: 2 or 3)
+    int overlapMS = 0;        // how far it stays on past its end, fading under the next shot
+    std::string relation;     // to the shot before on its screen: "same-ambience", "same-motif", ...
 };
 
 struct StoryboardGap {
@@ -113,6 +122,12 @@ struct StoryboardStats {
     int acceptable = 0;
     int doubtful = 0;
     double meanScore = 0;
+    int meanShotMS = 0;
+    std::map<std::string, int> transitions; // kind -> count
+    double coherence = 0; // mean relation of each shot to the one before on its screen, 0..1
+    double crossScreen = 0; // mean relation between the screens of a scene, 0..1
+    int overlays = 0;
+    int motionClips = 0;
 };
 
 struct VisualMediaStoryboard {
@@ -122,6 +137,7 @@ struct VisualMediaStoryboard {
     std::string level;
     std::string themeId;
     std::string analysisMode; // "semantic", "basic", "mixed" or "none"
+    std::string lyricsMode;   // how words and pictures share the screens
     std::vector<StoryboardLane> lanes;
     std::vector<StoryboardScene> scenes;
     std::vector<StoryboardShot> shots; // by lane, then start
@@ -133,6 +149,7 @@ struct VisualMediaStoryboard {
 
     [[nodiscard]] bool Empty() const { return shots.empty(); }
     [[nodiscard]] const StoryboardScene* Scene(const std::string& id) const;
+    [[nodiscard]] const StoryboardLane* Lane(const std::string& target) const;
 };
 
 // A storyboard as the sidecar keeps an earlier version of it: enough to bring it back.
