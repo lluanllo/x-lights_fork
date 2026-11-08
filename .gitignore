@@ -90,3 +90,9 @@ lib/linux/.onnxruntime_version
 # Generated translation catalogs and Python bytecode
 resources/locale/**/*.mo
 __pycache__/
+
+# Local secrets (API keys go in the environment, never in the repository)
+.env
+.env.*
+*.env
+credentials.json
