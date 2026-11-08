@@ -31,9 +31,10 @@
 namespace composer {
 
 inline constexpr int PREFERENCES_VERSION = 1;
-// Learned values need this much backing before they act: two full decisions (an older
-// one weighs 0.85), never one.
+// Learned values need this much backing before they act, from at least two reviews: two
+// full decisions (an older one weighs 0.85), never one, and never one show alone.
 inline constexpr double PREFERENCE_MIN_SUPPORT = 1.75;
+inline constexpr int PREFERENCE_MIN_REVIEWS = 2;
 
 struct PreferenceSignal {
     std::string key;
@@ -64,6 +65,7 @@ struct Preference {
     double learned = 0;
     double support = 0;
     int decisions = 0;
+    int reviews = 0;     // the different shows' reviews behind it: a taste needs two
     double value = 0;    // what generation uses (0 when off or not backed enough)
     std::string source;  // "learned", "person", "learned-not-enough"
     bool enabled = true;

@@ -1094,7 +1094,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
             headlessArg = true;
             break;
         }
@@ -1225,6 +1225,9 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "clt", "composer-lyrics-test", "internal test: run the lyrics, phonetics and alignment cases under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-visual-test", "internal test: the visual analysis, framing and storyboard on pictures and videos it draws under --out (with --vision-model <folder>, also the image-text model), and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-review", "internal tool: apply --decisions <file> to the review of --sequence <xsq> in the show (-s), with the storyboard of --report <folder>; learn from it and write the next corrections to --out <file>; never approves a show" },
+        { wxCMD_LINE_OPTION, "", "decisions", "with --composer-review: the decisions file" },
+        { wxCMD_LINE_OPTION, "", "report", "with --composer-review: the report folder of the generation" },
         { wxCMD_LINE_SWITCH, "", "composer-learning-test", "internal test: the review of a show's pictures and videos, its approval, the labels of the library, the model measured against them and the preferences learned, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-media-eval", "internal tool: analyse the --media-folders of the show (-s) with --vision-model, twice to time the cache, and write a validation set and its metrics (from --labels <file> when given) under --out; then exit" },
         { wxCMD_LINE_OPTION, "", "labels", "with --composer-media-eval: a validation set with labels" },
@@ -2046,6 +2049,16 @@ bool xLightsApp::OnInit()
             std::exit(2);
         }
         std::exit(composer::RunMediaTest(outName.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-review")) {
+        wxString sequence, decisions, report, outName;
+        if (showDir.IsEmpty() || !parser.Found("sequence", &sequence) || !parser.Found("decisions", &decisions) || !parser.Found("report", &report) || !parser.Found("out", &outName)) {
+            spdlog::error("--composer-review requires -s, --sequence, --decisions, --report and --out");
+            std::exit(2);
+        }
+        std::exit(composer::RunReviewCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), report.ToStdString(wxConvUTF8), decisions.ToStdString(wxConvUTF8),
+                                             outName.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-learning-test")) {

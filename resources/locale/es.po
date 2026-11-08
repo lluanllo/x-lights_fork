@@ -11792,3 +11792,9 @@ msgstr "Cómo acierta el programa"
 
 msgid "decisions: %d"
 msgstr "decisiones: %d"
+
+msgid "decisions: %d, shows: %d"
+msgstr "decisiones: %d, espectáculos: %d"
+
+msgid "Learned from your reviews, on this computer. Nothing counts until it comes from the reviews of two shows; you can change, turn off or forget anything."
+msgstr "Aprendido de tus revisiones, en este ordenador. Nada cuenta hasta que sale de las revisiones de dos espectáculos; puedes cambiar, desactivar u olvidar cualquier cosa."

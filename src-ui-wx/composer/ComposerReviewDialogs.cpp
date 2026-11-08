@@ -709,7 +709,7 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, ArtisticPreferences prefs
     _prefs(std::move(prefs)),
     _library(library) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(new wxStaticText(this, wxID_ANY, _("Learned from your reviews, on this computer. Nothing is decided by one shot alone; you can change, turn off or forget anything.")), 0, wxALL, 8);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("Learned from your reviews, on this computer. Nothing counts until it comes from the reviews of two shows; you can change, turn off or forget anything.")), 0, wxALL, 8);
     _learning = new wxCheckBox(this, wxID_ANY, _("Use what has been learned when composing"));
     _learning->SetValue(_prefs.learning);
     sizer->Add(_learning, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
@@ -829,7 +829,7 @@ void PreferencesDialog::Fill() {
     for (const Preference& p : ComputePreferences(_prefs)) {
         _list->InsertItem(row, PreferenceName(p.key, _library));
         _list->SetItem(row, 1, p.source == "person" ? PreferenceValueText(p.value) : PreferenceValueText(p.learned));
-        _list->SetItem(row, 2, wxString::Format(_("decisions: %d"), p.decisions));
+        _list->SetItem(row, 2, wxString::Format(_("decisions: %d, shows: %d"), p.decisions, p.reviews));
         _list->SetItem(row, 3, p.source == "person" ? _("your value") : p.source == "learned" ? _("learned") : _("learned, not yet enough to count"));
         _list->SetItem(row, 4, !p.enabled ? _("off") : p.active ? _("yes") : _("not yet"));
         if (p.key == keep) {

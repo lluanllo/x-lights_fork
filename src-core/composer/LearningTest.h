@@ -11,4 +11,14 @@ namespace composer {
 
 [[nodiscard]] int RunLearningTest(const std::string& workDir);
 
+// Internal tool behind --composer-review: applies the decisions of `decisionsFile` to
+// the review of `sequencePath` (its sidecar; the storyboard from `reportDir`), keeps it,
+// learns from it in the show's preferences and writes the corrections that make the
+// next version (for --composer-generate --corrections) to `correctionsOut`. It never
+// approves a show: only a person does, in the window. Decisions file:
+//   { "author": "...", "clips": [ { "decision": "<id>" | "file": "<name>", "lane": "<screen>",
+//     "state": "approved|rejected|needs-fix|pending", "flags": [...], "note": "...",
+//     "replace": "<file name or media id>" } ] }
+[[nodiscard]] int RunReviewCommand(const std::string& showDir, const std::string& sequencePath, const std::string& reportDir, const std::string& decisionsFile, const std::string& correctionsOut);
+
 } // namespace composer

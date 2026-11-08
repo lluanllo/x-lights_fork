@@ -3,6 +3,7 @@
 #include "composer/ArtisticPreferences.h"
 #include "composer/GenerationSidecar.h"
 #include "composer/MediaAnalysis.h"
+#include "composer/MediaStoryboard.h"
 #include "composer/MediaValidation.h"
 #include "composer/VisualModel.h"
 #include "composer/VisualReview.h"
@@ -430,10 +431,108 @@ private:
             LearnFromReview(d, x, &lib, "");
         }
         Check(EffectivePreferences(d).contains("light.dark") && EffectivePreferences(d).at("light.dark") < 0, "dark videos turned down twice: a taste against dark ones");
+        // Approved in two shows, a file is wanted there, whatever the general taste says.
+        ArtisticPreferences kept;
+        for (const char* name : { "c.xsq", "e.xsq" }) {
+            VisualReview x = BuildReview(b, name, "s", nullptr);
+            DecideClip(x, "Matriz/chorus#1.1/1", ClipState::Approved, {}, "", "t");
+            LearnFromReview(kept, x, &lib, "");
+        }
+        Check(EffectivePreferences(kept).contains("file.m:b@Matriz") && EffectivePreferences(kept).at("file.m:b@Matriz") > 0, "a file approved in two shows is wanted on its screen");
     }
 };
 
 } // namespace
+
+int RunReviewCommand(const std::string& showDir, const std::string& sequencePath, const std::string& reportDir, const std::string& decisionsFile, const std::string& correctionsOut) {
+    std::string error;
+    GenerationSidecar sidecar;
+    const std::string sidecarPath = SidecarPathFor(sequencePath);
+    if (ReadSidecar(sidecarPath, sidecar, error) != SidecarStatus::Ok) {
+        printf("composer-review: the sidecar could not be read: %s\n", error.c_str());
+        return 1;
+    }
+    VisualMediaStoryboard board;
+    {
+        std::ifstream in(fs::path(std::u8string(reportDir.begin(), reportDir.end())) / "storyboard.json", std::ios::binary);
+        const json j = json::parse(in, nullptr, false);
+        if (!j.is_object() || !StoryboardFrom(j, board, error)) {
+            printf("composer-review: no storyboard in the report: %s\n", error.c_str());
+            return 1;
+        }
+    }
+    std::ifstream din(fs::path(std::u8string(decisionsFile.begin(), decisionsFile.end())), std::ios::binary);
+    const json d = json::parse(din, nullptr, false);
+    if (!d.is_object()) {
+        printf("composer-review: the decisions file is not JSON\n");
+        return 2;
+    }
+    MediaLibrary library;
+    const bool haveLibrary = ReadMediaLibrary(MediaLibraryPath(showDir), library, error);
+    const std::string author = d.value("author", std::string());
+    VisualReview& review = sidecar.review;
+    int applied = 0;
+    for (const json& c : d.value("clips", json::array())) {
+        std::string id = c.value("decision", std::string());
+        if (id.empty()) {
+            const std::string file = c.value("file", std::string());
+            const std::string lane = c.value("lane", std::string());
+            for (const ClipReview& k : review.clips) {
+                if (id.empty() && k.name == file && (lane.empty() || k.lane == lane)) {
+                    id = k.decisionId;
+                }
+            }
+        }
+        ClipState state;
+        if (id.empty() || review.Find(id) == nullptr || !ClipStateFromId(c.value("state", std::string("pending")), state)) {
+            printf("composer-review: skipped %s\n", c.dump().c_str());
+            continue;
+        }
+        const std::string note = c.value("note", std::string());
+        DecideClip(review, id, state, c.value("flags", std::vector<std::string>()), author.empty() ? note : "[" + author + "] " + note, author);
+        const std::string replace = c.value("replace", std::string());
+        if (!replace.empty() && haveLibrary) {
+            const MediaItem* m = library.Find(replace);
+            for (const MediaItem& x : library.items) {
+                m = m == nullptr && x.name == replace ? &x : m;
+            }
+            if (m != nullptr) {
+                ReplaceClipMedia(review, id, m->id, m->relative.empty() ? m->path : m->relative, author);
+            }
+        }
+        ++applied;
+    }
+    // Never an approval from a file: the state is in progress at most.
+    if (review.state == "approved" && !review.checklist.Complete()) {
+        review.state = "in-progress";
+    }
+    {
+        std::ofstream out(fs::path(std::u8string(sidecarPath.begin(), sidecarPath.end())), std::ios::binary | std::ios::trunc);
+        out << ToJson(sidecar);
+    }
+    ArtisticPreferences prefs;
+    (void)ReadPreferences(PreferencesPath(showDir), prefs, error);
+    const int learned = LearnFromReview(prefs, review, haveLibrary ? &library : nullptr, sidecar.profileId);
+    (void)SavePreferences(PreferencesPath(showDir), prefs, error);
+    CorrectionSet next;
+    next.media = sidecar.media.corrections;
+    for (const MediaCorrection& m : ReviewCorrections(review, board)) {
+        UpsertMediaCorrection(next.media, m);
+    }
+    next.review = review;
+    next.screens = sidecar.media.screens;
+    {
+        std::ofstream out(fs::path(std::u8string(correctionsOut.begin(), correctionsOut.end())), std::ios::binary | std::ios::trunc);
+        out << ToJson(next);
+    }
+    const ReviewCounts n = CountReview(review);
+    printf("composer-review: %d decisions applied; %d shots: %d approved, %d rejected, %d waiting for a fix, %d pending; %d signals learned; show %s\n", applied, n.clips, n.approved, n.rejected,
+           n.needsFix, n.pending, learned, review.state == "approved" ? "approved" : "NOT approved (only a person approves, in the window)");
+    for (const Preference& p : ComputePreferences(prefs)) {
+        printf("  preference %s: learned %.2f, %d decisions, %s\n", p.key.c_str(), p.learned, p.decisions, p.active ? "in use" : "not yet backed enough");
+    }
+    return 0;
+}
 
 int RunLearningTest(const std::string& workDir) {
     fs::path root;

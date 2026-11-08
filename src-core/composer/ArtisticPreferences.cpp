@@ -59,6 +59,7 @@ bool Has(const std::vector<std::string>& v, const std::string& x) {
 std::vector<Preference> ComputePreferences(const ArtisticPreferences& prefs) {
     std::map<std::string, Preference> byKey;
     std::map<std::string, double> sum;
+    std::map<std::string, std::set<std::string>> reviewsOf;
     for (const PreferenceSignal& s : prefs.signals) {
         Preference& p = byKey[s.key];
         p.key = s.key;
@@ -71,6 +72,7 @@ std::vector<Preference> ComputePreferences(const ArtisticPreferences& prefs) {
         if (std::find(p.origins.begin(), p.origins.end(), s.origin) == p.origins.end()) {
             p.origins.push_back(s.origin);
         }
+        reviewsOf[s.key].insert(s.origin.substr(0, s.origin.find('|')));
     }
     for (const auto& [key, o] : prefs.overrides) {
         byKey[key].key = key;
@@ -88,7 +90,8 @@ std::vector<Preference> ComputePreferences(const ArtisticPreferences& prefs) {
             p.value = p.enabled ? std::clamp(o->second.value, -1.0, 1.0) : 0;
             p.active = p.enabled;
         } else {
-            const bool backed = p.support >= PREFERENCE_MIN_SUPPORT;
+            p.reviews = static_cast<int>(reviewsOf[key].size());
+            const bool backed = p.support >= PREFERENCE_MIN_SUPPORT && p.reviews >= PREFERENCE_MIN_REVIEWS;
             p.source = backed ? "learned" : "learned-not-enough";
             p.active = p.enabled && backed && prefs.learning;
             p.value = p.active ? p.learned : 0;
@@ -148,6 +151,9 @@ int LearnFromReview(ArtisticPreferences& prefs, const VisualReview& review, cons
             add(origin, "concept." + conceptId, s, 0.5, what);
         }
         if (yes) {
+            // A file approved on a screen is wanted there: a general taste never takes away
+            // what the person kept approving.
+            add(origin, "file." + c.mediaId + "@" + c.lane, 1, 1.0, what);
             add(origin, "screen." + c.lane + ".presence", 1, 0.25, what);
             if (!c.transition.empty()) {
                 add(origin, "transition." + c.transition, 1, 0.5, what);

@@ -11790,3 +11790,9 @@ msgstr ""
 
 msgid "decisions: %d"
 msgstr ""
+
+msgid "decisions: %d, shows: %d"
+msgstr ""
+
+msgid "Learned from your reviews, on this computer. Nothing counts until it comes from the reviews of two shows; you can change, turn off or forget anything."
+msgstr ""
