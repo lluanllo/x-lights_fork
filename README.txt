@@ -12,6 +12,10 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: a song with no lyrics gets them from what Groq hears (sung lines only,
+                                 doubtful lines marked, nothing filled in), ready to read and correct before generating
+    -bug (lluanllo)              Show Composer: a line sung twice in a row is shown twice instead of stopping the
+                                 generation
     -enh (lluanllo)              Show Composer: review the pictures and videos of a show shot by shot (approve,
                                  reject with a reason, choose another file, add a note), apply the corrections
                                  without making the rest again, and approve the show only after ticking what you

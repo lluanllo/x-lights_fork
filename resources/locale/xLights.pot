@@ -11796,3 +11796,9 @@ msgstr ""
 
 msgid "Learned from your reviews, on this computer. Nothing counts until it comes from the reviews of two shows; you can change, turn off or forget anything."
 msgstr ""
+
+msgid "Groq heard no sung words in this song: no lyrics were made."
+msgstr ""
+
+msgid "No lyrics were given, so the lyrics are what Groq heard: %d phrases, %d of them doubtful, %d left out (not sung). Read them and correct them before generating: nothing was filled in from memory."
+msgstr ""

@@ -196,6 +196,29 @@ struct TranscribeOptions {
 [[nodiscard]] std::string ToJson(const Transcript& transcript);
 [[nodiscard]] bool FromJson(const std::string& text, Transcript& transcript, std::string& error);
 
+// Lyrics made from what a transcription heard, for a song with no lyrics of its own: one
+// LRC line per sung segment, long ones split where the singing pauses, an empty line
+// where a pause of 1.5 s or more follows, nothing past the song's end. Nothing is
+// invented or filled in from memory: a segment the service says has no voice, or that
+// is one of the sentences speech models write over music ("subtitles by...",
+// "subscribe..."), is left out and said so; a segment it was unsure of is kept and
+// marked doubtful, for a person to check.
+struct TranscriptLrcLine {
+    int startMS = 0;
+    int endMS = 0;
+    std::string text;
+    bool doubtful = false;
+    std::string why; // why doubtful
+};
+
+struct TranscriptLrc {
+    std::string lrc;
+    std::vector<TranscriptLrcLine> lines;
+    std::vector<std::pair<std::string, std::string>> dropped; // text, reason
+};
+
+[[nodiscard]] TranscriptLrc TranscriptToLrc(const Transcript& transcript, int durationMS);
+
 // --------------------------------------------------------------- song character
 
 struct CharacterSection {
@@ -293,7 +316,8 @@ struct TimedLine {
 // freezes it. The answer goes to `outPath` as JSON; a transcription or description is
 // also kept in the show's cache, where a later generation finds it offline.
 struct AssistCommandOptions {
-    std::string action;   // "lrclib", "transcribe" or "describe"
+    std::string action;   // "lrclib", "transcribe", "describe" or "transcript-lrc"
+    std::string transcriptPath; // transcript-lrc: the transcription to make lyrics from
     std::string audioPath;
     std::string showDir;  // for the cache; empty: no cache
     std::string outPath;

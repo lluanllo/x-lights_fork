@@ -922,6 +922,12 @@ private:
                 const EffectTemplate* t = _lib.Find(e.templateId);
                 const bool touching = p.target == e.target && p.layer == e.layer && p.endMS == e.startMS;
                 const bool automatic = p.state == DecisionState::Automatic && e.state == DecisionState::Automatic;
+                // A line sung twice is shown twice: each phrase keeps its own effect.
+                const auto phrase = [](const ChoreographyEvent& x) { return std::any_of(x.reasons.begin(), x.reasons.end(), [](const Reason& r) { return r.code == "phrase"; }); };
+                if (phrase(p) || phrase(e)) {
+                    merged.push_back(std::move(e));
+                    continue;
+                }
                 // The same effect with the same settings is prolonged, not cut and
                 // started again, while it stays within the template's length.
                 if (touching && automatic && !p.plannedTransitions && !e.plannedTransitions && p.templateId == e.templateId && p.settings == e.settings && p.paletteId == e.paletteId && t != nullptr &&

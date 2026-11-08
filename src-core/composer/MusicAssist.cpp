@@ -653,6 +653,131 @@ std::string ToJson(const Transcript& t) {
     return root.dump(2);
 }
 
+namespace {
+
+std::string Folded(const std::string& s) {
+    std::string out;
+    for (const unsigned char c : s) {
+        out += static_cast<char>(c < 128 ? std::tolower(c) : c);
+    }
+    return out;
+}
+
+std::string Trimmed(const std::string& s) {
+    const size_t a = s.find_first_not_of(" \t\r\n");
+    const size_t b = s.find_last_not_of(" \t\r\n");
+    return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
+
+} // namespace
+
+TranscriptLrc TranscriptToLrc(const Transcript& t, int durationMS) {
+    TranscriptLrc out;
+    const int end = durationMS > 0 ? durationMS : t.durationMS > 0 ? t.durationMS : 0;
+    // Sentences speech models write over music and silence, never sung in a carol.
+    static const char* const FILLERS[] = { "amara.org", "subtítulos", "subtitulos", "suscríbete", "suscribete", "gracias por ver", "thanks for watching", "música de fondo" };
+    for (const TranscriptSegment& seg : t.segments) {
+        const std::string text = Trimmed(seg.text);
+        if (text.empty()) {
+            continue;
+        }
+        const std::string folded = Folded(text);
+        bool filler = false;
+        for (const char* f : FILLERS) {
+            filler = filler || folded.find(f) != std::string::npos;
+        }
+        if (filler) {
+            out.dropped.emplace_back(text, "words written over music, not sung");
+            continue;
+        }
+        if (seg.noSpeechProb >= 0.8 && seg.avgLogprob < -1.0) {
+            out.dropped.emplace_back(text, fmt::format("the service heard no voice there ({:.2f})", seg.noSpeechProb));
+            continue;
+        }
+        if (end > 0 && seg.startMS >= end) {
+            out.dropped.emplace_back(text, "after the end of the song");
+            continue;
+        }
+        const bool unsure = seg.avgLogprob < -1.0 || seg.noSpeechProb >= 0.5;
+        const std::string why = unsure ? fmt::format("the service was unsure (log-probability {:.2f}, no voice {:.2f})", seg.avgLogprob, seg.noSpeechProb) : std::string();
+        // A long segment is split where the singing pauses, by its own words' times.
+        std::vector<const TranscriptWord*> words;
+        for (const TranscriptWord& w : t.words) {
+            if (w.startMS >= seg.startMS - 50 && w.endMS <= seg.endMS + 50) {
+                words.push_back(&w);
+            }
+        }
+        const auto add = [&](int a, int b, const std::string& s) {
+            TranscriptLrcLine l;
+            l.startMS = std::max(0, a);
+            l.endMS = end > 0 ? std::min(b, end) : b;
+            l.text = Trimmed(s);
+            l.doubtful = unsure;
+            l.why = why;
+            // The same word twice in a row, with nothing between ("voy voy camino camino"):
+            // two voices heard at once and written as one. A refrain with commas ("tuqui,
+            // tuqui") is sung that way and is not counted.
+            {
+                std::istringstream in(l.text);
+                std::string w, prev;
+                int doubled = 0;
+                while (in >> w) {
+                    const std::string f = Folded(w);
+                    doubled += !prev.empty() && f == prev && f.size() >= 2 ? 1 : 0;
+                    prev = f.empty() || f.back() == ',' || f.back() == '.' ? std::string() : f;
+                }
+                if (doubled >= 2 && !l.doubtful) {
+                    l.doubtful = true;
+                    l.why = fmt::format("{} words heard twice in a row: two voices at once may have been written as one", doubled);
+                }
+            }
+            if (!l.text.empty() && l.endMS > l.startMS) {
+                out.lines.push_back(l);
+            }
+        };
+        if (seg.endMS - seg.startMS <= 8000 || words.size() < 4) {
+            add(seg.startMS, seg.endMS, text);
+            continue;
+        }
+        size_t from = 0;
+        while (from < words.size()) {
+            size_t to = from;
+            // Grow the line to at most 8 s; cut at the widest pause in its second half.
+            while (to + 1 < words.size() && words[to + 1]->endMS - words[from]->startMS <= 8000) {
+                ++to;
+            }
+            if (to + 1 < words.size()) {
+                size_t best = to;
+                int gap = -1;
+                for (size_t k = from + (to - from) / 2; k < to; ++k) {
+                    const int g = words[k + 1]->startMS - words[k]->endMS;
+                    if (g > gap) {
+                        gap = g;
+                        best = k;
+                    }
+                }
+                to = best;
+            }
+            std::string s;
+            for (size_t k = from; k <= to; ++k) {
+                s += (s.empty() ? "" : " ") + Trimmed(words[k]->text);
+            }
+            add(words[from]->startMS, words[to]->endMS, s);
+            from = to + 1;
+        }
+    }
+    std::sort(out.lines.begin(), out.lines.end(), [](const TranscriptLrcLine& a, const TranscriptLrcLine& b) { return a.startMS < b.startMS; });
+    for (size_t i = 0; i < out.lines.size(); ++i) {
+        const TranscriptLrcLine& l = out.lines[i];
+        out.lrc += LrcTime(l.startMS) + l.text + "\n";
+        const int next = i + 1 < out.lines.size() ? out.lines[i + 1].startMS : end;
+        if (next - l.endMS >= 1500 || i + 1 == out.lines.size()) {
+            out.lrc += LrcTime(l.endMS) + "\n";
+        }
+    }
+    return out;
+}
+
 bool FromJson(const std::string& text, Transcript& t, std::string& error) {
     const json j = json::parse(text, nullptr, false);
     if (j.is_discarded() || StringField(j, "kind") != "composer-transcript") {
@@ -1231,6 +1356,33 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
         (void)WriteJson(o.outPath, root.dump(1));
         printf("composer-assist: lrclib: %zu matches via %s (%s)\n", r.matches.size(), r.via.empty() ? "-" : r.via.c_str(), AssistErrorId(r.failure.error));
         return r.matches.empty() ? 1 : 0;
+    }
+    if (o.action == "transcript-lrc") {
+        std::ifstream in(fs::path(std::u8string(o.transcriptPath.begin(), o.transcriptPath.end())), std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        Transcript t;
+        std::string error;
+        if (!FromJson(text.str(), t, error)) {
+            printf("composer-assist: transcript-lrc: the transcription cannot be read: %s\n", error.c_str());
+            return 1;
+        }
+        const TranscriptLrc lrc = TranscriptToLrc(t, static_cast<int>(o.durationS * 1000));
+        json lines = json::array();
+        int doubtful = 0;
+        for (const TranscriptLrcLine& l : lrc.lines) {
+            doubtful += l.doubtful ? 1 : 0;
+            lines.push_back({ { "startMS", l.startMS }, { "endMS", l.endMS }, { "doubtful", l.doubtful }, { "why", l.why } });
+        }
+        json dropped = json::array();
+        for (const auto& [what, why] : lrc.dropped) {
+            dropped.push_back({ { "why", why } });
+        }
+        // The lyrics themselves only go to the LRC file; the report has times and reasons.
+        std::ofstream(fs::path(std::u8string(o.outPath.begin(), o.outPath.end())), std::ios::binary) << lrc.lrc;
+        (void)WriteJson(o.outPath + ".review.json", json({ { "lines", lines }, { "dropped", dropped } }).dump(1));
+        printf("composer-assist: transcript-lrc: %zu lines, %d doubtful, %zu left out\n", lrc.lines.size(), doubtful, lrc.dropped.size());
+        return lrc.lines.empty() ? 1 : 0;
     }
     if (o.action != "transcribe" && o.action != "describe") {
         printf("composer-assist: unknown action '%s' (lrclib, transcribe, describe)\n", o.action.c_str());

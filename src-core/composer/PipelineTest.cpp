@@ -1501,6 +1501,24 @@ private:
         Check(status != StageStatus::Failed && ending.lyricTrack.layers.size() == 3 && lastEnd <= ending.analysis.durationMS && lastEnd % r.frameMS == 0,
               fmt::format("a last line near the end of a {} ms song: synchronized up to {} ms, on a frame", ending.analysis.durationMS, lastEnd));
 
+        // A line sung twice in a row (as in many carols) is two phrases on the matrix, not
+        // one long effect the validator would refuse.
+        const fs::path twice = _root / "dos-veces.lrc";
+        (void)WriteText(twice, "[00:02.00]Si me ven, si me ven\n[00:06.00]Si me ven, si me ven\n[00:10.00]\n");
+        GenerationRequest rt = Request("lrc-dos-veces");
+        rt.lyricsPath = twice.string();
+        const GenerationRun repeated = Generate(rt);
+        std::map<std::string, int> shown;
+        for (const ChoreographyEvent& e : repeated.choreography.events) {
+            for (const auto& [k, v] : e.settings) {
+                if (e.effect == "Text" && k == "E_TEXTCTRL_Text" && v == "Si me ven, si me ven") {
+                    ++shown[e.target];
+                }
+            }
+        }
+        Check(repeated.ok && !shown.empty() && std::all_of(shown.begin(), shown.end(), [](const auto& kv) { return kv.second == 2; }),
+              fmt::format("a line sung twice in a row is published as two phrases ({} figures show it)", shown.size()));
+
         _expectSuccess = false;
         const auto refused = [&](const char* name, const std::string& lrc, const char* note) {
             const fs::path path = _root / (std::string(name) + ".lrc");

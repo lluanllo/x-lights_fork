@@ -1542,6 +1542,30 @@ void ShowComposerDialog::AssistFinished(int exitCode) {
         std::string error;
         if (!FromJson(ReadFile(fs::path(_assistResultPath)), t, error)) {
             _assistMessage = S(_("The transcription could not be read."));
+        } else if (_lyricsPath.empty()) {
+            // No lyrics of its own: what was heard becomes the lyrics, kept with the show
+            // for a person to read, correct and keep.
+            SetTranscript(_assistResultPath);
+            const TranscriptLrc lrc = TranscriptToLrc(t, _durationMS);
+            int doubtful = 0;
+            for (const TranscriptLrcLine& l : lrc.lines) {
+                doubtful += l.doubtful ? 1 : 0;
+            }
+            if (lrc.lines.empty()) {
+                _assistMessage = S(_("Groq heard no sung words in this song: no lyrics were made."));
+            } else {
+                const fs::path folder = fs::path(_showDir) / "ShowComposer" / "lyrics";
+                std::error_code ec;
+                fs::create_directories(folder, ec);
+                const std::u8string stem = fs::u8path(_audioPath).stem().u8string();
+                const std::string name = stem.empty() ? std::string("song") : std::string(stem.begin(), stem.end());
+                const fs::path file = folder / fs::u8path(SafeFileName(name) + " (Groq).lrc");
+                std::ofstream(file, std::ios::binary) << lrc.lrc;
+                const std::u8string utf8 = file.u8string();
+                SetLyrics(std::string(utf8.begin(), utf8.end()));
+                _assistMessage = S(wxString::Format(_("No lyrics were given, so the lyrics are what Groq heard: %d phrases, %d of them doubtful, %d left out (not sung). Read them and correct them before generating: nothing was filled in from memory."),
+                                                    static_cast<int>(lrc.lines.size()), doubtful, static_cast<int>(lrc.dropped.size())));
+            }
         } else {
             SetTranscript(_assistResultPath);
             _assistMessage = S(wxString::Format(_("%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."), static_cast<int>(t.words.size()), U(t.model)));
