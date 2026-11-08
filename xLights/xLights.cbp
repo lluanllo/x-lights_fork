@@ -584,6 +584,8 @@
 		<Unit filename="../src-core/composer/MediaStoryboard.h" />
 		<Unit filename="../src-core/composer/MediaSurfaces.cpp" />
 		<Unit filename="../src-core/composer/MediaSurfaces.h" />
+		<Unit filename="../src-core/composer/MediaValidation.cpp" />
+		<Unit filename="../src-core/composer/MediaValidation.h" />
 		<Unit filename="../src-core/composer/MediaTest.cpp" />
 		<Unit filename="../src-core/composer/MediaTest.h" />
 		<Unit filename="../src-core/composer/VisualTest.cpp" />

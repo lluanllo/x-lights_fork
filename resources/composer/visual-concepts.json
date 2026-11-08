@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 1,
+  "version": 2,
   "notes": "What the visual analysis looks for in a picture or a video. 'prompt' is what an image-text model (SigLIP) compares the picture with, in English because that is the language it was trained on; 'label' is what a person sees (translated by the window). 'group' is subject, scene, style or mood. 'categories' are the fixed media categories a strong match suggests. 'energy' (0 calm .. 1 intense) is how lively the concept usually feels; 'matrix' and 'tree' (0..1) how well it usually reads on each figure. Edit freely: a new concept is used the next time a library is analysed with the model, and ids are what analyses refer to. Nothing here identifies people: there is no concept for who someone is.",
   "promptTemplate": "a photo of {}",
   "concepts": [
@@ -69,6 +69,11 @@
     { "id": "water", "label": "Water", "prompt": "flowing water", "group": "style", "categories": ["backgrounds"], "energy": 0.4, "matrix": 0.9, "tree": 0.8 },
     { "id": "rain", "label": "Rain", "prompt": "rain falling", "group": "style", "categories": ["backgrounds"], "energy": 0.4, "matrix": 0.8, "tree": 0.8 },
     { "id": "lightning", "label": "Lightning", "prompt": "lightning in a storm", "group": "style", "categories": ["backgrounds"], "energy": 0.95, "matrix": 0.9, "tree": 0.8 },
+    { "id": "train", "label": "Train", "prompt": "a steam train locomotive", "group": "subject", "categories": ["cinema", "adventure"], "energy": 0.6, "matrix": 0.9, "tree": 0.4 },
+    { "id": "portrait", "label": "A person's face", "prompt": "a portrait of a person's face", "group": "subject", "categories": ["other"], "energy": 0.4, "matrix": 0.7, "tree": 0.3 },
+    { "id": "music-notes", "label": "Musical notes", "prompt": "musical notes", "group": "subject", "categories": ["backgrounds"], "energy": 0.6, "matrix": 0.8, "tree": 0.7 },
+    { "id": "holly", "label": "Holly", "prompt": "holly leaves with red berries", "group": "subject", "categories": ["christmas"], "energy": 0.3, "matrix": 0.8, "tree": 0.7 },
+    { "id": "planet", "label": "Planet", "prompt": "the planet earth seen from space", "group": "scene", "categories": ["stars"], "energy": 0.4, "matrix": 0.8, "tree": 0.6 },
     { "id": "cartoon", "label": "Cartoon", "prompt": "a cartoon illustration", "group": "style", "categories": ["fantasy"], "energy": 0.5, "matrix": 0.8, "tree": 0.6 },
     { "id": "text", "label": "Text or title", "prompt": "text and letters", "group": "style", "categories": ["other"], "energy": 0.3, "matrix": 0.5, "tree": 0.2 },
     { "id": "calm", "label": "Calm", "prompt": "a calm peaceful scene", "group": "mood", "categories": [], "energy": 0.1, "matrix": 0.8, "tree": 0.7 },

@@ -78,6 +78,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "ai/WxServiceSettingsStore.h"
 #include "composer/AssistTest.h"
 #include "composer/MediaTest.h"
+#include "composer/MediaValidation.h"
 #include "composer/VisualTest.h"
 #include "composer/MusicAssist.h"
 #include "composer/LyricTest.h"
@@ -1092,7 +1093,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
             headlessArg = true;
             break;
         }
@@ -1223,6 +1224,9 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "clt", "composer-lyrics-test", "internal test: run the lyrics, phonetics and alignment cases under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-visual-test", "internal test: the visual analysis, framing and storyboard on pictures and videos it draws under --out (with --vision-model <folder>, also the image-text model), and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-media-eval", "internal tool: analyse the --media-folders of the show (-s) with --vision-model, twice to time the cache, and write a validation set and its metrics (from --labels <file> when given) under --out; then exit" },
+        { wxCMD_LINE_OPTION, "", "labels", "with --composer-media-eval: a validation set with labels" },
+        { wxCMD_LINE_OPTION, "", "sample", "with --composer-media-eval: how many files the validation set has (24)" },
         { wxCMD_LINE_OPTION, "", "vision-model", "with --composer-visual-test or --composer-generate: the folder holding the image-text model (siglip-base-patch16-224)" },
         { wxCMD_LINE_SWITCH, "cmt", "composer-media-test", "internal test: the media library on pictures, an animation and a video it makes under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cst", "composer-assist-test", "internal test: LRCLIB, Groq and Gemini against stand-ins (nothing is sent), under --out, and exit" },
@@ -2038,6 +2042,26 @@ bool xLightsApp::OnInit()
             std::exit(2);
         }
         std::exit(composer::RunMediaTest(outName.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-media-eval")) {
+        wxString outName, folders, model, labels, sample;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty() || !parser.Found("media-folders", &folders) || folders.IsEmpty()) {
+            spdlog::error("--composer-media-eval requires -s <show>, --media-folders <a;b> and --out <folder>");
+            std::exit(2);
+        }
+        parser.Found("vision-model", &model);
+        parser.Found("labels", &labels);
+        parser.Found("sample", &sample);
+        std::vector<std::string> list;
+        for (const wxString& f : wxSplit(folders, ';')) {
+            if (!f.IsEmpty()) {
+                list.push_back(f.ToStdString(wxConvUTF8));
+            }
+        }
+        const long n = sample.IsEmpty() ? 24 : std::strtol(sample.ToStdString().c_str(), nullptr, 10);
+        std::exit(composer::RunMediaEvaluation(showDir.ToStdString(wxConvUTF8), list, model.ToStdString(wxConvUTF8), outName.ToStdString(wxConvUTF8), labels.ToStdString(wxConvUTF8),
+                                               static_cast<size_t>(std::max(4L, n))));
     }
 
     if (parser.Found("composer-visual-test")) {

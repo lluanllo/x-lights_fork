@@ -3,6 +3,7 @@
 #include "composer/MediaAnalysis.h"
 #include "composer/MediaFraming.h"
 #include "composer/MediaLibrary.h"
+#include "composer/MediaValidation.h"
 #include "composer/MediaTest.h"
 #include "composer/VisualModel.h"
 #include "media/VideoWriter.h"
@@ -706,6 +707,29 @@ private:
         const int pruned = PruneMediaDerived(S(_show), { keep }, 60);
         Check(pruned == 1 && !fs::exists(derived / "viejo.png", ec) && fs::exists(clip, ec), fmt::format("a derived file unused for years goes, the one in use stays ({} removed)", pruned));
         Check(PruneMediaDerived(S(_show), {}, 60) == 0 && fs::exists(clip, ec), "and a file used today is kept even when nothing asks for it");
+
+        // The model's words against a person's: only a person's labels make a measure.
+        MediaValidationSet vs;
+        MediaValidationEntry a;
+        a.mediaId = "m:a";
+        a.proposed = { { "lion", 0.4, 0, "strong", "model" }, { "savanna", 0.01, 0, "weak", "model" }, { "cartoon", 0.03, 0, "probable", "model" } };
+        a.labelSource = "person";
+        a.present = { "lion", "sunset" };
+        a.poiUseful = 1;
+        MediaValidationEntry b = a;
+        b.mediaId = "m:b";
+        b.labelSource = "assistant-provisional";
+        b.present = { "savanna" };
+        vs.entries = { a, b };
+        const MediaValidationMetrics human = EvaluateMediaValidation(vs, "person", 3);
+        Check(human.files == 1 && human.truePositive == 1 && human.falsePositive == 2 && human.falseNegative == 1 && near(human.recall, 0.5) && human.confidentRight == 1 &&
+                  human.confidentWrong == 1 && human.confusion.size() == 2,
+              "precision, recall, the confident concepts and the confusions come from the person's labels only");
+        const std::string text = MediaValidationReport(vs, { human, EvaluateMediaValidation(vs, "assistant-provisional", 3) });
+        Check(text.find("PROVISIONAL") != std::string::npos && text.find("Labelled by a person: 1") != std::string::npos, "labels by anyone else are reported apart, as provisional");
+        MediaValidationSet back;
+        std::string verr;
+        Check(MediaValidationSetFrom(MediaValidationSetJson(vs), back, verr) && back.entries.size() == 2 && back.entries[1].labelSource == "assistant-provisional", "the set and its labels read back");
     }
 
     void TestModel() {

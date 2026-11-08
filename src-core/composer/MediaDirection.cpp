@@ -916,10 +916,28 @@ private:
                 }
             }
         }
+        // A motif the screen already showed twice is enough: the story moves on.
+        if (!m.analysis.description.empty()) {
+            const std::string& motif = m.analysis.description.front();
+            int shown = 0;
+            for (const Planned& p : _planned) {
+                if (p.shot.lane != lane.t->name || p.shot.mediaId == m.id) {
+                    continue;
+                }
+                const MediaItem* o = ItemById(p.shot.mediaId);
+                shown += o != nullptr && !o->analysis.description.empty() && o->analysis.description.front() == motif ? 1 : 0;
+            }
+            if (shown >= 2) {
+                story -= 0.04 * (shown - 1);
+                relation = "enough-of-" + motif;
+            }
+        }
         double score = 0.30 * c.theme + 0.20 * fit + 0.15 * energy + 0.20 * role + 0.15 * quality + repeat + story + (continuity ? 0.15 : 0) + 0.01 * Unit(_seed, sc.info.id + "/" + lane.t->name + "/" + m.id);
         e.score = R3(std::clamp(score, 0.0, 1.0));
         if (!relation.empty() && story > 0) {
             e.why.push_back({ "story", relation });
+        } else if (relation.rfind("enough-of-", 0) == 0) {
+            e.why.push_back({ "variety", relation });
         }
         e.why.push_back({ "theme-category", c.themeWhy == "no-theme" || c.themeWhy == "neutral" ? c.themeWhy : fmt::format("{} ({})", c.themeWhy, _out.themeId) });
         std::string seen;

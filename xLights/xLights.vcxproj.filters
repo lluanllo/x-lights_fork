@@ -119,6 +119,7 @@
     <ClCompile Include="..\src-core\composer\MediaFraming.cpp" />
     <ClCompile Include="..\src-core\composer\MediaStoryboard.cpp" />
     <ClCompile Include="..\src-core\composer\MediaSurfaces.cpp" />
+    <ClCompile Include="..\src-core\composer\MediaValidation.cpp" />
     <ClCompile Include="..\src-core\composer\MediaTest.cpp" />
     <ClCompile Include="..\src-core\composer\VisualTest.cpp" />
     <ClCompile Include="..\src-core\composer\MediaLibrary.cpp" />
@@ -1733,6 +1734,7 @@
     <ClInclude Include="..\src-core\composer\MediaFraming.h" />
     <ClInclude Include="..\src-core\composer\MediaStoryboard.h" />
     <ClInclude Include="..\src-core\composer\MediaSurfaces.h" />
+    <ClInclude Include="..\src-core\composer\MediaValidation.h" />
     <ClInclude Include="..\src-core\composer\MediaTest.h" />
     <ClInclude Include="..\src-core\composer\VisualTest.h" />
     <ClInclude Include="..\src-core\composer\MediaLibrary.h" />
