@@ -12,6 +12,14 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: review the pictures and videos of a show shot by shot (approve,
+                                 reject with a reason, choose another file, add a note), apply the corrections
+                                 without making the rest again, and approve the show only after ticking what you
+                                 checked in xLights; correct what the image model says each file shows and see how
+                                 well it does against your labels; the program learns your taste from your reviews,
+                                 shows what it learned and lets you change, turn off or forget it
+    -bug (lluanllo)              Show Composer: a screen with no controller is no longer chosen automatically for
+                                 the pictures of a show for the real installation
     -enh (lluanllo)              Show Composer: every screen of the show plays a part (main, second, tree, words,
                                  extra pictures, lights only or none), chosen from the figures or by you in
                                  "Screens..."; words and pictures share a matrix without a picture ever covering a

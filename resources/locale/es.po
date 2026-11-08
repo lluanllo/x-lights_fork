@@ -11363,3 +11363,432 @@ msgstr "Acebo"
 
 msgid "Planet"
 msgstr "Planeta"
+
+msgid "the opening"
+msgstr "la apertura"
+
+msgid "the verses"
+msgstr "las estrofas"
+
+msgid "the choruses"
+msgstr "los estribillos"
+
+msgid "the instrumentals"
+msgstr "los instrumentales"
+
+msgid "the bridge"
+msgstr "el puente"
+
+msgid "the climax"
+msgstr "el clímax"
+
+msgid "the ending"
+msgstr "el final"
+
+msgid "the calm parts"
+msgstr "las partes tranquilas"
+
+msgid "suits the part of the song"
+msgstr "encaja con esa parte de la canción"
+
+msgid "the music repeats, so does the picture"
+msgstr "la música se repite y la imagen también"
+
+msgid "Approved"
+msgstr "Aprobado"
+
+msgid "Rejected"
+msgstr "Rechazado"
+
+msgid "Needs a fix"
+msgstr "Necesita corrección"
+
+msgid "does not fit the music"
+msgstr "no encaja con la música"
+
+msgid "does not fit the scene"
+msgstr "no encaja con la escena"
+
+msgid "comes back too often"
+msgstr "se repite demasiado"
+
+msgid "not the right screen for it"
+msgstr "no es la pantalla adecuada"
+
+msgid "the movement is wrong"
+msgstr "el movimiento no es correcto"
+
+msgid "the way in does not work"
+msgstr "la transición no funciona"
+
+msgid "more (+%d%%)"
+msgstr "más (+%d%%)"
+
+msgid "less (-%d%%)"
+msgstr "menos (-%d%%)"
+
+msgid "Videos rather than pictures"
+msgstr "Vídeos en lugar de imágenes"
+
+msgid "Dark pictures and videos"
+msgstr "Imágenes y vídeos oscuros"
+
+msgid "Slow camera movements"
+msgstr "Movimientos lentos de cámara"
+
+msgid "Files coming back in a song"
+msgstr "Que los archivos se repitan en una canción"
+
+msgid "How much of the song has pictures"
+msgstr "Cuánta parte de la canción lleva imágenes"
+
+msgid "Coming in with a %s"
+msgstr "Entrar con un %s"
+
+msgid "Pictures with %s"
+msgstr "Imágenes con %s"
+
+msgid "Pictures on %s"
+msgstr "Imágenes en %s"
+
+msgid "%s on %s"
+msgstr "%s en %s"
+
+msgid "Movement in %s"
+msgstr "Movimiento en %s"
+
+msgid "%s in %s"
+msgstr "%s en %s"
+
+msgid "%s, with the style %s"
+msgstr "%s, con el estilo %s"
+
+msgid "Review the Pictures and Videos"
+msgstr "Revisar las imágenes y vídeos"
+
+msgid "Order:"
+msgstr "Orden:"
+
+msgid "As they come in the song"
+msgstr "Según salen en la canción"
+
+msgid "Screen by screen"
+msgstr "Pantalla por pantalla"
+
+msgid "Sure"
+msgstr "Seguridad"
+
+msgid "In / out"
+msgstr "Entrada / salida"
+
+msgid "Approve"
+msgstr "Aprobar"
+
+msgid "Reject"
+msgstr "Rechazar"
+
+msgid "Another File..."
+msgstr "Otro archivo..."
+
+msgid "It Does Not Work Because..."
+msgstr "No funciona porque..."
+
+msgid "Note..."
+msgstr "Nota..."
+
+msgid "Never Use This File"
+msgstr "No usar nunca este archivo"
+
+msgid "Not Decided"
+msgstr "Sin decidir"
+
+msgid "What you checked in xLights"
+msgstr "Lo que has comprobado en xLights"
+
+msgid "I opened the sequence in xLights"
+msgstr "He abierto la secuencia en xLights"
+
+msgid "I looked at the visual composition"
+msgstr "He revisado la composición visual"
+
+msgid "I looked at the main screens"
+msgstr "He revisado las pantallas principales"
+
+msgid "I checked the transitions and the movements"
+msgstr "He comprobado las transiciones y los movimientos"
+
+msgid "I finished the review"
+msgstr "He terminado la revisión"
+
+msgid "Reviewed by:"
+msgstr "Revisado por:"
+
+msgid "Approve the Show"
+msgstr "Aprobar el espectáculo"
+
+msgid "Apply the Corrections and Make the Show Again"
+msgstr "Aplicar las correcciones y volver a hacer el espectáculo"
+
+msgid "Save the Review"
+msgstr "Guardar la revisión"
+
+msgid "Your note about this shot:"
+msgstr "Tu nota sobre este plano:"
+
+msgid "Note"
+msgstr "Nota"
+
+msgid "Tick every step first: the show is only approved once you have watched it in xLights."
+msgstr "Marca antes todos los pasos: el espectáculo solo se aprueba cuando lo has visto en xLights."
+
+msgid "Write who reviewed it."
+msgstr "Escribe quién lo ha revisado."
+
+msgid "Some shots are rejected or wait for another file: apply the corrections and review the new version."
+msgstr "Hay planos rechazados o esperando otro archivo: aplica las correcciones y revisa la nueva versión."
+
+msgid "not known"
+msgstr "no se sabe"
+
+msgid "%s - %s, %s long. Screens: %s. %d shots from %d files; transitions: %s."
+msgstr "%s - %s, dura %s. Pantallas: %s. %d planos de %d archivos; transiciones: %s."
+
+msgid "To see: %d pending, %d approved, %d rejected, %d waiting for a fix."
+msgstr "Por revisar: %d pendientes, %d aprobados, %d rechazados, %d esperando corrección."
+
+msgid "Needs your attention: "
+msgstr "Necesita tu atención: "
+
+msgid "Choose a shot to decide about it. Watch it in xLights first: what is written here is only what the program decided."
+msgstr "Elige un plano para decidir sobre él. Míralo antes en xLights: lo que pone aquí es solo lo que decidió el programa."
+
+msgid "%s on %s, %s to %s. Why: %s%s"
+msgstr "%s en %s, de %s a %s. Por qué: %s%s"
+
+msgid "Your note: "
+msgstr "Tu nota: "
+
+msgid "Approved by %s, %s."
+msgstr "Aprobado por %s, %s."
+
+msgid "Every step checked: you can approve the show."
+msgstr "Todos los pasos comprobados: puedes aprobar el espectáculo."
+
+msgid "Pending visual review: the show is only approved by you, after watching it in xLights."
+msgstr "Revisión visual pendiente: el espectáculo solo lo apruebas tú, después de verlo en xLights."
+
+msgid "What This File Shows"
+msgstr "Qué se ve en este archivo"
+
+msgid "Looked at with the image model."
+msgstr "Analizado con el modelo de imágenes."
+
+msgid "Measured without the image model: only colours and light."
+msgstr "Medido sin el modelo de imágenes: solo colores y luz."
+
+msgid "The program proposes; you correct. Your word counts over the program's, which is kept to compare."
+msgstr "El programa propone; tú corriges. Lo que dices tú cuenta más que lo que dijo el programa, que se guarda para comparar."
+
+msgid "The program said"
+msgstr "El programa dijo"
+
+msgid "You say"
+msgstr "Tú dices"
+
+msgid "It Is There"
+msgstr "Sí está"
+
+msgid "It Is Not"
+msgstr "No está"
+
+msgid "Never for This File"
+msgstr "Nunca para este archivo"
+
+msgid "Not Said"
+msgstr "Sin decir"
+
+msgid "Add What Is Missing..."
+msgstr "Añadir lo que falta..."
+
+msgid "Show the program's scores (advanced)"
+msgstr "Mostrar las puntuaciones del programa (avanzado)"
+
+msgid "Never use it for:"
+msgstr "No usarlo nunca para:"
+
+msgid "the matrices"
+msgstr "las matrices"
+
+msgid "the trees"
+msgstr "los árboles"
+
+msgid "calm parts"
+msgstr "partes tranquilas"
+
+msgid "intense parts"
+msgstr "partes intensas"
+
+msgid "I went through everything it shows"
+msgstr "He revisado todo lo que se ve"
+
+msgid "By:"
+msgstr "Por:"
+
+msgid "What does it show that the program missed?"
+msgstr "¿Qué se ve que el programa no ha visto?"
+
+msgid "Add What Is Missing"
+msgstr "Añadir lo que falta"
+
+msgid "did not see it"
+msgstr "no lo vio"
+
+msgid "clearly"
+msgstr "con claridad"
+
+msgid "probably"
+msgstr "probablemente"
+
+msgid "doubtfully"
+msgstr "con dudas"
+
+msgid "It is there"
+msgstr "Sí está"
+
+msgid "It is not"
+msgstr "No está"
+
+msgid "Never for this file"
+msgstr "Nunca para este archivo"
+
+msgid "What Has Been Learned of Your Taste"
+msgstr "Lo que se ha aprendido de tu gusto"
+
+msgid "Learned from your reviews, on this computer. Nothing is decided by one shot alone; you can change, turn off or forget anything."
+msgstr "Aprendido de tus revisiones, en este ordenador. Nada se decide por un solo plano; puedes cambiar, desactivar u olvidar cualquier cosa."
+
+msgid "Use what has been learned when composing"
+msgstr "Usar lo aprendido al componer"
+
+msgid "Backed by"
+msgstr "Respaldado por"
+
+msgid "In use"
+msgstr "En uso"
+
+msgid "Change the Value..."
+msgstr "Cambiar el valor..."
+
+msgid "Turn On or Off"
+msgstr "Activar o desactivar"
+
+msgid "Forget It"
+msgstr "Olvidarlo"
+
+msgid "More or Fewer Pictures..."
+msgstr "Más o menos imágenes..."
+
+msgid "Forget Everything"
+msgstr "Olvidarlo todo"
+
+msgid "From -100 (much less) to 100 (much more); 0 is neutral."
+msgstr "De -100 (mucho menos) a 100 (mucho más); 0 es neutro."
+
+msgid "Change the Value"
+msgstr "Cambiar el valor"
+
+msgid "Forget everything learned and every value you set?"
+msgstr "¿Olvidar todo lo aprendido y todos los valores que has puesto?"
+
+msgid "You have turned down dark pictures and videos several times (%d decisions)."
+msgstr "Has rechazado varias veces imágenes y vídeos oscuros (%d decisiones)."
+
+msgid "You seem to like slow camera movements: %s (%d decisions)."
+msgstr "Parece que te gustan los movimientos lentos de cámara: %s (%d decisiones)."
+
+msgid "You seem to prefer still pictures: %s (%d decisions)."
+msgstr "Parece que prefieres imágenes quietas: %s (%d decisiones)."
+
+msgid "You often approve pictures on a screen: %s (%d decisions)."
+msgstr "Apruebas a menudo imágenes en una pantalla: %s (%d decisiones)."
+
+msgid "You find fewer pictures fit a screen: %s (%d decisions)."
+msgstr "Ves que encajan menos imágenes en una pantalla: %s (%d decisiones)."
+
+msgid "%s: %s (%d decisions)."
+msgstr "%s: %s (%d decisiones)."
+
+msgid "%d decisions"
+msgstr "%d decisiones"
+
+msgid "your value"
+msgstr "tu valor"
+
+msgid "learned"
+msgstr "aprendido"
+
+msgid "learned, not yet enough to count"
+msgstr "aprendido, aún sin respaldo suficiente"
+
+msgid "off"
+msgstr "desactivado"
+
+msgid "yes"
+msgstr "sí"
+
+msgid "not yet"
+msgstr "todavía no"
+
+msgid "Learning is off: shows are composed with only the values you set."
+msgstr "El aprendizaje está desactivado: los espectáculos se componen solo con los valores que has puesto."
+
+msgid "Nothing learned yet: review the pictures and videos of a show to teach the program your taste."
+msgstr "Aún no se ha aprendido nada: revisa las imágenes y vídeos de un espectáculo para enseñar tu gusto al programa."
+
+msgid "no controller: its pictures would only be seen on the computer"
+msgstr "sin controlador: sus imágenes solo se verían en el ordenador"
+
+msgid "Only to watch on the computer: screens with no controller may get pictures too"
+msgstr "Solo para verlo en el ordenador: las pantallas sin controlador también pueden recibir imágenes"
+
+msgid "Review the Pictures and Videos..."
+msgstr "Revisar las imágenes y vídeos..."
+
+msgid "What Has Been Learned..."
+msgstr "Lo aprendido..."
+
+msgid "Review in progress: %d of %d shots decided. Pending visual review: watch it in xLights before showing it."
+msgstr "Revisión en curso: %d de %d planos decididos. Revisión visual pendiente: míralo en xLights antes de mostrarlo."
+
+msgid "The review could not be kept."
+msgstr "No se ha podido guardar la revisión."
+
+msgid "%d shots the program was not sure about."
+msgstr "%d planos de los que el programa no estaba seguro."
+
+msgid "This show has no pictures or videos to review. Watch it in xLights before showing it."
+msgstr "Este espectáculo no tiene imágenes ni vídeos que revisar. Míralo en xLights antes de mostrarlo."
+
+msgid "What It Shows..."
+msgstr "Qué se ve..."
+
+msgid "How Well the Program Sees..."
+msgstr "Cómo acierta el programa..."
+
+msgid "No file has been labelled completely yet: open a file with \"What It Shows...\", say what is really there and tick \"I went through everything it shows\"."
+msgstr "Todavía no hay ningún archivo etiquetado del todo: abre un archivo con «Qué se ve...», di lo que hay de verdad y marca «He revisado todo lo que se ve»."
+
+msgid "Measured on %d files you labelled (duplicates counted once).\nOf what the program said first, %.0f%% was right; of what is really there, it saw %.0f%%."
+msgstr "Medido con %d archivos que has etiquetado (los duplicados cuentan una vez).\nDe lo primero que dijo el programa, acertó el %.0f%%; de lo que hay de verdad, vio el %.0f%%."
+
+msgid "Only %d files: label at least %d before trusting these numbers."
+msgstr "Solo %d archivos: etiqueta al menos %d antes de fiarte de estos números."
+
+msgid "Details:"
+msgstr "Detalles:"
+
+msgid "How Well the Program Sees"
+msgstr "Cómo acierta el programa"
+
+msgid "decisions: %d"
+msgstr "decisiones: %d"

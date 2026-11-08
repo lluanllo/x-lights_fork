@@ -11361,3 +11361,432 @@ msgstr ""
 
 msgid "Planet"
 msgstr ""
+
+msgid "the opening"
+msgstr ""
+
+msgid "the verses"
+msgstr ""
+
+msgid "the choruses"
+msgstr ""
+
+msgid "the instrumentals"
+msgstr ""
+
+msgid "the bridge"
+msgstr ""
+
+msgid "the climax"
+msgstr ""
+
+msgid "the ending"
+msgstr ""
+
+msgid "the calm parts"
+msgstr ""
+
+msgid "suits the part of the song"
+msgstr ""
+
+msgid "the music repeats, so does the picture"
+msgstr ""
+
+msgid "Approved"
+msgstr ""
+
+msgid "Rejected"
+msgstr ""
+
+msgid "Needs a fix"
+msgstr ""
+
+msgid "does not fit the music"
+msgstr ""
+
+msgid "does not fit the scene"
+msgstr ""
+
+msgid "comes back too often"
+msgstr ""
+
+msgid "not the right screen for it"
+msgstr ""
+
+msgid "the movement is wrong"
+msgstr ""
+
+msgid "the way in does not work"
+msgstr ""
+
+msgid "more (+%d%%)"
+msgstr ""
+
+msgid "less (-%d%%)"
+msgstr ""
+
+msgid "Videos rather than pictures"
+msgstr ""
+
+msgid "Dark pictures and videos"
+msgstr ""
+
+msgid "Slow camera movements"
+msgstr ""
+
+msgid "Files coming back in a song"
+msgstr ""
+
+msgid "How much of the song has pictures"
+msgstr ""
+
+msgid "Coming in with a %s"
+msgstr ""
+
+msgid "Pictures with %s"
+msgstr ""
+
+msgid "Pictures on %s"
+msgstr ""
+
+msgid "%s on %s"
+msgstr ""
+
+msgid "Movement in %s"
+msgstr ""
+
+msgid "%s in %s"
+msgstr ""
+
+msgid "%s, with the style %s"
+msgstr ""
+
+msgid "Review the Pictures and Videos"
+msgstr ""
+
+msgid "Order:"
+msgstr ""
+
+msgid "As they come in the song"
+msgstr ""
+
+msgid "Screen by screen"
+msgstr ""
+
+msgid "Sure"
+msgstr ""
+
+msgid "In / out"
+msgstr ""
+
+msgid "Approve"
+msgstr ""
+
+msgid "Reject"
+msgstr ""
+
+msgid "Another File..."
+msgstr ""
+
+msgid "It Does Not Work Because..."
+msgstr ""
+
+msgid "Note..."
+msgstr ""
+
+msgid "Never Use This File"
+msgstr ""
+
+msgid "Not Decided"
+msgstr ""
+
+msgid "What you checked in xLights"
+msgstr ""
+
+msgid "I opened the sequence in xLights"
+msgstr ""
+
+msgid "I looked at the visual composition"
+msgstr ""
+
+msgid "I looked at the main screens"
+msgstr ""
+
+msgid "I checked the transitions and the movements"
+msgstr ""
+
+msgid "I finished the review"
+msgstr ""
+
+msgid "Reviewed by:"
+msgstr ""
+
+msgid "Approve the Show"
+msgstr ""
+
+msgid "Apply the Corrections and Make the Show Again"
+msgstr ""
+
+msgid "Save the Review"
+msgstr ""
+
+msgid "Your note about this shot:"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Tick every step first: the show is only approved once you have watched it in xLights."
+msgstr ""
+
+msgid "Write who reviewed it."
+msgstr ""
+
+msgid "Some shots are rejected or wait for another file: apply the corrections and review the new version."
+msgstr ""
+
+msgid "not known"
+msgstr ""
+
+msgid "%s - %s, %s long. Screens: %s. %d shots from %d files; transitions: %s."
+msgstr ""
+
+msgid "To see: %d pending, %d approved, %d rejected, %d waiting for a fix."
+msgstr ""
+
+msgid "Needs your attention: "
+msgstr ""
+
+msgid "Choose a shot to decide about it. Watch it in xLights first: what is written here is only what the program decided."
+msgstr ""
+
+msgid "%s on %s, %s to %s. Why: %s%s"
+msgstr ""
+
+msgid "Your note: "
+msgstr ""
+
+msgid "Approved by %s, %s."
+msgstr ""
+
+msgid "Every step checked: you can approve the show."
+msgstr ""
+
+msgid "Pending visual review: the show is only approved by you, after watching it in xLights."
+msgstr ""
+
+msgid "What This File Shows"
+msgstr ""
+
+msgid "Looked at with the image model."
+msgstr ""
+
+msgid "Measured without the image model: only colours and light."
+msgstr ""
+
+msgid "The program proposes; you correct. Your word counts over the program's, which is kept to compare."
+msgstr ""
+
+msgid "The program said"
+msgstr ""
+
+msgid "You say"
+msgstr ""
+
+msgid "It Is There"
+msgstr ""
+
+msgid "It Is Not"
+msgstr ""
+
+msgid "Never for This File"
+msgstr ""
+
+msgid "Not Said"
+msgstr ""
+
+msgid "Add What Is Missing..."
+msgstr ""
+
+msgid "Show the program's scores (advanced)"
+msgstr ""
+
+msgid "Never use it for:"
+msgstr ""
+
+msgid "the matrices"
+msgstr ""
+
+msgid "the trees"
+msgstr ""
+
+msgid "calm parts"
+msgstr ""
+
+msgid "intense parts"
+msgstr ""
+
+msgid "I went through everything it shows"
+msgstr ""
+
+msgid "By:"
+msgstr ""
+
+msgid "What does it show that the program missed?"
+msgstr ""
+
+msgid "Add What Is Missing"
+msgstr ""
+
+msgid "did not see it"
+msgstr ""
+
+msgid "clearly"
+msgstr ""
+
+msgid "probably"
+msgstr ""
+
+msgid "doubtfully"
+msgstr ""
+
+msgid "It is there"
+msgstr ""
+
+msgid "It is not"
+msgstr ""
+
+msgid "Never for this file"
+msgstr ""
+
+msgid "What Has Been Learned of Your Taste"
+msgstr ""
+
+msgid "Learned from your reviews, on this computer. Nothing is decided by one shot alone; you can change, turn off or forget anything."
+msgstr ""
+
+msgid "Use what has been learned when composing"
+msgstr ""
+
+msgid "Backed by"
+msgstr ""
+
+msgid "In use"
+msgstr ""
+
+msgid "Change the Value..."
+msgstr ""
+
+msgid "Turn On or Off"
+msgstr ""
+
+msgid "Forget It"
+msgstr ""
+
+msgid "More or Fewer Pictures..."
+msgstr ""
+
+msgid "Forget Everything"
+msgstr ""
+
+msgid "From -100 (much less) to 100 (much more); 0 is neutral."
+msgstr ""
+
+msgid "Change the Value"
+msgstr ""
+
+msgid "Forget everything learned and every value you set?"
+msgstr ""
+
+msgid "You have turned down dark pictures and videos several times (%d decisions)."
+msgstr ""
+
+msgid "You seem to like slow camera movements: %s (%d decisions)."
+msgstr ""
+
+msgid "You seem to prefer still pictures: %s (%d decisions)."
+msgstr ""
+
+msgid "You often approve pictures on a screen: %s (%d decisions)."
+msgstr ""
+
+msgid "You find fewer pictures fit a screen: %s (%d decisions)."
+msgstr ""
+
+msgid "%s: %s (%d decisions)."
+msgstr ""
+
+msgid "%d decisions"
+msgstr ""
+
+msgid "your value"
+msgstr ""
+
+msgid "learned"
+msgstr ""
+
+msgid "learned, not yet enough to count"
+msgstr ""
+
+msgid "off"
+msgstr ""
+
+msgid "yes"
+msgstr ""
+
+msgid "not yet"
+msgstr ""
+
+msgid "Learning is off: shows are composed with only the values you set."
+msgstr ""
+
+msgid "Nothing learned yet: review the pictures and videos of a show to teach the program your taste."
+msgstr ""
+
+msgid "no controller: its pictures would only be seen on the computer"
+msgstr ""
+
+msgid "Only to watch on the computer: screens with no controller may get pictures too"
+msgstr ""
+
+msgid "Review the Pictures and Videos..."
+msgstr ""
+
+msgid "What Has Been Learned..."
+msgstr ""
+
+msgid "Review in progress: %d of %d shots decided. Pending visual review: watch it in xLights before showing it."
+msgstr ""
+
+msgid "The review could not be kept."
+msgstr ""
+
+msgid "%d shots the program was not sure about."
+msgstr ""
+
+msgid "This show has no pictures or videos to review. Watch it in xLights before showing it."
+msgstr ""
+
+msgid "What It Shows..."
+msgstr ""
+
+msgid "How Well the Program Sees..."
+msgstr ""
+
+msgid "No file has been labelled completely yet: open a file with \"What It Shows...\", say what is really there and tick \"I went through everything it shows\"."
+msgstr ""
+
+msgid "Measured on %d files you labelled (duplicates counted once).\nOf what the program said first, %.0f%% was right; of what is really there, it saw %.0f%%."
+msgstr ""
+
+msgid "Only %d files: label at least %d before trusting these numbers."
+msgstr ""
+
+msgid "Details:"
+msgstr ""
+
+msgid "How Well the Program Sees"
+msgstr ""
+
+msgid "decisions: %d"
+msgstr ""
