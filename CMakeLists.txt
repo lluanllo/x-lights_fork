@@ -297,6 +297,7 @@ file(GLOB_RECURSE SRC_CORE
     src-core/XmlSerializer/*.cpp
     src-core/ai/*.cpp
     src-core/cad/*.cpp
+    src-core/composer/*.cpp
     src-core/controllers/*.cpp
 	src-core/diagnostics/*.cpp
     src-core/discovery/*.cpp
@@ -520,6 +521,7 @@ file(GLOB_RECURSE SRC_UI
     src-ui-wx/modelproperties/*.cpp
     src-ui-wx/preferences/*.cpp
     src-ui-wx/render/*.cpp
+    src-ui-wx/composer/*.cpp
     src-ui-wx/sequencer/*.cpp
     src-ui-wx/settings/*.cpp
     src-ui-wx/setup/*.cpp
@@ -601,6 +603,25 @@ add_executable(xLights WIN32 MACOSX_BUNDLE
     ${SRC_DEPS}
     ${WIN32_RC}
 )
+
+if(MSVC)
+    # The manifest xLights.vcxproj embeds: without it the UTF-8 code page is missing and
+    # paths with accents, read through std::string, do not open.
+    target_sources(xLights PRIVATE xLights/xLightsApp.manifest)
+endif()
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_custom_command(TARGET xLights POST_BUILD
+        COMMAND ${Python3_EXECUTABLE}
+            "${CMAKE_SOURCE_DIR}/ci_scripts/localization/build_catalog.py"
+            --compile
+            "${CMAKE_SOURCE_DIR}/resources/locale/es.po"
+            "$<TARGET_FILE_DIR:xLights>/locale/es/LC_MESSAGES/xLights.mo"
+        COMMENT "Compiling Spanish translation catalog"
+        VERBATIM
+    )
+endif()
 
 # Add ISPC-generated object files to the link step.
 if(ISPC_OBJECTS)

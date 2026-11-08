@@ -15,6 +15,7 @@
 #ifdef _WIN32
 
 #include "Color.h"
+#include "utils/string_utils.h"
 
 #include <d2d1.h>
 #include <dwrite.h>
@@ -538,14 +539,16 @@ void D2DTextDrawingContext::GetTextExtents(const std::string& msg, std::vector<d
     // advances measured from the whole string place characters where they
     // were not actually drawn, and glyphs end up overlapping or gapped -
     // worst at the small pixel sizes typical of an LED matrix. Measure each
-    // character the same way it will be drawn: one at a time. Byte-indexed
-    // like the caller, which only ever hands this one-byte substrings.
+    // character the same way it will be drawn: one at a time, one entry per
+    // character like the other backends, whatever its size in UTF-8.
     double running = 0;
-    for (size_t i = 0; i < msg.size(); i++) {
+    for (size_t i = 0; i < msg.size();) {
+        const size_t charLen = Utf8CharLength(msg, i);
         double charWidth = 0, charHeight = 0;
-        GetTextExtent(msg.substr(i, 1), &charWidth, &charHeight);
+        GetTextExtent(msg.substr(i, charLen), &charWidth, &charHeight);
         running += charWidth;
         extents.push_back(running);
+        i += charLen;
     }
 }
 

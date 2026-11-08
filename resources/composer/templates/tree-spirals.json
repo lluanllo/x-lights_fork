@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "tree-spirals",
+  "version": 1,
+  "effect": "Spirals",
+  "roles": [
+    "mega-tree",
+    "small-tree"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "feature",
+    "accompany"
+  ],
+  "prominence": [
+    "lead",
+    "support",
+    "accent"
+  ],
+  "requires": [
+    "geometric",
+    "color"
+  ],
+  "sections": [],
+  "energy": [
+    0.35,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    4000,
+    16000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Spirals_Count",
+      "energy": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "Spirals_Rotation",
+      "energy": [
+        5,
+        20
+      ]
+    },
+    {
+      "id": "Spirals_Thickness",
+      "value": 50
+    },
+    {
+      "id": "Spirals_Movement",
+      "energy": [
+        0.5,
+        2.5
+      ]
+    },
+    {
+      "id": "Spirals_Blend",
+      "value": true
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

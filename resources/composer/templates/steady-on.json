@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "steady-on",
+  "version": 1,
+  "effect": "On",
+  "roles": [
+    "window",
+    "arch",
+    "star",
+    "prop",
+    "figure",
+    "line",
+    "small-tree"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "accompany"
+  ],
+  "prominence": [
+    "support"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    0.45
+  ],
+  "intensity": 0.4,
+  "durationMS": [
+    4000,
+    16000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      1
+    ],
+    "families": [
+      "warm",
+      "soft",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Eff_On_Start",
+      "value": 100
+    },
+    {
+      "id": "Eff_On_End",
+      "value": 100
+    }
+  ],
+  "weight": 0.6,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

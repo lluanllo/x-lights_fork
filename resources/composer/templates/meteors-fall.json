@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "id": "meteors-fall",
+  "version": 1,
+  "effect": "Meteors",
+  "roles": [
+    "mega-tree",
+    "small-tree",
+    "matrix",
+    "line"
+  ],
+  "targetTypes": [
+    "model",
+    "group"
+  ],
+  "intents": [
+    "feature",
+    "accompany"
+  ],
+  "prominence": [
+    "lead",
+    "support",
+    "accent"
+  ],
+  "requires": [
+    "geometric"
+  ],
+  "sections": [],
+  "energy": [
+    0.3,
+    0.9
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    4000,
+    12000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      2,
+      3
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Meteors_Type",
+      "value": "Palette"
+    },
+    {
+      "id": "Meteors_Effect",
+      "choices": [
+        "Down",
+        "Up"
+      ]
+    },
+    {
+      "id": "Meteors_Count",
+      "energy": [
+        5,
+        25
+      ]
+    },
+    {
+      "id": "Meteors_Speed",
+      "energy": [
+        8,
+        25
+      ]
+    },
+    {
+      "id": "Meteors_Length",
+      "value": 25
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

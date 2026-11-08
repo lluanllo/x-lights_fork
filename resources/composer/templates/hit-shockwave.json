@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "hit-shockwave",
+  "version": 1,
+  "effect": "Shockwave",
+  "roles": [
+    "figure",
+    "prop",
+    "star",
+    "matrix",
+    "mega-tree",
+    "group"
+  ],
+  "targetTypes": [
+    "model",
+    "group",
+    "submodel"
+  ],
+  "intents": [
+    "ensemble-hit"
+  ],
+  "prominence": [
+    "accent"
+  ],
+  "requires": [],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.9,
+  "durationMS": [
+    100,
+    900
+  ],
+  "maxPerMinute": 240,
+  "transitions": [],
+  "palette": {
+    "colors": [
+      1,
+      1
+    ],
+    "families": [
+      "festive",
+      "warm",
+      "cool",
+      "soft"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Shockwave_CenterX",
+      "value": 50
+    },
+    {
+      "id": "Shockwave_CenterY",
+      "value": 50
+    },
+    {
+      "id": "Shockwave_Start_Radius",
+      "value": 1
+    },
+    {
+      "id": "Shockwave_End_Radius",
+      "value": 65
+    },
+    {
+      "id": "Shockwave_Start_Width",
+      "value": 5
+    },
+    {
+      "id": "Shockwave_End_Width",
+      "value": 120
+    },
+    {
+      "id": "Shockwave_Blend_Edges",
+      "value": true
+    }
+  ],
+  "weight": 1.0,
+  "provenance": "reference-derived",
+  "visuallyValidated": false,
+  "notes": "Parametric template for the ensemble mode. Its values are the medians measured in the reference shows (FASE9 reference study), not settings copied from any sequence; nobody has judged its render yet."
+}

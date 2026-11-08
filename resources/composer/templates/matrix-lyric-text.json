@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "matrix-lyric-text",
+  "version": 1,
+  "effect": "Text",
+  "roles": [
+    "matrix"
+  ],
+  "targetTypes": [
+    "model"
+  ],
+  "intents": [
+    "lyric-text"
+  ],
+  "prominence": [
+    "lead",
+    "support"
+  ],
+  "requires": [
+    "text"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    800,
+    12000
+  ],
+  "maxPerMinute": 30,
+  "transitions": [
+    "Fade"
+  ],
+  "palette": {
+    "colors": [
+      1,
+      1
+    ],
+    "families": [
+      "soft",
+      "festive"
+    ]
+  },
+  "parameters": [
+    {
+      "id": "Text_Effect",
+      "value": "normal"
+    },
+    {
+      "id": "Text_Count",
+      "value": "none"
+    },
+    {
+      "id": "Text_Speed",
+      "value": 12
+    }
+  ],
+  "binding": "lyrics-phrase",
+  "weight": 1.0,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Starting values chosen from the effect's metadata ranges, to be tuned by watching renders; not a learned style."
+}

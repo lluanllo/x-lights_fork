@@ -23,6 +23,7 @@
 #include "render/GPURenderUtils.h"
 #include "media/VideoReader.h"
 #include <wx/config.h>
+#include <wx/translation.h>
 
 #ifdef __APPLE__
 void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (no Dock/focus)
@@ -68,9 +69,27 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #ifdef __APPLE__
 #include "effects/metal/MetalShaderTranslator.h"
 #endif
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include "shared/utils/BitmapCache.h"
+#include "composer/AnalyzerTest.h"
+#include "composer/ChoreographyTest.h"
+#include "ai/WxServiceSettingsStore.h"
+#include "composer/AssistTest.h"
+#include "composer/MediaTest.h"
+#include "composer/LearningTest.h"
+#include "composer/MediaValidation.h"
+#include "composer/VisualTest.h"
+#include "composer/MusicAssist.h"
+#include "composer/LyricTest.h"
+#include "composer/ReferenceStudy.h"
+#include "composer/VisualDirection.h"
+#include "composer/PipelineTest.h"
+#include "composer/ComposerUITest.h"
+#include "composer/PlanTest.h"
+#include "composer/ValidatorTest.h"
+#include "composer/WriterTest.h"
 #include "utils/CurlManager.h"
 #include "render/SequencePackage.h"
 #include "utils/AppCallbacks.h"
@@ -1075,7 +1094,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
             headlessArg = true;
             break;
         }
@@ -1131,6 +1150,18 @@ bool xLightsApp::OnInit()
     SetIsxLights(true);
     GetResourcesDirectory(); // bootstrap GetResourcesDir() with wx-dependent path lookup
     InitializeXLightsConfig();
+    wxString interfaceLanguage;
+    GetXLightsConfig()->Read("InterfaceLanguage", &interfaceLanguage, "es");
+    const bool useSpanish = interfaceLanguage != "en";
+    const wxLanguage language = useSpanish ? wxLANGUAGE_SPANISH : wxLANGUAGE_ENGLISH_US;
+    auto* translations = new wxTranslations;
+    translations->SetLanguage(language);
+    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(wxString::FromUTF8((GetResourcesDirectory() + "/locale").c_str()));
+    wxTranslations::Set(translations);
+    if (useSpanish && !translations->AddCatalog("xLights", wxLANGUAGE_ENGLISH_US)) {
+        spdlog::warn("Spanish translation catalog could not be loaded from {}",
+                     (GetResourcesDirectory() + "/locale").c_str());
+    }
     DumpConfig();
 
     // Point VAMP_PATH at the per-user plugin dir + standard location before any
@@ -1178,6 +1209,83 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "r", "render", "render files and exit"},
         { wxCMD_LINE_SWITCH, "hl", "headless", "render sequence(s) to fseq with no window and exit" },
         { wxCMD_LINE_SWITCH, "fc", "fseqcmp", "compare two .fseq files channel-for-channel and exit (0=identical)" },
+        { wxCMD_LINE_SWITCH, "cwt", "composer-writer-test", "internal test: write a synthetic sequence to a copy of a show (-s) with all controllers inactive, as --out, verify it and exit" },
+        { wxCMD_LINE_OPTION, "", "out", "file name of the sequence written by --composer-writer-test, or folder for --composer-validator-test" },
+        { wxCMD_LINE_SWITCH, "cvd", "composer-validate", "internal test: check a sequence (and --fseq) against a show (-s) with all controllers inactive, and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-writer-spec", "with --composer-validate: expect the sequence --composer-writer-test writes" },
+        { wxCMD_LINE_OPTION, "", "fseq", "rendered file checked by --composer-validate" },
+        { wxCMD_LINE_OPTION, "cas", "composer-analyze-song", "internal tool: analyze this audio file with no window, writing --out (default: next to the audio), and exit" },
+        { wxCMD_LINE_OPTION, "", "xtiming", "with --composer-analyze-song: also write the timing tracks to this .xtiming file" },
+        { wxCMD_LINE_OPTION, "", "report", "with --composer-analyze-song: also write the summary to this file" },
+        { wxCMD_LINE_OPTION, "", "analysis-interval", "with --composer-analyze-song: milliseconds between energy points (default 100)" },
+        { wxCMD_LINE_OPTION, "", "onset-sensitivity", "with --composer-analyze-song: higher finds fewer onsets (default 1.5)" },
+        { wxCMD_LINE_OPTION, "", "cancel-file", "with --composer-analyze-song and --composer-generate: stop without publishing anything if this file appears" },
+        { wxCMD_LINE_OPTION, "", "reference", "with --composer-analyze-song: score against this reviewed reference file" },
+        { wxCMD_LINE_SWITCH, "cat", "composer-analyzer-test", "internal test: run the analyzer cases on synthetic audio written under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "clt", "composer-lyrics-test", "internal test: run the lyrics, phonetics and alignment cases under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-visual-test", "internal test: the visual analysis, framing and storyboard on pictures and videos it draws under --out (with --vision-model <folder>, also the image-text model), and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-review", "internal tool: apply --decisions <file> to the review of --sequence <xsq> in the show (-s), with the storyboard of --report <folder>; learn from it and write the next corrections to --out <file>; never approves a show" },
+        { wxCMD_LINE_OPTION, "", "decisions", "with --composer-review: the decisions file" },
+        { wxCMD_LINE_OPTION, "", "report", "with --composer-review: the report folder of the generation" },
+        { wxCMD_LINE_SWITCH, "", "composer-learning-test", "internal test: the review of a show's pictures and videos, its approval, the labels of the library, the model measured against them and the preferences learned, under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-media-eval", "internal tool: analyse the --media-folders of the show (-s) with --vision-model, twice to time the cache, and write a validation set and its metrics (from --labels <file> when given) under --out; then exit" },
+        { wxCMD_LINE_OPTION, "", "labels", "with --composer-media-eval: a validation set with labels" },
+        { wxCMD_LINE_OPTION, "", "sample", "with --composer-media-eval: how many files the validation set has (24)" },
+        { wxCMD_LINE_OPTION, "", "vision-model", "with --composer-visual-test or --composer-generate: the folder holding the image-text model (siglip-base-patch16-224)" },
+        { wxCMD_LINE_SWITCH, "cmt", "composer-media-test", "internal test: the media library on pictures, an animation and a video it makes under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cst", "composer-assist-test", "internal test: LRCLIB, Groq and Gemini against stand-ins (nothing is sent), under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cft", "composer-faces-test", "internal test: write, render and check a singing face on a copy of a show (-s) with all controllers inactive, as --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cmc", "composer-model-capabilities", "internal tool: write the roles and capabilities of a show (-s) with all controllers inactive to --out <file>.json, and exit" },
+        { wxCMD_LINE_SWITCH, "cpt", "composer-plan-test", "internal test: run the composition planner cases under --out, also on the show (-s) if given, and exit" },
+        { wxCMD_LINE_SWITCH, "cct", "composer-choreography-test", "internal test: choreograph synthetic plans under --out, also on the show (-s) if given, and exit" },
+        { wxCMD_LINE_OPTION, "", "plan", "with --composer-choreography-test: a composition-plan.json to choreograph against the show (-s)" },
+        { wxCMD_LINE_OPTION, "", "profile", "with --composer-choreography-test and --composer-generate: a style profile JSON" },
+        { wxCMD_LINE_OPTION, "", "level", "with --composer-choreography-test, --composer-generate and --composer-pipeline-test: conservative, balanced or creative" },
+        { wxCMD_LINE_OPTION, "", "seed", "with --composer-choreography-test and --composer-generate: the seed, instead of the plan's" },
+        { wxCMD_LINE_OPTION, "", "templates", "with --composer-choreography-test and --composer-generate: a template folder instead of resources/composer/templates" },
+        { wxCMD_LINE_OPTION, "cgn", "composer-generate", "generate a sequence for this audio file on the show (-s) with no window: --name <file>.xsq is published in the show folder, never replacing one, and --out <folder> gets the diagnostics; then exit" },
+        { wxCMD_LINE_OPTION, "", "name", "with --composer-generate: the sequence's file name, ending in .xsq" },
+        { wxCMD_LINE_OPTION, "", "lyrics", "with --composer-generate and --composer-pipeline-test: lyrics as plain text, LRC or SRT (UTF-8)" },
+        { wxCMD_LINE_OPTION, "", "timing", "with --composer-generate and --composer-pipeline-test: an .xtiming with a synchronized lyrics track, which wins over any other time" },
+        { wxCMD_LINE_OPTION, "", "timing-track", "with --composer-generate: which track of --timing holds the lyrics" },
+        { wxCMD_LINE_OPTION, "", "lyric-session", "with --composer-generate: the marks saved by Sync Lyrics" },
+        { wxCMD_LINE_OPTION, "", "corrections", "with --composer-generate: a corrections file to apply" },
+        { wxCMD_LINE_OPTION, "", "previous", "with --composer-generate: the .composer.json of an earlier generation, whose corrections and locks are kept" },
+        { wxCMD_LINE_OPTION, "", "roles", "with --composer-generate: a roles.json instead of <show>/ShowComposer/roles.json" },
+        { wxCMD_LINE_OPTION, "", "cache", "with --composer-generate: the analysis cache folder instead of <show>/ShowComposer/cache" },
+        { wxCMD_LINE_OPTION, "", "themes", "with --composer-generate: a theme catalogue JSON instead of resources/composer/themes.json" },
+        { wxCMD_LINE_OPTION, "", "character", "with --composer-generate: a song description saved by the music assistant" },
+        { wxCMD_LINE_OPTION, "", "transcript", "with --composer-generate: a transcription saved by the music assistant, matched to the lyrics for word times" },
+        { wxCMD_LINE_OPTION, "", "media-folders", "with --composer-generate: picture and video folders, separated by ';'" },
+        { wxCMD_LINE_SWITCH, "", "scan-media", "with --composer-generate: search the media folders again before choosing" },
+        { wxCMD_LINE_SWITCH, "", "media-manual-only", "with --composer-generate: only the pictures and videos a person assigned" },
+        { wxCMD_LINE_OPTION, "", "media-share", "with --composer-generate: at most this share of the song (0-1) with a picture or a video" },
+        { wxCMD_LINE_SWITCH, "", "copy-media", "with --composer-generate: the person agreed to copy media outside the show into its Images and Videos folders" },
+        { wxCMD_LINE_SWITCH, "", "analyze-media", "with --composer-generate: look at the pictures and videos again before planning (with --vision-model, also with the image-text model)" },
+        { wxCMD_LINE_OPTION, "", "media-variant", "with --composer-generate: another visual montage from the same files (a number)" },
+        { wxCMD_LINE_SWITCH, "", "no-learning", "with --composer-generate: ignore the show maker's preferences (ShowComposer/preferences.json)" },
+        { wxCMD_LINE_OPTION, "", "screens-for", "with --composer-generate: installation (only screens wired to a controller get pictures automatically, the default) or preview" },
+        { wxCMD_LINE_OPTION, "", "lyrics-mode", "with --composer-generate: how words and pictures share the screens: lyrics-first, smart or free" },
+        { wxCMD_LINE_OPTION, "", "screens", "with --composer-generate: screen roles, \"Name=role;Name=role\" (main, secondary, tree, lyrics, narration, media, support, off)" },
+        { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
+        { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
+        { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
+        { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
+        { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
+        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, or transcript-lrc (lyrics from --transcript), answer to --out, and exit; nothing is sent without --allow-upload" },
+        { wxCMD_LINE_SWITCH, "", "allow-upload", "with --composer-assist: the person agreed in the window to send this song to the service" },
+        { wxCMD_LINE_OPTION, "", "query", "with --composer-assist lrclib: \"Artist - Title\"" },
+        { wxCMD_LINE_OPTION, "", "duration", "with --composer-assist lrclib: the song's length in seconds" },
+        { wxCMD_LINE_SWITCH, "", "composer-reference-profile", "internal tool: write a style profile measured from --studies (study folders separated by ';') to --out, named --study-id, and exit" },
+        { wxCMD_LINE_OPTION, "", "studies", "with --composer-reference-profile: study folders written by --composer-reference-study, separated by ';'" },
+        { wxCMD_LINE_OPTION, "", "study-id", "with --composer-reference-study: a short name for the reports" },
+        { wxCMD_LINE_SWITCH, "", "composer-snapshots", "internal tool: write PNG pictures of --models at --times in a rendered --fseq of the show (-s) with all controllers inactive, to --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "models", "with --composer-snapshots: model names separated by ';'" },
+        { wxCMD_LINE_OPTION, "", "times", "with --composer-snapshots: times in milliseconds separated by ','" },
+        { wxCMD_LINE_SWITCH, "", "composer-ui-test", "internal test: drive Show Composer through its window on the show (-s) with all controllers inactive, with --audio and --lyrics, writing results and screenshots to --out, and exit" },
+        { wxCMD_LINE_SWITCH, "cvt", "composer-validator-test", "internal test: run the validator cases on a synthetic show written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "st", "shadertranslate", "assemble every .fs shader in the show dir to GLSL (spike) and exit" },
         { wxCMD_LINE_SWITCH, "cs", "checksequence", "run check sequence and exit" },
         { wxCMD_LINE_OPTION, "m", "media", "specify media directory"},
@@ -1366,7 +1474,7 @@ bool xLightsApp::OnInit()
             sequenceFiles.Clear();
         }
 
-        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("fc") && !parser.Found("st") && !info.empty() && readOnlyZipFile == "")
+        if (!parser.Found("cs") && !parser.Found("r") && !parser.Found("o") && !parser.Found("hl") && !parser.Found("cwt") && !parser.Found("cvd") && !parser.Found("cvt") && !parser.Found("cas") && !parser.Found("cat") && !parser.Found("cab") && !parser.Found("clt") && !parser.Found("cst") && !parser.Found("cmt") && !parser.Found("cft") && !parser.Found("cmc") && !parser.Found("cpt") && !parser.Found("cct") && !parser.Found("fc") && !parser.Found("st") && !headlessArg && !parser.Found("composer-ui-test") && !info.empty() && readOnlyZipFile == "")
         {
             if (parser.Found("q")) {
                 spdlog::info("Command line notices (dialog suppressed by -q):\n{}", (const char*)info.c_str());
@@ -1850,6 +1958,408 @@ bool xLightsApp::OnInit()
         std::exit(diffSamples == 0 ? 0 : 1);
     }
 
+    if (parser.Found("cwt")) {
+        wxString outName;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-writer-test requires a show directory (-s <dir>) and --out <name>.xsq");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(composer::RunWriterTest(showDir.ToStdString(), outName.ToStdString()));
+    }
+
+    if (parser.Found("cvd")) {
+        if (showDir.IsEmpty() || sequenceFiles.GetCount() != 1) {
+            spdlog::error("--composer-validate requires a show directory (-s <dir>) and one sequence file");
+            std::exit(2);
+        }
+        wxString fseqName;
+        parser.Found("fseq", &fseqName);
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunValidateCommand(showDir.ToStdString(), sequenceFiles[0].ToStdString(), fseqName.ToStdString(), parser.Found("composer-writer-spec")));
+    }
+
+    wxString analyzeSong;
+    if (parser.Found("cas", &analyzeSong)) {
+        composer::AnalyzeCommandOptions command;
+        command.audioPath = analyzeSong.ToStdString();
+        wxString value;
+        if (parser.Found("out", &value)) {
+            command.outPath = value.ToStdString();
+        }
+        if (parser.Found("xtiming", &value)) {
+            command.xtimingPath = value.ToStdString();
+        }
+        if (parser.Found("report", &value)) {
+            command.reportPath = value.ToStdString();
+        }
+        if (parser.Found("cancel-file", &value)) {
+            command.cancelFile = value.ToStdString();
+        }
+        if (parser.Found("reference", &value)) {
+            command.referencePath = value.ToStdString();
+        }
+        if (parser.Found("analysis-interval", &value)) {
+            command.energyIntervalMS = (int)std::strtol(value.ToStdString().c_str(), nullptr, 10);
+        }
+        if (parser.Found("onset-sensitivity", &value)) {
+            command.onsetSensitivity = std::strtod(value.ToStdString().c_str(), nullptr);
+        }
+        std::exit(composer::RunAnalyzeCommand(command));
+    }
+
+    if (parser.Found("cat") || parser.Found("cab")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-analyzer-test and --composer-analyzer-bench require --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(parser.Found("cat") ? composer::RunAnalyzerTest(outName.ToStdString()) : composer::RunAnalyzerBench(outName.ToStdString()));
+    }
+
+    if (parser.Found("clt")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-lyrics-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(composer::RunLyricsTest(outName.ToStdString()));
+    }
+
+    if (parser.Found("cst")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-assist-test requires --out <folder>");
+            std::exit(2);
+        }
+        std::exit(composer::RunAssistTest(outName.ToStdString()));
+    }
+
+    if (parser.Found("cmt")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-media-test requires --out <folder>");
+            std::exit(2);
+        }
+        std::exit(composer::RunMediaTest(outName.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-review")) {
+        wxString sequence, decisions, report, outName;
+        if (showDir.IsEmpty() || !parser.Found("sequence", &sequence) || !parser.Found("decisions", &decisions) || !parser.Found("report", &report) || !parser.Found("out", &outName)) {
+            spdlog::error("--composer-review requires -s, --sequence, --decisions, --report and --out");
+            std::exit(2);
+        }
+        std::exit(composer::RunReviewCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), report.ToStdString(wxConvUTF8), decisions.ToStdString(wxConvUTF8),
+                                             outName.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-learning-test")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-learning-test requires --out <folder>");
+            std::exit(2);
+        }
+        std::exit(composer::RunLearningTest(outName.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-media-eval")) {
+        wxString outName, folders, model, labels, sample;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty() || !parser.Found("media-folders", &folders) || folders.IsEmpty()) {
+            spdlog::error("--composer-media-eval requires -s <show>, --media-folders <a;b> and --out <folder>");
+            std::exit(2);
+        }
+        parser.Found("vision-model", &model);
+        parser.Found("labels", &labels);
+        parser.Found("sample", &sample);
+        std::vector<std::string> list;
+        for (const wxString& f : wxSplit(folders, ';')) {
+            if (!f.IsEmpty()) {
+                list.push_back(f.ToStdString(wxConvUTF8));
+            }
+        }
+        const long n = sample.IsEmpty() ? 24 : std::strtol(sample.ToStdString().c_str(), nullptr, 10);
+        std::exit(composer::RunMediaEvaluation(showDir.ToStdString(wxConvUTF8), list, model.ToStdString(wxConvUTF8), outName.ToStdString(wxConvUTF8), labels.ToStdString(wxConvUTF8),
+                                               static_cast<size_t>(std::max(4L, n))));
+    }
+
+    if (parser.Found("composer-visual-test")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-visual-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxString model;
+        parser.Found("vision-model", &model);
+        std::exit(composer::RunVisualTest(outName.ToStdString(wxConvUTF8), model.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("cft")) {
+        wxString outName;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-faces-test requires a show directory (-s <dir>) and --out <name>.xsq");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunFacesTest(showDir.ToStdString(), outName.ToStdString()));
+    }
+
+    if (parser.Found("cmc")) {
+        wxString outName;
+        if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-model-capabilities requires a show directory (-s <dir>) and --out <file>.json");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(composer::RunCapabilitiesCommand(showDir.ToStdString(), outName.ToStdString()));
+    }
+
+    if (parser.Found("cpt")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-plan-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        std::exit(composer::RunPlanTest(outName.ToStdString(), showDir.ToStdString()));
+    }
+
+    if (parser.Found("cct")) {
+        composer::ChoreographyTestOptions options;
+        wxString value;
+        if (!parser.Found("out", &value) || value.IsEmpty()) {
+            spdlog::error("--composer-choreography-test requires --out <folder>");
+            std::exit(2);
+        }
+        options.outDir = value.ToStdString();
+        options.showDir = showDir.ToStdString();
+        if (parser.Found("plan", &value)) {
+            options.planPath = value.ToStdString();
+        }
+        if (parser.Found("profile", &value)) {
+            options.profilePath = value.ToStdString();
+        }
+        if (parser.Found("level", &value)) {
+            options.level = value.ToStdString();
+        }
+        if (parser.Found("seed", &value)) {
+            options.seed = std::strtoull(value.ToStdString().c_str(), nullptr, 10);
+        }
+        if (parser.Found("templates", &value)) {
+            options.templatesDir = value.ToStdString();
+        }
+        if (!options.planPath.empty() && options.showDir.empty()) {
+            spdlog::error("--plan needs the show it was made for (-s <dir>)");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunChoreographyTest(options));
+    }
+
+    wxString generateAudio;
+    if (parser.Found("cgn", &generateAudio)) {
+        composer::GenerateCommandOptions command;
+        command.audioPath = generateAudio.ToStdString();
+        command.showDir = showDir.ToStdString();
+        wxString value;
+        const std::pair<const char*, std::string*> options[] = {
+            { "name", &command.sequenceName }, { "out", &command.reportDir }, { "profile", &command.profilePath }, { "roles", &command.rolesPath }, { "templates", &command.templatesDir },
+            { "cache", &command.cacheDir }, { "lyrics", &command.lyricsPath }, { "timing", &command.timingPath }, { "timing-track", &command.timingTrack }, { "lyric-session", &command.lyricSessionPath },
+            { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
+            { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
+            { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare }, { "vision-model", &command.visionModel }, { "media-variant", &command.mediaVariant },
+            { "lyrics-mode", &command.lyricsMode }, { "screens", &command.screens }, { "screens-for", &command.screensFor },
+        };
+        for (const auto& [name, target] : options) {
+            if (parser.Found(name, &value)) {
+                *target = value.ToStdString();
+            }
+        }
+        command.render = !parser.Found("no-render");
+        command.scanMedia = parser.Found("scan-media");
+        command.mediaManualOnly = parser.Found("media-manual-only");
+        command.copyMedia = parser.Found("copy-media");
+        command.analyzeMedia = parser.Found("analyze-media");
+        command.noLearning = parser.Found("no-learning");
+        if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
+            spdlog::error("--composer-generate requires a show directory (-s <dir>), --name <file>.xsq and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunGenerateCommand(command));
+    }
+
+    if (parser.Found("composer-assist")) {
+        composer::AssistCommandOptions options;
+        wxString value;
+        parser.Found("composer-assist", &value);
+        options.action = value.ToStdString(wxConvUTF8);
+        if (parser.Found("audio", &value)) {
+            options.audioPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("out", &value)) {
+            options.outPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("query", &value)) {
+            options.query = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("transcript", &value)) {
+            options.transcriptPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("duration", &value)) {
+            options.durationS = std::strtod(value.ToStdString().c_str(), nullptr);
+        }
+        options.showDir = showDir.ToStdString(wxConvUTF8);
+        options.allowUpload = parser.Found("allow-upload");
+        WxServiceSettingsStore keys;
+        std::unique_ptr<composer::IHttpClient> client = composer::MakeCurlHttpClient();
+        std::exit(composer::RunAssistCommand(options, *client, &keys));
+    }
+
+    if (parser.Found("composer-reference-profile")) {
+        wxString studies;
+        wxString out;
+        wxString id;
+        if (!parser.Found("studies", &studies) || !parser.Found("out", &out) || !parser.Found("study-id", &id)) {
+            spdlog::error("--composer-reference-profile requires --studies <a;b>, --out <profile.json> and --study-id <id>");
+            std::exit(2);
+        }
+        std::vector<std::string> dirs;
+        for (const wxString& d : wxSplit(studies, ';')) {
+            if (!d.IsEmpty()) {
+                dirs.push_back(d.ToStdString(wxConvUTF8));
+            }
+        }
+        composer::ThemeCatalog themes;
+        std::string error;
+        const bool haveThemes = composer::LoadThemeCatalog(composer::DefaultThemeCatalogPath(), themes, error);
+        std::string json;
+        if (!composer::BuildReferenceProfile(dirs, id.ToStdString(wxConvUTF8), "Reference style: " + id.ToStdString(wxConvUTF8), haveThemes ? &themes : nullptr, json, error)) {
+            printf("composer-reference-profile: %s\n", error.c_str());
+            std::exit(1);
+        }
+        std::ofstream file(std::filesystem::path(out.ToStdString(wxConvUTF8)), std::ios::binary | std::ios::trunc);
+        file << json;
+        printf("composer-reference-profile: %s written from %zu studies\n", out.ToStdString(wxConvUTF8).c_str(), dirs.size());
+        std::exit(file.good() ? 0 : 1);
+    }
+
+    if (parser.Found("composer-reference-study")) {
+        composer::ReferenceStudyOptions options;
+        wxString value;
+        options.showDir = showDir.ToStdString(wxConvUTF8);
+        if (parser.Found("sequence", &value)) {
+            options.sequencePath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("study-id", &value)) {
+            options.id = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("times", &value)) {
+            for (const wxString& t : wxSplit(value, ',')) {
+                options.timesMS.push_back(static_cast<int>(std::strtol(t.ToStdString().c_str(), nullptr, 10)));
+            }
+        }
+        if (options.showDir.empty() || options.sequencePath.empty() || options.outDir.empty()) {
+            spdlog::error("--composer-reference-study requires -s <dir>, --sequence <file.xsq> and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunReferenceStudy(options));
+    }
+
+    if (parser.Found("composer-snapshots")) {
+        composer::SnapshotOptions options;
+        wxString value;
+        options.showDir = showDir.ToStdString();
+        if (parser.Found("fseq", &value)) {
+            options.fseqPath = value.ToStdString();
+        }
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString();
+        }
+        if (parser.Found("models", &value)) {
+            for (const wxString& m : wxSplit(value, ';')) {
+                if (!m.IsEmpty()) {
+                    options.models.push_back(m.ToStdString(wxConvUTF8));
+                }
+            }
+        }
+        if (parser.Found("times", &value)) {
+            for (const wxString& t : wxSplit(value, ',')) {
+                options.timesMS.push_back(static_cast<int>(std::strtol(t.ToStdString().c_str(), nullptr, 10)));
+            }
+        }
+        if (options.showDir.empty() || options.fseqPath.empty() || options.outDir.empty() || options.models.empty() || options.timesMS.empty()) {
+            spdlog::error("--composer-snapshots requires -s <dir>, --fseq <file>, --models <a;b>, --times <ms,ms> and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        std::exit(composer::RunSnapshotCommand(options));
+    }
+
+    if (parser.Found("cpl")) {
+        composer::PipelineTestOptions options;
+        wxString value;
+        if (!parser.Found("out", &value) || value.IsEmpty()) {
+            spdlog::error("--composer-pipeline-test requires --out <folder>");
+            std::exit(2);
+        }
+        options.outDir = value.ToStdString();
+        options.showDir = showDir.ToStdString();
+        if (parser.Found("audio", &value)) {
+            options.audioPath = value.ToStdString();
+        }
+        if (parser.Found("lyrics", &value)) {
+            options.lyricsPath = value.ToStdString();
+        }
+        if (parser.Found("timing", &value)) {
+            options.timingPath = value.ToStdString();
+        }
+        if (parser.Found("level", &value)) {
+            options.level = value.ToStdString();
+        }
+        if (!options.audioPath.empty() && options.showDir.empty()) {
+            spdlog::error("--audio needs the show to generate on (-s <dir>)");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunPipelineTest(options));
+    }
+
+    if (parser.Found("cvt")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-validator-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunValidatorTest(outName.ToStdString()));
+    }
+
     // ---- Headless render: no window at all. Load the show + sequence(s),
     // render to fseq, and exit. Proof that xLightsShowContext carries a full
     // render without an xLightsFrame. See HeadlessRenderContext / AGENTS.md.
@@ -2037,6 +2547,23 @@ bool xLightsApp::OnInit()
         spdlog::info("-v: Check sequence mode is ON");
         topFrame->_checkSequenceMode = true;
         topFrame->CallAfter(&xLightsFrame::OpenAndCheckSequence, sequenceFiles, true);
+    }
+
+    if (parser.Found("composer-ui-test")) {
+        ComposerUITestOptions options;
+        wxString value;
+        if (parser.Found("out", &value)) {
+            options.outDir = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("audio", &value)) {
+            options.audio = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("lyrics", &value)) {
+            options.lyrics = value.ToStdString(wxConvUTF8);
+        }
+        spdlog::info("--composer-ui-test: driving Show Composer, results in {}", options.outDir);
+        // After the show has loaded and the window is up.
+        topFrame->CallAfter([topFrame, options]() { StartComposerUITest(topFrame, options); });
     }
 
     if (parser.Found("o")) {

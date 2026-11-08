@@ -238,7 +238,7 @@ wxDECLARE_EVENT(EVT_SETEFFECTCHOICE, wxCommandEvent);
 wxDECLARE_EVENT(EVT_TIPOFDAY_READY, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SET_EFFECT_DURATION, wxCommandEvent);
 
-static const wxString xlights_base_name       = "xLights";
+static const wxString xlights_base_name       = "xJuanjiLights";
 static const wxString strSupportedFileTypes = "LOR Music Sequences (*.lms)|*.lms|LOR Animation Sequences (*.las)|*.las|HLS hlsIdata Sequences(*.hlsIdata)|*.hlsIdata|Vixen Sequences (*.vix)|*.vix|Glediator Record File (*.gled)|*.gled)|Lynx Conductor Sequences (*.seq)|*.seq|xLights/FPP Sequences(*.fseq)|*.fseq|xLights Imports(*.iseq)|*.iseq";
 static const wxString strSequenceSaveAsFileTypes = "xLights Sequences(*.xsq)|*.xsq|Old xLights Sequences(*.xml)|*.xml";
 
@@ -1198,6 +1198,7 @@ public:
     // Set by the Batch Render menu; scripted and command-line batches get no progress window.
     bool _batchRenderShowProgress = false;
     bool _snapToTimingMarks = true;
+    int _showComposerMenuId = wxID_ANY;
     bool _autoSavePerspecive = true;
     bool _renderBellEnabled = false;
     bool _pasteAsLayers = false;
@@ -1800,6 +1801,9 @@ public:
     void SaveSequence();
     void SetSequenceTiming(int timingMS);
     bool CloseSequence();
+    // Show Composer, from Tools; opens what it generated when asked to. Returns the menu id.
+    void OpenShowComposer();
+    [[nodiscard]] int ShowComposerMenuId() const { return _showComposerMenuId; }
 
     // Held across an operation that runs nested event loops (modal dialogs) over
     // the open sequence, such as Import Effects. While held, anything that would

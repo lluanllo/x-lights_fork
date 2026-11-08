@@ -32,6 +32,33 @@ namespace lrc {
 // bridge (`src-iPad/Bridge/XLLyricsImport.mm`).
 std::vector<std::pair<int, std::string>> ParseLRC(const std::string& syncedLyrics);
 
+// The same, keeping what went wrong. Lines come one per timestamp, so
+// "[00:12.00][01:30.00]text" gives two; a UTF-8 BOM and CR line ends are
+// accepted; "[offset:+500]" moves every line 500 ms earlier, as LRC players
+// read it. Nothing is dropped silently: a tag that is not a valid time, a
+// negative time and a non-empty line with no tag are each an issue.
+struct ParsedLRC {
+    struct Line {
+        int timeMS = 0;
+        std::string text;
+        int number = 0; // 1-based line of the file
+    };
+    struct Issue {
+        std::string code; // "malformed-time", "negative-time", "malformed-offset", "untimed-line"
+        int line = 0;
+        std::string text;
+    };
+    std::vector<Line> lines; // in the file's order
+    std::vector<Issue> issues;
+    int timestampCount = 0;
+    int metadataCount = 0;
+    int offsetMS = 0;
+    bool hadOffset = false;
+    bool hadBom = false;
+    bool hadWordTimes = false;
+};
+ParsedLRC ParseLRCDetailed(const std::string& syncedLyrics);
+
 // Apply the small text-cleanup pass the desktop runs before
 // adding a phrase to a timing layer:
 //   - Replace common Unicode quotes with ASCII (' " ").

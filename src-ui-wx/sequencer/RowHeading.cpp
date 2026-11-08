@@ -40,10 +40,12 @@
 #include <log.h>
 #include "shared/utils/wxUtilities.h"
 #include "sequencer/LyricsDialog.h"
+#include "sequencer/LyricSyncDialog.h"
 #include "LRCLIBSearchDialog.h"
 #include "lyrics/LyricBreakdown.h"
 #include "TimeLine.h"
 
+#include <filesystem>
 #include <sstream>
 
 #define ICON_SPACE FromDIP(25)
@@ -220,6 +222,7 @@ const long RowHeading::ID_ROW_MNU_UNFIX_TIMING_TRACK = wxNewId();
 const long RowHeading::ID_ROW_MNU_IMPORT_NOTES = wxNewId();
 const long RowHeading::ID_ROW_MNU_IMPORT_LYRICS = wxNewId();
 const long RowHeading::ID_ROW_MNU_SEARCH_LYRICS_ONLINE = wxNewId();
+const long RowHeading::ID_ROW_MNU_SYNC_LYRICS = wxNewId();
 const long RowHeading::ID_ROW_MNU_AI_LYRICS = wxNewId();
 const long RowHeading::ID_ROW_MNU_BREAKDOWN_TIMING_PHRASES = wxNewId();
 const long RowHeading::ID_ROW_MNU_BREAKDOWN_TIMING_WORDS = wxNewId();
@@ -813,6 +816,7 @@ void RowHeading::rightClick( wxMouseEvent& event)
                     mnuLayer.Append(ID_ROW_MNU_SEARCH_LYRICS_ONLINE, "Search for Lyrics Online...");
                     TimingElement *te = dynamic_cast<TimingElement*>(element);
                     if (te->GetSubType() == "") {
+                        mnuLayer.Append(ID_ROW_MNU_SYNC_LYRICS, _("Sync Lyrics..."));
                         mnuLayer.Append(ID_ROW_MNU_BREAKDOWN_TIMING_PHRASES, "Breakdown Phrases");
                         if (element->GetEffectLayerCount() > 1) {
                             mnuLayer.Append(ID_ROW_MNU_BREAKDOWN_TIMING_WORDS, "Breakdown Words");
@@ -933,6 +937,32 @@ static void ImportLyrics(SequenceElements* seqElements, TimingElement* element, 
             }
         }
     }
+}
+
+// The sync marks live next to the sequence, one file per lyrics track, so that marking
+// again or generating again never starts from nothing.
+static bool SyncLyrics(SequenceElements* seqElements, TimingElement* element, wxWindow* parent)
+{
+    xLightsFrame* frame = xLightsApp::GetFrame();
+    if (element == nullptr || frame == nullptr || frame->CurrentSeqXmlFile == nullptr) {
+        return false;
+    }
+    wxCommandEvent stop(EVT_STOP_SEQUENCE);
+    frame->GetEventHandler()->ProcessEvent(stop);
+
+    std::string trackFile;
+    for (char c : element->GetName()) {
+        const bool safe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+        trackFile += safe ? c : '_';
+    }
+    std::filesystem::path sequence(frame->CurrentSeqXmlFile->GetFullPath());
+    const std::string sessionPath = (sequence.parent_path() / (sequence.stem().string() + "." + trackFile + ".composer-lyrics.json")).string();
+    LyricSyncDialog dialog(parent, seqElements, element, frame->GetPlaybackAudio(), sessionPath);
+    if (frame->GetPlaybackAudio() == nullptr) {
+        wxMessageBox(_("This sequence has no audio, so phrases cannot be marked by ear. Lyrics can still be imported, and phrases with times can be generated."), _("Sync Lyrics"), wxOK | wxICON_INFORMATION, parent);
+    }
+    dialog.ShowModal();
+    return dialog.TrackChanged();
 }
 
 static void ImportSyncedLyrics(SequenceElements* seqElements, TimingElement* element, wxWindow* parent)
@@ -1859,6 +1889,11 @@ void RowHeading::OnLayerPopup(wxCommandEvent& event)
         ImportLyrics(mSequenceElements, dynamic_cast<TimingElement*>(element), GetParent());
     } else if (id == ID_ROW_MNU_SEARCH_LYRICS_ONLINE) {
         ImportSyncedLyrics(mSequenceElements, dynamic_cast<TimingElement*>(element), GetParent());
+    } else if (id == ID_ROW_MNU_SYNC_LYRICS) {
+        if (SyncLyrics(mSequenceElements, dynamic_cast<TimingElement*>(element), GetParent())) {
+            wxCommandEvent eventRowHeaderChanged(EVT_ROW_HEADINGS_CHANGED);
+            wxPostEvent(GetParent(), eventRowHeaderChanged);
+        }
     } else if (id == ID_ROW_MNU_BREAKDOWN_TIMING_PHRASES) {
         int result = wxOK;
         if (element->GetEffectLayerCount() > 1) {

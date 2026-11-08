@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "notes": "Starting palettes, not a learned style. Families group palettes by mood; templates name the families they accept.",
+  "palettes": [
+    {
+      "id": "festive-red-green",
+      "family": "festive",
+      "colors": [
+        "#FF0000",
+        "#00C000",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "festive-candy",
+      "family": "festive",
+      "colors": [
+        "#FF0000",
+        "#FFFFFF",
+        "#FF4040"
+      ]
+    },
+    {
+      "id": "festive-gold-red",
+      "family": "festive",
+      "colors": [
+        "#FFB000",
+        "#FF0000",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "warm-gold",
+      "family": "warm",
+      "colors": [
+        "#FFB000",
+        "#FF6000",
+        "#FFE0A0"
+      ]
+    },
+    {
+      "id": "warm-candle",
+      "family": "warm",
+      "colors": [
+        "#FF8C20",
+        "#FFD080",
+        "#FF5000"
+      ]
+    },
+    {
+      "id": "cool-ice",
+      "family": "cool",
+      "colors": [
+        "#0080FF",
+        "#FFFFFF",
+        "#80C0FF"
+      ]
+    },
+    {
+      "id": "cool-violet",
+      "family": "cool",
+      "colors": [
+        "#6020FF",
+        "#00C0FF",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "soft-snow",
+      "family": "soft",
+      "colors": [
+        "#FFFFFF",
+        "#C0D8FF",
+        "#E0E0FF"
+      ]
+    },
+    {
+      "id": "soft-pink",
+      "family": "soft",
+      "colors": [
+        "#FF66CC",
+        "#FFFFFF",
+        "#FFC0E0"
+      ]
+    }
+  ]
+}

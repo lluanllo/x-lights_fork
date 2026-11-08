@@ -12,6 +12,67 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: a song with no lyrics gets them from what Groq hears (sung lines only,
+                                 doubtful lines marked, nothing filled in), ready to read and correct before generating
+    -bug (lluanllo)              Show Composer: a line sung twice in a row is shown twice instead of stopping the
+                                 generation
+    -enh (lluanllo)              Show Composer: review the pictures and videos of a show shot by shot (approve,
+                                 reject with a reason, choose another file, add a note), apply the corrections
+                                 without making the rest again, and approve the show only after ticking what you
+                                 checked in xLights; correct what the image model says each file shows and see how
+                                 well it does against your labels; the program learns your taste from your reviews,
+                                 shows what it learned and lets you change, turn off or forget it
+    -bug (lluanllo)              Show Composer: a screen with no controller is no longer chosen automatically for
+                                 the pictures of a show for the real installation
+    -enh (lluanllo)              Show Composer: every screen of the show plays a part (main, second, tree, words,
+                                 extra pictures, lights only or none), chosen from the figures or by you in
+                                 "Screens..."; words and pictures share a matrix without a picture ever covering a
+                                 phrase; videos play on both faces of a round mega tree in step, from a front you can
+                                 turn; slow eased zooms and pans, cuts, cross-fades and rests that follow the music,
+                                 and shots that follow on from each other across the screens
+    -enh (lluanllo)              Show Composer: the pictures and videos of a folder are analysed (colours, light,
+                                 subject, motion, duplicates, and what they show with an optional local image model)
+                                 and made into a montage for the main matrix and the mega tree, scene by scene, cut on
+                                 the beat and framed for each figure; a shot or a scene can be kept, moved, replaced,
+                                 rebuilt or brought back from an earlier version
+    -enh (lluanllo)              Show Composer: several voices, a choir, a narrator and dialogue from the lyrics'
+                                 tags, each face singing only its own voice; a voice editor to fix who sings what
+    -enh (lluanllo)              Show Composer: a library of your own pictures and videos; the show places them on
+                                 matrices and mega trees as native Pictures and Video effects, saying why, and you
+                                 can choose, remove or keep each one
+    -enh (lluanllo)              Show Composer: reference styles measured from finished shows make the whole house
+                                 move together, with a colour theme per song, scenes that keep their look when a
+                                 section repeats, and short hits on the beat
+    -enh (lluanllo)              Show Composer: find the lyrics on LRCLIB, time the words with Groq or describe
+                                 the song with Gemini; the song is only sent after you agree, and the answers are
+                                 kept with the show so it works offline afterwards
+    -enh (lluanllo)              Show Composer: drop a song, lyrics or an .xtiming on the first step; step 2 shows
+                                 doubtful lyric marks, step 3 the art direction and step 5 a comparison with the
+                                 references
+    -bug (lluanllo)              LRC lyrics: several times on one line, a byte order mark, [offset:] and wrong
+                                 times are now read and reported instead of dropped silently
+    -bug (lluanllo)              Show Composer no longer refuses lyrics whose last line is close to the end of a
+                                 song that does not end on a frame
+    -bug (lluanllo)              Show Composer prefers faces wired to a controller over faces it cannot show
+    -bug (lluanllo)              The CMake build now embeds the application manifest (UTF-8 paths, DPI awareness)
+
+    -enh (lluanllo)              Show Composer window (Tools > Show Composer): choose a song, its lyrics and the
+                                 installation, review the song, the lyrics and the composition, fix beats and
+                                 figures by hand, generate the show and open it
+    -bug (lluanllo)              Show Composer no longer gives a face whose images are missing, or two models
+                                 that share channels at the same time
+    -enh (lluanllo)              Show Composer: --composer-generate makes a complete sequence for a song on a show
+                                 folder with no window, checks and renders it before publishing, and never
+                                 replaces an existing file
+    -change (lluanllo)           The desktop window title now reads xJuanjiLights; settings, show folders
+                                 and file formats are unchanged
+    -enh (lluanllo)              Sync Lyrics on lyrics timing tracks: mark phrases while the song plays and
+                                 generate words and Spanish mouth shapes for singing faces
+    -bug (lluanllo)              Importing an .srt subtitle file as a timing track no longer drops the last subtitle
+    -bug (lluanllo)              Text effect with several colours or vertical text no longer breaks accented
+                                 letters and signs such as n-tilde and inverted punctuation
+    -enh (lluanllo)              Added a Spanish desktop interface option under Preferences > Other, including effect-panel metadata and the main UI catalog.
+
     -bug (derwin12)              Floating Effect Assist window no longer stays open when switching
                                  to the Layout tab (#7241)
     -bug (derwin12)              Ctrl+Left/Right on multiple selected effects slides them as a group
