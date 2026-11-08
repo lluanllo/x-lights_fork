@@ -92,6 +92,29 @@ struct MediaAnalysis {
     [[nodiscard]] bool Done() const { return !mode.empty(); }
 };
 
+// What a person says a file shows, kept apart from the model's analysis, which is never
+// changed: the model's words stay to be compared with the person's.
+struct MediaHumanLabels {
+    std::vector<std::string> confirmed; // concepts the model proposed and the person agrees with
+    std::vector<std::string> rejected;  // concepts the model proposed that are wrong
+    std::vector<std::string> added;     // concepts the model missed
+    std::vector<std::string> excluded;  // concepts never to attach to it, whatever a model says later
+    // Uses it is not for: "matrix", "tree", "calm", "intense", "opening", "ending".
+    std::vector<std::string> notFor;
+    // The person went through everything the model proposed: only then can the file
+    // measure the model (an unconfirmed, unrejected concept is otherwise unknown).
+    bool complete = false;
+    std::string reviewer;
+    std::string reviewedAt;
+
+    [[nodiscard]] bool Empty() const { return confirmed.empty() && rejected.empty() && added.empty() && excluded.empty() && notFor.empty() && !complete; }
+};
+
+inline const std::vector<std::string>& MediaUses() {
+    static const std::vector<std::string> u = { "matrix", "tree", "calm", "intense", "opening", "ending" };
+    return u;
+}
+
 struct MediaItem {
     // "m:" and a hash of the file's contents: the same file keeps its id when it is
     // moved or renamed, which is how a moved file is found again.
@@ -120,7 +143,8 @@ struct MediaItem {
     std::string color;                   // its average colour, "#rrggbb"
     bool disabled = false;               // kept out of automatic choices by a person
     bool reviewed = false;               // a person looked at its categories
-    MediaAnalysis analysis;
+    MediaAnalysis analysis;              // what the analysis (and the model) said, as it said it
+    MediaHumanLabels human;
 
     [[nodiscard]] bool Usable() const { return status == MediaStatus::Ok && kind != MediaKind::Unsupported; }
 };
@@ -131,7 +155,9 @@ struct MediaFolder {
 };
 
 struct MediaLibrary {
-    int version = 2; // 2: each item may carry its analysis
+    // 2: each item may carry its analysis; 3: and a person's labels (older readers refuse
+    // it rather than drop the labels when they save).
+    int version = 3;
     std::vector<MediaFolder> folders;
     std::vector<MediaItem> items; // by path
     std::vector<std::string> warnings;

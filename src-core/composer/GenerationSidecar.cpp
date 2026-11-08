@@ -126,6 +126,9 @@ std::string ToJson(const GenerationSidecar& s) {
     if (!s.media.Empty()) {
         root["media"] = MediaSessionJson(s.media);
     }
+    if (!s.review.Empty()) {
+        root["review"] = VisualReviewJson(s.review);
+    }
     return root.dump(1);
 }
 
@@ -202,6 +205,12 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         if (root.contains("media") && !MediaSessionFrom(root["media"], s.media, error)) {
             return SidecarStatus::Damaged;
         }
+        if (root.contains("review") && !VisualReviewFrom(root["review"], s.review, error)) {
+            return SidecarStatus::Damaged;
+        }
+        s.visualReview = s.review.state == "approved" ? "approved" : s.visualReview == "approved" ? "not-reviewed" : s.visualReview;
+        // Read as the current schema from now on: a version 1 file has no review.
+        s.schemaVersion = SIDECAR_SCHEMA_VERSION;
         sidecar = std::move(s);
     } catch (const json::exception& e) {
         error = e.what();
@@ -246,7 +255,7 @@ std::string SidecarPathFor(const std::string& sequencePath) {
 }
 
 bool CorrectionSet::Empty() const {
-    return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && voices.empty() && screens.Empty() && analysis.events.empty() && analysis.sections.empty() &&
+    return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && voices.empty() && screens.Empty() && review.Empty() && analysis.events.empty() && analysis.sections.empty() &&
            analysis.bar.firstDownbeatMS < 0;
 }
 
@@ -269,6 +278,9 @@ void MergeCorrections(CorrectionSet& into, const CorrectionSet& extra) {
         UpsertMediaCorrection(into.media, c);
     }
     MergeScreenSettings(into.screens, extra.screens);
+    if (!extra.review.Empty()) {
+        into.review = extra.review;
+    }
     for (const VoiceDef& v : extra.voices) {
         std::erase_if(into.voices, [&](const VoiceDef& o) { return o.id == v.id; });
         into.voices.push_back(v);
@@ -282,6 +294,9 @@ std::string ToJson(const CorrectionSet& c) {
     root["choreography"] = ChoreographyCorrectionsJson(c.choreography);
     root["lyrics"] = LyricCorrectionsJson(c.lyrics);
     root["analysis"] = AnalysisCorrectionsJson(c.analysis);
+    if (!c.review.Empty()) {
+        root["review"] = VisualReviewJson(c.review);
+    }
     if (!c.screens.Empty()) {
         root["screens"] = ScreenSettingsJson(c.screens);
     }
@@ -309,7 +324,8 @@ bool FromJson(const std::string& text, CorrectionSet& corrections, std::string& 
     CorrectionSet out;
     if ((root.contains("plan") && !PlanCorrectionsFrom(root["plan"], out.plan, error)) || (root.contains("choreography") && !ChoreographyCorrectionsFrom(root["choreography"], out.choreography, error)) ||
         (root.contains("lyrics") && !LyricCorrectionsFrom(root["lyrics"], out.lyrics, error)) || (root.contains("analysis") && !AnalysisCorrectionsFrom(root["analysis"], out.analysis, error)) ||
-        (root.contains("media") && !MediaCorrectionsFrom(root["media"], out.media, error)) || (root.contains("screens") && !ScreenSettingsFrom(root["screens"], out.screens, error))) {
+        (root.contains("media") && !MediaCorrectionsFrom(root["media"], out.media, error)) || (root.contains("screens") && !ScreenSettingsFrom(root["screens"], out.screens, error)) ||
+        (root.contains("review") && !VisualReviewFrom(root["review"], out.review, error))) {
         return false;
     }
     if (root.contains("voices")) {

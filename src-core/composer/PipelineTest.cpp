@@ -4,6 +4,9 @@
 
 #include "composer/PipelineTest.h"
 
+#include "composer/ArtisticPreferences.h"
+#include "composer/VisualReview.h"
+
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
 #include "composer/MediaAnalysis.h"
@@ -144,6 +147,7 @@ public:
         TestMedia();
         TestStoryboard();
         TestScreens();
+        TestReviewLoop();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -809,6 +813,169 @@ private:
             { { "NumStrings", "1" }, { "NodesPerString", "288" }, { "StrandsPerString", "12" }, { "Vertical", "false" }, { "AlternateNodes", "false" }, { "NoZig", "false" }, { "Controller", "No Controller" } });
         add("Arbol Medio", "Tree", 40001, { { "NumStrings", "12" }, { "NodesPerString", "30" }, { "StrandsPerString", "1" }, { "TreeType", "0" }, { "TreeDegrees", "180" }, { "TreeBottomTopRatio", "6" }, { "TreePerspective", "0.2" } });
         return doc.save_file((folder / "xlights_rgbeffects.xml").wstring().c_str());
+    }
+
+    // Phase 13: generate, review, correct, close and open again, and generate with what
+    // was learned. On a show of its own, so what it learns stays there.
+    void TestReviewLoop() {
+        Title("A2l. A person reviews the montage, corrects it, and the next show learns from it");
+        const fs::path show = _root / "aprendizaje" / "show";
+        Check(WriteScreensShow(show), "a show of its own for what is learned");
+        const fs::path folder = _show / "Medios Fase 11";
+        const std::string profile = (fs::path(DefaultTemplateDirectory()).parent_path() / "profiles" / "reference-winter-cinematic.json").string();
+        const std::vector<std::pair<int, SectionKind>> layout = { { 0, SectionKind::Intro },  { 8000, SectionKind::Verse },        { 20000, SectionKind::Chorus },
+                                                                  { 32000, SectionKind::Verse }, { 44000, SectionKind::Chorus },     { 56000, SectionKind::Bridge },
+                                                                  { 64000, SectionKind::Instrumental }, { 76000, SectionKind::Chorus }, { 88000, SectionKind::Outro } };
+        int n = 0;
+        const auto request = [&](const std::string& name) {
+            GenerationRequest r;
+            r.audioPath = (_root / "montaje.wav").string();
+            r.showDir = show.string();
+            r.sequenceName = name + ".xsq";
+            r.reportDir = (_root / "reports" / name).string();
+            r.level = AutomationLevel::Balanced;
+            r.seed = 7;
+            r.lyricsPath = (_root / "montaje.lrc").string();
+            r.profilePath = profile;
+            r.mediaFolders = { folder.string() };
+            r.scanMedia = n++ == 0;
+            for (size_t i = 0; i < layout.size(); ++i) {
+                SectionCorrection c;
+                c.startMS = layout[i].first;
+                c.endMS = i + 1 < layout.size() ? layout[i + 1].first : 96000;
+                c.kind = layout[i].second;
+                r.corrections.analysis.sections.push_back(c);
+            }
+            return r;
+        };
+        const GenerationRun base = Generate(request("aprender-1"));
+        Check(base.ok, "a show generated with its montage");
+        if (!base.ok) {
+            return;
+        }
+        GenerationSidecar sidecar;
+        std::string error;
+        const bool readOk = ReadSidecar(base.sidecarPath, sidecar, error) == SidecarStatus::Ok;
+        Check(readOk && sidecar.review.clips.size() == base.media.storyboard.shots.size() &&
+                  CountReview(sidecar.review).pending == static_cast<int>(sidecar.review.clips.size()) && sidecar.visualReview == "not-reviewed",
+              fmt::format("its sidecar has a review of the {} shots, all pending, and the show is not reviewed", sidecar.review.clips.size()));
+        Check(FileExists((fs::path(base.request.reportDir) / "review.json").string()), "and the report has it too");
+        // The person reviews three shots of the main screen.
+        std::vector<const ClipReview*> main;
+        for (const ClipReview& c : sidecar.review.clips) {
+            if (c.lane == "Matriz Dos" && main.size() < 3) {
+                main.push_back(&c);
+            }
+        }
+        if (main.size() < 3) {
+            Check(false, "three shots on the main screen to review");
+            return;
+        }
+        const std::string ok = main[0]->decisionId, no = main[1]->decisionId, swap = main[2]->decisionId;
+        const std::string noMedia = main[1]->mediaId, noScene = main[1]->sceneId;
+        std::set<std::string> inScene;
+        for (const StoryboardShot& s : base.media.storyboard.shots) {
+            if (s.sceneId == main[2]->sceneId) {
+                inScene.insert(s.mediaId);
+            }
+        }
+        const MediaItem* other = nullptr;
+        for (const MediaItem& m : base.mediaLibrary.items) {
+            if (other == nullptr && m.Usable() && m.kind == MediaKind::Image && !inScene.contains(m.id) && m.analysis.issues.empty() && !m.disabled) {
+                other = &m;
+            }
+        }
+        VisualReview review = sidecar.review;
+        DecideClip(review, ok, ClipState::Approved, {}, "", "2026-11-08 18:00");
+        DecideClip(review, no, ClipState::Rejected, { "not-music" }, "no pega con la canción", "2026-11-08 18:01");
+        Check(other != nullptr && ReplaceClipMedia(review, swap, other->id, other->relative.empty() ? other->path : other->relative, "2026-11-08 18:02"), "one approved, one rejected, one given another file");
+        std::string why;
+        Check(!ApproveShow(review, "Juan", "now", why), "the show is not approved: nothing was checked in xLights");
+        // Learned and kept with the show; the corrections and the review go to the next version.
+        ArtisticPreferences prefs;
+        Check(ReadPreferences(PreferencesPath(show.string()), prefs, error) && prefs.signals.empty(), "nothing learned before");
+        Check(LearnFromReview(prefs, review, &base.mediaLibrary, base.profile.id) > 0 && SavePreferences(PreferencesPath(show.string()), prefs, error), "the decisions are learned and kept with the show");
+        GenerationRequest r2 = request("aprender-2");
+        r2.corrections.media = ReviewCorrections(review, base.media.storyboard);
+        r2.corrections.review = review;
+        const GenerationRun next = Generate(r2);
+        Check(next.ok, "the corrections applied: another version made");
+        if (!next.ok) {
+            return;
+        }
+        const auto shotOf = [](const GenerationRun& run, const std::string& decision) {
+            const auto it = std::find_if(run.media.storyboard.shots.begin(), run.media.storyboard.shots.end(), [&](const StoryboardShot& s) { return s.decisionId == decision; });
+            return it != run.media.storyboard.shots.end() ? &*it : nullptr;
+        };
+        const StoryboardShot* kept = shotOf(next, ok);
+        const StoryboardShot* before = shotOf(base, ok);
+        Check(kept != nullptr && before != nullptr && kept->mediaId == before->mediaId && kept->startMS == before->startMS && kept->endMS == before->endMS && kept->state == DecisionState::Locked,
+              "the approved shot is exactly as it was, now locked");
+        bool rejectedGone = true;
+        for (const StoryboardShot& s : next.media.storyboard.shots) {
+            rejectedGone = rejectedGone && !(s.sceneId == noScene && s.lane == "Matriz Dos" && s.mediaId == noMedia);
+        }
+        Check(rejectedGone, "the rejected file is not on that screen in that scene any more");
+        const StoryboardShot* swapped = shotOf(next, swap);
+        Check(swapped != nullptr && other != nullptr && swapped->mediaId == other->id, "the shot given another file shows it, in its place");
+        int held = 0, same = 0;
+        for (const ClipReview& c : review.clips) {
+            if (c.state != ClipState::Pending || !c.replacementId.empty()) {
+                continue;
+            }
+            ++held;
+            const StoryboardShot* a = shotOf(base, c.decisionId);
+            const StoryboardShot* b = shotOf(next, c.decisionId);
+            same += a != nullptr && b != nullptr && a->mediaId == b->mediaId && a->startMS == b->startMS && a->endMS == b->endMS ? 1 : 0;
+        }
+        Check(held > 0 && same == held, fmt::format("the {} shots nobody judged are not made again ({} the same)", held, same));
+        GenerationSidecar reopened;
+        Check(ReadSidecar(next.sidecarPath, reopened, error) == SidecarStatus::Ok && reopened.review.Find(ok) != nullptr && reopened.review.Find(ok)->state == ClipState::Approved &&
+                  reopened.review.Find(swap) != nullptr && reopened.review.Find(swap)->state == ClipState::Pending && reopened.visualReview == "not-reviewed",
+              "closed and opened again: the approval is still there, the replaced shot is to be seen again, the show still not approved");
+        bool locksKept = true;
+        for (const MediaCorrection& c : r2.corrections.media) {
+            locksKept = locksKept && std::any_of(reopened.media.corrections.begin(), reopened.media.corrections.end(), [&](const MediaCorrection& k) { return k.decisionId == c.decisionId && k.action == c.action; });
+        }
+        Check(locksKept, "every correction is kept in the sidecar for the versions to come");
+        // Another montage: the person's choices survive; the review's holds can be let go.
+        GenerationRequest r3 = request("aprender-3");
+        r3.corrections.media = reopened.media.corrections;
+        ReleaseReviewHolds(r3.corrections.media);
+        r3.corrections.review = reopened.review;
+        r3.mediaVariant = 1;
+        const GenerationRun third = Generate(r3);
+        const StoryboardShot* still = third.ok ? shotOf(third, ok) : nullptr;
+        Check(third.ok && still != nullptr && still->mediaId == before->mediaId && still->startMS == before->startMS && shotOf(third, swap) != nullptr && shotOf(third, swap)->mediaId == other->id,
+              "rebuilt as another montage: the approved and the replaced shots stay");
+        // What was learned shapes a new show; with learning off it is as if nothing was.
+        ArtisticPreferences taste;
+        for (const char* seq : { "gusto-a.xsq", "gusto-b.xsq" }) {
+            VisualReview x = BuildReview(base.media.storyboard, seq, "s", nullptr, &base.mediaLibrary);
+            for (const ClipReview& c : x.clips) {
+                DecideClip(x, c.decisionId, c.kind == "video" ? ClipState::Rejected : ClipState::Approved, {}, "", "t");
+            }
+            LearnFromReview(taste, x, &base.mediaLibrary, base.profile.id);
+        }
+        const std::map<std::string, double> learned = EffectivePreferences(taste);
+        Check(learned.contains("kind.video") && learned.at("kind.video") < -0.3, fmt::format("every video turned down in two reviews: a taste for pictures ({:.2f})", learned.contains("kind.video") ? learned.at("kind.video") : 0.0));
+        Check(SavePreferences(PreferencesPath(show.string()), taste, error), "kept with the show");
+        const auto videos = [](const GenerationRun& run) {
+            return static_cast<int>(std::count_if(run.media.storyboard.shots.begin(), run.media.storyboard.shots.end(), [](const StoryboardShot& s) { return s.kind == MediaKind::Video; }));
+        };
+        const GenerationRun withTaste = Generate(request("aprender-gusto"));
+        GenerationRequest plain = request("aprender-sin");
+        plain.learning = false;
+        const GenerationRun without = Generate(plain);
+        Check(withTaste.ok && without.ok && without.media.storyboard.hash == base.media.storyboard.hash && without.preferences.empty(),
+              "with learning off the montage is the one made before anything was learned");
+        Check(withTaste.ok && withTaste.preferences.contains("kind.video") && videos(withTaste) < videos(base),
+              fmt::format("with it, fewer videos: {} instead of {}", videos(withTaste), videos(base)));
+        bool said = false;
+        for (const StoryboardShot& s : withTaste.media.storyboard.shots) {
+            said = said || std::any_of(s.reasons.begin(), s.reasons.end(), [](const Reason& r) { return r.code == "preference"; });
+        }
+        Check(said, "and each shot it touched says so");
     }
 
     void TestScreens() {
@@ -1834,6 +2001,7 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     if (!o.mediaVariant.empty()) {
         r.mediaVariant = static_cast<int>(std::strtol(o.mediaVariant.c_str(), nullptr, 10));
     }
+    r.learning = !o.noLearning;
     if (!o.lyricsMode.empty() || !o.screens.empty() || !o.screensFor.empty()) {
         ScreenSettings ss;
         ss.set = true;

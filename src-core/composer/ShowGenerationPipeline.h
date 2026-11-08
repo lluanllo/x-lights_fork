@@ -102,6 +102,9 @@ struct GenerationRequest {
     std::optional<double> mediaMaxShare;   // default: by level, or the previous show's
     bool copyMediaIntoShow = false;        // a person agreed: files outside the show are copied into Images or Videos
     std::optional<int> mediaVariant;       // another montage from the same files; default: the previous show's
+    // The show maker's preferences (<showDir>/ShowComposer/preferences.json) shape the
+    // montage; false: generate as if nothing had been learned (a person's own values too).
+    bool learning = true;
     // Looks at the files again before planning (otherwise only the ones never analysed
     // are, without a model); with `visionModelDir` the image-text model is used too.
     bool analyzeMedia = false;
@@ -183,6 +186,7 @@ struct GenerationRun {
     TranscriptAlignment transcriptAlignment;
     MediaLibrary mediaLibrary;
     MediaPlan media;
+    std::map<std::string, double> preferences; // the preferences the montage used
     MediaSession mediaSession;
     MediaAnalysisSummary mediaAnalysis;
     Choreography choreography;

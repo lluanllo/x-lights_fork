@@ -38,6 +38,7 @@ struct ReportFolder {
     std::string media;                // media-plan.json as written: the pictures and videos chosen
     std::string storyboard;           // storyboard.json as written: the visual montage
     std::string screens;              // screens.json as written: the display's screens and their roles
+    std::string review;               // review.json as written: a person's review of the pictures and videos
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

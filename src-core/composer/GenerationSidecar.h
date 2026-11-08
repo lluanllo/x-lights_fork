@@ -5,6 +5,7 @@
 #include "composer/LyricAligner.h"
 #include "composer/MediaDirection.h"
 #include "composer/SongAnalysis.h"
+#include "composer/VisualReview.h"
 
 #include <cstdint>
 #include <map>
@@ -17,7 +18,9 @@
 // xLights objects and stays valid if this file is lost, moved or damaged.
 namespace composer {
 
-inline constexpr int SIDECAR_SCHEMA_VERSION = 1;
+// 2: a person's review of the pictures and videos (`review`). A version 1 file reads as
+// a show nobody reviewed.
+inline constexpr int SIDECAR_SCHEMA_VERSION = 2;
 
 struct GenerationSidecar {
     int schemaVersion = SIDECAR_SCHEMA_VERSION;
@@ -56,7 +59,8 @@ struct GenerationSidecar {
     int validationErrors = 0;
     int validationWarnings = 0;
     bool rendered = false;
-    std::string visualReview = "not-reviewed"; // only a person changes it
+    std::string visualReview = "not-reviewed"; // only a person changes it: "approved" with `review`
+    VisualReview review;
     // Answers of the music assistant this show used, kept in the show's cache so a
     // regeneration finds them with no network. Relative to the show folder.
     std::string transcriptCache;
@@ -92,6 +96,7 @@ struct CorrectionSet {
     std::vector<MediaCorrection> media;
     std::vector<VoiceDef> voices; // a person's names, roles and faces for the voices
     ScreenSettings screens;       // a person's screens and how words and pictures share them
+    VisualReview review;          // the review of the version this one replaces, carried by decision
 
     [[nodiscard]] bool Empty() const;
 };

@@ -971,6 +971,67 @@ std::vector<std::string> EffectiveCategories(const MediaItem& m) {
     return out;
 }
 
+MediaAnalysis EffectiveAnalysis(const MediaItem& m, const VisualConcepts* concepts) {
+    MediaAnalysis a = m.analysis;
+    const MediaHumanLabels& h = m.human;
+    if (h.Empty()) {
+        return a;
+    }
+    const auto gone = [&](const std::string& id) { return Has(h.rejected, id) || Has(h.excluded, id); };
+    std::vector<MediaConcept> person, rest;
+    for (const MediaConcept& c : a.concepts) {
+        if (gone(c.id)) {
+            continue;
+        }
+        if (Has(h.confirmed, c.id) || Has(h.added, c.id)) {
+            MediaConcept p = c;
+            p.level = "strong";
+            p.score = std::max(p.score, 0.5);
+            p.source = "person";
+            person.push_back(p);
+        } else {
+            rest.push_back(c);
+        }
+    }
+    for (const std::vector<std::string>* list : { &h.confirmed, &h.added }) {
+        for (const std::string& id : *list) {
+            if (!gone(id) && std::none_of(person.begin(), person.end(), [&](const MediaConcept& c) { return c.id == id; })) {
+                person.push_back({ id, 0.5, 0, "strong", "person" });
+            }
+        }
+    }
+    a.concepts = person;
+    a.concepts.insert(a.concepts.end(), rest.begin(), rest.end());
+    std::vector<std::string> description;
+    for (const MediaConcept& c : person) {
+        description.push_back(c.id);
+    }
+    for (const std::string& id : a.description) {
+        if (!gone(id) && !Has(description, id) && description.size() < 3) {
+            description.push_back(id);
+        }
+    }
+    a.description = description;
+    if (concepts != nullptr) {
+        for (const MediaConcept& c : person) {
+            if (const VisualConceptDef* d = concepts->Find(c.id); d != nullptr) {
+                for (const std::string& cat : d->categories) {
+                    if (!Has(a.categories, cat)) {
+                        a.categories.push_back(cat);
+                    }
+                }
+            }
+        }
+    }
+    return a;
+}
+
+void ApplyHumanLabels(MediaLibrary& library, const VisualConcepts* concepts) {
+    for (MediaItem& m : library.items) {
+        m.analysis = EffectiveAnalysis(m, concepts);
+    }
+}
+
 MediaAnalysisSummary AnalyzeMediaLibrary(MediaLibrary& library, const MediaAnalysisOptions& o) {
     MediaAnalysisSummary s;
     const auto start = std::chrono::steady_clock::now();

@@ -152,7 +152,7 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
     json scenes = json::array();
     for (const StoryboardScene& s : b.scenes) {
         scenes.push_back({ { "id", s.id }, { "startMS", s.startMS }, { "endMS", s.endMS }, { "section", s.sectionKind }, { "band", s.band }, { "role", s.role }, { "lookKey", s.lookKey },
-                           { "repeatOf", s.repeatOf }, { "energy", s.energy }, { "vocals", s.vocals } });
+                           { "repeatOf", s.repeatOf }, { "energy", s.energy }, { "vocals", s.vocals }, { "key", s.key } });
     }
     json shots = json::array();
     for (const StoryboardShot& s : b.shots) {
@@ -160,7 +160,7 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
                    { "kind", MediaKindId(s.kind) }, { "effect", s.effect }, { "path", s.path }, { "source", s.source }, { "framing", s.framing }, { "transitionIn", s.transitionIn },
                    { "fadeInMS", s.fadeInMS }, { "transitionOut", s.transitionOut }, { "fadeOutMS", s.fadeOutMS }, { "score", s.score }, { "level", s.level },
                    { "state", DecisionStateId(s.state) }, { "reasons", ReasonsJson(s.reasons) }, { "constraints", s.constraints }, { "layer", s.layer }, { "transition", s.transition },
-                   { "overlay", s.overlay }, { "pieces", s.pieces }, { "relation", s.relation }, { "overlapMS", s.overlapMS } };
+                   { "overlay", s.overlay }, { "pieces", s.pieces }, { "relation", s.relation }, { "overlapMS", s.overlapMS }, { "decisionId", s.decisionId } };
         if (s.kind == MediaKind::Video) {
             j["fragment"] = { { "startMS", s.fragmentStartMS }, { "scene", s.fragmentScene } };
         }
@@ -232,6 +232,7 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         sc.repeatOf = s.value("repeatOf", std::string());
         sc.energy = s.value("energy", 0.0);
         sc.vocals = s.value("vocals", 0.0);
+        sc.key = s.value("key", std::string());
         b.scenes.push_back(std::move(sc));
     }
     for (const json& s : j.value("shots", json::array())) {
@@ -263,6 +264,7 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         sh.pieces = s.value("pieces", 1);
         sh.relation = s.value("relation", std::string());
         sh.overlapMS = s.value("overlapMS", 0);
+        sh.decisionId = s.value("decisionId", std::string());
         if (s.contains("fragment") && s["fragment"].is_object()) {
             sh.fragmentStartMS = s["fragment"].value("startMS", 0);
             sh.fragmentScene = s["fragment"].value("scene", -1);

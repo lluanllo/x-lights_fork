@@ -6,6 +6,7 @@
 #include "composer/MediaSurfaces.h"
 #include "composer/TemplateLibrary.h"
 
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,7 +35,8 @@ struct MediaCorrection {
     enum class Action {
         Assign, // `mediaId` (or `path`) plays on `target` in the segment: a person's choice
         Lock,   // as Assign, and kept exactly so when the song is generated again
-        Remove  // no picture or video in the segment (on `target` only, if given)
+        Remove, // no picture or video in the segment (on `target` only, if given)
+        Avoid   // not `mediaId` on `target` in the segment: the planner chooses something else
     };
     Action action = Action::Assign;
     std::string segmentId;
@@ -47,6 +49,12 @@ struct MediaCorrection {
     int shotStartMS = -1;
     int shotEndMS = -1;
     int fragmentStartMS = -1; // videos: where in the file; -1: chosen by the planner
+    // The shot's stable decision ("<screen>/<scene key>/<n>"): finds the segment again
+    // when the song's segments move or are renamed.
+    std::string decisionId;
+    // "person" (said in the window or a file) or "review" (kept as it was while a review
+    // changed other shots; "Rebuild the Montage" lets those go).
+    std::string origin;
 };
 
 struct MediaAssignment {
@@ -65,6 +73,7 @@ struct MediaAssignment {
     std::vector<Reason> reasons;
     std::vector<std::string> constraints; // "cropped", "letterboxed", "outside-show", "loops", "derived", "pans", ...
     std::string shotId;
+    std::string decisionId; // stable: "<screen>/<scene key>/<n>"
     std::string source; // the original file, as kept; `path` may be a derived picture
     std::string framing;
     int fragmentStartMS = 0;
@@ -122,6 +131,9 @@ struct MediaPlanInput {
     const SongAnalysis* analysis = nullptr;          // downbeats to cut shots on
     const LyricAlignment* alignment = nullptr;       // the phrases a screen with words must keep
     const ScreenSettings* screens = nullptr;         // a person's screens and lyrics mode
+    // The show maker's preferences (EffectivePreferences: key -> -1..1); null: none.
+    const std::map<std::string, double>* preferences = nullptr;
+    std::string profileId; // for the preferences of one artistic profile
     std::vector<std::string> themeCategories;        // the theme's media categories, best first
     std::string showDir;
     MediaOptions options;

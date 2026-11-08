@@ -35,6 +35,9 @@ struct MediaValidationEntry {
     int poiUseful = -1;      // 1 the point of interest is on what matters, 0 not, -1 not said
     int descriptionOk = -1;  // 1 the description would do for a person, 0 not, -1 not said
     std::string notes;
+    // Files that are the same picture share a group: a group counts once, so a duplicate
+    // never makes the model look better or worse than it is.
+    std::string group;
 
     [[nodiscard]] bool Labelled() const { return !labelSource.empty(); }
 };
@@ -80,9 +83,21 @@ struct MediaValidationMetrics {
     double poiUseful = 0;
     int descriptionAnswered = 0;
     double descriptionOk = 0;
+    double f1 = 0;
+    int duplicatesSkipped = 0; // labelled files that repeat a group already counted
+    // Below MIN_VALIDATION_FILES files, or a concept with fewer than MIN_CONCEPT_SUPPORT
+    // files where it is really there, the numbers only hint.
+    bool reliable = false;
 };
 
 // The model's top `topK` concepts against the labels from `source` only.
+inline constexpr int MIN_VALIDATION_FILES = 20;
+inline constexpr int MIN_CONCEPT_SUPPORT = 5;
+
+// Every file of the library a person labelled completely, as a validation set with
+// "person" labels: what is really there is what they confirmed or added.
+[[nodiscard]] MediaValidationSet MediaValidationSetFromLibrary(const MediaLibrary& library);
+
 [[nodiscard]] MediaValidationMetrics EvaluateMediaValidation(const MediaValidationSet& set, const std::string& source, size_t topK);
 [[nodiscard]] std::string MediaValidationReport(const MediaValidationSet& set, const std::vector<MediaValidationMetrics>& metrics);
 

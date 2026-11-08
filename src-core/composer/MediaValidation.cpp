@@ -71,6 +71,16 @@ double Ratio(double a, double b) {
     return b > 0 ? a / b : 0;
 }
 
+// The group of a file among its duplicates: the file it duplicates, or its own id.
+std::string GroupOf(const MediaItem& m) {
+    for (const std::string& i : m.analysis.issues) {
+        if (i.rfind("duplicate-of:", 0) == 0) {
+            return i.substr(std::string("duplicate-of:").size());
+        }
+    }
+    return m.id;
+}
+
 } // namespace
 
 MediaValidationSet BuildMediaValidationSet(const MediaLibrary& library, size_t size, uint64_t seed) {
@@ -120,6 +130,7 @@ MediaValidationSet BuildMediaValidationSet(const MediaLibrary& library, size_t s
             e.matrixFit = m.analysis.matrixFit;
             e.treeFit = m.analysis.treeFit;
             e.issues = m.analysis.issues;
+            e.group = GroupOf(m);
             set.entries.push_back(std::move(e));
         }
         if (!any) {
@@ -164,6 +175,7 @@ json MediaValidationSetJson(const MediaValidationSet& set) {
                          { "matrixFit", e.matrixFit },
                          { "treeFit", e.treeFit },
                          { "issues", e.issues },
+                         { "group", e.group },
                          { "labels",
                            { { "source", e.labelSource },
                              { "reviewer", e.reviewer },
@@ -218,6 +230,7 @@ bool MediaValidationSetFrom(const json& j, MediaValidationSet& set, std::string&
         e.matrixFit = x.value("matrixFit", 0.0);
         e.treeFit = x.value("treeFit", 0.0);
         e.issues = x.value("issues", std::vector<std::string>());
+        e.group = x.value("group", std::string());
         const json l = x.value("labels", json::object());
         if (l.is_object()) {
             e.labelSource = l.value("source", std::string());
@@ -237,13 +250,55 @@ bool MediaValidationSetFrom(const json& j, MediaValidationSet& set, std::string&
     return true;
 }
 
+MediaValidationSet MediaValidationSetFromLibrary(const MediaLibrary& library) {
+    MediaValidationSet set;
+    set.created = Now();
+    for (const MediaItem& it : library.items) {
+        if (!it.human.complete || !it.Usable()) {
+            continue;
+        }
+        if (set.model.empty() && !it.analysis.model.empty()) {
+            set.model = it.analysis.model;
+        }
+        MediaValidationEntry e;
+        e.mediaId = it.id;
+        e.name = it.name;
+        e.path = it.path;
+        e.kind = MediaKindId(it.kind);
+        // The model's own words, as it said them: the labels never change them.
+        e.proposed = it.analysis.concepts;
+        e.description = it.analysis.description;
+        e.categories = it.analysis.categories;
+        e.poiX = it.analysis.poiX;
+        e.poiY = it.analysis.poiY;
+        e.issues = it.analysis.issues;
+        e.labelSource = "person";
+        e.reviewer = it.human.reviewer;
+        e.reviewedAt = it.human.reviewedAt;
+        e.present = it.human.confirmed;
+        for (const std::string& a : it.human.added) {
+            if (std::find(e.present.begin(), e.present.end(), a) == e.present.end()) {
+                e.present.push_back(a);
+            }
+        }
+        e.group = GroupOf(it);
+        set.entries.push_back(std::move(e));
+    }
+    return set;
+}
+
 MediaValidationMetrics EvaluateMediaValidation(const MediaValidationSet& set, const std::string& source, size_t topK) {
     MediaValidationMetrics m;
     m.source = source;
     m.topK = topK;
     int hits = 0, poiYes = 0, descYes = 0;
+    std::set<std::string> groups;
     for (const MediaValidationEntry& e : set.entries) {
         if (e.labelSource != source) {
+            continue;
+        }
+        if (!e.group.empty() && !groups.insert(e.group).second) {
+            ++m.duplicatesSkipped;
             continue;
         }
         ++m.files;
@@ -294,6 +349,8 @@ MediaValidationMetrics EvaluateMediaValidation(const MediaValidationSet& set, co
     m.precision = Ratio(m.truePositive, m.truePositive + m.falsePositive);
     m.recall = Ratio(m.truePositive, m.truePositive + m.falseNegative);
     m.confidentPrecision = Ratio(m.confidentRight, m.confidentRight + m.confidentWrong);
+    m.f1 = Ratio(2 * m.precision * m.recall, m.precision + m.recall);
+    m.reliable = m.files >= MIN_VALIDATION_FILES;
     m.filesWithAHit = Ratio(hits, m.files);
     m.poiUseful = Ratio(poiYes, m.poiAnswered);
     m.descriptionOk = Ratio(descYes, m.descriptionAnswered);
@@ -315,7 +372,12 @@ std::string MediaValidationReport(const MediaValidationSet& set, const std::vect
         if (m.files == 0) {
             continue;
         }
-        out += fmt::format("\n{} labels, {} files, top {} concepts:\n", m.source == "person" ? "Human" : "PROVISIONAL (assistant, not human)", m.files, m.topK);
+        out += fmt::format("\n{} labels, {} files, top {} concepts{}:\n", m.source == "person" ? "Human" : "PROVISIONAL (assistant, not human)", m.files, m.topK,
+                           m.duplicatesSkipped > 0 ? fmt::format(" ({} duplicates counted once)", m.duplicatesSkipped) : std::string());
+        if (!m.reliable) {
+            out += fmt::format("  TOO FEW FILES ({} of the {} needed): the numbers below only hint, they are not a measure\n", m.files, MIN_VALIDATION_FILES);
+        }
+        out += fmt::format("  F1 {:.2f}\n", m.f1);
         out += fmt::format("  precision {:.2f} ({} right, {} wrong), recall {:.2f} ({} missed), files with at least one right concept {:.0f}%\n", m.precision, m.truePositive, m.falsePositive, m.recall,
                            m.falseNegative, m.filesWithAHit * 100);
         out += fmt::format("  precision of the strong and probable concepts only: {:.2f} ({} right, {} wrong); weak ones weigh a quarter in the montage\n", m.confidentPrecision, m.confidentRight,
@@ -331,9 +393,12 @@ std::string MediaValidationReport(const MediaValidationSet& set, const std::vect
             const int ea = a.second.falsePositive + a.second.falseNegative, eb = b.second.falsePositive + b.second.falseNegative;
             return ea != eb ? ea > eb : a.first < b.first;
         });
-        out += "  concepts (right / wrong / missed):\n";
+        out += "  concepts (right / wrong / missed, precision, recall, F1):\n";
         for (const auto& [id, c] : worst) {
-            out += fmt::format("    {:<22} {:>3} / {:>3} / {:>3}\n", id, c.truePositive, c.falsePositive, c.falseNegative);
+            const double p = Ratio(c.truePositive, c.truePositive + c.falsePositive), r = Ratio(c.truePositive, c.truePositive + c.falseNegative);
+            const int support = c.truePositive + c.falseNegative;
+            out += fmt::format("    {:<22} {:>3} / {:>3} / {:>3}  {:.2f} {:.2f} {:.2f}{}\n", id, c.truePositive, c.falsePositive, c.falseNegative, p, r, Ratio(2 * p * r, p + r),
+                               support < MIN_CONCEPT_SUPPORT ? "  (few files)" : "");
         }
         std::vector<std::pair<std::pair<std::string, std::string>, int>> conf(m.confusion.begin(), m.confusion.end());
         std::sort(conf.begin(), conf.end(), [](const auto& a, const auto& b) { return a.second != b.second ? a.second > b.second : a.first < b.first; });
@@ -417,6 +482,15 @@ int RunMediaEvaluation(const std::string& showDir, const std::vector<std::string
             return 1;
         }
         CarryMediaLabels(set, labelled);
+    }
+    // Every file a person labelled completely in the library counts, with their labels.
+    for (const MediaValidationEntry& lib : MediaValidationSetFromLibrary(library).entries) {
+        auto it = std::find_if(set.entries.begin(), set.entries.end(), [&](const MediaValidationEntry& e) { return e.mediaId == lib.mediaId; });
+        if (it != set.entries.end()) {
+            *it = lib;
+        } else {
+            set.entries.push_back(lib);
+        }
     }
     std::vector<MediaValidationMetrics> metrics;
     for (const char* source : { "person", "assistant-provisional" }) {

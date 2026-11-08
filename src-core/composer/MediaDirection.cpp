@@ -267,6 +267,8 @@ private:
     std::vector<Lane> _lanes;
     std::vector<Cand> _cands;
     std::set<std::string> _removed; // scene ids, or "scene|target"
+    std::set<std::string> _avoid;   // "scene|target|media" a person did not want
+    std::set<std::string> _avoidKeys; // "scene|target" with something a person did not want
     std::vector<Planned> _planned;
     std::set<std::string> _manual;                     // "scene|lane" with a person's shots
     std::map<std::string, std::string> _noFit;         // "scene|lane" -> why nothing was placed
@@ -293,7 +295,24 @@ private:
         i.lookKey = sc.look != nullptr ? sc.look->lookKey : s.repeatGroup >= 0 ? fmt::format("group{}", s.repeatGroup) : std::string();
         i.energy = R3(std::clamp(s.targetIntensity > 0 ? s.targetIntensity : s.energy, 0.0, 1.0));
         i.vocals = R3(s.vocalCoverage);
+        i.key = SegmentKey(s);
         return sc;
+    }
+
+    // "chorus#2.1": the segment's section kind, which section of that kind it is, and
+    // which part of it.
+    std::string SegmentKey(const PlanSegment& s) const {
+        std::set<int> sections;
+        int part = 0;
+        for (const PlanSegment& o : _plan.segments) {
+            if (o.sectionKind == s.sectionKind && o.sectionIndex <= s.sectionIndex) {
+                sections.insert(o.sectionIndex);
+            }
+            if (o.sectionIndex == s.sectionIndex && o.startMS <= s.startMS) {
+                ++part;
+            }
+        }
+        return fmt::format("{}#{}.{}", s.sectionKind.empty() ? std::string("part") : s.sectionKind, sections.size(), std::max(1, part));
     }
 
     void BuildScenes() {
@@ -377,8 +396,61 @@ private:
         }
     }
 
+    // A preference's value, 0 when there is none.
+    double Pref(const std::string& key) const {
+        if (_in.preferences == nullptr) {
+            return 0;
+        }
+        const auto it = _in.preferences->find(key);
+        return it != _in.preferences->end() ? it->second : 0;
+    }
+
+    static bool DarkItem(const MediaItem& m) {
+        const MediaAnalysis& a = m.analysis;
+        return Has(a.issues, "dark-spans") || (a.Done() && (a.dark >= 0.5 || a.brightness < 0.22));
+    }
+
+    // What the preferences add to a file's score on a screen in a scene, and the words
+    // that say so.
+    double Preferred(const MediaItem& m, const Scene& sc, const Lane& lane, const MediaFraming& f, std::string& why) const {
+        if (_in.preferences == nullptr || _in.preferences->empty()) {
+            return 0;
+        }
+        double total = 0;
+        const auto term = [&](const std::string& key, double v, double k) {
+            if (std::fabs(v) > 1e-6) {
+                total += k * v;
+                why += fmt::format("{}{} {:+.2f}", why.empty() ? "" : ", ", key, k * v);
+            }
+        };
+        const bool video = m.kind == MediaKind::Video;
+        const double kind = Pref("kind.video") + (_in.profileId.empty() ? 0 : Pref("profile." + _in.profileId + ".kind.video"));
+        term("kind.video", video ? kind : -kind, 0.15);
+        if (DarkItem(m)) {
+            term("light.dark", Pref("light.dark"), 0.08);
+        }
+        for (size_t i = 0; i < m.analysis.description.size() && i < 2; ++i) {
+            const std::string& c = m.analysis.description[i];
+            term("concept." + c, Pref("concept." + c), 0.08);
+            term("scene." + sc.info.role + ".concept." + c, Pref("scene." + sc.info.role + ".concept." + c), 0.08);
+            term("screen." + lane.t->name + ".concept." + c, Pref("screen." + lane.t->name + ".concept." + c), 0.08);
+        }
+        term("file." + m.id + "@" + lane.t->name, Pref("file." + m.id + "@" + lane.t->name), 0.15);
+        if (f.moves || f.motionClip) {
+            const double moving = Pref("motion.moving") + Pref("scene." + sc.info.role + ".motion.moving") + (_in.profileId.empty() ? 0 : Pref("profile." + _in.profileId + ".motion.moving"));
+            term("motion.moving", moving, 0.05);
+        }
+        return total;
+    }
+
     // How much of its free time each kind of screen aims to fill.
     double GoalOf(const Lane& l) const {
+        // A maker's taste for more or fewer pictures, on the whole and on this screen.
+        const double taste = (1.0 + 0.3 * Pref("amount")) * (1.0 + 0.3 * Pref("screen." + l.t->name + ".presence"));
+        return std::clamp(BaseGoalOf(l) * taste, 0.05, 0.95);
+    }
+
+    double BaseGoalOf(const Lane& l) const {
         const int level = _plan.level == AutomationLevel::Conservative ? 0 : _plan.level == AutomationLevel::Creative ? 2 : 1;
         if (l.screen == "secondary") {
             return std::array<double, 3>{ 0.3, 0.5, 0.7 }[level];
@@ -855,6 +927,19 @@ private:
         if (otherScreens.contains(m.id)) {
             return e; // the screens of a scene never show the same file
         }
+        if (_avoid.contains(sc.info.id + "|" + lane.t->name + "|" + m.id)) {
+            return e; // a person did not want it there
+        }
+        // Uses a person said a file is not for.
+        const std::vector<std::string>& notFor = m.human.notFor;
+        if (!notFor.empty()) {
+            const bool calm = sc.info.energy < 0.4 && sc.info.role != "climax";
+            const bool intense = sc.info.energy >= 0.65 || sc.info.role == "climax";
+            if ((Has(notFor, "tree") && lane.frame.tree) || (Has(notFor, "matrix") && !lane.frame.tree) || (Has(notFor, "calm") && calm) || (Has(notFor, "intense") && intense) ||
+                (Has(notFor, "opening") && sc.info.role == "establish") || (Has(notFor, "ending") && sc.info.role == "ending")) {
+                return e;
+            }
+        }
         const auto uses = _sceneUses.find(m.id);
         const bool usedBefore = uses != _sceneUses.end() && !uses->second.empty();
         const std::string lookLane = sc.info.lookKey + "|" + lane.t->name;
@@ -869,7 +954,7 @@ private:
             if (FreeFragments(m) <= 0) {
                 return e;
             }
-            repeat -= 0.15 * static_cast<double>(uses->second.size());
+            repeat -= 0.15 * static_cast<double>(uses->second.size()) * (1.0 - 0.5 * Pref("repetition"));
         }
         const int idx = at;
         if (!continuity && !sameSceneAgain && (UsedIn(m.id, idx - 1) || UsedIn(m.id, idx + 1))) {
@@ -932,8 +1017,14 @@ private:
                 relation = "enough-of-" + motif;
             }
         }
-        double score = 0.30 * c.theme + 0.20 * fit + 0.15 * energy + 0.20 * role + 0.15 * quality + repeat + story + (continuity ? 0.15 : 0) + 0.01 * Unit(_seed, sc.info.id + "/" + lane.t->name + "/" + m.id);
+        std::string liked;
+        const double taste = Preferred(m, sc, lane, e.framing, liked);
+        double score = 0.30 * c.theme + 0.20 * fit + 0.15 * energy + 0.20 * role + 0.15 * quality + repeat + story + taste + (continuity ? 0.15 : 0) +
+                       0.01 * Unit(_seed, sc.info.id + "/" + lane.t->name + "/" + m.id);
         e.score = R3(std::clamp(score, 0.0, 1.0));
+        if (!liked.empty()) {
+            e.why.push_back({ "preference", liked });
+        }
         if (!relation.empty() && story > 0) {
             e.why.push_back({ "story", relation });
         } else if (relation.rfind("enough-of-", 0) == 0) {
@@ -1198,6 +1289,16 @@ private:
                 return &s;
             }
         }
+        // A decision names its part of the song: found again when the times moved.
+        if (const size_t a = c.decisionId.find('/'); a != std::string::npos) {
+            const size_t b = c.decisionId.find('/', a + 1);
+            const std::string key = c.decisionId.substr(a + 1, b == std::string::npos ? std::string::npos : b - a - 1);
+            for (const PlanSegment& s : _plan.segments) {
+                if (SegmentKey(s) == key) {
+                    return &s;
+                }
+            }
+        }
         if (c.startMS >= 0) {
             for (const PlanSegment& s : _plan.segments) {
                 if (c.startMS >= s.startMS && c.startMS < s.endMS) {
@@ -1223,6 +1324,13 @@ private:
 
     void Manual() {
         for (const MediaCorrection& c : _in.corrections) {
+            if (c.action == MediaCorrection::Action::Avoid) {
+                if (const PlanSegment* s = SegmentFor(c); s != nullptr) {
+                    _avoid.insert(s->id + "|" + c.target + "|" + c.mediaId);
+                    _avoidKeys.insert(s->id + "|" + c.target);
+                }
+                continue;
+            }
             if (c.action != MediaCorrection::Action::Remove) {
                 continue;
             }
@@ -1234,7 +1342,7 @@ private:
             _removed.insert(c.target.empty() ? s->id : s->id + "|" + c.target);
         }
         for (const MediaCorrection& c : _in.corrections) {
-            if (c.action == MediaCorrection::Action::Remove) {
+            if (c.action == MediaCorrection::Action::Remove || c.action == MediaCorrection::Action::Avoid) {
                 continue;
             }
             const PlanSegment* s = SegmentFor(c);
@@ -1269,8 +1377,10 @@ private:
                 _noFit[s->id + "|" + t->name] = "media-missing";
                 continue;
             }
-            const int start = c.shotStartMS >= 0 ? std::clamp(c.shotStartMS, s->startMS, s->endMS) : s->startMS;
-            const int end = c.shotEndMS >= 0 ? std::clamp(c.shotEndMS, start, s->endMS) : s->endMS;
+            // Found by its decision in a segment that moved: the shot moves with it.
+            const int shift = c.startMS >= 0 && c.shotStartMS >= 0 ? s->startMS - c.startMS : 0;
+            const int start = c.shotStartMS >= 0 ? std::clamp(c.shotStartMS + shift, s->startMS, s->endMS) : s->startMS;
+            const int end = c.shotEndMS >= 0 ? std::clamp(c.shotEndMS + shift, start, s->endMS) : s->endMS;
             if (end - start < 200) {
                 continue;
             }
@@ -1435,7 +1545,10 @@ private:
                     continue;
                 }
                 const std::string key = sc.info.id + "|" + l.t->name;
-                if (_manual.contains(key)) {
+                // A screen with a person's shots here is theirs, unless a review rejected a
+                // shot of it: then only the stretch it leaves is chosen again.
+                const bool refill = _manual.contains(key) && _avoidKeys.contains(key);
+                if (_manual.contains(key) && !refill) {
                     continue;
                 }
                 if (_removed.contains(sc.info.id) || _removed.contains(key)) {
@@ -1443,7 +1556,37 @@ private:
                     continue;
                 }
                 std::string why;
-                const std::vector<std::pair<int, int>> windows = Windows(sc, l, why);
+                std::vector<std::pair<int, int>> windows = Windows(sc, l, why);
+                if (refill) {
+                    std::vector<std::pair<int, int>> taken;
+                    for (const Planned& p : _planned) {
+                        if (p.shot.sceneId == sc.info.id && p.shot.lane == l.t->name) {
+                            taken.emplace_back(p.shot.startMS, p.shot.endMS);
+                        }
+                    }
+                    std::vector<std::pair<int, int>> free;
+                    for (const auto& [a, b] : windows) {
+                        int at = a;
+                        std::vector<std::pair<int, int>> in = taken;
+                        std::sort(in.begin(), in.end());
+                        for (const auto& [ta, tb] : in) {
+                            if (tb <= at || ta >= b) {
+                                continue;
+                            }
+                            if (ta - at >= _in.options.minShotMS) {
+                                free.emplace_back(at, ta);
+                            }
+                            at = std::max(at, tb);
+                        }
+                        if (b - at >= _in.options.minShotMS) {
+                            free.emplace_back(at, b);
+                        }
+                    }
+                    windows = free;
+                    if (windows.empty()) {
+                        continue;
+                    }
+                }
                 if (windows.empty()) {
                     _noFit[key] = why;
                     continue;
@@ -1456,7 +1599,7 @@ private:
                 // The pauses between phrases are what a screen with words is there for: the
                 // louder scenes, which choose first, cannot spend them.
                 const bool pauses = l.gapsOnly && Words(*sc.seg, *l.t);
-                if (!pauses && l.usedMS + len > l.budgetMS + (bookend ? l.reserveMS : 0)) {
+                if (!pauses && !refill && l.usedMS + len > l.budgetMS + (bookend ? l.reserveMS : 0)) {
                     _noFit[key] = "goal-reached";
                     continue;
                 }
@@ -1544,6 +1687,11 @@ private:
                     s.transition = "wipe";
                 } else {
                     s.transition = "fade";
+                }
+                // A way in the maker keeps turning down is not used.
+                if (Pref("transition." + s.transition) <= -0.3) {
+                    s.transition = s.transition != "fade" && Pref("transition.fade") > -0.3 ? "fade" : "cut";
+                    s.reasons.push_back({ "preference", "transition." + s.transition });
                 }
                 if (s.transition == "cut") {
                     s.transitionIn.clear();
@@ -1672,6 +1820,27 @@ private:
             _sb.shots.push_back(p.shot);
         }
         (void)n;
+        {
+            std::map<std::string, std::string> keys;
+            for (const StoryboardScene& sc : _sb.scenes) {
+                keys[sc.id] = sc.key;
+            }
+            std::vector<size_t> order(_sb.shots.size());
+            for (size_t i = 0; i < order.size(); ++i) {
+                order[i] = i;
+            }
+            std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return _sb.shots[a].startMS < _sb.shots[b].startMS; });
+            std::map<std::string, int> nth;
+            std::map<std::string, std::string> byShot;
+            for (const size_t i : order) {
+                StoryboardShot& sh = _sb.shots[i];
+                sh.decisionId = fmt::format("{}/{}/{}", sh.lane, keys[sh.sceneId], ++nth[sh.sceneId + "|" + sh.lane]);
+                byShot[sh.id] = sh.decisionId;
+            }
+            for (MediaAssignment& a : _out.assignments) {
+                a.decisionId = byShot[a.shotId];
+            }
+        }
         std::sort(_out.assignments.begin(), _out.assignments.end(), [](const MediaAssignment& a, const MediaAssignment& b) { return a.startMS != b.startMS ? a.startMS < b.startMS : a.target < b.target; });
         for (const Cand& c : _cands) {
             if (!c.used) {
@@ -1805,9 +1974,15 @@ DecisionState StateFrom(const std::string& id) {
 } // namespace
 
 void UpsertMediaCorrection(std::vector<MediaCorrection>& list, const MediaCorrection& c) {
+    // "Not this file here" sits beside any other choice: only the same one is replaced.
+    if (c.action == MediaCorrection::Action::Avoid) {
+        std::erase_if(list, [&](const MediaCorrection& o) { return o.action == c.action && o.segmentId == c.segmentId && o.target == c.target && o.mediaId == c.mediaId; });
+        list.push_back(c);
+        return;
+    }
     const bool wholeSegment = c.action == MediaCorrection::Action::Remove && c.target.empty();
     std::erase_if(list, [&](const MediaCorrection& o) {
-        if (o.segmentId != c.segmentId) {
+        if (o.segmentId != c.segmentId || o.action == MediaCorrection::Action::Avoid) {
             return false;
         }
         if (wholeSegment || o.target.empty()) {
@@ -1949,6 +2124,12 @@ json MediaCorrectionsJson(const std::vector<MediaCorrection>& list) {
         if (c.fragmentStartMS >= 0) {
             j["fragmentStartMS"] = c.fragmentStartMS;
         }
+        if (!c.decisionId.empty()) {
+            j["decision"] = c.decisionId;
+        }
+        if (!c.origin.empty() && c.origin != "person") {
+            j["origin"] = c.origin;
+        }
         out.push_back(std::move(j));
     }
     return out;
@@ -1976,7 +2157,9 @@ bool MediaCorrectionsFrom(const json& list, std::vector<MediaCorrection>& out, s
             c.shotEndMS = j["shot"][1].get<int>();
         }
         c.fragmentStartMS = j.value("fragmentStartMS", -1);
-        if (c.segmentId.empty() && c.startMS < 0) {
+        c.decisionId = j.value("decision", std::string());
+        c.origin = j.value("origin", std::string("person"));
+        if (c.segmentId.empty() && c.startMS < 0 && c.decisionId.empty()) {
             error = "media corrections: no segment";
             return false;
         }
@@ -2066,6 +2249,7 @@ const char* MediaActionId(MediaCorrection::Action action) {
     switch (action) {
     case MediaCorrection::Action::Assign: return "assign";
     case MediaCorrection::Action::Lock: return "lock";
+    case MediaCorrection::Action::Avoid: return "avoid";
     default: return "remove";
     }
 }
@@ -2077,6 +2261,8 @@ bool MediaActionFromId(const std::string& id, MediaCorrection::Action& action) {
         action = MediaCorrection::Action::Lock;
     } else if (id == "remove") {
         action = MediaCorrection::Action::Remove;
+    } else if (id == "avoid") {
+        action = MediaCorrection::Action::Avoid;
     } else {
         return false;
     }

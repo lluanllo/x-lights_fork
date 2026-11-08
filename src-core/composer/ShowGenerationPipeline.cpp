@@ -1,5 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
+#include "composer/ArtisticPreferences.h"
+
 #include "composer/SequenceWriter.h"
 #include "composer/MediaFraming.h"
 #include "composer/VisualModel.h"
@@ -377,6 +379,11 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.validationErrors = v.ErrorCount() + run.renderValidation.ErrorCount();
     s.validationWarnings = v.WarningCount() + run.renderValidation.WarningCount();
     s.rendered = run.render.ran;
+    // The review of this version: what the person said about the same decisions before
+    // (handed over with the corrections, or in the sidecar this run continues).
+    const VisualReview* before = !run.corrections.review.Empty() ? &run.corrections.review : !run.previous.review.Empty() ? &run.previous.review : nullptr;
+    s.review = BuildReview(run.media.storyboard, s.sequenceFile, s.specHash, before, &run.mediaLibrary);
+    s.visualReview = s.review.state == "approved" ? "approved" : "not-reviewed";
     return s;
 }
 
@@ -1023,10 +1030,25 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
             Note(run, S, "media-library-not-saved", error);
         }
     }
+    // Planning reads what a person said each file shows over what the model said.
+    MediaLibrary planning = run.mediaLibrary;
+    {
+        VisualConcepts vocabulary;
+        std::string verr;
+        const bool haveVocabulary = ReadVisualConcepts(DefaultVisualConceptsPath(), vocabulary, verr);
+        ApplyHumanLabels(planning, haveVocabulary ? &vocabulary : nullptr);
+        int labelled = 0;
+        for (const MediaItem& m : planning.items) {
+            labelled += m.human.Empty() ? 0 : 1;
+        }
+        if (labelled > 0) {
+            Note(run, S, "media-human-labels", fmt::format("{} files with a person's labels", labelled));
+        }
+    }
     MediaPlanInput in;
     in.plan = &run.plan;
     in.capabilities = &run.capabilities;
-    in.library = &run.mediaLibrary;
+    in.library = &planning;
     in.analysis = &run.analysis;
     in.options.variant = session.variant;
     in.screens = &session.screens;
@@ -1042,6 +1064,27 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
             }
         }
     }
+    // What the maker taught the program, unless this show is made without it.
+    if (r.learning && !r.showDir.empty()) {
+        ArtisticPreferences prefs;
+        std::string perr;
+        if (ReadPreferences(PreferencesPath(r.showDir), prefs, perr)) {
+            run.preferences = EffectivePreferences(prefs);
+        } else {
+            Note(run, S, "preferences-unreadable", perr);
+        }
+    }
+    if (!run.preferences.empty()) {
+        std::string list;
+        for (const auto& [k, v] : run.preferences) {
+            list += fmt::format("{}{} {:+.2f}", list.empty() ? "" : ", ", k, v);
+        }
+        Note(run, S, "preferences", list);
+        in.preferences = &run.preferences;
+    } else {
+        Note(run, S, "preferences", r.learning ? "none learned yet" : "learning off for this show");
+    }
+    in.profileId = run.profile.id;
     in.showDir = r.showDir;
     in.options.automatic = session.automatic;
     in.options.maxShare = session.maxShare;
@@ -1504,6 +1547,9 @@ void WriteDiagnostics(GenerationRun& run) {
         }
         if (!run.media.storyboard.lanes.empty()) {
             ok &= WriteText(report / "storyboard.json", StoryboardJson(run.media.storyboard).dump(2));
+            if (!run.sidecar.review.Empty()) {
+                ok &= WriteText(report / "review.json", VisualReviewJson(run.sidecar.review).dump(2));
+            }
             ok &= WriteText(report / "storyboard-report.txt", StoryboardReport(run.media.storyboard));
         }
         if (!run.mediaLibrary.items.empty()) {

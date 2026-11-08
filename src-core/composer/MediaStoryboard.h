@@ -47,6 +47,9 @@ struct StoryboardScene {
     std::string repeatOf; // the scene it repeats, when the music does
     double energy = 0;
     double vocals = 0;
+    // Where it sits in the song's form, stable when times move: "chorus#2.1" is the first
+    // part of the second chorus.
+    std::string key;
 };
 
 struct StoryboardShot {
@@ -79,6 +82,9 @@ struct StoryboardShot {
     int pieces = 1;           // effects that draw it (a video on both faces of a tree: 2 or 3)
     int overlapMS = 0;        // how far it stays on past its end, fading under the next shot
     std::string relation;     // to the shot before on its screen: "same-ambience", "same-motif", ...
+    // The decision, as a person's review and corrections refer to it: "<screen>/<scene
+    // key>/<n>", the n-th shot of that screen in that part of the song.
+    std::string decisionId;
 };
 
 struct StoryboardGap {

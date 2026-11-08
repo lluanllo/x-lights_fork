@@ -77,6 +77,7 @@ bool LoadReportFolder(const std::string& folder, ReportFolder& out, std::string&
     (void)ReadIfThere(dir / "media-plan.json", r.media);
     (void)ReadIfThere(dir / "storyboard.json", r.storyboard);
     (void)ReadIfThere(dir / "screens.json", r.screens);
+    (void)ReadIfThere(dir / "review.json", r.review);
     if (ReadIfThere(dir / "summary.json", r.summary)) {
         r.hasSummary = true;
     }

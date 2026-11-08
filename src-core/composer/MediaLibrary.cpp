@@ -750,6 +750,7 @@ void Carry(MediaItem& to, const MediaItem& from) {
     to.categorySource = from.categorySource;
     to.disabled = from.disabled;
     to.reviewed = from.reviewed;
+    to.human = from.human;
     // Its key says which file version it describes: a changed file is analysed again.
     to.analysis = from.analysis;
 }
@@ -992,6 +993,11 @@ json ItemJson(const MediaItem& m) {
     if (m.analysis.Done() || !m.analysis.error.empty()) {
         j["analysis"] = MediaAnalysisJson(m.analysis);
     }
+    if (!m.human.Empty()) {
+        const MediaHumanLabels& h = m.human;
+        j["human"] = { { "confirmed", h.confirmed }, { "rejected", h.rejected }, { "added", h.added }, { "excluded", h.excluded }, { "notFor", h.notFor },
+                       { "complete", h.complete }, { "reviewer", h.reviewer }, { "reviewedAt", h.reviewedAt } };
+    }
     return j;
 }
 
@@ -1025,13 +1031,25 @@ MediaItem ItemFrom(const json& j) {
     if (j.contains("analysis") && j["analysis"].is_object()) {
         m.analysis = MediaAnalysisFrom(j["analysis"]);
     }
+    if (j.contains("human") && j["human"].is_object()) {
+        const json& h = j["human"];
+        m.human.confirmed = h.value("confirmed", std::vector<std::string>());
+        m.human.rejected = h.value("rejected", std::vector<std::string>());
+        m.human.added = h.value("added", std::vector<std::string>());
+        m.human.excluded = h.value("excluded", std::vector<std::string>());
+        m.human.notFor = h.value("notFor", std::vector<std::string>());
+        m.human.complete = h.value("complete", false);
+        m.human.reviewer = h.value("reviewer", std::string());
+        m.human.reviewedAt = h.value("reviewedAt", std::string());
+    }
     return m;
 }
 
 } // namespace
 
 bool SaveMediaLibrary(const std::string& path, const MediaLibrary& library, std::string& error) {
-    json root = { { "format", "xjuanjilights-media-library" }, { "version", library.version } };
+    // Always written as the current version: what it holds now is read as such.
+    json root = { { "format", "xjuanjilights-media-library" }, { "version", MediaLibrary().version } };
     json folders = json::array();
     for (const MediaFolder& f : library.folders) {
         folders.push_back({ { "path", f.path }, { "relative", f.relative } });
@@ -1081,7 +1099,7 @@ bool ReadMediaLibrary(const std::string& path, MediaLibrary& library, std::strin
         return false;
     }
     library.version = root.value("version", 1);
-    if (library.version > 2) {
+    if (library.version > 3) {
         error = "newer";
         return false;
     }

@@ -81,6 +81,12 @@ void FindDuplicateMedia(MediaLibrary& library);
 // The fixed categories an item counts as: a person's own, or those its name suggested
 // together with what the analysis found.
 [[nodiscard]] std::vector<std::string> EffectiveCategories(const MediaItem& item);
+// The analysis as planning reads it: a person's labels over the model's (rejected and
+// excluded concepts gone, confirmed and added ones certain and first, their categories
+// added). The stored analysis is not changed. `concepts` may be null.
+[[nodiscard]] MediaAnalysis EffectiveAnalysis(const MediaItem& item, const VisualConcepts* concepts);
+// The same for every file of a library copy that planning reads.
+void ApplyHumanLabels(MediaLibrary& library, const VisualConcepts* concepts);
 
 [[nodiscard]] nlohmann::json MediaAnalysisJson(const MediaAnalysis& analysis);
 [[nodiscard]] MediaAnalysis MediaAnalysisFrom(const nlohmann::json& object);
