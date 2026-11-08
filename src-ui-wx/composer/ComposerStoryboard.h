@@ -79,25 +79,32 @@ private:
     std::string _error;
 };
 
-// The visual storyboard on a timeline: a lane for the matrix and one for the mega tree,
-// each shot as its picture, the scenes behind them and the gaps left to the lights.
+// The visual storyboard on a timeline: a row for each screen with the part it plays,
+// each shot as its picture and how it comes in, the scenes behind them, the gaps left
+// to the lights, and a strip showing where the screens change together.
 class StoryboardView : public wxPanel {
 public:
     explicit StoryboardView(wxWindow* parent);
     void SetStoryboard(const composer::VisualMediaStoryboard* storyboard, int durationMS, std::map<std::string, wxBitmap> thumbnails);
     void Select(int shot);
+    void SelectLane(const std::string& lane);
     [[nodiscard]] int Selected() const { return _selected; }
+    [[nodiscard]] const std::string& SelectedLane() const { return _selectedLane; }
     std::function<void(int shot)> onSelect;
+    std::function<void(const std::string& lane)> onSelectLane;
 
 private:
     void OnPaint(wxPaintEvent& event);
     void OnClick(wxMouseEvent& event);
     [[nodiscard]] wxRect ShotRect(int shot) const;
+    [[nodiscard]] int LaneHeight() const;
+    [[nodiscard]] int LaneTop(size_t lane) const;
 
     const composer::VisualMediaStoryboard* _board = nullptr;
     int _durationMS = 0;
     std::map<std::string, wxBitmap> _thumbs;
     int _selected = -1;
+    std::string _selectedLane;
 };
 
 // What a visual concept is called for a person, in their language.
@@ -106,3 +113,5 @@ private:
 [[nodiscard]] wxString ShotWhy(const composer::StoryboardShot& shot);
 // The framing, said simply: "fills the figure", "slow zoom", "round the tree"...
 [[nodiscard]] wxString FramingName(const std::string& strategy);
+// How a shot comes in, said simply: "cut", "cross-fade"...
+[[nodiscard]] wxString TransitionName(const std::string& transition);

@@ -18,6 +18,7 @@
 #include <cmath>
 
 #include "composer/VisualModel.h"
+#include "ComposerScreens.h"
 #include "utils/ExternalHooks.h"
 
 using namespace composer;
@@ -171,15 +172,43 @@ void ModelDownloadRunner::Start(const std::string& root) {
 
 namespace {
 
-constexpr int LABEL_W = 110;
+constexpr int LABEL_W = 130;
 constexpr int SCENE_H = 18;
-constexpr int LANE_H = 58;
+constexpr int SYNC_H = 12;
 constexpr int GAP = 4;
+constexpr int TIME_H = 18;
+
+wxColour TransitionColour(const std::string& t) {
+    return t == "cut" ? wxColour(240, 240, 240) : t == "crossfade" ? wxColour(90, 170, 255) : t == "zoom" ? wxColour(255, 160, 60) : t == "wipe" ? wxColour(190, 120, 255) : t == "rest" ? wxColour(90, 90, 90)
+                                                                                                                                                                                  : wxColour(150, 150, 160);
+}
 
 } // namespace
 
+wxString TransitionName(const std::string& t) {
+    if (t == "cut") {
+        return _("cut");
+    }
+    if (t == "fade") {
+        return _("fade");
+    }
+    if (t == "crossfade") {
+        return _("cross-fade");
+    }
+    if (t == "zoom") {
+        return _("zoom");
+    }
+    if (t == "wipe") {
+        return _("wipe");
+    }
+    if (t == "rest") {
+        return _("rest");
+    }
+    return U(t);
+}
+
 StoryboardView::StoryboardView(wxWindow* parent) :
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, SCENE_H + 2 * (LANE_H + GAP) + 18)) {
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(-1, SCENE_H + SYNC_H + GAP + 2 * (58 + GAP) + TIME_H)) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     Bind(wxEVT_PAINT, &StoryboardView::OnPaint, this);
     Bind(wxEVT_LEFT_DOWN, &StoryboardView::OnClick, this);
@@ -189,6 +218,15 @@ StoryboardView::StoryboardView(wxWindow* parent) :
     });
 }
 
+int StoryboardView::LaneHeight() const {
+    const size_t n = _board != nullptr ? _board->lanes.size() : 2;
+    return n <= 2 ? 58 : n == 3 ? 48 : 38;
+}
+
+int StoryboardView::LaneTop(size_t lane) const {
+    return SCENE_H + SYNC_H + GAP + static_cast<int>(lane) * (LaneHeight() + GAP);
+}
+
 void StoryboardView::SetStoryboard(const VisualMediaStoryboard* storyboard, int durationMS, std::map<std::string, wxBitmap> thumbnails) {
     _board = storyboard;
     _durationMS = durationMS;
@@ -196,11 +234,32 @@ void StoryboardView::SetStoryboard(const VisualMediaStoryboard* storyboard, int 
     if (_board == nullptr || _selected >= static_cast<int>(_board->shots.size())) {
         _selected = -1;
     }
+    if (_board == nullptr || _board->Lane(_selectedLane) == nullptr) {
+        _selectedLane.clear();
+    }
+    // One row per screen: the view grows with the screens of the show.
+    const size_t lanes = _board != nullptr ? std::max<size_t>(1, _board->lanes.size()) : 2;
+    const int height = LaneTop(lanes) + TIME_H;
+    if (GetMinSize().y != height) {
+        SetMinSize(wxSize(-1, height));
+        if (GetParent() != nullptr) {
+            GetParent()->Layout();
+        }
+    }
     Refresh();
 }
 
 void StoryboardView::Select(int shot) {
     _selected = shot;
+    if (_board != nullptr && shot >= 0 && shot < static_cast<int>(_board->shots.size())) {
+        _selectedLane = _board->shots[static_cast<size_t>(shot)].lane;
+    }
+    Refresh();
+}
+
+void StoryboardView::SelectLane(const std::string& lane) {
+    _selectedLane = lane;
+    _selected = -1;
     Refresh();
 }
 
@@ -209,16 +268,16 @@ wxRect StoryboardView::ShotRect(int i) const {
         return {};
     }
     const StoryboardShot& s = _board->shots[static_cast<size_t>(i)];
-    int lane = 0;
+    size_t lane = 0;
     for (size_t k = 0; k < _board->lanes.size(); ++k) {
         if (_board->lanes[k].target == s.lane) {
-            lane = static_cast<int>(k);
+            lane = k;
         }
     }
     const int w = std::max(1, GetClientSize().x - LABEL_W - 4);
     const int x0 = LABEL_W + static_cast<int>(static_cast<double>(s.startMS) / _durationMS * w);
     const int x1 = LABEL_W + static_cast<int>(static_cast<double>(s.endMS) / _durationMS * w);
-    return wxRect(x0, SCENE_H + GAP + lane * (LANE_H + GAP), std::max(2, x1 - x0 - 1), LANE_H);
+    return wxRect(x0, LaneTop(lane), std::max(2, x1 - x0 - 1), LaneHeight());
 }
 
 void StoryboardView::OnPaint(wxPaintEvent&) {
@@ -232,6 +291,7 @@ void StoryboardView::OnPaint(wxPaintEvent&) {
         dc.DrawText(_("No visual storyboard yet: choose a folder of pictures and videos, then compose."), 8, 8);
         return;
     }
+    const int laneH = LaneHeight();
     const int w = std::max(1, size.x - LABEL_W - 4);
     const auto X = [&](int ms) { return LABEL_W + static_cast<int>(static_cast<double>(ms) / _durationMS * w); };
     // Scenes: the part each plays, alternating shades.
@@ -247,24 +307,50 @@ void StoryboardView::OnPaint(wxPaintEvent&) {
         dc.DrawText(RoleName(sc.role), x0 + 3, 2);
         dc.DestroyClippingRegion();
     }
+    // The screens together: a mark where each shot comes in, coloured by how; where two
+    // screens change at once, a line through every row.
+    dc.SetTextForeground(wxColour(150, 150, 160));
+    dc.DrawText(_("all screens"), 4, SCENE_H - 1);
+    const int bottom = LaneTop(_board->lanes.size());
+    std::map<int, int> changes;
+    for (const StoryboardShot& s : _board->shots) {
+        ++changes[s.startMS / 100];
+    }
+    for (const StoryboardShot& s : _board->shots) {
+        const int x = X(s.startMS);
+        const bool together = changes[s.startMS / 100] > 1;
+        dc.SetPen(wxPen(TransitionColour(s.transition), together ? 2 : 1));
+        dc.DrawLine(x, SCENE_H + (together ? 0 : 4), x, SCENE_H + SYNC_H);
+        if (together) {
+            dc.SetPen(wxPen(wxColour(255, 255, 255, 40), 1, wxPENSTYLE_DOT));
+            dc.DrawLine(x, SCENE_H + SYNC_H, x, bottom);
+        }
+    }
     for (size_t k = 0; k < _board->lanes.size(); ++k) {
-        const int y = SCENE_H + GAP + static_cast<int>(k) * (LANE_H + GAP);
-        dc.SetBrush(wxBrush(wxColour(22, 22, 26)));
-        dc.SetPen(*wxTRANSPARENT_PEN);
-        dc.DrawRectangle(0, y, LABEL_W - 4, LANE_H);
+        const StoryboardLane& lane = _board->lanes[k];
+        const int y = LaneTop(k);
+        const bool chosen = lane.target == _selectedLane;
+        dc.SetBrush(wxBrush(chosen ? wxColour(40, 50, 70) : wxColour(22, 22, 26)));
+        dc.SetPen(chosen ? wxPen(wxColour(120, 170, 255)) : *wxTRANSPARENT_PEN);
+        dc.DrawRectangle(0, y, LABEL_W - 4, laneH);
         dc.SetTextForeground(*wxWHITE);
-        dc.SetClippingRegion(2, y, LABEL_W - 8, LANE_H);
-        dc.DrawText(U(_board->lanes[k].target), 4, y + 4);
+        dc.SetClippingRegion(2, y, LABEL_W - 8, laneH);
+        dc.DrawText(U(lane.target), 4, y + 2);
         dc.SetTextForeground(wxColour(160, 160, 170));
-        dc.DrawText(_board->lanes[k].role == "mega-tree" ? _("mega tree") : _("matrix"), 4, y + 20);
+        const wxString role = !lane.screen.empty() ? ScreenRoleNameOf(lane.screen) : lane.role == "mega-tree" ? _("mega tree") : _("matrix");
+        dc.DrawText(role, 4, y + 15);
+        if (lane.gapsOnly && laneH >= 44) {
+            dc.DrawText(_("between phrases"), 4, y + 28);
+        }
         dc.DestroyClippingRegion();
         // Gaps: the lights carry on there.
         for (const StoryboardGap& g : _board->gaps) {
-            if (g.lane != _board->lanes[k].target) {
+            if (g.lane != lane.target) {
                 continue;
             }
             dc.SetBrush(wxBrush(wxColour(70, 70, 70), wxBRUSHSTYLE_BDIAGONAL_HATCH));
-            dc.DrawRectangle(X(g.startMS), y, X(g.endMS) - X(g.startMS), LANE_H);
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.DrawRectangle(X(g.startMS), y, X(g.endMS) - X(g.startMS), laneH);
         }
     }
     for (int i = 0; i < static_cast<int>(_board->shots.size()); ++i) {
@@ -289,11 +375,17 @@ void StoryboardView::OnPaint(wxPaintEvent&) {
         dc.SetTextForeground(*wxWHITE);
         dc.DrawText(U(s.name), r.x + 3, r.GetBottom() - 13);
         dc.DestroyClippingRegion();
-        // Cuts and fades at the edges.
-        dc.SetPen(wxPen(wxColour(255, 255, 255, 120)));
+        // A picture between the phrases of a screen with words: a dotted top edge.
+        if (s.overlay) {
+            dc.SetPen(wxPen(wxColour(255, 220, 120), 1, wxPENSTYLE_DOT));
+            dc.DrawLine(r.x, r.y, r.GetRight(), r.y);
+        }
+        // How it comes in and goes out.
+        dc.SetPen(wxPen(TransitionColour(s.transition.empty() ? "fade" : s.transition)));
         if (s.fadeInMS > 0) {
             dc.DrawLine(r.x, r.GetBottom(), X(s.startMS + s.fadeInMS), r.y);
         }
+        dc.SetPen(wxPen(wxColour(255, 255, 255, 120)));
         if (s.fadeOutMS > 0) {
             dc.DrawLine(X(s.endMS - s.fadeOutMS), r.y, r.GetRight(), r.GetBottom());
         }
@@ -305,7 +397,6 @@ void StoryboardView::OnPaint(wxPaintEvent&) {
     }
     // Time marks.
     dc.SetTextForeground(wxColour(150, 150, 160));
-    const int bottom = SCENE_H + GAP + static_cast<int>(_board->lanes.size()) * (LANE_H + GAP);
     const int step = _durationMS > 240000 ? 30000 : _durationMS > 60000 ? 15000 : 5000;
     for (int ms = 0; ms <= _durationMS; ms += step) {
         dc.DrawText(Clock(ms), X(ms) + 2, bottom);
@@ -323,6 +414,19 @@ void StoryboardView::OnClick(wxMouseEvent& e) {
                 onSelect(i);
             }
             return;
+        }
+    }
+    // A screen's name chooses the whole screen.
+    if (e.GetPosition().x < LABEL_W) {
+        for (size_t k = 0; k < _board->lanes.size(); ++k) {
+            const int y = LaneTop(k);
+            if (e.GetPosition().y >= y && e.GetPosition().y < y + LaneHeight()) {
+                SelectLane(_board->lanes[k].target);
+                if (onSelectLane) {
+                    onSelectLane(_selectedLane);
+                }
+                return;
+            }
         }
     }
 }
@@ -406,9 +510,20 @@ wxString ShotWhy(const StoryboardShot& s) {
             add(_("your choice"));
         } else if (r.code == "copied-into-show") {
             add(_("copied into the show"));
+        } else if (r.code == "between-phrases") {
+            add(_("between the sung phrases"));
+        } else if (r.code == "story") {
+            add(r.detail == "same-ambience"     ? _("same air as the shot before")
+                : r.detail == "same-motif"      ? _("same motif as the shot before")
+                : r.detail == "complementary"   ? _("contrasts with the shot before")
+                : r.detail == "answers-the-opening" ? _("answers the opening")
+                                                : _("follows on from the shot before"));
         }
     }
     add(FramingName(s.framing));
+    if (!s.transition.empty() && s.transition != "fade") {
+        add(wxString::Format(_("comes in with a %s"), TransitionName(s.transition)));
+    }
     if (s.state == DecisionState::Automatic) {
         add(s.level == "very-suitable" ? _("very suitable") : s.level == "acceptable" ? _("acceptable") : _("doubtful"));
     }

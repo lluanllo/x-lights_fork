@@ -474,6 +474,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerMediaDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerStoryboard.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerStoryboard.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerScreens.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerScreens.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.h" />
 		<Unit filename="../dependencies/midifile/src/Binasc.cpp" />
@@ -580,6 +582,8 @@
 		<Unit filename="../src-core/composer/MediaFraming.h" />
 		<Unit filename="../src-core/composer/MediaStoryboard.cpp" />
 		<Unit filename="../src-core/composer/MediaStoryboard.h" />
+		<Unit filename="../src-core/composer/MediaSurfaces.cpp" />
+		<Unit filename="../src-core/composer/MediaSurfaces.h" />
 		<Unit filename="../src-core/composer/MediaTest.cpp" />
 		<Unit filename="../src-core/composer/MediaTest.h" />
 		<Unit filename="../src-core/composer/VisualTest.cpp" />

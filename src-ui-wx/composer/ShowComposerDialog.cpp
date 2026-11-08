@@ -54,6 +54,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ComposerMediaDialogs.h"
+#include "ComposerScreens.h"
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
 #include "ComposerTimeline.h"
@@ -130,6 +131,8 @@ enum {
     ID_SHOT_MOVE,
     ID_MONTAGE_REBUILD,
     ID_MONTAGE_VERSIONS,
+    ID_SCREENS,
+    ID_LANE_LOCK,
 };
 
 constexpr int FRAME_MS = 25;
@@ -697,6 +700,11 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     mediaRow->Add(_mediaInfo, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
     mediaRow->Add(new wxButton(mediaBox->GetStaticBox(), ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0);
     mediaBox->Add(mediaRow, 0, wxEXPAND | wxALL, 4);
+    auto* screensRow = new wxBoxSizer(wxHORIZONTAL);
+    _screensInfo = new wxStaticText(mediaBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1), wxST_ELLIPSIZE_END);
+    screensRow->Add(_screensInfo, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+    screensRow->Add(new wxButton(mediaBox->GetStaticBox(), ID_SCREENS, _("Screens...")), 0);
+    mediaBox->Add(screensRow, 0, wxEXPAND | wxALL, 4);
     _mediaAuto = new wxCheckBox(mediaBox->GetStaticBox(), wxID_ANY, _("Choose pictures and videos for the show by themselves (otherwise only the ones I assign)"));
     _mediaAuto->SetValue(true);
     mediaBox->Add(_mediaAuto, 0, wxALL, 4);
@@ -710,7 +718,7 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     _analysisState = new wxStaticText(mediaBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1), wxST_ELLIPSIZE_END);
     analysisRow->Add(_analysisState, 1, wxALIGN_CENTER_VERTICAL);
     mediaBox->Add(analysisRow, 0, wxEXPAND | wxALL, 4);
-    mediaBox->Add(Muted(mediaBox->GetStaticBox(), _("Only your own files are used, on the main matrix and the mega tree, where no lyrics are shown; the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere.")), 0, wxLEFT | wxBOTTOM, 6);
+    mediaBox->Add(Muted(mediaBox->GetStaticBox(), _("Only your own files are used, on the screens of the show (\"Screens...\"); a picture never covers a sung phrase, and the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere.")), 0, wxLEFT | wxBOTTOM, 6);
 
     wxStaticBoxSizer* output = box(_("Sequence"));
     auto* nameRow = new wxBoxSizer(wxHORIZONTAL);
@@ -792,6 +800,7 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         StartAssist("describe", AskConsent("Google Gemini (generativelanguage.googleapis.com)", _("to describe its genre, mood and energy; it is only a suggestion and never changes the analysis")));
     }, ID_DESCRIBE);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditScreens(); }, ID_SCREENS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         if (MediaAnalysisRunning()) {
@@ -1027,7 +1036,9 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
 }
 
 wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
-    auto* page = new wxPanel(parent);
+    // It scrolls: the montage has a row per screen, however many the show has.
+    auto* page = new wxScrolledWindow(parent);
+    page->SetScrollRate(0, 10);
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     auto* head = new wxBoxSizer(wxHORIZONTAL);
     head->Add(Bold(page, _("Review the composition")), 1, wxALIGN_CENTER_VERTICAL);
@@ -1104,7 +1115,7 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     _correctionInfo = Muted(page, "");
     sizer->Add(_correctionInfo, 0, wxEXPAND | wxBOTTOM, 6);
 
-    sizer->Add(new wxStaticText(page, wxID_ANY, _("Visual montage of the main matrix and the mega tree: each shot, its picture, and where the lights carry on")), 0, wxBOTTOM, 2);
+    sizer->Add(new wxStaticText(page, wxID_ANY, _("Visual montage, one row per screen: each shot, its picture, how it comes in, and where the lights carry on")), 0, wxBOTTOM, 2);
     _storyboardView = new StoryboardView(page);
     sizer->Add(_storyboardView, 0, wxEXPAND | wxBOTTOM, 4);
     _storyboardView->onSelect = [this](int shot) {
@@ -1119,16 +1130,19 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 70 }, { _("To"), 70 }, { _("Figure"), 160 }, { _("File"), 200 }, { _("State"), 110 }, { _("Why"), 320 } }) {
         _cueList->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
+    _cueList->SetMinSize(wxSize(-1, 110));
     sizer->Add(_cueList, 0, wxEXPAND | wxBOTTOM, 4);
     auto* mediaActions = new wxBoxSizer(wxHORIZONTAL);
     mediaActions->Add(new wxButton(page, ID_MEDIA_ASSIGN, _("Choose a File...")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_MEDIA_REMOVE, _("No Picture Here")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_MEDIA_LOCK, _("Keep This One")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_SCENE_LOCK, _("Keep the Whole Scene")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_LANE_LOCK, _("Keep This Screen")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_SHOT_MOVE, _("On the Other Screen")), 0, wxRIGHT, 12);
     mediaActions->Add(new wxButton(page, ID_MONTAGE_REBUILD, _("Rebuild the Montage")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_MONTAGE_VERSIONS, _("Earlier Versions...")), 0, wxRIGHT, 12);
-    mediaActions->Add(new wxButton(page, ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_SCREENS, _("Screens...")), 0);
     sizer->Add(mediaActions, 0);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         const long selected = _cueList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
@@ -1146,6 +1160,17 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
         }
         MoveShotToOtherScreen(_rowShot[selected]);
     }, ID_SHOT_MOVE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const long selected = _cueList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        const int shot = selected >= 0 && selected < static_cast<long>(_rowShot.size()) ? _rowShot[selected] : -1;
+        const std::string lane = shot >= 0 ? _storyboard.shots[static_cast<size_t>(shot)].lane : _storyboardView->SelectedLane();
+        if (lane.empty()) {
+            wxMessageBox(_("Choose a shot or a screen of the montage first."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        LockStoryboardLane(lane);
+    }, ID_LANE_LOCK);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditScreens(); }, ID_SCREENS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { RebuildMontage(); }, ID_MONTAGE_REBUILD);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChooseStoryboardVersion(); }, ID_MONTAGE_VERSIONS);
     _cueList->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& e) {
@@ -1846,6 +1871,7 @@ bool ShowComposerDialog::LoadPreviousShow(const std::string& sidecarPath, std::s
     _corrections.choreography = sidecar.choreographyCorrections;
     _corrections.analysis = sidecar.analysisCorrections;
     _corrections.media = sidecar.media.corrections;
+    _corrections.screens = sidecar.media.screens;
     if (!sidecar.media.folders.empty()) {
         _mediaFolders.clear();
         for (const std::string& f : sidecar.media.folders) {
@@ -2461,6 +2487,20 @@ void ShowComposerDialog::RefreshCreate() {
             _mediaInfo->SetLabel(wxString::Format(_("%d folders, %d files that can be used."), static_cast<int>(_mediaFolders.size()), usable));
         }
     }
+    if (_screensInfo != nullptr) {
+        wxString text;
+        if (_showOk) {
+            const SurfacePlan sp = ScreensPreview();
+            for (const Surface& s : sp.surfaces) {
+                if (s.role != SurfaceRole::Support && s.role != SurfaceRole::Off) {
+                    text += (text.empty() ? "" : ", ") + U(s.target) + ": " + ScreenRoleName(s.role);
+                }
+            }
+            text = text.empty() ? wxString(_("No screen for pictures in this show.")) : wxString::Format(_("Screens: %s. Words and pictures: %s."), text, LyricsModeName(_corrections.screens.mode));
+        }
+        _screensInfo->SetLabel(text);
+        _screensInfo->SetToolTip(text);
+    }
     RefreshMediaAnalysisState();
     if (_audioPath.empty()) {
         _audioName->SetLabel(_("No song chosen"));
@@ -3002,6 +3042,30 @@ void ShowComposerDialog::RefreshResult() {
         extra += "\n" + wxString::Format(_("Visual montage: %s%d files (%d pictures, %d videos), %d prepared pictures, %d repeats (%d where the music repeats), %d stretches left to the lights. Analysis: %s."), lanes,
                                          montage.value("files", 0), montage.value("images", 0), montage.value("videos", 0), montage.value("derived", 0), montage.value("repeats", 0), montage.value("repeatsByMusic", 0),
                                          montage.value("gaps", 0), mode == "semantic" ? _("what each file shows, with the image model") : mode == "mixed" ? _("partly with the image model") : _("colours, light and motion only"));
+        wxString screens;
+        for (const json& l : montage.value("screens", json::array())) {
+            wxString cover;
+            for (const json& x : montage.value("lanes", json::array())) {
+                if (x.value("lane", std::string()) == l.value("target", std::string())) {
+                    cover = wxString::Format(_(", %.0f%% of the song"), x.value("coverage", 0.0) * 100);
+                }
+            }
+            screens += (screens.empty() ? "" : "; ") + U(l.value("target", std::string())) + " (" + ScreenRoleNameOf(l.value("screen", std::string())) +
+                       (l.value("gapsOnly", false) ? wxString(_(", between phrases")) : wxString()) + cover + ")";
+        }
+        if (!screens.empty()) {
+            LyricsMode lm = LyricsMode::Smart;
+            (void)LyricsModeFromId(montage.value("lyricsMode", std::string("smart")), lm);
+            wxString moves;
+            const json transitions = montage.value("transitions", json::object());
+            for (const auto& [k, v] : transitions.items()) {
+                moves += (moves.empty() ? "" : ", ") + wxString::Format("%s %d", TransitionName(k), v.is_number() ? v.get<int>() : 0);
+            }
+            extra += "\n" + wxString::Format(_("Screens: %s. Words and pictures: %s."), screens, LyricsModeName(lm));
+            extra += "\n" + wxString::Format(_("Shots of %.1f s on average; transitions: %s; %d pictures between phrases; %d moving clips. Related shots one after another: %.0f%%; between the screens at the same time: %.0f%%."),
+                                             montage.value("meanShotMS", 0) / 1000.0, moves.empty() ? wxString(_("none")) : moves, montage.value("overlays", 0), montage.value("motionClips", 0),
+                                             montage.value("coherence", 0.0) * 100, montage.value("crossScreen", 0.0) * 100);
+        }
     }
     SetWrapped(_resultFacts, facts + extra);
     fs::path review = _resultSequence;
@@ -3016,6 +3080,18 @@ void ShowComposerDialog::RefreshResult() {
     const auto warn = [&](const wxString& text) { _warningList->InsertItem(w++, text); };
     if (lyrics == "unsynchronized") {
         warn(_("The lyrics are not synchronized, so no face sings. Mark the phrases and make another version."));
+    }
+    {
+        const json screens = _result.screens.empty() ? json() : json::parse(_result.screens, nullptr, false);
+        if (screens.is_object()) {
+            SurfacePlan sp;
+            for (const json& x : screens.value("warnings", json::array())) {
+                sp.warnings.push_back(x.get<std::string>());
+            }
+            for (const wxString& line : ScreenWarnings(sp)) {
+                warn(line);
+            }
+        }
     }
     if (faces.empty() && lyrics != "none" && lyrics != "unsynchronized") {
         warn(_("No face sings: no figure with a face took part."));
@@ -3333,6 +3409,34 @@ void ShowComposerDialog::LockStoryboardScene(const std::string& sceneId) {
         UpsertMediaCorrection(_corrections.media, c);
     }
     RefreshAll();
+}
+
+void ShowComposerDialog::LockStoryboardLane(const std::string& lane) {
+    for (const MediaCorrection& c : composer::LockStoryboardLane(_storyboard, lane)) {
+        UpsertMediaCorrection(_corrections.media, c);
+    }
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetScreens(const ScreenSettings& screens) {
+    _corrections.screens = screens;
+    RefreshAll();
+}
+
+SurfacePlan ShowComposerDialog::ScreensPreview() const {
+    const ReportFolder& level = _levels[static_cast<int>(Level())];
+    return PlanSurfaces(_capabilities, level.hasPlan ? &level.plan : nullptr, _corrections.screens);
+}
+
+void ShowComposerDialog::EditScreens() {
+    if (!_showOk) {
+        return;
+    }
+    const ReportFolder& level = _levels[static_cast<int>(Level())];
+    ScreensDialog dialog(this, _capabilities, level.hasPlan ? &level.plan : nullptr, _corrections.screens);
+    if (dialog.ShowModal() == wxID_OK) {
+        SetScreens(dialog.Settings());
+    }
 }
 
 void ShowComposerDialog::MoveShotToOtherScreen(int shot) {

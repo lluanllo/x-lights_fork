@@ -161,6 +161,11 @@ public:
     [[nodiscard]] const composer::MediaAnalysisSummary& LastMediaAnalysis() const { return _lastMediaAnalysis; }
     [[nodiscard]] const composer::VisualMediaStoryboard& ShownStoryboard() const { return _storyboard; }
     void LockStoryboardScene(const std::string& sceneId);
+    void LockStoryboardLane(const std::string& lane);
+    // The screens and how words and pictures share them: kept with the show.
+    void SetScreens(const composer::ScreenSettings& screens);
+    [[nodiscard]] const composer::ScreenSettings& Screens() const { return _corrections.screens; }
+    [[nodiscard]] composer::SurfacePlan ScreensPreview() const;
     void MoveShotToOtherScreen(int shot);
     void RebuildMontage();
     [[nodiscard]] int MontageVariant() const { return _mediaVariant; }
@@ -223,6 +228,7 @@ private:
     void OnTimer(wxTimerEvent& event);
     void OnFigureSelected(wxListEvent& event);
     void EditMediaLibrary();
+    void EditScreens();
     void EditVoices();
     void ChangeMedia(int action);
     void GetVisualModel();
@@ -234,6 +240,7 @@ private:
     std::vector<std::string> _mediaFolders;
     std::vector<MediaRow> _mediaRows;
     wxStaticText* _mediaInfo = nullptr;
+    wxStaticText* _screensInfo = nullptr;
     wxCheckBox* _mediaAuto = nullptr;
     wxCheckBox* _copyMedia = nullptr;
     wxStaticText* _voicesInfo = nullptr;

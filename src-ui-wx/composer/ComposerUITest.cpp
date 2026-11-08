@@ -33,6 +33,7 @@
 
 #include "ComposerJob.h"
 #include "ComposerMediaDialogs.h"
+#include "ComposerScreens.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
 #include "composer/LyricAligner.h"
@@ -342,6 +343,29 @@ private:
                               _dialog->StartMediaAnalysis();
                               Check(_dialog->MediaAnalysisRunning(), "the library is analysed on its own thread, the window still usable");
                               Capture(_dialog, "crear-con-medios");
+                              // The screens: found from the figures, each with its part; a person's choice is kept.
+                              auto* screens = new ScreensDialog(_dialog, _dialog->Capabilities(), nullptr, _dialog->Screens());
+                              const SurfacePlan& sp = screens->Preview();
+                              const Surface* main = nullptr;
+                              for (const Surface& sf : sp.surfaces) {
+                                  main = main == nullptr && sf.role == SurfaceRole::Main ? &sf : main;
+                              }
+                              Check(!sp.surfaces.empty() && main != nullptr, fmt::format("{} screens found for pictures, the main one {}", sp.surfaces.size(), main != nullptr ? main->target : std::string("-")));
+                              if (main != nullptr) {
+                                  const std::string target = main->target;
+                                  screens->SetMode(LyricsMode::Smart);
+                                  Check(screens->SetRole(target, SurfaceRole::Main) && screens->Preview().Find(target)->roleSource == "person", "a screen's part chosen by hand is shown as the person's");
+                                  screens->Show();
+                                  screens->Update();
+                                  Capture(screens, "pantallas");
+                                  _dialog->SetScreens(screens->Settings());
+                                  const SurfacePlan now = _dialog->ScreensPreview();
+                                  const Surface* kept = now.Find(target);
+                                  Check(kept != nullptr && kept->role == SurfaceRole::Main && kept->roleSource == "person" && _dialog->Screens().mode == LyricsMode::Smart,
+                                        fmt::format("and the window keeps it for the show ({} choices, {} as {} by {})", _dialog->Screens().screens.size(), target, kept != nullptr ? SurfaceRoleId(kept->role) : "-",
+                                                    kept != nullptr ? kept->roleSource : std::string("-")));
+                              }
+                              screens->Destroy();
                               return true;
                           },
                            60 });
@@ -508,6 +532,41 @@ private:
                                   now.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
                               }
                               Check(now == _montageAll, fmt::format("the first montage is back, shot by shot ({} shots)", now.size()));
+                              return true;
+                          },
+                           1800 });
+        _steps.push_back({ "a screen kept", [this]() {
+                              if (!_started) {
+                                  const VisualMediaStoryboard& b = _dialog->ShownStoryboard();
+                                  _montageLane.clear();
+                                  _montageBefore.clear();
+                                  for (const StoryboardShot& s : b.shots) {
+                                      _montageLane = _montageLane.empty() ? s.lane : _montageLane;
+                                      if (s.lane == _montageLane) {
+                                          _montageBefore.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                                      }
+                                  }
+                                  if (_montageLane.empty()) {
+                                      Check(false, "a screen with shots to keep");
+                                      return true;
+                                  }
+                                  _dialog->LockStoryboardLane(_montageLane);
+                                  _dialog->RebuildMontage();
+                                  _started = true;
+                                  return false;
+                              }
+                              if (!JobDone() || !_dialog->LevelReport(AutomationLevel::Creative).hasChoreography || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              std::set<std::string> after;
+                              for (const StoryboardShot& s : _dialog->ShownStoryboard().shots) {
+                                  if (s.lane == _montageLane) {
+                                      after.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                                  }
+                              }
+                              Check(after == _montageBefore, fmt::format("\"Keep This Screen\": {} stays exactly as it was while the montage is rebuilt ({} shots)", _montageLane, after.size()));
+                              Capture(_dialog, "pantalla-bloqueada");
                               return true;
                           },
                            1800 });
@@ -803,6 +862,7 @@ private:
     bool _midShot = false;
     std::string _locked;
     std::string _montageScene;
+    std::string _montageLane;
     std::string _montageHash;
     std::set<std::string> _montageBefore;
     std::set<std::string> _montageAll;
