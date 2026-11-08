@@ -815,54 +815,66 @@ private:
     // A picture or a video from the show's own files, as the media plan chose it: the
     // template gives the transitions, the plan the file and how it is fitted.
     void Media(const PlanSegment& s, const PlanAssignment& a, const TargetInfo& target, const std::string& key, std::set<std::string>& usedEffects) {
-        const MediaAssignment* m = _in.media != nullptr ? _in.media->Find(s.id, a.target) : nullptr;
-        if (m == nullptr) {
+        const std::vector<const MediaAssignment*> shots = _in.media != nullptr ? _in.media->FindAll(s.id, a.target) : std::vector<const MediaAssignment*>();
+        if (shots.empty()) {
             _out.warnings.push_back(fmt::format("media-without-assignment:{}:{}", a.target, s.id));
             return;
         }
-        const EffectTemplate* chosen = nullptr;
-        CompatibilityResult compat;
-        for (const EffectTemplate& t : _lib.templates) {
-            if (t.effect != m->effect || t.media.empty() || !Has(t.intents, "media")) {
-                continue;
-            }
-            compat = EvaluateCompatibility(t, target);
-            if (compat.level != Compatibility::Incompatible) {
-                chosen = &t;
-                break;
-            }
-        }
-        if (chosen == nullptr) {
-            _out.warnings.push_back(fmt::format("no-template:{}:media", a.target));
-            return;
-        }
-        const Option o{ chosen, compat, 1.0 };
-        const int start = ToFrame(std::max(m->startMS, s.startMS), _frame);
-        const int end = ToFrame(std::min(m->endMS, s.endMS), _frame);
-        const int blocks = std::max(1, static_cast<int>(std::ceil(static_cast<double>(end - start) / chosen->maxMS)));
-        for (int b = 0; b < blocks; ++b) {
-            const int from = b == 0 ? start : ToFrame(start + static_cast<double>(end - start) * b / blocks, _frame);
-            const int to = b == blocks - 1 ? end : ToFrame(start + static_cast<double>(end - start) * (b + 1) / blocks, _frame);
-            ChoreographyEvent e = Base(s, a, target, o, from, to, fmt::format("m{}", b));
-            SetParameters(e, *chosen, 0, key, b);
-            for (const auto& [k, v] : m->settings) {
-                const auto same = std::find_if(e.settings.begin(), e.settings.end(), [&](const auto& kv) { return kv.first == k; });
-                if (same != e.settings.end()) {
-                    same->second = v;
-                } else {
-                    e.settings.emplace_back(k, v);
+        for (size_t shot = 0; shot < shots.size(); ++shot) {
+            const MediaAssignment* m = shots[shot];
+            const EffectTemplate* chosen = nullptr;
+            CompatibilityResult compat;
+            for (const EffectTemplate& t : _lib.templates) {
+                if (t.effect != m->effect || t.media.empty() || !Has(t.intents, "media")) {
+                    continue;
+                }
+                compat = EvaluateCompatibility(t, target);
+                if (compat.level != Compatibility::Incompatible) {
+                    chosen = &t;
+                    break;
                 }
             }
-            std::sort(e.settings.begin(), e.settings.end());
-            e.reasons.push_back({ "media", m->mediaId });
-            e.reasons.insert(e.reasons.end(), m->reasons.begin(), m->reasons.end());
-            e.constraints.insert(e.constraints.end(), m->constraints.begin(), m->constraints.end());
-            e.state = m->state;
-            e.provenance = m->state == DecisionState::Automatic ? e.provenance : std::string("manual");
-            e.needsReview = true; // how a picture reads on the lights is only judged by eye
-            _out.events.push_back(std::move(e));
+            if (chosen == nullptr) {
+                _out.warnings.push_back(fmt::format("no-template:{}:media", a.target));
+                continue;
+            }
+            const Option o{ chosen, compat, 1.0 };
+            const int start = ToFrame(std::max(m->startMS, s.startMS), _frame);
+            const int end = ToFrame(std::min(m->endMS, s.endMS), _frame);
+            if (end <= start) {
+                continue;
+            }
+            const int blocks = std::max(1, static_cast<int>(std::ceil(static_cast<double>(end - start) / chosen->maxMS)));
+            for (int b = 0; b < blocks; ++b) {
+                const int from = b == 0 ? start : ToFrame(start + static_cast<double>(end - start) * b / blocks, _frame);
+                const int to = b == blocks - 1 ? end : ToFrame(start + static_cast<double>(end - start) * (b + 1) / blocks, _frame);
+                ChoreographyEvent e = Base(s, a, target, o, from, to, shots.size() > 1 ? fmt::format("m{}.{}", shot, b) : fmt::format("m{}", b));
+                SetParameters(e, *chosen, 0, key, b);
+                for (const auto& [k, v] : m->settings) {
+                    const auto same = std::find_if(e.settings.begin(), e.settings.end(), [&](const auto& kv) { return kv.first == k; });
+                    if (same != e.settings.end()) {
+                        same->second = v;
+                    } else {
+                        e.settings.emplace_back(k, v);
+                    }
+                }
+                std::sort(e.settings.begin(), e.settings.end());
+                e.reasons.push_back({ "media", m->mediaId });
+                e.reasons.insert(e.reasons.end(), m->reasons.begin(), m->reasons.end());
+                e.constraints.insert(e.constraints.end(), m->constraints.begin(), m->constraints.end());
+                e.state = m->state;
+                e.provenance = m->state == DecisionState::Automatic ? e.provenance : std::string("manual");
+                e.needsReview = true; // how a picture reads on the lights is only judged by eye
+                // The storyboard's cut or fade, on the shot's first and last block.
+                e.plannedTransitions = true;
+                e.transitionIn = b == 0 ? m->transitionIn : std::string();
+                e.fadeInMS = b == 0 ? m->fadeInMS : 0;
+                e.transitionOut = b == blocks - 1 ? m->transitionOut : std::string();
+                e.fadeOutMS = b == blocks - 1 ? m->fadeOutMS : 0;
+                _out.events.push_back(std::move(e));
+            }
+            usedEffects.insert(chosen->effect);
         }
-        usedEffects.insert(chosen->effect);
     }
 
     void Cue(const PlanSegment& s, const PlanAssignment& a, const TargetInfo& target) {
@@ -888,7 +900,8 @@ private:
                 const bool automatic = p.state == DecisionState::Automatic && e.state == DecisionState::Automatic;
                 // The same effect with the same settings is prolonged, not cut and
                 // started again, while it stays within the template's length.
-                if (touching && automatic && p.templateId == e.templateId && p.settings == e.settings && p.paletteId == e.paletteId && t != nullptr && e.endMS - p.startMS <= t->maxMS) {
+                if (touching && automatic && !p.plannedTransitions && !e.plannedTransitions && p.templateId == e.templateId && p.settings == e.settings && p.paletteId == e.paletteId && t != nullptr &&
+                    e.endMS - p.startMS <= t->maxMS) {
                     p.endMS = e.endMS;
                     p.reasons.push_back({ "extended-into", e.segmentId });
                     continue;
@@ -899,7 +912,29 @@ private:
         _out.events = std::move(merged);
         for (size_t i = 0; i < _out.events.size(); ++i) {
             ChoreographyEvent& e = _out.events[i];
-            if (e.state == DecisionState::Locked) {
+            if (e.state == DecisionState::Locked && !e.plannedTransitions) {
+                continue;
+            }
+            if (e.plannedTransitions) {
+                e.continuation = "new";
+                e.fadeInMS = e.fadeInMS / _frame * _frame;
+                e.fadeOutMS = e.fadeOutMS / _frame * _frame;
+                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0; }), e.settings.end());
+                if (e.fadeInMS > 0 && !e.transitionIn.empty()) {
+                    e.settings.emplace_back("T_CHOICE_In_Transition_Type", e.transitionIn);
+                    e.settings.emplace_back("T_TEXTCTRL_Fadein", fmt::format("{:.2f}", e.fadeInMS / 1000.0));
+                } else {
+                    e.transitionIn.clear();
+                    e.fadeInMS = 0;
+                }
+                if (e.fadeOutMS > 0 && !e.transitionOut.empty()) {
+                    e.settings.emplace_back("T_CHOICE_Out_Transition_Type", e.transitionOut);
+                    e.settings.emplace_back("T_TEXTCTRL_Fadeout", fmt::format("{:.2f}", e.fadeOutMS / 1000.0));
+                } else {
+                    e.transitionOut.clear();
+                    e.fadeOutMS = 0;
+                }
+                std::sort(e.settings.begin(), e.settings.end());
                 continue;
             }
             const EffectTemplate* t = _lib.Find(e.templateId);

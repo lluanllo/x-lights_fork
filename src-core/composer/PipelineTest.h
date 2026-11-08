@@ -36,6 +36,9 @@ struct GenerateCommandOptions {
     bool mediaManualOnly = false;
     std::string mediaShare; // 0-1; empty: by level
     bool copyMedia = false; // the person agreed to copy files outside the show into it
+    bool analyzeMedia = false; // look at the files again before planning
+    std::string visionModel;   // the image-text model's folder, for --analyze-media
+    std::string mediaVariant;  // another montage from the same files
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

@@ -48,6 +48,7 @@ struct ChoreographyEvent {
     std::string transitionOut;
     int fadeOutMS = 0;
     std::string continuation; // "new", "vary" or "extend"
+    bool plannedTransitions = false; // the storyboard chose them: kept as they are
     Compatibility compatibility = Compatibility::Compatible;
     std::vector<std::string> constraints;
     std::vector<Reason> reasons;

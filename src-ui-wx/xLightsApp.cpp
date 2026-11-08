@@ -78,6 +78,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "ai/WxServiceSettingsStore.h"
 #include "composer/AssistTest.h"
 #include "composer/MediaTest.h"
+#include "composer/VisualTest.h"
 #include "composer/MusicAssist.h"
 #include "composer/LyricTest.h"
 #include "composer/ReferenceStudy.h"
@@ -1091,7 +1092,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
             headlessArg = true;
             break;
         }
@@ -1221,6 +1222,8 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "cat", "composer-analyzer-test", "internal test: run the analyzer cases on synthetic audio written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cab", "composer-analyzer-bench", "internal test: time the analyzer on synthetic songs written under --out, and exit" },
         { wxCMD_LINE_SWITCH, "clt", "composer-lyrics-test", "internal test: run the lyrics, phonetics and alignment cases under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-visual-test", "internal test: the visual analysis, framing and storyboard on pictures and videos it draws under --out (with --vision-model <folder>, also the image-text model), and exit" },
+        { wxCMD_LINE_OPTION, "", "vision-model", "with --composer-visual-test or --composer-generate: the folder holding the image-text model (siglip-base-patch16-224)" },
         { wxCMD_LINE_SWITCH, "cmt", "composer-media-test", "internal test: the media library on pictures, an animation and a video it makes under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cst", "composer-assist-test", "internal test: LRCLIB, Groq and Gemini against stand-ins (nothing is sent), under --out, and exit" },
         { wxCMD_LINE_SWITCH, "cft", "composer-faces-test", "internal test: write, render and check a singing face on a copy of a show (-s) with all controllers inactive, as --out, and exit" },
@@ -1250,6 +1253,8 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "media-manual-only", "with --composer-generate: only the pictures and videos a person assigned" },
         { wxCMD_LINE_OPTION, "", "media-share", "with --composer-generate: at most this share of the song (0-1) with a picture or a video" },
         { wxCMD_LINE_SWITCH, "", "copy-media", "with --composer-generate: the person agreed to copy media outside the show into its Images and Videos folders" },
+        { wxCMD_LINE_SWITCH, "", "analyze-media", "with --composer-generate: look at the pictures and videos again before planning (with --vision-model, also with the image-text model)" },
+        { wxCMD_LINE_OPTION, "", "media-variant", "with --composer-generate: another visual montage from the same files (a number)" },
         { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
@@ -2033,6 +2038,17 @@ bool xLightsApp::OnInit()
         std::exit(composer::RunMediaTest(outName.ToStdString(wxConvUTF8)));
     }
 
+    if (parser.Found("composer-visual-test")) {
+        wxString outName;
+        if (!parser.Found("out", &outName) || outName.IsEmpty()) {
+            spdlog::error("--composer-visual-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxString model;
+        parser.Found("vision-model", &model);
+        std::exit(composer::RunVisualTest(outName.ToStdString(wxConvUTF8), model.ToStdString(wxConvUTF8)));
+    }
+
     if (parser.Found("cft")) {
         wxString outName;
         if (showDir.IsEmpty() || !parser.Found("out", &outName) || outName.IsEmpty()) {
@@ -2112,7 +2128,7 @@ bool xLightsApp::OnInit()
             { "cache", &command.cacheDir }, { "lyrics", &command.lyricsPath }, { "timing", &command.timingPath }, { "timing-track", &command.timingTrack }, { "lyric-session", &command.lyricSessionPath },
             { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
             { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
-            { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare },
+            { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare }, { "vision-model", &command.visionModel }, { "media-variant", &command.mediaVariant },
         };
         for (const auto& [name, target] : options) {
             if (parser.Found(name, &value)) {
@@ -2123,6 +2139,7 @@ bool xLightsApp::OnInit()
         command.scanMedia = parser.Found("scan-media");
         command.mediaManualOnly = parser.Found("media-manual-only");
         command.copyMedia = parser.Found("copy-media");
+        command.analyzeMedia = parser.Found("analyze-media");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
             spdlog::error("--composer-generate requires a show directory (-s <dir>), --name <file>.xsq and --out <folder>");
             std::exit(2);

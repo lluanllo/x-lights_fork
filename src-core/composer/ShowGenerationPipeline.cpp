@@ -1,6 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
 #include "composer/SequenceWriter.h"
+#include "composer/VisualModel.h"
 #include "effects/EffectManager.h"
 #include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
@@ -943,6 +944,9 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
     if (r.mediaMaxShare) {
         session.maxShare = *r.mediaMaxShare;
     }
+    if (r.mediaVariant) {
+        session.variant = *r.mediaVariant;
+    }
     // Media only for a show that asked for it, with its folders or a person's choices.
     if (session.folders.empty() && run.corrections.media.empty()) {
         return;
@@ -985,10 +989,44 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
         }
         Note(run, S, "media-library", fmt::format("{} files, {} gone since it was searched", run.mediaLibrary.items.size(), gone));
     }
+    if (!run.mediaLibrary.items.empty()) {
+        // Files never looked at are analysed here without a model: colours, light and
+        // motion, the same on every run. The model only runs when asked for.
+        MediaAnalysisOptions ao;
+        ao.showDir = r.showDir;
+        ao.cancelled = r.cancel;
+        VisualConcepts concepts;
+        std::string cerr;
+        if (ReadVisualConcepts(DefaultVisualConceptsPath(), concepts, cerr)) {
+            ao.concepts = &concepts;
+        } else {
+            Note(run, S, "visual-concepts-unreadable", cerr);
+        }
+        std::unique_ptr<VisualModel> model;
+        ConceptIndex index;
+        if (r.analyzeMedia && !r.visionModelDir.empty() && ao.concepts != nullptr) {
+            model = OpenVisualModel(r.visionModelDir, cerr);
+            if (model != nullptr && BuildConceptIndex(*model, concepts, MediaCacheDir(r.showDir), index, cerr)) {
+                ao.model = model.get();
+                ao.index = &index;
+            } else {
+                Note(run, S, "visual-model-unavailable", cerr);
+            }
+        }
+        run.mediaAnalysis = AnalyzeMediaLibrary(run.mediaLibrary, ao);
+        const MediaAnalysisSummary& sa = run.mediaAnalysis;
+        Note(run, S, "media-analysis", fmt::format("{}: {} usable of {}, {} analysed now, {} from the cache, {} with the model, {} duplicates, {} similar", sa.mode, sa.usable, sa.total, sa.analysed,
+                                                   sa.cached, sa.semantic, sa.duplicates, sa.similar));
+        if (sa.analysed > 0 && !SaveMediaLibrary(libraryPath, run.mediaLibrary, error)) {
+            Note(run, S, "media-library-not-saved", error);
+        }
+    }
     MediaPlanInput in;
     in.plan = &run.plan;
     in.capabilities = &run.capabilities;
     in.library = &run.mediaLibrary;
+    in.analysis = &run.analysis;
+    in.options.variant = session.variant;
     in.metadata = &run.metadata;
     in.direction = run.direction.enabled ? &run.direction : nullptr;
     if (run.direction.enabled) {
@@ -1030,8 +1068,37 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
         Note(run, S, "media-copied", relative);
     }
     ApplyMediaPlan(run.plan, run.media, run.capabilities);
+    // The storyboard before this one is kept, to bring it back if a person prefers it.
+    const VisualMediaStoryboard& board = run.media.storyboard;
+    if (run.hasPrevious && !run.previous.media.storyboardHash.empty() && run.previous.media.storyboardHash != board.hash && !run.previous.media.used.empty()) {
+        StoryboardVersion v;
+        v.number = session.history.empty() ? 1 : session.history.back().number + 1;
+        v.hash = run.previous.media.storyboardHash;
+        v.created = run.previous.generationId;
+        v.variant = run.previous.media.variant;
+        for (const MediaUse& u : run.previous.media.used) {
+            v.shots.push_back({ u.segmentId, u.target, u.startMS, u.endMS, u.mediaId, u.source.empty() ? u.path : u.source, std::max(0, u.fragmentStartMS), u.framing });
+        }
+        session.history.push_back(std::move(v));
+        while (session.history.size() > STORYBOARD_HISTORY) {
+            session.history.erase(session.history.begin());
+        }
+    }
+    session.storyboardHash = board.hash;
+    if (!board.lanes.empty()) {
+        Note(run, S, "storyboard", fmt::format("{} shots on {} screens, {} files ({} images, {} videos), {} derived, {} repeats ({} by the music), {} gaps, mean {:.2f}, analysis {}, hash {}", board.stats.shots,
+                                               board.lanes.size(), board.stats.distinctFiles, board.stats.images + board.stats.animations, board.stats.videos, board.stats.derived, board.stats.repeats,
+                                               board.stats.repeatsByMusic, board.stats.gaps, board.stats.meanScore, board.analysisMode, board.hash));
+        for (const StoryboardLaneStats& l : board.stats.lanes) {
+            Note(run, S, "storyboard-lane", fmt::format("{}: {} shots, {:.0f}% of the song, {:.0f}% of its free time", l.lane, l.shots, l.coverage * 100, l.ofFree * 100));
+        }
+    }
     for (const MediaAssignment& a : run.media.assignments) {
-        session.used.push_back({ a.segmentId, a.target, a.startMS, a.endMS, a.mediaId, a.path, a.effect, a.state });
+        MediaUse use{ a.segmentId, a.target, a.startMS, a.endMS, a.mediaId, a.path, a.effect, a.state };
+        use.source = a.source.empty() ? a.path : a.source;
+        use.fragmentStartMS = a.kind == MediaKind::Video ? a.fragmentStartMS : -1;
+        use.framing = a.framing;
+        session.used.push_back(std::move(use));
         Note(run, S, "media", fmt::format("{} {}-{} ms on {}: {} ({})", a.effect, a.startMS, a.endMS, a.target, a.name, DecisionStateId(a.state)));
     }
     for (const std::string& w : run.media.warnings) {
@@ -1404,6 +1471,13 @@ void WriteDiagnostics(GenerationRun& run) {
             ok &= WriteText(report / "media-plan.json", ToJson(run.media));
             ok &= WriteText(report / "media-report.txt", MediaReport(run.media));
         }
+        if (!run.media.storyboard.lanes.empty()) {
+            ok &= WriteText(report / "storyboard.json", StoryboardJson(run.media.storyboard).dump(2));
+            ok &= WriteText(report / "storyboard-report.txt", StoryboardReport(run.media.storyboard));
+        }
+        if (!run.mediaLibrary.items.empty()) {
+            ok &= WriteText(report / "media-analysis.txt", MediaAnalysisReport(run.mediaLibrary, run.mediaAnalysis));
+        }
     }
     if (!run.transcriptAlignment.anchors.empty()) {
         nlohmann::json lines = nlohmann::json::array();
@@ -1539,6 +1613,16 @@ std::string SummaryJson(const GenerationRun& run) {
                           { "effect", a.effect }, { "state", DecisionStateId(a.state) }, { "constraints", a.constraints } });
     }
     root["media"] = { { "assignments", std::move(media) }, { "share", run.media.share }, { "maxShare", run.media.maxShare }, { "usable", run.media.usableItems }, { "library", run.mediaLibrary.items.size() } };
+    if (!run.media.storyboard.lanes.empty()) {
+        const StoryboardStats& st = run.media.storyboard.stats;
+        nlohmann::json lanes = nlohmann::json::array();
+        for (const StoryboardLaneStats& l : st.lanes) {
+            lanes.push_back({ { "lane", l.lane }, { "shots", l.shots }, { "coverage", l.coverage }, { "ofFree", l.ofFree } });
+        }
+        root["storyboard"] = { { "hash", run.media.storyboard.hash }, { "analysis", run.media.storyboard.analysisMode }, { "shots", st.shots }, { "files", st.distinctFiles }, { "images", st.images + st.animations },
+                               { "videos", st.videos }, { "derived", st.derived }, { "repeats", st.repeats }, { "repeatsByMusic", st.repeatsByMusic }, { "gaps", st.gaps }, { "meanScore", st.meanScore },
+                               { "lanes", std::move(lanes) } };
+    }
     json coverage = json::array();
     for (const TargetCoverage& t : run.coverage) {
         coverage.push_back({ { "target", t.target }, { "planned", t.plannedSegments }, { "events", t.events }, { "written", t.written }, { "lit", t.effectsLit }, { "framesLit", t.framesLit }, { "note", t.note } });

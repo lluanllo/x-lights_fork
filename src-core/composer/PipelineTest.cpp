@@ -6,8 +6,10 @@
 
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaAnalysis.h"
 #include "composer/MediaLibrary.h"
 #include "composer/MediaTest.h"
+#include "composer/VisualTest.h"
 #include "composer/TemplateLibrary.h"
 #include "composer/PlanTest.h"
 #include "composer/SequenceWriter.h"
@@ -15,6 +17,8 @@
 #include "composer/SyntheticAudio.h"
 #include "composer/WriterTest.h"
 #include "models/Model.h"
+#include "models/ModelGroup.h"
+#include "models/ModelScreenLocation.h"
 #include "models/Node.h"
 #include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
@@ -33,6 +37,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <sstream>
 
@@ -136,6 +141,7 @@ public:
         TestLrcFiles();
         TestVoices();
         TestMedia();
+        TestStoryboard();
         TestFacesAndExclusion();
         TestCorrections();
         TestFailures();
@@ -444,6 +450,332 @@ private:
         return nullptr;
     }
 
+    // A song with every kind of section, cut where the test wants them.
+    static bool WriteMontageSong(const fs::path& path) {
+        testaudio::SyntheticSong song(96);
+        const auto music = [&](double from, double to, double kick, double click, double tone, double freq) {
+            for (double t = from; t < to - 0.01; t += 0.5) {
+                song.Kick(t, kick);
+                if (click > 0) {
+                    song.Click(t + 0.25, click);
+                }
+            }
+            for (double t = from; t < to - 0.01; t += 2.0) {
+                song.Tone(t, std::min(2.0, to - t), freq, tone);
+                song.Tone(t, std::min(2.0, to - t), freq * 1.5, tone * 0.6);
+            }
+        };
+        song.Tone(0, 8, 196, 0.08, 0.5);
+        for (double t = 0; t < 8; t += 1.0) {
+            song.Kick(t, 0.12);
+        }
+        music(8, 20, 0.35, 0.12, 0.1, 220);   // verse
+        music(20, 32, 0.75, 0.4, 0.25, 262);  // chorus
+        music(32, 44, 0.35, 0.12, 0.1, 220);  // verse
+        music(44, 56, 0.75, 0.4, 0.25, 262);  // chorus
+        music(56, 64, 0.3, 0.0, 0.15, 175);   // bridge
+        music(64, 76, 0.6, 0.5, 0.05, 330);   // instrumental
+        music(76, 88, 0.95, 0.6, 0.3, 262);   // last chorus, the climax
+        song.Tone(88, 8, 196, 0.06, 0.3);     // ending
+        return song.Save(path.string());
+    }
+
+    static std::string ShotKey(const StoryboardShot& s) {
+        return fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId);
+    }
+
+    void TestStoryboard() {
+        Title("A2h. A folder of pictures and videos made into a montage for the matrix and the mega tree");
+        const fs::path folder = _show / "Medios Fase 11";
+        std::string error;
+        Check(WriteVisualFixtures(folder.string(), error), "a folder of original pictures and videos, many of them, made by the test " + error);
+        std::map<std::string, std::string> before;
+        for (const auto& e : fs::recursive_directory_iterator(folder)) {
+            if (e.is_regular_file()) {
+                before[e.path().string()] = Sha256OfFile(e.path().string());
+            }
+        }
+        const fs::path song = _root / "montaje.wav";
+        const fs::path lrc = _root / "montaje.lrc";
+        Check(WriteMontageSong(song) && WriteText(lrc, "[00:09.00]Nieve en la ventana\n[00:13.50]Luces en el árbol\n[00:33.00]Estrellas de invierno\n[00:37.50]Nieve en el camino\n[00:43.50]\n"),
+              "a 96 second song with an intro, verses with words, a repeated chorus, a bridge, an instrumental, a climax and an ending");
+        const std::string profile = (fs::path(DefaultTemplateDirectory()).parent_path() / "profiles" / "reference-winter-cinematic.json").string();
+        const std::vector<std::pair<int, SectionKind>> layout = { { 0, SectionKind::Intro },  { 8000, SectionKind::Verse },        { 20000, SectionKind::Chorus },
+                                                                  { 32000, SectionKind::Verse }, { 44000, SectionKind::Chorus },     { 56000, SectionKind::Bridge },
+                                                                  { 64000, SectionKind::Instrumental }, { 76000, SectionKind::Chorus }, { 88000, SectionKind::Outro } };
+        const auto request = [&](const std::string& name, AutomationLevel level) {
+            GenerationRequest r = Request(name);
+            r.audioPath = song.string();
+            r.lyricsPath = lrc.string();
+            r.profilePath = profile;
+            r.level = level;
+            r.mediaFolders = { folder.string() };
+            r.scanMedia = true;
+            for (size_t i = 0; i < layout.size(); ++i) {
+                SectionCorrection c;
+                c.startMS = layout[i].first;
+                c.endMS = i + 1 < layout.size() ? layout[i + 1].first : 96000;
+                c.kind = layout[i].second;
+                r.corrections.analysis.sections.push_back(c);
+            }
+            return r;
+        };
+        const GenerationRun run = Generate(request("montaje", AutomationLevel::Balanced));
+        Check(run.ok, "published with the folder analysed and the montage planned");
+        if (!run.ok) {
+            return;
+        }
+        const VisualMediaStoryboard& b = run.media.storyboard;
+        printf("%s", StoryboardReport(b).c_str());
+        const auto lane = [&](const char* role) {
+            const auto it = std::find_if(b.lanes.begin(), b.lanes.end(), [&](const StoryboardLane& l) { return l.role == role; });
+            return it != b.lanes.end() ? &*it : nullptr;
+        };
+        const StoryboardLane* matrix = lane("matrix");
+        const StoryboardLane* tree = lane("mega-tree");
+        Check(matrix != nullptr && matrix->target == "Matriz Prueba" && tree != nullptr && tree->target == "Arbol Grande" && tree->degrees >= 360,
+              "two screens planned together: the matrix and the 360 degree mega tree");
+        const auto stats = [&](const std::string& target) {
+            const auto it = std::find_if(b.stats.lanes.begin(), b.stats.lanes.end(), [&](const StoryboardLaneStats& l) { return l.lane == target; });
+            return it != b.stats.lanes.end() ? *it : StoryboardLaneStats();
+        };
+        const StoryboardLaneStats ms = stats("Matriz Prueba");
+        const StoryboardLaneStats ts = stats("Arbol Grande");
+        Check(ms.shots >= 3 && ms.ofFree >= 0.4, fmt::format("the matrix is mostly made up: {} shots, {:.0f}% of its free time", ms.shots, ms.ofFree * 100));
+        Check(ts.shots >= 2 && ts.ofFree >= 0.2, fmt::format("so is the mega tree: {} shots, {:.0f}% of its free time", ts.shots, ts.ofFree * 100));
+        Check(b.stats.distinctFiles >= 5 && b.stats.images > 0 && b.stats.videos > 0, fmt::format("{} different files, {} pictures and {} videos", b.stats.distinctFiles, b.stats.images + b.stats.animations, b.stats.videos));
+        Check(b.stats.consecutiveRepeats == 0, "no file twice in a row on a screen");
+        Check(b.stats.repeats == b.stats.repeatsByMusic || b.stats.repeats <= 2, fmt::format("repeats only where the music repeats or a video shows another of its scenes ({} repeats, {} by the music)", b.stats.repeats, b.stats.repeatsByMusic));
+        bool together = true, explained = true, levels = true, frames = true;
+        std::set<std::string> treeFramings;
+        for (const StoryboardShot& s : b.shots) {
+            for (const StoryboardShot& o : b.shots) {
+                together = together && !(s.sceneId == o.sceneId && s.lane != o.lane && s.mediaId == o.mediaId);
+            }
+            const auto has = [&](const char* code) { return std::any_of(s.reasons.begin(), s.reasons.end(), [&](const Reason& r) { return r.code == code; }); };
+            explained = explained && has("theme-category") && has("aspect") && (has("scene-role") || s.state != DecisionState::Automatic);
+            levels = levels && !s.level.empty() && s.score > 0 && s.score <= 1;
+            if (s.lane == "Arbol Grande") {
+                treeFramings.insert(s.framing);
+                frames = frames && (s.framing.rfind("tree-", 0) == 0 || s.framing == "video-wrap" || s.framing.rfind("gif-", 0) == 0);
+            } else {
+                frames = frames && s.framing.rfind("tree-", 0) != 0;
+            }
+        }
+        Check(together, "the two screens of a scene never show the same file");
+        Check(explained && levels, "every shot says why (theme, shape, the scene's part) and how suitable it is, never as a certainty");
+        Check(frames, fmt::format("the tree is framed for a tree ({}), the matrix for a matrix", std::accumulate(treeFramings.begin(), treeFramings.end(), std::string(), [](std::string a, const std::string& x) { return a + (a.empty() ? "" : ", ") + x; })));
+        // Words on the matrix keep it: no picture there while the lyrics are shown.
+        bool lyrics = true;
+        for (const PlanSegment& seg : run.plan.segments) {
+            const bool words = std::any_of(seg.assignments.begin(), seg.assignments.end(), [](const PlanAssignment& a) { return a.intent == "lyric-text" && a.target == "Matriz Prueba"; });
+            for (const StoryboardShot& s : b.shots) {
+                lyrics = lyrics && !(words && s.lane == "Matriz Prueba" && s.startMS < seg.endMS && s.endMS > seg.startMS && s.state == DecisionState::Automatic);
+            }
+        }
+        Check(lyrics, "the words on the matrix keep their priority");
+        // Cuts inside a scene fall on the beat.
+        int cuts = 0, onBeat = 0;
+        for (size_t i = 1; i < b.shots.size(); ++i) {
+            const StoryboardShot& p = b.shots[i - 1];
+            const StoryboardShot& s = b.shots[i];
+            if (p.lane != s.lane || p.sceneId != s.sceneId || p.endMS != s.startMS) {
+                continue;
+            }
+            ++cuts;
+            onBeat += std::any_of(run.analysis.events.begin(), run.analysis.events.end(), [&](const MusicalEvent& e) {
+                return (e.type == MusicalEventType::Downbeat || e.type == MusicalEventType::Beat) && std::abs(e.timeMS - s.startMS) <= 25;
+            }) ? 1 : 0;
+        }
+        Check(cuts == 0 || onBeat * 10 >= cuts * 8, fmt::format("{} of the {} cuts inside a scene fall on a beat or a downbeat", onBeat, cuts));
+        bool transitions = true;
+        for (const StoryboardShot& s : b.shots) {
+            const StoryboardScene* sc = b.Scene(s.sceneId);
+            transitions = transitions && sc != nullptr && (s.fadeInMS <= (s.endMS - s.startMS) / 4) && (s.fadeOutMS <= (s.endMS - s.startMS) / 4);
+        }
+        Check(transitions, "each shot comes in and goes out with a cut or a fade that fits inside it");
+        // Videos with several scenes give fragments; the effect starts where the shot says.
+        bool fragments = true;
+        int fragmentShots = 0;
+        for (const StoryboardShot& s : b.shots) {
+            if (s.kind != MediaKind::Video) {
+                continue;
+            }
+            const MediaItem* m = run.mediaLibrary.Find(s.mediaId);
+            if (m == nullptr || m->analysis.video.scenes.size() < 2) {
+                continue;
+            }
+            ++fragmentShots;
+            fragments = fragments && s.fragmentScene >= 0 && s.fragmentStartMS >= 0 && s.fragmentStartMS < m->durationMS;
+        }
+        Check(fragments, fmt::format("{} shots from videos with several scenes start at the scene they chose", fragmentShots));
+        // Written natively, read back, every file there, every effect lit.
+        const SequenceSpec read = Reopen(run);
+        int files = 0, lit = 0, moving = 0, videos = 0, onTree = 0, derived = 0;
+        bool exist = true;
+        for (const EffectSpec& e : read.effects) {
+            if (e.effect != "Pictures" && e.effect != "Video") {
+                continue;
+            }
+            ++files;
+            const std::string file = Setting(e, e.effect == "Video" ? "E_FILEPICKERCTRL_Video_Filename" : "E_TEXTCTRL_Pictures_Filename");
+            exist = exist && !file.empty() && FileExists(MediaAbsolutePath(file, _show.string()));
+            derived += file.rfind("ShowComposer/media-derived/", 0) == 0 ? 1 : 0;
+            onTree += FullName(e) == "Arbol Grande" ? 1 : 0;
+            const RenderMetric* m = Metric(run, e);
+            lit += m != nullptr && m->framesWithLight > 0 ? 1 : 0;
+            if (e.effect == "Video") {
+                ++videos;
+                moving += m != nullptr && m->distinctFrames > 1 ? 1 : 0;
+            }
+        }
+        Check(files > 0 && exist, fmt::format("{} native Pictures and Video effects read back from the sequence, {} on the tree, {} through derived pictures, every file there", files, onTree, derived));
+        Check(lit == files, fmt::format("each lights its figure in the headless render ({} of {})", lit, files));
+        Check(videos == 0 || moving == videos, fmt::format("each video moves from frame to frame ({} of {})", moving, videos));
+        Check(Count(read, "Text") > 0, "with the words still on the display");
+        bool untouched = true;
+        for (const auto& [path, hash] : before) {
+            untouched = untouched && Sha256OfFile(path) == hash;
+        }
+        Check(untouched, "no original picture or video was changed");
+        Check(FileExists((_root / "reports" / "montaje" / "storyboard.json").string()) && FileExists((_root / "reports" / "montaje" / "storyboard-report.txt").string()),
+              "the storyboard is in the report");
+
+        Title("A2i. The same inputs give the same montage; the three levels fill more or less");
+        GenerationRequest same = request("montaje-igual", AutomationLevel::Balanced);
+        same.scanMedia = false;
+        const GenerationRun again = Generate(same);
+        Check(again.ok && again.media.storyboard.hash == b.hash, fmt::format("made again, the same storyboard ({} and {})", b.hash, again.media.storyboard.hash));
+        double previous = -1;
+        bool rising = true;
+        std::string coverage;
+        for (AutomationLevel level : { AutomationLevel::Conservative, AutomationLevel::Balanced, AutomationLevel::Creative }) {
+            const GenerationRun lv = level == AutomationLevel::Balanced ? GenerationRun() : Generate(request(level == AutomationLevel::Conservative ? "montaje-conservador" : "montaje-creativo", level));
+            const VisualMediaStoryboard& bb = level == AutomationLevel::Balanced ? b : lv.media.storyboard;
+            double total = 0;
+            for (const StoryboardLaneStats& l : bb.stats.lanes) {
+                total += l.coverage;
+            }
+            coverage += fmt::format("{}{:.0f}%", coverage.empty() ? "" : ", ", total * 50);
+            rising = rising && total >= previous - 0.001;
+            previous = total;
+        }
+        Check(rising, "conservative, balanced and creative fill the screens more and more: " + coverage);
+
+        Title("A2j. A person's changes: lock a scene, take out, replace, move, rebuild, bring back");
+        std::string lockScene, removeScene, replaceScene, moveScene;
+        for (const StoryboardScene& sc : b.scenes) {
+            const auto on = [&](const char* target) { return std::any_of(b.shots.begin(), b.shots.end(), [&](const StoryboardShot& s) { return s.sceneId == sc.id && s.lane == target; }); };
+            const bool m = on("Matriz Prueba"), t = on("Arbol Grande");
+            if (lockScene.empty() && m && t) {
+                lockScene = sc.id;
+            } else if (removeScene.empty() && m) {
+                removeScene = sc.id;
+            } else if (replaceScene.empty() && m) {
+                replaceScene = sc.id;
+            } else if (moveScene.empty() && t && !m) {
+                moveScene = sc.id;
+            }
+        }
+        Check(!lockScene.empty() && !removeScene.empty() && !replaceScene.empty(), fmt::format("scenes to change: lock {}, remove {}, replace {}, move {}", lockScene, removeScene, replaceScene, moveScene));
+        if (lockScene.empty() || removeScene.empty() || replaceScene.empty()) {
+            return;
+        }
+        GenerationRequest changed = request("montaje-cambiado", AutomationLevel::Balanced);
+        changed.previousSidecarPath = run.sidecarPath;
+        changed.scanMedia = false;
+        changed.mediaVariant = 1;
+        changed.corrections.media = LockStoryboardScene(b, lockScene);
+        MediaCorrection off;
+        off.action = MediaCorrection::Action::Remove;
+        off.segmentId = removeScene;
+        off.startMS = b.Scene(removeScene)->startMS;
+        off.target = "Matriz Prueba";
+        UpsertMediaCorrection(changed.corrections.media, off);
+        const MediaItem* treeFile = nullptr;
+        for (const MediaItem& m : run.mediaLibrary.items) {
+            if (m.name == "árbol de navidad vertical.png") {
+                treeFile = &m;
+            }
+        }
+        MediaCorrection put;
+        put.action = MediaCorrection::Action::Assign;
+        put.segmentId = replaceScene;
+        put.startMS = b.Scene(replaceScene)->startMS;
+        put.target = "Matriz Prueba";
+        put.mediaId = treeFile != nullptr ? treeFile->id : std::string();
+        put.path = treeFile != nullptr ? treeFile->relative : std::string();
+        UpsertMediaCorrection(changed.corrections.media, put);
+        std::string movedMedia;
+        if (!moveScene.empty()) {
+            for (const StoryboardShot& s : b.shots) {
+                if (s.sceneId == moveScene && s.lane == "Arbol Grande" && movedMedia.empty()) {
+                    movedMedia = s.mediaId;
+                }
+            }
+            MediaCorrection from;
+            from.action = MediaCorrection::Action::Remove;
+            from.segmentId = moveScene;
+            from.startMS = b.Scene(moveScene)->startMS;
+            from.target = "Arbol Grande";
+            UpsertMediaCorrection(changed.corrections.media, from);
+            MediaCorrection to;
+            to.action = MediaCorrection::Action::Lock;
+            to.segmentId = moveScene;
+            to.startMS = from.startMS;
+            to.target = "Matriz Prueba";
+            to.mediaId = movedMedia;
+            UpsertMediaCorrection(changed.corrections.media, to);
+        }
+        const GenerationRun second = Generate(changed);
+        Check(second.ok, "rebuilt with the changes and another variant");
+        if (!second.ok) {
+            return;
+        }
+        const VisualMediaStoryboard& c = second.media.storyboard;
+        std::set<std::string> lockedBefore, lockedAfter;
+        for (const StoryboardShot& s : b.shots) {
+            if (s.sceneId == lockScene) {
+                lockedBefore.insert(ShotKey(s));
+            }
+        }
+        for (const StoryboardShot& s : c.shots) {
+            if (s.sceneId == lockScene) {
+                lockedAfter.insert(ShotKey(s));
+            }
+        }
+        Check(lockedBefore == lockedAfter && std::all_of(c.shots.begin(), c.shots.end(), [&](const StoryboardShot& s) { return s.sceneId != lockScene || s.state == DecisionState::Locked; }),
+              "the locked scene is exactly as it was, on both screens");
+        Check(std::none_of(c.shots.begin(), c.shots.end(), [&](const StoryboardShot& s) { return s.sceneId == removeScene && s.lane == "Matriz Prueba"; }), "nothing on the matrix where it was taken out");
+        Check(treeFile != nullptr && std::any_of(c.shots.begin(), c.shots.end(), [&](const StoryboardShot& s) { return s.sceneId == replaceScene && s.lane == "Matriz Prueba" && s.mediaId == treeFile->id; }),
+              "the replaced picture plays where the person put it");
+        if (!moveScene.empty()) {
+            Check(std::any_of(c.shots.begin(), c.shots.end(), [&](const StoryboardShot& s) { return s.sceneId == moveScene && s.lane == "Matriz Prueba" && s.mediaId == movedMedia; }) &&
+                      std::none_of(c.shots.begin(), c.shots.end(), [&](const StoryboardShot& s) { return s.sceneId == moveScene && s.lane == "Arbol Grande"; }),
+                  "the file moved from the tree to the matrix");
+        }
+        Check(c.hash != b.hash && c.variant == 1, "another variant: the rest of the montage is planned again");
+        GenerationSidecar sidecar;
+        Check(ReadSidecar(second.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.media.history.size() == 1 && sidecar.media.history.front().hash == b.hash && sidecar.media.variant == 1,
+              "the sidecar keeps the earlier storyboard to bring it back");
+        if (sidecar.media.history.empty()) {
+            return;
+        }
+        GenerationRequest back = request("montaje-recuperado", AutomationLevel::Balanced);
+        back.previousSidecarPath = second.sidecarPath;
+        back.scanMedia = false;
+        back.corrections.media = RestoreStoryboard(sidecar.media.history.front(), c);
+        const GenerationRun restored = Generate(back);
+        std::set<std::string> was, now;
+        for (const StoryboardShot& s : b.shots) {
+            was.insert(ShotKey(s));
+        }
+        for (const StoryboardShot& s : restored.media.storyboard.shots) {
+            now.insert(ShotKey(s));
+        }
+        Check(restored.ok && was == now, fmt::format("the earlier version comes back shot by shot ({} and {} shots)", was.size(), now.size()));
+    }
+
     void TestMedia() {
         Title("A2d. Pictures and videos from the show's own files, with two voices, a choir, a narrator and the words");
         const fs::path media = _show / "Medios";
@@ -453,6 +785,8 @@ private:
         std::error_code ec;
         fs::create_directories(outside, ec);
         fs::copy_file(media / "panorama luces.png", outside / "luces de fuera.png", fs::copy_options::overwrite_existing, ec);
+        // An animation is never framed through a derived picture: it is used as it is.
+        fs::copy_file(media / "bucle fuego.gif", outside / "fuego de fuera.gif", fs::copy_options::overwrite_existing, ec);
         const std::string text = "[Narrador]\nHabía una vez una casa encendida\n\n[Voz: Ana]\n¿Dónde está el niño?\n\n[Voz: Luis]\nPingüino en la nieve\n\n[Voz: Coro]\n¡Año nuevo, señor!\n";
         const LyricDocument doc = ParsePlainLyrics(text);
         LyricSession session;
@@ -481,7 +815,7 @@ private:
         if (!run.ok) {
             return;
         }
-        Check(FileExists(MediaLibraryPath(_show.string())) && run.mediaLibrary.items.size() == 8, fmt::format("the library has the {} files and is kept in the show", run.mediaLibrary.items.size()));
+        Check(FileExists(MediaLibraryPath(_show.string())) && run.mediaLibrary.items.size() == 9, fmt::format("the library has the {} files and is kept in the show", run.mediaLibrary.items.size()));
         Check(!run.media.assignments.empty(), fmt::format("{} pictures or videos chosen by themselves, theme {}", run.media.assignments.size(), run.media.themeId));
         Check(run.media.share <= run.media.maxShare + 0.001, fmt::format("{:.0f}% of the song, within {:.0f}%", run.media.share * 100, run.media.maxShare * 100));
         std::map<std::string, std::set<std::string>> looks;
@@ -492,7 +826,11 @@ private:
             looks[a.mediaId].insert(scene != nullptr ? scene->lookKey : a.segmentId);
             explained = explained && HasReason(a, "aspect") && (HasReason(a, "theme-category") || HasReason(a, "repeat-keeps-media"));
             const TargetInfo* t = run.capabilities.Find(a.target);
-            onScreen = onScreen && t != nullptr && t->Can(Capability::Image).support == Support::Yes;
+            // A mega tree's support stays "unknown" for the planner; the storyboard frames
+            // pictures for it (Phase 11).
+            const RoleAssignment* role = t != nullptr ? t->PrimaryRole() : nullptr;
+            onScreen = onScreen && t != nullptr &&
+                       (t->Can(Capability::Image).support == Support::Yes || (role != nullptr && role->role == Role::MegaTree && t->Can(Capability::Image).support == Support::Unknown));
         }
         Check(explained && onScreen, "each says why: its theme category, its shape against the figure's; each on a figure that shows pictures");
         Check(std::all_of(looks.begin(), looks.end(), [](const auto& kv) { return kv.second.size() == 1; }), "no file shown in two different scenes");
@@ -589,7 +927,22 @@ private:
               "made again from the sidecar alone, offline: the same choices");
 
         Title("A2f. A file outside the show: used where it is, copied only when the person agrees");
-        const MediaItem* far = run.mediaLibrary.FindByPath((outside / "luces de fuera.png").string());
+        // A still picture from outside is framed through a derived picture kept in the
+        // show, so it travels with it without copying the original.
+        const MediaItem* farPicture = run.mediaLibrary.FindByPath((outside / "luces de fuera.png").string());
+        bool derivedInside = true;
+        int farUses = 0;
+        for (const GenerationRun* g : { &run, &second }) {
+            for (const MediaAssignment& a : g->media.assignments) {
+                if (farPicture != nullptr && a.mediaId == farPicture->id) {
+                    ++farUses;
+                    derivedInside = derivedInside && (a.path.rfind("ShowComposer/media-derived/", 0) == 0 ? FileExists(MediaAbsolutePath(a.path, _show.string())) : a.path == farPicture->path);
+                }
+            }
+        }
+        Check(derivedInside && !FileExists((_show / "Images" / "luces de fuera.png").string()),
+              fmt::format("an outside picture ({} uses) is shown through a derived picture inside the show, or from where it is; the original is not copied", farUses));
+        const MediaItem* far = run.mediaLibrary.FindByPath((outside / "fuego de fuera.gif").string());
         const PlanSegment* other = nullptr;
         for (const PlanSegment& seg : run.plan.segments) {
             const bool used = std::any_of(second.media.assignments.begin(), second.media.assignments.end(), [&](const MediaAssignment& a) { return a.segmentId == seg.id; });
@@ -613,14 +966,14 @@ private:
         asked.corrections.media = { put };
         const GenerationRun noCopy = Generate(asked);
         const MediaAssignment* where = noCopy.media.Find(other->id, "Matriz Prueba");
-        Check(noCopy.ok && where != nullptr && where->path == far->path && HasNote(noCopy, GenerationStage::Choreography, "media-outside-show") && !FileExists((_show / "Images" / "luces de fuera.png").string()),
+        Check(noCopy.ok && where != nullptr && where->path == far->path && HasNote(noCopy, GenerationStage::Choreography, "media-outside-show") && !FileExists((_show / "Images" / "fuego de fuera.gif").string()),
               "without consent: used from where it is, said so, nothing copied");
         asked.sequenceName = "medios-copiados.xsq";
         asked.reportDir = (_root / "reports" / "medios-copiados").string();
         asked.copyMediaIntoShow = true;
         const GenerationRun copied = Generate(asked);
         const MediaAssignment* inShow = copied.media.Find(other->id, "Matriz Prueba");
-        Check(copied.ok && inShow != nullptr && inShow->path == "Images/luces de fuera.png" && FileExists((_show / "Images" / "luces de fuera.png").string()) && FileExists(far->path),
+        Check(copied.ok && inShow != nullptr && inShow->path == "Images/fuego de fuera.gif" && FileExists((_show / "Images" / "fuego de fuera.gif").string()) && FileExists(far->path),
               "with consent: copied into the show's Images folder, the original left where it was");
 
         Title("A2g. A file that went missing");
@@ -1163,6 +1516,11 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
         r.mediaMaxShare = std::clamp(std::strtod(o.mediaShare.c_str(), nullptr), 0.0, 1.0);
     }
     r.copyMediaIntoShow = o.copyMedia;
+    r.analyzeMedia = o.analyzeMedia;
+    r.visionModelDir = o.visionModel;
+    if (!o.mediaVariant.empty()) {
+        r.mediaVariant = static_cast<int>(std::strtol(o.mediaVariant.c_str(), nullptr, 10));
+    }
     if (!o.level.empty()) {
         AutomationLevel level;
         if (!LevelFrom(o.level, level)) {
@@ -1241,7 +1599,91 @@ int RunSnapshotCommand(const SnapshotOptions& o) {
     file->prepareRead(ranges);
     std::vector<uint8_t> data(channels, 0);
     int written = 0;
+    std::map<std::string, std::vector<xlImage>> sheets; // one contact sheet per model, and one of the house
+    const auto save = [&](const xlImage& image, const fs::path& out) {
+        std::vector<uint8_t> png;
+        return image.SaveAsPNG(png) && WriteText(out, std::string(png.begin(), png.end()));
+    };
+    const auto readFrame = [&](int ms) {
+        const int frame = ms / std::max(1, file->getStepTime());
+        std::fill(data.begin(), data.end(), 0);
+        std::unique_ptr<FSEQFile::FrameData> frameData(file->getFrame(frame));
+        return frameData != nullptr && frameData->readFrame(data.data(), channels);
+    };
+    if (std::find(o.models.begin(), o.models.end(), "@house") != o.models.end()) {
+        // The whole display as the layout places it, every light at its place.
+        struct Dot {
+            Model* model;
+            uint32_t node;
+            float x, y;
+        };
+        std::vector<Dot> dots;
+        float minX = 1e30f, minY = 1e30f, maxX = -1e30f, maxY = -1e30f;
+        for (const auto& [name, model] : ctx.AllModels) {
+            if (model == nullptr || dynamic_cast<ModelGroup*>(model) != nullptr) {
+                continue;
+            }
+            for (uint32_t n = 0; n < model->GetNodeCount(); ++n) {
+                const NodeBaseClass* node = model->GetNode(n);
+                for (uint32_t c = 0; c < node->Coords.size(); ++c) {
+                    float x = node->Coords[c].screenX, y = node->Coords[c].screenY, z = node->Coords[c].screenZ;
+                    model->GetModelScreenLocation().TranslatePoint(x, y, z);
+                    dots.push_back({ model, n, x, y });
+                    minX = std::min(minX, x);
+                    maxX = std::max(maxX, x);
+                    minY = std::min(minY, y);
+                    maxY = std::max(maxY, y);
+                }
+            }
+        }
+        const int W = 1200;
+        const double span = std::max(1.0f, maxX - minX);
+        const int H = std::clamp(static_cast<int>(W * std::max(1.0f, maxY - minY) / span), 200, 900);
+        const double sx = (W - 20) / span, sy = (H - 20) / std::max(1.0, static_cast<double>(maxY - minY));
+        const double k = std::min(sx, sy);
+        for (int ms : o.timesMS) {
+            if (!readFrame(ms)) {
+                continue;
+            }
+            xlImage image(W, H);
+            for (int y = 0; y < H; ++y) {
+                for (int x = 0; x < W; ++x) {
+                    image.SetRGBA(x, y, 12, 12, 16, 255);
+                }
+            }
+            int lit = 0;
+            for (const Dot& d : dots) {
+                NodeBaseClass* node = d.model->GetNode(d.node);
+                if (node->ActChan + node->GetChanCount() > channels) {
+                    continue;
+                }
+                node->SetFromChannels(&data[node->ActChan]);
+                xlColor color;
+                node->GetColor(color);
+                const bool on = color.red != 0 || color.green != 0 || color.blue != 0;
+                lit += on ? 1 : 0;
+                const int px = 10 + static_cast<int>((d.x - minX) * k);
+                const int py = H - 10 - static_cast<int>((d.y - minY) * k);
+                for (int dy = -1; dy <= 1; ++dy) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        if (px + dx >= 0 && px + dx < W && py + dy >= 0 && py + dy < H) {
+                            image.SetRGBA(px + dx, py + dy, on ? color.red : 34, on ? color.green : 34, on ? color.blue : 34, 255);
+                        }
+                    }
+                }
+            }
+            const fs::path out = fs::path(o.outDir) / fmt::format("house_{:06d}ms.png", ms);
+            if (save(image, out)) {
+                ++written;
+                sheets["house"].push_back(image);
+                printf("composer-snapshots: the house at %d ms: %d of %zu lights on -> %s\n", ms, lit, dots.size(), out.string().c_str());
+            }
+        }
+    }
     for (const std::string& name : o.models) {
+        if (name == "@house") {
+            continue;
+        }
         Model* model = ctx.AllModels[name];
         if (model == nullptr) {
             printf("composer-snapshots: no model '%s'\n", name.c_str());
@@ -1308,7 +1750,42 @@ int RunSnapshotCommand(const SnapshotOptions& o) {
                 continue;
             }
             ++written;
+            sheets[safe].push_back(image);
             printf("composer-snapshots: %s at %d ms (frame %d): %d of %u nodes lit, picture %016llx -> %s\n", name.c_str(), ms, frame, lit, model->GetNodeCount(), static_cast<unsigned long long>(digest), out.string().c_str());
+        }
+    }
+    // Contact sheets: every time of one model, or of the house, side by side.
+    for (const auto& [name, images] : sheets) {
+        if (images.size() < 2) {
+            continue;
+        }
+        const int cols = std::min<int>(4, static_cast<int>(images.size()));
+        const int rows = (static_cast<int>(images.size()) + cols - 1) / cols;
+        int cw = 0, ch = 0;
+        for (const xlImage& i : images) {
+            cw = std::max(cw, i.GetWidth());
+            ch = std::max(ch, i.GetHeight());
+        }
+        const double shrink = std::min(1.0, 2400.0 / (cols * (cw + 8)));
+        const int tw = std::max(1, static_cast<int>(cw * shrink)), th = std::max(1, static_cast<int>(ch * shrink));
+        xlImage sheet(cols * (tw + 8) + 8, rows * (th + 8) + 8);
+        for (int y = 0; y < sheet.GetHeight(); ++y) {
+            for (int x = 0; x < sheet.GetWidth(); ++x) {
+                sheet.SetRGBA(x, y, 70, 70, 70, 255);
+            }
+        }
+        for (size_t k = 0; k < images.size(); ++k) {
+            const xlImage thumb = ResampleImage(images[k], std::max(1, static_cast<int>(images[k].GetWidth() * shrink)), std::max(1, static_cast<int>(images[k].GetHeight() * shrink)));
+            const int ox = 8 + static_cast<int>(k % cols) * (tw + 8), oy = 8 + static_cast<int>(k / cols) * (th + 8);
+            for (int y = 0; y < thumb.GetHeight(); ++y) {
+                for (int x = 0; x < thumb.GetWidth(); ++x) {
+                    sheet.SetRGBA(ox + x, oy + y, thumb.GetRed(x, y), thumb.GetGreen(x, y), thumb.GetBlue(x, y), 255);
+                }
+            }
+        }
+        const fs::path out = fs::path(o.outDir) / fmt::format("contact-sheet_{}.png", name);
+        if (save(sheet, out)) {
+            printf("composer-snapshots: contact sheet of %s, %zu times -> %s\n", name.c_str(), images.size(), out.string().c_str());
         }
     }
     printf("composer-snapshots: %d pictures written; they show the render, nobody has judged them\n", written);

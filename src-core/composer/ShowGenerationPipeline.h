@@ -6,6 +6,7 @@
 #include "composer/ComposerTypes.h"
 #include "composer/CompositionPlan.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaAnalysis.h"
 #include "composer/MediaDirection.h"
 #include "composer/MediaLibrary.h"
 #include "composer/GenerationValidator.h"
@@ -100,6 +101,11 @@ struct GenerationRequest {
     std::optional<bool> mediaAutomatic;    // default: on, or the previous show's
     std::optional<double> mediaMaxShare;   // default: by level, or the previous show's
     bool copyMediaIntoShow = false;        // a person agreed: files outside the show are copied into Images or Videos
+    std::optional<int> mediaVariant;       // another montage from the same files; default: the previous show's
+    // Looks at the files again before planning (otherwise only the ones never analysed
+    // are, without a model); with `visionModelDir` the image-text model is used too.
+    bool analyzeMedia = false;
+    std::string visionModelDir;
     CancelCheck cancel;
     std::function<void(GenerationStage stage, const std::string& what)> progress;
 };
@@ -178,6 +184,7 @@ struct GenerationRun {
     MediaLibrary mediaLibrary;
     MediaPlan media;
     MediaSession mediaSession;
+    MediaAnalysisSummary mediaAnalysis;
     Choreography choreography;
     ValidationReport planValidation;
     ValidationReport choreographyValidation;

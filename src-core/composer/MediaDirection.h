@@ -2,22 +2,24 @@
 
 #include "composer/CompositionPlan.h"
 #include "composer/MediaLibrary.h"
+#include "composer/MediaStoryboard.h"
 #include "composer/TemplateLibrary.h"
 
 #include <string>
 #include <utility>
 #include <vector>
 
-// Which picture or video plays where: a few sections of the song get one of the show's
-// own files on a matrix or a mega tree, chosen by the scene's theme, the file's shape
-// against the figure's, the energy and what was already shown. Words on a figure win
-// over a picture there, and a face singing keeps its figure.
+// Which picture or video plays where. The show's main screens, the largest matrix and
+// the mega tree, are planned together as a visual storyboard: scene by scene, with the
+// files that suit the theme, the scene's part in the song, its energy and each figure's
+// shape, cut into shots on the downbeats, framed for each figure and changing with the
+// music. Words on a figure win over a picture there, and a face singing keeps its figure.
 //
 // Everything chosen says why; nothing is marked as looking good, which only a person
 // can say after watching it.
 namespace composer {
 
-inline constexpr const char* MEDIA_DIRECTOR_VERSION = "1.0.0";
+inline constexpr const char* MEDIA_DIRECTOR_VERSION = "2.0.0";
 
 struct MediaCorrection {
     enum class Action {
@@ -31,6 +33,11 @@ struct MediaCorrection {
     std::string target;
     std::string mediaId;
     std::string path; // as kept: relative to the show folder when inside it
+    // One shot inside the segment rather than the whole of it (a version brought back,
+    // a scene locked as it was); -1: the whole segment.
+    int shotStartMS = -1;
+    int shotEndMS = -1;
+    int fragmentStartMS = -1; // videos: where in the file; -1: chosen by the planner
 };
 
 struct MediaAssignment {
@@ -47,14 +54,26 @@ struct MediaAssignment {
     DecisionState state = DecisionState::Automatic;
     double score = 0;
     std::vector<Reason> reasons;
-    std::vector<std::string> constraints; // "cropped", "letterboxed", "outside-show", "loops"
+    std::vector<std::string> constraints; // "cropped", "letterboxed", "outside-show", "loops", "derived", "pans", ...
+    std::string shotId;
+    std::string source; // the original file, as kept; `path` may be a derived picture
+    std::string framing;
+    int fragmentStartMS = 0;
+    std::string transitionIn; // "" is a cut
+    int fadeInMS = 0;
+    std::string transitionOut;
+    int fadeOutMS = 0;
+    std::string level; // "very-suitable", "acceptable", "doubtful"
 };
 
 struct MediaOptions {
     bool automatic = true; // false: only what a person assigned
-    double maxShare = -1;  // of the song's time; below 0: by level
-    int minSegmentMS = 4000;
-    int maxTargets = 2; // the largest matrices and mega trees
+    double maxShare = -1;  // of the song's time on any one figure; below 0: by level
+    int minSegmentMS = 3000;
+    int minShotMS = 2000;
+    int maxTargets = 2;     // the main matrix and the mega tree
+    int variant = 0;        // another montage from the same files ("rebuild")
+    bool writeDerived = true; // make the derived pictures (only tests turn it off)
 };
 
 struct MediaPlan {
@@ -68,12 +87,16 @@ struct MediaPlan {
     std::vector<MediaAssignment> assignments; // by start
     std::vector<std::string> warnings;
     std::vector<Reason> reasons;
+    VisualMediaStoryboard storyboard;
 
+    // The first shot of the segment on the target.
     [[nodiscard]] const MediaAssignment* Find(const std::string& segmentId, const std::string& target) const;
+    [[nodiscard]] std::vector<const MediaAssignment*> FindAll(const std::string& segmentId, const std::string& target) const;
 };
 
 struct ShowVisualDirection;
 struct LyricAlignment;
+struct SongAnalysis;
 
 struct MediaPlanInput {
     const CompositionPlan* plan = nullptr;           // required
@@ -81,6 +104,7 @@ struct MediaPlanInput {
     const MediaLibrary* library = nullptr;           // null or empty: no media
     const MetadataLookup* metadata = nullptr;        // required to write settings
     const ShowVisualDirection* direction = nullptr;  // the scenes and the theme, if any
+    const SongAnalysis* analysis = nullptr;          // downbeats to cut shots on
     std::vector<std::string> themeCategories;        // the theme's media categories, best first
     std::string showDir;
     MediaOptions options;
@@ -103,20 +127,35 @@ struct MediaUse {
     std::string path;
     std::string effect;
     DecisionState state = DecisionState::Automatic;
+    std::string source;       // the original, when `path` is a derived picture
+    int fragmentStartMS = -1; // videos
+    std::string framing;
 };
 
 struct MediaSession {
     std::vector<std::string> folders;
     bool automatic = true;
     double maxShare = -1;
+    int variant = 0;
     std::vector<MediaCorrection> corrections;
     std::vector<MediaUse> used;
+    std::string storyboardHash;
+    std::vector<StoryboardVersion> history; // earlier storyboards, newest last, at most five
 
-    [[nodiscard]] bool Empty() const { return folders.empty() && automatic && maxShare < 0 && corrections.empty() && used.empty(); }
+    [[nodiscard]] bool Empty() const { return folders.empty() && automatic && maxShare < 0 && variant == 0 && corrections.empty() && used.empty() && history.empty(); }
 };
 
-// A later choice for the same segment and figure replaces the earlier one; removing a
-// segment's media replaces every choice in it.
+inline constexpr size_t STORYBOARD_HISTORY = 5;
+
+// The corrections that bring back an earlier storyboard exactly: each of its shots
+// locked as it was, and nothing on a main figure where it had nothing.
+[[nodiscard]] std::vector<MediaCorrection> RestoreStoryboard(const StoryboardVersion& version, const VisualMediaStoryboard& current);
+// The corrections that keep one scene exactly as it is now.
+[[nodiscard]] std::vector<MediaCorrection> LockStoryboardScene(const VisualMediaStoryboard& storyboard, const std::string& sceneId);
+
+// A later choice for the same segment, figure and shot replaces the earlier one; a choice
+// for the whole segment replaces its shots; removing a segment's media replaces every
+// choice in it.
 void UpsertMediaCorrection(std::vector<MediaCorrection>& corrections, const MediaCorrection& correction);
 
 [[nodiscard]] nlohmann::json MediaCorrectionsJson(const std::vector<MediaCorrection>& corrections);

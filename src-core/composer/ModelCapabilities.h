@@ -91,6 +91,10 @@ struct TargetInfo {
     std::string parent; // submodels only
     int bufferWi = 0;
     int bufferHt = 0;
+    double width = 0;   // in the layout's world units: the figure's real proportions,
+    double height = 0;  // which its buffer's need not share
+    double degrees = 0; // trees: how far round the strings go (360: all the way)
+    double topRatio = 0; // trees: bottom diameter over top diameter
     int nodes = 0;
     int strands = 0;
     int channelsPerNode = 0;

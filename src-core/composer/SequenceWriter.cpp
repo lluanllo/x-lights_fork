@@ -189,6 +189,14 @@ void VerifySettingAgainstMetadata(const RenderableEffect& renderable, const Effe
         high /= divisor;
     }
     const double number = std::strtod(value.c_str(), nullptr);
+    // The video's start time goes up to the video's length, which the metadata cannot
+    // know (see CheckSetting): only a negative one is wrong.
+    if (key == "E_TEXTCTRL_Video_Starttime") {
+        if (number < 0) {
+            problems.push_back(fmt::format("'{}={}' es negativo", key, value));
+        }
+        return;
+    }
     if (number < low || number > high) {
         problems.push_back(fmt::format("'{}={}' está fuera de rango [{}, {}]", key, value, low, high));
     }

@@ -27,6 +27,7 @@
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
+#include <limits>
 #include <array>
 #include <cstdint>
 #include <cstdlib>
@@ -507,6 +508,10 @@ private:
         }
         double low = (*property)["min"].get<double>();
         double high = (*property)["max"].get<double>();
+        // Its maximum is the video's length, read when the file is (see CheckSetting).
+        if (key == "E_TEXTCTRL_Video_Starttime") {
+            high = std::numeric_limits<double>::max();
+        }
         if (control == "TEXTCTRL" && property->contains("divisor")) {
             const double divisor = (*property)["divisor"].get<double>();
             low /= divisor;

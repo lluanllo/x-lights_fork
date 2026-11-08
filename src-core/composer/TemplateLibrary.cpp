@@ -208,6 +208,12 @@ std::string CheckSetting(const json& metadata, const std::string& key, const std
         if (end == value.c_str() || *end != '\0') {
             return "not a number";
         }
+        // The video's start time: its metadata maximum is only the panel's starting
+        // value, replaced by the file's length once the video is read. The planner
+        // checks it against the probed length; here only that it is not negative.
+        if (id == "Video_Starttime") {
+            return d < 0 ? "negative" : "";
+        }
         return d < shape.min - 1e-9 || d > shape.max + 1e-9 ? fmt::format("outside {}..{}", shape.min, shape.max) : "";
     }
     if (!shape.options.empty() && std::find(shape.options.begin(), shape.options.end(), value) == shape.options.end()) {

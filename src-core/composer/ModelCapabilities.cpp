@@ -5,6 +5,8 @@
 #include "models/DisplayAsType.h"
 #include "models/Model.h"
 #include "models/ModelGroup.h"
+#include "models/ModelScreenLocation.h"
+#include "models/TreeModel.h"
 #include "render/xLightsShowContext.h"
 #include "utils/ExternalHooks.h"
 #include "utils/FileUtils.h"
@@ -13,6 +15,7 @@
 #include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <set>
 
@@ -250,6 +253,12 @@ ModelCapabilities ExtractCapabilities(const xLightsShowContext& ctx, const RoleO
         t.channelsPerNode = static_cast<int>(m.GetNodeChannelCount(t.stringType));
         t.firstChannel = m.GetFirstChannel();
         t.lastChannel = m.GetLastChannel();
+        t.width = std::round(m.GetModelScreenLocation().GetMWidth() * 1000.0) / 1000.0;
+        t.height = std::round(m.GetModelScreenLocation().GetMHeight() * 1000.0) / 1000.0;
+        if (const auto* tree = dynamic_cast<const TreeModel*>(&m)) {
+            t.degrees = tree->GetTreeDegrees();
+            t.topRatio = tree->GetBottomTopRatio();
+        }
     };
 
     for (const auto& [name, model] : ctx.AllModels) {
@@ -582,6 +591,13 @@ std::string ToJson(const ModelCapabilities& caps) {
         if (!t.parent.empty()) {
             item["parent"] = t.parent;
         }
+        if (t.width > 0 && t.height > 0) {
+            item["size"] = { t.width, t.height };
+        }
+        if (t.degrees > 0) {
+            item["degrees"] = t.degrees;
+            item["topRatio"] = t.topRatio;
+        }
         for (const auto& [key, list] : { std::pair<const char*, const std::vector<std::string>*>{ "faces", &t.faces }, { "states", &t.states }, { "subModels", &t.subModels }, { "groups", &t.groups }, { "members", &t.members }, { "flatModels", &t.flatModels }, { "warnings", &t.warnings } }) {
             if (!list->empty()) {
                 item[key] = *list;
@@ -627,6 +643,12 @@ bool FromJson(const std::string& text, ModelCapabilities& caps, std::string& err
                 t.bufferWi = item["buffer"][0].get<int>();
                 t.bufferHt = item["buffer"][1].get<int>();
             }
+            if (item.contains("size") && item["size"].size() == 2) {
+                t.width = item["size"][0].get<double>();
+                t.height = item["size"][1].get<double>();
+            }
+            t.degrees = item.value("degrees", 0.0);
+            t.topRatio = item.value("topRatio", 0.0);
             t.nodes = item.value("nodes", 0);
             t.strands = item.value("strands", 0);
             t.channelsPerNode = item.value("channelsPerNode", 0);
