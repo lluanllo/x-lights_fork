@@ -28,6 +28,7 @@ struct StoryboardLane {
     double degrees = 0;
     double freeShare = 0; // of the song's time the figure is free for pictures
     double goal = 0;      // share of that free time the montage aims to fill
+    std::string reason;   // why this figure, and what the others had
     std::vector<std::string> assumptions;
 };
 

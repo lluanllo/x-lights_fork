@@ -132,7 +132,7 @@ json StoryboardJson(const VisualMediaStoryboard& b) {
     json lanes = json::array();
     for (const StoryboardLane& l : b.lanes) {
         lanes.push_back({ { "target", l.target }, { "role", l.role }, { "buffer", { l.bufferWi, l.bufferHt } }, { "faceAspect", l.faceAspect }, { "degrees", l.degrees }, { "freeShare", l.freeShare },
-                          { "goal", l.goal }, { "assumptions", l.assumptions } });
+                          { "goal", l.goal }, { "reason", l.reason }, { "assumptions", l.assumptions } });
     }
     json scenes = json::array();
     for (const StoryboardScene& s : b.scenes) {
@@ -196,6 +196,7 @@ bool StoryboardFrom(const json& j, VisualMediaStoryboard& b, std::string& error)
         lane.degrees = l.value("degrees", 0.0);
         lane.freeShare = l.value("freeShare", 0.0);
         lane.goal = l.value("goal", 0.0);
+        lane.reason = l.value("reason", std::string());
         lane.assumptions = l.value("assumptions", std::vector<std::string>());
         b.lanes.push_back(std::move(lane));
     }
@@ -294,6 +295,9 @@ std::string StoryboardReport(const VisualMediaStoryboard& b) {
         out += fmt::format("lane {} ({}, {}x{}, real shape {:.2f}{}): free {:.0f}% of the song, goal {:.0f}% of that, {} shots, {:.0f}% of the song, {:.0f}% of its free time\n", l.target, l.role, l.bufferWi,
                            l.bufferHt, l.faceAspect, l.degrees > 0 ? fmt::format(", {:.0f} degrees", l.degrees) : std::string(), l.freeShare * 100, l.goal * 100,
                            st != b.stats.lanes.end() ? st->shots : 0, st != b.stats.lanes.end() ? st->coverage * 100 : 0.0, st != b.stats.lanes.end() ? st->ofFree * 100 : 0.0);
+        if (!l.reason.empty()) {
+            out += "  why: " + l.reason + "\n";
+        }
         for (const std::string& a : l.assumptions) {
             out += "  assumed: " + a + "\n";
         }

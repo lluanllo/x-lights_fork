@@ -220,6 +220,7 @@ private:
         double reserveMS = 0; // only for the opening and the ending
         double usedMS = 0;
         bool main = true;
+        std::string reason;
     };
     struct Scene {
         const PlanSegment* seg = nullptr;
@@ -422,8 +423,16 @@ private:
         if (static_cast<int>(chosen.size()) > _in.options.maxTargets) {
             chosen.resize(static_cast<size_t>(std::max(0, _in.options.maxTargets)));
         }
+        const double songMS = std::max(1, _plan.durationMS);
         for (const Option* o : chosen) {
-            _lanes.push_back(MakeLane(*o->t, o->free, true));
+            Lane l = MakeLane(*o->t, o->free, true);
+            l.reason = fmt::format("{} lights, free {:.0f}% of the song", o->t->nodes, o->free / songMS * 100);
+            for (const Option& other : options) {
+                if (other.tree == o->tree && other.t != o->t && std::find(chosen.begin(), chosen.end(), &other) == chosen.end()) {
+                    l.reason += fmt::format("; {}: {} lights, free {:.0f}%{}", other.t->name, other.t->nodes, other.free / songMS * 100, other.t->noController ? ", no controller" : "");
+                }
+            }
+            _lanes.push_back(std::move(l));
         }
         const double duration = std::max(1, _plan.durationMS);
         for (const Lane& l : _lanes) {
@@ -634,7 +643,10 @@ private:
         const bool usedBefore = uses != _sceneUses.end() && !uses->second.empty();
         const std::string lookLane = sc.info.lookKey + "|" + lane.t->name;
         const auto first = sc.info.lookKey.empty() ? _firstOnLook.end() : _firstOnLook.find(lookLane);
-        const bool continuity = first != _firstOnLook.end() && first->second == m.id;
+        const int at = IndexOf(sc.info.id);
+        // The music's repeat brings its picture back, but not straight after itself:
+        // that would only be one long shot of the same thing.
+        const bool continuity = first != _firstOnLook.end() && first->second == m.id && !UsedIn(m.id, at - 1) && !UsedIn(m.id, at + 1);
         double repeat = 0;
         if (usedBefore && !continuity && !sameSceneAgain) {
             // Only a video with scenes left can come back, with another of its scenes.
@@ -643,7 +655,7 @@ private:
             }
             repeat -= 0.15 * static_cast<double>(uses->second.size());
         }
-        const int idx = IndexOf(sc.info.id);
+        const int idx = at;
         if (!continuity && !sameSceneAgain && (UsedIn(m.id, idx - 1) || UsedIn(m.id, idx + 1))) {
             repeat -= 0.3; // back to back would look like a slideshow stuck on one picture
         }
@@ -1253,6 +1265,7 @@ private:
             out.degrees = l.t->degrees;
             out.freeShare = R3(l.freeMS / std::max(1, _plan.durationMS));
             out.goal = l.main ? Goal(l.role) : 0;
+            out.reason = l.main ? l.reason : std::string("a person's choice");
             out.assumptions = l.frame.assumptions;
             _sb.lanes.push_back(std::move(out));
         }
