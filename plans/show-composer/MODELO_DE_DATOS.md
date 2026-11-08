@@ -577,3 +577,15 @@ Al regenerar con `--previous`, se recuperan las correcciones, los bloqueos y la 
 ## 10. Abrir sin recursos
 
 Un `.xsq` generado **no contiene referencias rotas**, porque un recurso solo se referencia tras asignarlo. Por tanto, se puede abrir aunque falten vídeos. Si se borra un vídeo ya asignado, el comportamiento es el normal de xLights, y `CheckEffectSettings` lo informa como error.
+
+### Cambios de la Fase 11
+
+- `media-library.json` pasa a la versión 2: cada elemento puede llevar `analysis` (`key` = hash y tamaño del archivo, versión del analizador, modelo y parámetros; `mode` `basic` o `semantic`; colores dominantes con su proporción, brillo, contraste, saturación, colorido, detalle, oscuro, blanco, iluminado, orientación, punto de interés `poi` y `subject`, `dhash`, `concepts` con `score`, `similarity`, `level` `strong`/`probable`/`weak` y `source` `model`/`rules`, `description`, `categories`, `fit` para `matrix` y `megaTree` con motivos, `issues`, y en vídeos y GIF `video` con muestras, escenas, movimiento, cortes, tramos oscuros, bucle, energía y usos corto y largo). Un lector de la versión 1 sigue leyendo; la 2 no la lee la Fase 10.
+- `resources/composer/visual-concepts.json`: conceptos que el modelo compara con cada imagen (id, etiqueta, texto en inglés, grupo, categorías, energía, idoneidad para matriz y árbol). Los embeddings de texto se guardan en `ShowComposer/media-cache/concepts-<modelo>-<hash>.json`.
+- `ShowComposer/media-derived/<hash del original>-<hash del encuadre>.png`: imágenes preparadas para una figura, reproducibles a partir del original y del encuadre.
+- `storyboard.json` en el informe (formato `xjuanjilights-storyboard`): carriles (figura, papel, búfer, proporción real, grados, tiempo libre, objetivo, motivo de la elección, supuestos), escenas (segmento, papel en la canción, banda, `lookKey`, repetición), planos (escena, carril, tiempos, archivo, efecto, ruta que lee el efecto y original, fragmento de vídeo, encuadre, transiciones, puntuación, nivel, estado, motivos, restricciones), huecos con su motivo, archivos descartados con su motivo, estadísticas y `hash`.
+- `MediaCorrection` gana `shot` (inicio y fin de un plano dentro del segmento) y `fragmentStartMS`. `MediaUse` gana `source`, `fragmentStartMS` y `framing`. `media` en el sidecar gana `variant`, `storyboard` (hash) e `history` (hasta cinco storyboards anteriores con sus planos, para recuperarlos).
+- `TargetInfo` (capacidades) gana `size` (ancho y alto en el layout), `degrees` y `topRatio` en los árboles.
+- `ChoreographyEvent.plannedTransitions`: las transiciones de un plano las decide el storyboard.
+- Plantillas `tree-picture` y `tree-video` (papel `mega-tree`, intención `media`).
+

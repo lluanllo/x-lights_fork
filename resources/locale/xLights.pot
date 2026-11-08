@@ -10698,3 +10698,435 @@ msgstr ""
 
 msgid "There are no pictures or videos yet: add a folder in \"Pictures and Videos...\"."
 msgstr ""
+
+msgid "Analyze the Library"
+msgstr ""
+
+msgid "Get the Image Model..."
+msgstr ""
+
+msgid "Only your own files are used, on the main matrix and the mega tree, where no lyrics are shown; the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere."
+msgstr ""
+
+msgid "Visual montage of the main matrix and the mega tree: each shot, its picture, and where the lights carry on"
+msgstr ""
+
+msgid "Keep the Whole Scene"
+msgstr ""
+
+msgid "On the Other Screen"
+msgstr ""
+
+msgid "Rebuild the Montage"
+msgstr ""
+
+msgid "Earlier Versions..."
+msgstr ""
+
+msgid "Choose a shot of the montage first."
+msgstr ""
+
+msgid "The image model could not be downloaded: %s. The library is still analysed without it."
+msgstr ""
+
+msgid "Downloading the image model: %d%%"
+msgstr ""
+
+msgid "%s %d shots, %.0f%% of its free time; "
+msgstr ""
+
+msgid "Visual montage: %s%d files (%d pictures, %d videos), %d prepared pictures, %d repeats (%d where the music repeats), %d stretches left to the lights. Analysis: %s."
+msgstr ""
+
+msgid "what each file shows, with the image model"
+msgstr ""
+
+msgid "partly with the image model"
+msgstr ""
+
+msgid "colours, light and motion only"
+msgstr ""
+
+msgid "Stop the Analysis"
+msgstr ""
+
+msgid "Analysing %d of %d: %s"
+msgstr ""
+
+msgid "Searching the folders: %d files read"
+msgstr ""
+
+msgid "Not analysed yet."
+msgstr ""
+
+msgid "%d files: %d pictures, %d videos; %d usable, %d not supported, %d damaged. Analysed: %d of %d"
+msgstr ""
+
+msgid ", %d with the image model"
+msgstr ""
+
+msgid ", colours, light and motion only (no image model)"
+msgstr ""
+
+msgid "; last run: %d looked at, %d from the cache%s"
+msgstr ""
+
+msgid ", stopped"
+msgstr ""
+
+msgid "This build of xLights cannot run the image model. The library is analysed by its colours, light and motion."
+msgstr ""
+
+msgid "Download the image model SigLIP (Google, Apache 2.0 licence), about 210 MB, from Hugging Face into the show's ai-models folder?\n\nIt is downloaded once and runs on this computer: your pictures and videos are never sent anywhere."
+msgstr ""
+
+msgid "Image Model"
+msgstr ""
+
+msgid "There is no earlier montage yet: rebuild it or change it first."
+msgstr ""
+
+msgid "Version %d, made at %s: %d shots"
+msgstr ""
+
+msgid "Which montage should come back? Every shot is kept as it was."
+msgstr ""
+
+msgid "Earlier Versions"
+msgstr ""
+
+msgid "opening"
+msgstr ""
+
+msgid "verse"
+msgstr ""
+
+msgid "chorus"
+msgstr ""
+
+msgid "bridge"
+msgstr ""
+
+msgid "ending"
+msgstr ""
+
+msgid "No visual storyboard yet: choose a folder of pictures and videos, then compose."
+msgstr ""
+
+msgid "fills the figure"
+msgstr ""
+
+msgid "framed on its subject"
+msgstr ""
+
+msgid "whole, with bands"
+msgstr ""
+
+msgid "slow pan"
+msgstr ""
+
+msgid "slow zoom in"
+msgstr ""
+
+msgid "slow zoom out"
+msgstr ""
+
+msgid "on both sides of the tree"
+msgstr ""
+
+msgid "turning round the tree"
+msgstr ""
+
+msgid "all the way round the tree"
+msgstr ""
+
+msgid "cropped to the figure"
+msgstr ""
+
+msgid "fits any theme"
+msgstr ""
+
+msgid "shows %s"
+msgstr ""
+
+msgid "suits the scene: %s"
+msgstr ""
+
+msgid "from %s of the video"
+msgstr ""
+
+msgid "very suitable"
+msgstr ""
+
+msgid "acceptable"
+msgstr ""
+
+msgid "doubtful"
+msgstr ""
+
+msgid "perhaps "
+msgstr ""
+
+msgid ", described"
+msgstr ""
+
+msgid ", measured"
+msgstr ""
+
+msgid ", not analysed"
+msgstr ""
+
+msgid ", very dark"
+msgstr ""
+
+msgid ", very bright"
+msgstr ""
+
+msgid ", too small"
+msgstr ""
+
+msgid ", too short"
+msgstr ""
+
+msgid ", does not move"
+msgstr ""
+
+msgid ", a copy of another"
+msgstr ""
+
+msgid ", like another"
+msgstr ""
+
+msgid "What it shows"
+msgstr ""
+
+msgid "Give These Categories to All Selected"
+msgstr ""
+
+msgid "clear"
+msgstr ""
+
+msgid "probable"
+msgstr ""
+
+msgid "Nothing recognised."
+msgstr ""
+
+msgid "Seems to show: %s."
+msgstr ""
+
+msgid "Colours %s; light %.0f%%, contrast %.0f%%, detail %.0f%%. Matrix %.0f%%, mega tree %.0f%%."
+msgstr ""
+
+msgid "Measured without the image model: what it shows is only a guess from its colours."
+msgstr ""
+
+msgid "Christmas tree"
+msgstr ""
+
+msgid "Christmas ornaments"
+msgstr ""
+
+msgid "Presents"
+msgstr ""
+
+msgid "Santa Claus"
+msgstr ""
+
+msgid "Reindeer"
+msgstr ""
+
+msgid "Snowman"
+msgstr ""
+
+msgid "Snowflakes"
+msgstr ""
+
+msgid "Candles"
+msgstr ""
+
+msgid "Fireplace"
+msgstr ""
+
+msgid "Fire and flames"
+msgstr ""
+
+msgid "Fireworks"
+msgstr ""
+
+msgid "Starry sky"
+msgstr ""
+
+msgid "The moon"
+msgstr ""
+
+msgid "Galaxy and space"
+msgstr ""
+
+msgid "Northern lights"
+msgstr ""
+
+msgid "Lion"
+msgstr ""
+
+msgid "Elephant"
+msgstr ""
+
+msgid "Giraffe"
+msgstr ""
+
+msgid "Birds"
+msgstr ""
+
+msgid "Penguin"
+msgstr ""
+
+msgid "Polar bear"
+msgstr ""
+
+msgid "Deer"
+msgstr ""
+
+msgid "Fish"
+msgstr ""
+
+msgid "Butterflies"
+msgstr ""
+
+msgid "Castle"
+msgstr ""
+
+msgid "Dragon"
+msgstr ""
+
+msgid "Unicorn"
+msgstr ""
+
+msgid "Magic sparkles"
+msgstr ""
+
+msgid "Pumpkins"
+msgstr ""
+
+msgid "Ghost"
+msgstr ""
+
+msgid "Bats"
+msgstr ""
+
+msgid "Skull"
+msgstr ""
+
+msgid "Ship"
+msgstr ""
+
+msgid "Treasure"
+msgstr ""
+
+msgid "Hearts"
+msgstr ""
+
+msgid "Flowers"
+msgstr ""
+
+msgid "Bells"
+msgstr ""
+
+msgid "Snowy landscape"
+msgstr ""
+
+msgid "Snow falling"
+msgstr ""
+
+msgid "Mountains"
+msgstr ""
+
+msgid "Savanna"
+msgstr ""
+
+msgid "Jungle"
+msgstr ""
+
+msgid "Desert"
+msgstr ""
+
+msgid "Sea"
+msgstr ""
+
+msgid "Underwater"
+msgstr ""
+
+msgid "Sunset"
+msgstr ""
+
+msgid "Sky and clouds"
+msgstr ""
+
+msgid "City at night"
+msgstr ""
+
+msgid "Village"
+msgstr ""
+
+msgid "Cosy room"
+msgstr ""
+
+msgid "Abstract"
+msgstr ""
+
+msgid "Particles"
+msgstr ""
+
+msgid "Light beams"
+msgstr ""
+
+msgid "Blurred lights"
+msgstr ""
+
+msgid "Neon"
+msgstr ""
+
+msgid "Light show"
+msgstr ""
+
+msgid "Geometric shapes"
+msgstr ""
+
+msgid "Colour gradient"
+msgstr ""
+
+msgid "Confetti"
+msgstr ""
+
+msgid "Smoke"
+msgstr ""
+
+msgid "Water"
+msgstr ""
+
+msgid "Rain"
+msgstr ""
+
+msgid "Lightning"
+msgstr ""
+
+msgid "Cartoon"
+msgstr ""
+
+msgid "Text or title"
+msgstr ""
+
+msgid "Calm"
+msgstr ""
+
+msgid "Festive"
+msgstr ""
+
+msgid "Mysterious"
+msgstr ""
+
+msgid "Epic"
+msgstr ""
+
+msgid "Magical"
+msgstr ""

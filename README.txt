@@ -12,6 +12,11 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: the pictures and videos of a folder are analysed (colours, light,
+                                 subject, motion, duplicates, and what they show with an optional local image model)
+                                 and made into a montage for the main matrix and the mega tree, scene by scene, cut on
+                                 the beat and framed for each figure; a shot or a scene can be kept, moved, replaced,
+                                 rebuilt or brought back from an earlier version
     -enh (lluanllo)              Show Composer: several voices, a choir, a narrator and dialogue from the lyrics'
                                  tags, each face singing only its own voice; a voice editor to fix who sings what
     -enh (lluanllo)              Show Composer: a library of your own pictures and videos; the show places them on

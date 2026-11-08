@@ -10700,3 +10700,435 @@ msgstr "¿Dónde debe verse la imagen o el vídeo?"
 
 msgid "There are no pictures or videos yet: add a folder in \"Pictures and Videos...\"."
 msgstr "Todavía no hay imágenes ni vídeos: añade una carpeta en «Imágenes y vídeos...»."
+
+msgid "Analyze the Library"
+msgstr "Analizar la biblioteca"
+
+msgid "Get the Image Model..."
+msgstr "Obtener el modelo de imagen..."
+
+msgid "Only your own files are used, on the main matrix and the mega tree, where no lyrics are shown; the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere."
+msgstr "Solo se usan tus propios archivos, en la matriz principal y el megaárbol, donde no se muestra la letra; el montaje se planifica por ti. Los originales nunca se mueven ni se cambian, y no se envía nada a ninguna parte."
+
+msgid "Visual montage of the main matrix and the mega tree: each shot, its picture, and where the lights carry on"
+msgstr "Montaje visual de la matriz principal y el megaárbol: cada plano, su imagen y dónde siguen las luces"
+
+msgid "Keep the Whole Scene"
+msgstr "Conservar la escena entera"
+
+msgid "On the Other Screen"
+msgstr "En la otra pantalla"
+
+msgid "Rebuild the Montage"
+msgstr "Reconstruir el montaje"
+
+msgid "Earlier Versions..."
+msgstr "Versiones anteriores..."
+
+msgid "Choose a shot of the montage first."
+msgstr "Elige antes un plano del montaje."
+
+msgid "The image model could not be downloaded: %s. The library is still analysed without it."
+msgstr "No se ha podido descargar el modelo de imagen: %s. La biblioteca se sigue analizando sin él."
+
+msgid "Downloading the image model: %d%%"
+msgstr "Descargando el modelo de imagen: %d%%"
+
+msgid "%s %d shots, %.0f%% of its free time; "
+msgstr "%s %d planos, el %.0f%% de su tiempo libre; "
+
+msgid "Visual montage: %s%d files (%d pictures, %d videos), %d prepared pictures, %d repeats (%d where the music repeats), %d stretches left to the lights. Analysis: %s."
+msgstr "Montaje visual: %s%d archivos (%d imágenes, %d vídeos), %d imágenes preparadas, %d repeticiones (%d donde se repite la música), %d tramos para las luces. Análisis: %s."
+
+msgid "what each file shows, with the image model"
+msgstr "lo que muestra cada archivo, con el modelo de imagen"
+
+msgid "partly with the image model"
+msgstr "en parte con el modelo de imagen"
+
+msgid "colours, light and motion only"
+msgstr "solo colores, luz y movimiento"
+
+msgid "Stop the Analysis"
+msgstr "Detener el análisis"
+
+msgid "Analysing %d of %d: %s"
+msgstr "Analizando %d de %d: %s"
+
+msgid "Searching the folders: %d files read"
+msgstr "Buscando en las carpetas: %d archivos leídos"
+
+msgid "Not analysed yet."
+msgstr "Todavía sin analizar."
+
+msgid "%d files: %d pictures, %d videos; %d usable, %d not supported, %d damaged. Analysed: %d of %d"
+msgstr "%d archivos: %d imágenes, %d vídeos; %d utilizables, %d no admitidos, %d dañados. Analizados: %d de %d"
+
+msgid ", %d with the image model"
+msgstr ", %d con el modelo de imagen"
+
+msgid ", colours, light and motion only (no image model)"
+msgstr ", solo colores, luz y movimiento (sin modelo de imagen)"
+
+msgid "; last run: %d looked at, %d from the cache%s"
+msgstr "; última vez: %d analizados, %d de la caché%s"
+
+msgid ", stopped"
+msgstr ", detenido"
+
+msgid "This build of xLights cannot run the image model. The library is analysed by its colours, light and motion."
+msgstr "Esta versión de xLights no puede usar el modelo de imagen. La biblioteca se analiza por sus colores, luz y movimiento."
+
+msgid "Download the image model SigLIP (Google, Apache 2.0 licence), about 210 MB, from Hugging Face into the show's ai-models folder?\n\nIt is downloaded once and runs on this computer: your pictures and videos are never sent anywhere."
+msgstr "¿Descargar el modelo de imagen SigLIP (Google, licencia Apache 2.0), unos 210 MB, desde Hugging Face a la carpeta ai-models del espectáculo?\n\nSe descarga una vez y funciona en este ordenador: tus imágenes y vídeos nunca se envían a ninguna parte."
+
+msgid "Image Model"
+msgstr "Modelo de imagen"
+
+msgid "There is no earlier montage yet: rebuild it or change it first."
+msgstr "Todavía no hay un montaje anterior: reconstrúyelo o cámbialo primero."
+
+msgid "Version %d, made at %s: %d shots"
+msgstr "Versión %d, hecha a las %s: %d planos"
+
+msgid "Which montage should come back? Every shot is kept as it was."
+msgstr "¿Qué montaje quieres recuperar? Cada plano se conserva tal como era."
+
+msgid "Earlier Versions"
+msgstr "Versiones anteriores"
+
+msgid "opening"
+msgstr "presentación"
+
+msgid "verse"
+msgstr "estrofa"
+
+msgid "chorus"
+msgstr "estribillo"
+
+msgid "bridge"
+msgstr "puente"
+
+msgid "ending"
+msgstr "final"
+
+msgid "No visual storyboard yet: choose a folder of pictures and videos, then compose."
+msgstr "Todavía no hay montaje visual: elige una carpeta de imágenes y vídeos y calcula la composición."
+
+msgid "fills the figure"
+msgstr "llena la figura"
+
+msgid "framed on its subject"
+msgstr "encuadrada en su motivo"
+
+msgid "whole, with bands"
+msgstr "entera, con bandas"
+
+msgid "slow pan"
+msgstr "desplazamiento lento"
+
+msgid "slow zoom in"
+msgstr "acercamiento lento"
+
+msgid "slow zoom out"
+msgstr "alejamiento lento"
+
+msgid "on both sides of the tree"
+msgstr "a ambos lados del árbol"
+
+msgid "turning round the tree"
+msgstr "girando alrededor del árbol"
+
+msgid "all the way round the tree"
+msgstr "alrededor de todo el árbol"
+
+msgid "cropped to the figure"
+msgstr "recortada a la figura"
+
+msgid "fits any theme"
+msgstr "sirve para cualquier tema"
+
+msgid "shows %s"
+msgstr "muestra %s"
+
+msgid "suits the scene: %s"
+msgstr "encaja con la escena: %s"
+
+msgid "from %s of the video"
+msgstr "desde %s del vídeo"
+
+msgid "very suitable"
+msgstr "muy adecuado"
+
+msgid "acceptable"
+msgstr "aceptable"
+
+msgid "doubtful"
+msgstr "dudoso"
+
+msgid "perhaps "
+msgstr "quizá "
+
+msgid ", described"
+msgstr ", descrito"
+
+msgid ", measured"
+msgstr ", medido"
+
+msgid ", not analysed"
+msgstr ", sin analizar"
+
+msgid ", very dark"
+msgstr ", muy oscuro"
+
+msgid ", very bright"
+msgstr ", muy claro"
+
+msgid ", too small"
+msgstr ", demasiado pequeño"
+
+msgid ", too short"
+msgstr ", demasiado corto"
+
+msgid ", does not move"
+msgstr ", no se mueve"
+
+msgid ", a copy of another"
+msgstr ", copia de otro"
+
+msgid ", like another"
+msgstr ", parecido a otro"
+
+msgid "What it shows"
+msgstr "Qué muestra"
+
+msgid "Give These Categories to All Selected"
+msgstr "Dar estas categorías a todos los elegidos"
+
+msgid "clear"
+msgstr "claro"
+
+msgid "probable"
+msgstr "probable"
+
+msgid "Nothing recognised."
+msgstr "No se reconoce nada."
+
+msgid "Seems to show: %s."
+msgstr "Parece mostrar: %s."
+
+msgid "Colours %s; light %.0f%%, contrast %.0f%%, detail %.0f%%. Matrix %.0f%%, mega tree %.0f%%."
+msgstr "Colores %s; luz %.0f%%, contraste %.0f%%, detalle %.0f%%. Matriz %.0f%%, megaárbol %.0f%%."
+
+msgid "Measured without the image model: what it shows is only a guess from its colours."
+msgstr "Medido sin el modelo de imagen: lo que muestra es solo una suposición por sus colores."
+
+msgid "Christmas tree"
+msgstr "Árbol de Navidad"
+
+msgid "Christmas ornaments"
+msgstr "Adornos de Navidad"
+
+msgid "Presents"
+msgstr "Regalos"
+
+msgid "Santa Claus"
+msgstr "Papá Noel"
+
+msgid "Reindeer"
+msgstr "Reno"
+
+msgid "Snowman"
+msgstr "Muñeco de nieve"
+
+msgid "Snowflakes"
+msgstr "Copos de nieve"
+
+msgid "Candles"
+msgstr "Velas"
+
+msgid "Fireplace"
+msgstr "Chimenea"
+
+msgid "Fire and flames"
+msgstr "Fuego y llamas"
+
+msgid "Fireworks"
+msgstr "Fuegos artificiales"
+
+msgid "Starry sky"
+msgstr "Cielo estrellado"
+
+msgid "The moon"
+msgstr "La luna"
+
+msgid "Galaxy and space"
+msgstr "Galaxia y espacio"
+
+msgid "Northern lights"
+msgstr "Aurora boreal"
+
+msgid "Lion"
+msgstr "León"
+
+msgid "Elephant"
+msgstr "Elefante"
+
+msgid "Giraffe"
+msgstr "Jirafa"
+
+msgid "Birds"
+msgstr "Pájaros"
+
+msgid "Penguin"
+msgstr "Pingüino"
+
+msgid "Polar bear"
+msgstr "Oso polar"
+
+msgid "Deer"
+msgstr "Ciervo"
+
+msgid "Fish"
+msgstr "Peces"
+
+msgid "Butterflies"
+msgstr "Mariposas"
+
+msgid "Castle"
+msgstr "Castillo"
+
+msgid "Dragon"
+msgstr "Dragón"
+
+msgid "Unicorn"
+msgstr "Unicornio"
+
+msgid "Magic sparkles"
+msgstr "Destellos mágicos"
+
+msgid "Pumpkins"
+msgstr "Calabazas"
+
+msgid "Ghost"
+msgstr "Fantasma"
+
+msgid "Bats"
+msgstr "Murciélagos"
+
+msgid "Skull"
+msgstr "Calavera"
+
+msgid "Ship"
+msgstr "Barco"
+
+msgid "Treasure"
+msgstr "Tesoro"
+
+msgid "Hearts"
+msgstr "Corazones"
+
+msgid "Flowers"
+msgstr "Flores"
+
+msgid "Bells"
+msgstr "Campanas"
+
+msgid "Snowy landscape"
+msgstr "Paisaje nevado"
+
+msgid "Snow falling"
+msgstr "Nieve cayendo"
+
+msgid "Mountains"
+msgstr "Montañas"
+
+msgid "Savanna"
+msgstr "Sabana"
+
+msgid "Jungle"
+msgstr "Selva"
+
+msgid "Desert"
+msgstr "Desierto"
+
+msgid "Sea"
+msgstr "Mar"
+
+msgid "Underwater"
+msgstr "Bajo el agua"
+
+msgid "Sunset"
+msgstr "Puesta de sol"
+
+msgid "Sky and clouds"
+msgstr "Cielo y nubes"
+
+msgid "City at night"
+msgstr "Ciudad de noche"
+
+msgid "Village"
+msgstr "Pueblo"
+
+msgid "Cosy room"
+msgstr "Habitación acogedora"
+
+msgid "Abstract"
+msgstr "Abstracto"
+
+msgid "Particles"
+msgstr "Partículas"
+
+msgid "Light beams"
+msgstr "Haces de luz"
+
+msgid "Blurred lights"
+msgstr "Luces desenfocadas"
+
+msgid "Neon"
+msgstr "Neón"
+
+msgid "Light show"
+msgstr "Espectáculo de luces"
+
+msgid "Geometric shapes"
+msgstr "Formas geométricas"
+
+msgid "Colour gradient"
+msgstr "Degradado de color"
+
+msgid "Confetti"
+msgstr "Confeti"
+
+msgid "Smoke"
+msgstr "Humo"
+
+msgid "Water"
+msgstr "Agua"
+
+msgid "Rain"
+msgstr "Lluvia"
+
+msgid "Lightning"
+msgstr "Rayos"
+
+msgid "Cartoon"
+msgstr "Dibujo animado"
+
+msgid "Text or title"
+msgstr "Texto o título"
+
+msgid "Calm"
+msgstr "Tranquilo"
+
+msgid "Festive"
+msgstr "Festivo"
+
+msgid "Mysterious"
+msgstr "Misterioso"
+
+msgid "Epic"
+msgstr "Épico"
+
+msgid "Magical"
+msgstr "Mágico"

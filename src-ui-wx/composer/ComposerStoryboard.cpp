@@ -32,6 +32,11 @@ wxString Clock(int ms) {
     return wxString::Format("%d:%02d", ms / 60000, ms / 1000 % 60);
 }
 
+wxString RoleName(const std::string& role) {
+    return role == "establish" ? _("opening") : role == "verse" ? _("verse") : role == "chorus" ? _("chorus") : role == "instrumental" ? _("instrumental") : role == "bridge" ? _("bridge")
+         : role == "climax" ? _("climax") : role == "ending" ? _("ending") : _("calm");
+}
+
 } // namespace
 
 // ------------------------------------------------------------------ analysis
@@ -239,9 +244,7 @@ void StoryboardView::OnPaint(wxPaintEvent&) {
         dc.DrawRectangle(x0, 0, x1 - x0, size.y);
         dc.SetTextForeground(wxColour(190, 190, 200));
         dc.SetClippingRegion(x0, 0, std::max(1, x1 - x0 - 2), SCENE_H);
-        const wxString role = sc.role == "establish" ? _("opening") : sc.role == "verse" ? _("verse") : sc.role == "chorus" ? _("chorus") : sc.role == "instrumental" ? _("instrumental")
-                              : sc.role == "bridge" ? _("bridge") : sc.role == "climax" ? _("climax") : sc.role == "ending" ? _("ending") : _("calm");
-        dc.DrawText(role, x0 + 3, 2);
+        dc.DrawText(RoleName(sc.role), x0 + 3, 2);
         dc.DestroyClippingRegion();
     }
     for (size_t k = 0; k < _board->lanes.size(); ++k) {
@@ -394,7 +397,7 @@ wxString ShotWhy(const StoryboardShot& s) {
             }
             add(wxString::Format(_("shows %s"), seen));
         } else if (r.code == "scene-role") {
-            add(wxString::Format(_("suits the %s"), U(r.detail.substr(0, r.detail.find(' ')))));
+            add(wxString::Format(_("suits the scene: %s"), RoleName(r.detail.substr(0, r.detail.find(' ')))));
         } else if (r.code == "repeat-keeps-media") {
             add(_("same picture as the repeated section"));
         } else if (r.code == "fragment") {

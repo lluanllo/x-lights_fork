@@ -84,7 +84,7 @@ Por eso un encuadre que no sea «encajar» o «recortar centrado» usa un **deri
 | `fit` | `Scale Keep Aspect Ratio` (sin recorte, con bandas). |
 | `fill` | `Scale Keep Aspect Ratio Crop`, centrado. |
 | `subject` | Derivado que cubre, `No Scaling` y `PicturesXC/YC` con el punto de interés en el centro. |
-| `pan-x` / `pan-y` | Derivado que cubre, `vector` de un borde al otro (hacia el punto de interés). |
+| `pan-x` / `pan-y` | Derivado que cubre, `vector` desde el lado opuesto hasta el punto de interés, como mucho un búfer cada cinco segundos. |
 | `zoom-in` / `zoom-out` | Derivado, `vector` con escala 100→118 (o al revés) y centro hacia el punto de interés. |
 | `tree-faces` | Árbol de 360°: derivado del ancho del búfer con la imagen (recortada a la proporción física de media vuelta) repetida en las dos caras, para que se vea desde cualquier lado. |
 | `tree-wrap` | Árbol de 360° y panorámica: la panorámica da la vuelta completa al árbol, con `WrapX` y un giro lento (`vector` de 0 a -100 en X). |
@@ -144,3 +144,12 @@ Todo es determinista: misma biblioteca (hashes y análisis), canción, direcció
 ## 8. Fuera de alcance
 
 Generar imágenes o vídeos con IA, descargar medios, editor de vídeo, editor de animación, varias canciones, cabezas móviles, voces y transcripción.
+
+## 9. Decisiones tomadas al implementar
+
+- **Derivado solo cuando hace falta.** Un `fill` o un `fit` en una figura de luces cuadradas usa el archivo original con `Scaling` nativo; el derivado se reserva para el movimiento de cámara, el encuadre en el sujeto, los píxeles no cuadrados, el árbol y las imágenes de más de 4096 px. Así un archivo de fuera del espectáculo sigue pudiendo copiarse con permiso (Fase 10) y el efecto lee el archivo de la persona.
+- **El árbol como pantalla.** Su capacidad `Image` sigue siendo «desconocida» para el resto del planificador (cambiarla habría cambiado los espectáculos sin medios); el storyboard acepta un megaárbol con búfer de al menos 8 x 16.
+- **`Video_Starttime`.** La metadata lo limita a 20 con divisor 100 (0-0,2 s); su propia descripción dice que el máximo es la duración del vídeo. `CheckSetting`, el validador y el escritor solo exigen que no sea negativo; el planificador lo comprueba contra la duración leída del archivo.
+- **Orden de reparto.** Primero el clímax y los estribillos, luego presentación y final (con una reserva del 15 % del objetivo), instrumental, puente y versos; una sección que repite a otra elige después de las nuevas. La continuidad de una repetición no se aplica si la escena original está justo antes.
+- **Carriles.** La matriz con más luces y más tiempo libre de letra y caras: en el layout real, `Matrix-2`, porque `HD Matrix` muestra la letra toda la canción; el motivo queda en el informe.
+
