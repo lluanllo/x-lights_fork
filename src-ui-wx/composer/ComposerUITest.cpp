@@ -889,7 +889,11 @@ private:
     void OnTick(wxTimerEvent&) {
         const auto now = std::chrono::steady_clock::now();
         if (_dialog != nullptr && _dialog->JobRunning()) {
-            _maxGapMS = std::max<long long>(_maxGapMS, std::chrono::duration_cast<std::chrono::milliseconds>(now - _last).count());
+            const long long gap = std::chrono::duration_cast<std::chrono::milliseconds>(now - _last).count();
+            _maxGapMS = std::max<long long>(_maxGapMS, gap);
+            if (gap > 1000 && _index < _steps.size()) {
+                Log(fmt::format("  (the window did not answer for {} ms during \"{}\")", gap, _steps[_index].name));
+            }
         }
         _last = now;
         if (_busy) {
@@ -913,6 +917,9 @@ private:
         _busy = true;
         const bool done = step.run();
         _busy = false;
+        // The test's own work (screenshots, reading results back) is not the window
+        // failing to answer: the next gap is measured from here.
+        _last = std::chrono::steady_clock::now();
         if (done) {
             ++_index;
             _stepStarted = false;

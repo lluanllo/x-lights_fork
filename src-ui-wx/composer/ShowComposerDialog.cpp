@@ -41,6 +41,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <future>
 #include <filesystem>
 #include <fstream>
@@ -136,6 +137,20 @@ enum {
     ID_LANE_LOCK,
     ID_REVIEW_CLIPS,
     ID_LEARNED,
+};
+
+// Logs a handler of the window that kept it from answering for long: the window must
+// stay responsive while the generator works.
+struct SlowLog {
+    const char* what;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    explicit SlowLog(const char* w) : what(w) {}
+    ~SlowLog() {
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+        if (ms > 300) {
+            spdlog::info("Show Composer: {} took {} ms", what, ms);
+        }
+    }
 };
 
 constexpr int FRAME_MS = 25;
@@ -1963,6 +1978,7 @@ std::string ShowComposerDialog::InputsKey() const {
 }
 
 void ShowComposerDialog::RunNext() {
+    const SlowLog slow("RunNext");
     if (_job.Running() || _queue.empty()) {
         return;
     }
@@ -2062,6 +2078,7 @@ void ShowComposerDialog::CancelJob() {
 }
 
 void ShowComposerDialog::OnJob(const ComposerJob::Update& u) {
+    const SlowLog slow("OnJob");
     if (u.kind == ComposerJob::Update::Kind::Finished) {
         JobFinished(u.exitCode);
         return;
@@ -2133,6 +2150,7 @@ void ShowComposerDialog::OnJob(const ComposerJob::Update& u) {
 }
 
 void ShowComposerDialog::JobFinished(int exitCode) {
+    const SlowLog slow("JobFinished");
     const Purpose purpose = _purpose;
     _purpose = Purpose::None;
     _lastExitCode = exitCode;
@@ -2180,6 +2198,7 @@ void ShowComposerDialog::JobFinished(int exitCode) {
 }
 
 void ShowComposerDialog::CollectLoads() {
+    const SlowLog slow("CollectLoads");
     for (auto it = _loads.begin(); it != _loads.end();) {
         if (it->done.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
             ++it;
@@ -2375,6 +2394,7 @@ void ShowComposerDialog::OnClose(wxCloseEvent& event) {
 }
 
 void ShowComposerDialog::OnTimer(wxTimerEvent&) {
+    const SlowLog slow("OnTimer");
     if (!_loads.empty()) {
         CollectLoads();
     }
@@ -2438,12 +2458,21 @@ bool ShowComposerDialog::SequenceNameFree(wxString& why) const {
 }
 
 void ShowComposerDialog::RefreshAll() {
+    // The window must keep answering while the generator works: a slow part is logged.
+    const auto timed = [](const char* what, const std::function<void()>& f) {
+        const auto t0 = std::chrono::steady_clock::now();
+        f();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+        if (ms > 300) {
+            spdlog::info("Show Composer: {} took {} ms", what, ms);
+        }
+    };
     RefreshSteps();
-    RefreshCreate();
-    RefreshAnalysis();
-    RefreshComposition();
-    RefreshGenerate();
-    RefreshResult();
+    timed("RefreshCreate", [this] { RefreshCreate(); });
+    timed("RefreshAnalysis", [this] { RefreshAnalysis(); });
+    timed("RefreshComposition", [this] { RefreshComposition(); });
+    timed("RefreshGenerate", [this] { RefreshGenerate(); });
+    timed("RefreshResult", [this] { RefreshResult(); });
     // Texts change length with what they say; the pages follow them.
     for (size_t i = 0; i < _book->GetPageCount(); ++i) {
         wxWindow* page = _book->GetPage(i);
@@ -2469,11 +2498,9 @@ void ShowComposerDialog::RefreshCreate() {
         if (_mediaFolders.empty()) {
             _mediaInfo->SetLabel(_("No folder of pictures or videos: the show uses none."));
         } else {
-            MediaLibrary library;
-            std::string error;
             int usable = 0;
-            if (ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
-                for (const MediaItem& m : library.items) {
+            if (const MediaLibrary* library = CachedLibrary(); library != nullptr) {
+                for (const MediaItem& m : library->items) {
                     usable += m.Usable() ? 1 : 0;
                 }
             }
@@ -2798,16 +2825,27 @@ void ShowComposerDialog::RefreshComposition() {
     }
     if (_storyboardView != nullptr) {
         std::map<std::string, wxBitmap> thumbs;
-        MediaLibrary library;
-        std::string error;
-        if (hasBoard && ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+        const MediaLibrary* cached = hasBoard ? CachedLibrary() : nullptr;
+        for (size_t k = 0; cached != nullptr && k < _storyboard.shots.size(); ++k) {
+            const StoryboardShot& s = _storyboard.shots[k];
+            const MediaItem* m = cached->Find(s.mediaId);
+            if (m != nullptr && !m->thumbnail.empty() && _thumbCache.contains(m->thumbnail)) {
+                thumbs[s.mediaId] = _thumbCache[m->thumbnail];
+            }
+        }
+        if (cached != nullptr) {
+            const MediaLibrary& library = *cached;
             for (const StoryboardShot& s : _storyboard.shots) {
                 const MediaItem* m = library.Find(s.mediaId);
+                if (thumbs.contains(s.mediaId)) {
+                    continue;
+                }
                 wxImage image;
                 if (m != nullptr && !m->thumbnail.empty() && !thumbs.contains(s.mediaId) && image.LoadFile(U(MediaAbsolutePath(m->thumbnail, _showDir)), wxBITMAP_TYPE_PNG) && image.IsOk()) {
                     const double k = 54.0 / std::max(1, image.GetHeight());
                     image.Rescale(std::max(1, static_cast<int>(image.GetWidth() * k)), 54, wxIMAGE_QUALITY_HIGH);
                     thumbs[s.mediaId] = wxBitmap(image);
+                    _thumbCache[m->thumbnail] = thumbs[s.mediaId];
                 }
             }
         }
@@ -3352,12 +3390,12 @@ void ShowComposerDialog::RefreshMediaAnalysisState() {
     if (_modelRunner != nullptr) {
         return;
     }
-    MediaLibrary library;
-    std::string error;
-    if (_mediaFolders.empty() || !ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+    const MediaLibrary* cached = _mediaFolders.empty() ? nullptr : CachedLibrary();
+    if (cached == nullptr) {
         _analysisState->SetLabel(_mediaFolders.empty() ? wxString() : _("Not analysed yet."));
         return;
     }
+    const MediaLibrary& library = *cached;
     int images = 0, videos = 0, usable = 0, unsupported = 0, damaged = 0, analysed = 0, semantic = 0;
     for (const MediaItem& m : library.items) {
         images += m.kind == MediaKind::Image || m.kind == MediaKind::Animation ? 1 : 0;
@@ -3433,16 +3471,45 @@ void ShowComposerDialog::EditScreens() {
     }
 }
 
+const MediaLibrary* ShowComposerDialog::CachedLibrary() const {
+    if (_showDir.empty()) {
+        return nullptr;
+    }
+    const std::string path = MediaLibraryPath(_showDir);
+    std::error_code ec;
+    const auto stamp = fs::last_write_time(fs::path(path), ec);
+    const std::string key = ec ? std::string() : path + "|" + std::to_string(stamp.time_since_epoch().count());
+    if (key.empty()) {
+        _libraryCacheKey.clear();
+        _libraryCacheOk = false;
+        return nullptr;
+    }
+    if (key != _libraryCacheKey) {
+        std::string error;
+        _libraryCacheOk = ReadMediaLibrary(path, _libraryCache, error);
+        _libraryCacheKey = key;
+    }
+    return _libraryCacheOk ? &_libraryCache : nullptr;
+}
+
 VisualReview ShowComposerDialog::ResultReview() const {
     VisualReview r;
     if (_resultSequence.empty()) {
         return r;
     }
-    GenerationSidecar sidecar;
-    std::string error;
-    if (ReadSidecar(SidecarPathFor(_resultSequence), sidecar, error) == SidecarStatus::Ok) {
-        r = sidecar.review;
+    // Read once and kept while the sidecar does not change: a whole sidecar is slow to
+    // read on every refresh of the window.
+    const std::string path = SidecarPathFor(_resultSequence);
+    std::error_code ec;
+    const auto stamp = fs::last_write_time(fs::path(path), ec);
+    const std::string key = path + "|" + std::to_string(ec ? 0 : stamp.time_since_epoch().count());
+    if (key != _reviewCacheKey) {
+        GenerationSidecar sidecar;
+        std::string error;
+        _reviewCache = ReadSidecar(path, sidecar, error) == SidecarStatus::Ok ? sidecar.review : VisualReview();
+        _reviewCacheKey = key;
     }
+    r = _reviewCache;
     // A show approved with the old window: its record still counts.
     fs::path legacy = _resultSequence;
     legacy.replace_extension(".composer-review.json");

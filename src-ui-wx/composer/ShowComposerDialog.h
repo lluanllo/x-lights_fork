@@ -11,6 +11,7 @@
  **************************************************************/
 
 #include <wx/collpane.h>
+#include <wx/bitmap.h>
 #include <wx/dialog.h>
 #include <wx/timer.h>
 
@@ -18,6 +19,7 @@
 #include <future>
 #include <functional>
 #include <memory>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -339,6 +341,15 @@ private:
     std::string _levelsKey;
     std::vector<composer::FigureSummary> _figures;
     composer::ReportFolder _result;
+    mutable composer::VisualReview _reviewCache;
+    // The library as last read, while its file does not change: the window refreshes
+    // often, also while the generator works.
+    [[nodiscard]] const composer::MediaLibrary* CachedLibrary() const;
+    mutable composer::MediaLibrary _libraryCache;
+    mutable std::string _libraryCacheKey;
+    mutable bool _libraryCacheOk = false;
+    std::map<std::string, wxBitmap> _thumbCache; // thumbnail path -> bitmap for the montage
+    mutable std::string _reviewCacheKey;
     std::string _resultSequence;
     std::string _resultReportDir;
     std::string _resultSummary;
