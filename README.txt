@@ -12,6 +12,12 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: every screen of the show plays a part (main, second, tree, words,
+                                 extra pictures, lights only or none), chosen from the figures or by you in
+                                 "Screens..."; words and pictures share a matrix without a picture ever covering a
+                                 phrase; videos play on both faces of a round mega tree in step, from a front you can
+                                 turn; slow eased zooms and pans, cuts, cross-fades and rests that follow the music,
+                                 and shots that follow on from each other across the screens
     -enh (lluanllo)              Show Composer: the pictures and videos of a folder are analysed (colours, light,
                                  subject, motion, duplicates, and what they show with an optional local image model)
                                  and made into a montage for the main matrix and the mega tree, scene by scene, cut on

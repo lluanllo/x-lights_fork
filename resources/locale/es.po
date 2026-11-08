@@ -11132,3 +11132,234 @@ msgstr "Épico"
 
 msgid "Magical"
 msgstr "Mágico"
+
+msgid "Tree"
+msgstr "Árbol"
+
+msgid "Pixel grid"
+msgstr "Rejilla de píxeles"
+
+msgid "Part of a matrix"
+msgstr "Parte de una matriz"
+
+msgid "shows words %s of the song"
+msgstr "muestra letra el %s de la canción"
+
+msgid "the largest screen that is seen and free"
+msgstr "la pantalla más grande que se ve y está libre"
+
+msgid "the mega tree"
+msgstr "el megaárbol"
+
+msgid "big enough for a second screen"
+msgstr "suficientemente grande para una segunda pantalla"
+
+msgid "plays with the lights"
+msgstr "acompaña con las luces"
+
+msgid "too few lights for a picture"
+msgstr "demasiadas pocas luces para una imagen"
+
+msgid "not known to draw a picture: choose it to try"
+msgstr "no se sabe si dibuja una imagen: elígela para probar"
+
+msgid "check in xLights that the picture looks right"
+msgstr "comprueba en xLights que la imagen se ve bien"
+
+msgid "only if you choose it"
+msgstr "solo si la eliges"
+
+msgid "few lights: the picture will be coarse"
+msgstr "pocas luces: la imagen se verá tosca"
+
+msgid "shares its lights with %s"
+msgstr "comparte sus luces con %s"
+
+msgid "no controller"
+msgstr "sin controlador"
+
+msgid "%s and %s share lights: they never show pictures at the same time."
+msgstr "%s y %s comparten luces: nunca muestran imágenes a la vez."
+
+msgid "%s has no controller: its pictures will only be seen once it is wired."
+msgstr "%s no tiene controlador: sus imágenes solo se verán cuando esté conectada."
+
+msgid "%s is not known to draw a picture well: check it in xLights."
+msgstr "No se sabe si %s dibuja bien una imagen: compruébalo en xLights."
+
+msgid "%s has few lights (%s): its pictures will be coarse."
+msgstr "%s tiene pocas luces (%s): sus imágenes se verán toscas."
+
+msgid "Main screen"
+msgstr "Pantalla principal"
+
+msgid "Second screen"
+msgstr "Segunda pantalla"
+
+msgid "Tree screen"
+msgstr "Pantalla del árbol"
+
+msgid "Words"
+msgstr "Letra"
+
+msgid "Narration"
+msgstr "Narración"
+
+msgid "Extra pictures"
+msgstr "Imágenes adicionales"
+
+msgid "Lights only"
+msgstr "Solo luces"
+
+msgid "Not used"
+msgstr "Sin usar"
+
+msgid "Words first"
+msgstr "Letra primero"
+
+msgid "Smart"
+msgstr "Inteligente"
+
+msgid "Free"
+msgstr "Libre"
+
+msgid "Screens"
+msgstr "Pantallas"
+
+msgid "Words and pictures:"
+msgstr "Letra e imágenes:"
+
+msgid "Screen"
+msgstr "Pantalla"
+
+msgid "Part it plays"
+msgstr "Papel"
+
+msgid "Part it plays:"
+msgstr "Papel:"
+
+msgid "Front of a round tree:"
+msgstr "Frente de un árbol redondo:"
+
+msgid "% of the way round from its first string"
+msgstr "% de la vuelta desde su primera tira"
+
+msgid "Turns:"
+msgstr "Gira:"
+
+msgid "Clockwise"
+msgstr "En el sentido de las agujas del reloj"
+
+msgid "Counter-clockwise"
+msgstr "En sentido contrario a las agujas del reloj"
+
+msgid "The program proposes; you correct. Your choices are kept with the show and used every time it is composed."
+msgstr "El programa propone; tú corriges. Tus decisiones se guardan con el espectáculo y se usan cada vez que se compone."
+
+msgid "A screen showing words keeps them all the song; pictures go on the other screens."
+msgstr "Una pantalla con letra la mantiene toda la canción; las imágenes van a las demás pantallas."
+
+msgid "Words while they are sung; between phrases, in the opening and the instrumentals, pictures there too."
+msgstr "La letra mientras se canta; entre frases, en la entrada y en los instrumentales, también imágenes."
+
+msgid "Every part is yours to choose; a picture still never covers a phrase."
+msgstr "Todos los papeles los eliges tú; aun así, una imagen nunca tapa una frase."
+
+msgid "No figure in this show can show a picture: matrices, mega trees and dense pixel grids can."
+msgstr "Ninguna figura de este espectáculo puede mostrar una imagen: pueden hacerlo las matrices, los megaárboles y las rejillas densas de píxeles."
+
+msgid "Choose a screen to change the part it plays."
+msgstr "Elige una pantalla para cambiar su papel."
+
+msgid "%s: %s, %dx%d, %d lights, seen %.0f%% as much as the largest; free of words %.0f%% of the song."
+msgstr "%s: %s, %dx%d, %d luces, se ve un %.0f%% de lo que se ve la mayor; libre de letra el %.0f%% de la canción."
+
+msgid "Videos play on both faces of a round tree, in step; the front sets where the first face is."
+msgstr "Los vídeos se ven en las dos caras de un árbol redondo, sincronizados; el frente marca dónde está la primera cara."
+
+msgid "cut"
+msgstr "corte"
+
+msgid "fade"
+msgstr "fundido"
+
+msgid "cross-fade"
+msgstr "fundido encadenado"
+
+msgid "zoom"
+msgstr "zoom"
+
+msgid "wipe"
+msgstr "cortinilla"
+
+msgid "all screens"
+msgstr "todas las pantallas"
+
+msgid "between phrases"
+msgstr "entre frases"
+
+msgid "between the sung phrases"
+msgstr "entre las frases cantadas"
+
+msgid "same air as the shot before"
+msgstr "mismo ambiente que el plano anterior"
+
+msgid "same motif as the shot before"
+msgstr "mismo motivo que el plano anterior"
+
+msgid "contrasts with the shot before"
+msgstr "contrasta con el plano anterior"
+
+msgid "answers the opening"
+msgstr "responde a la apertura"
+
+msgid "follows on from the shot before"
+msgstr "sigue al plano anterior"
+
+msgid "comes in with a %s"
+msgstr "entra con un %s"
+
+msgid "Screens..."
+msgstr "Pantallas..."
+
+msgid "Only your own files are used, on the screens of the show (\"Screens...\"); a picture never covers a sung phrase, and the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere."
+msgstr "Solo se usan tus propios archivos, en las pantallas del espectáculo («Pantallas...»); una imagen nunca tapa una frase cantada y el montaje se planifica por ti. Los originales nunca se mueven ni se cambian, y no se envía nada a ningún sitio."
+
+msgid "Visual montage, one row per screen: each shot, its picture, how it comes in, and where the lights carry on"
+msgstr "Montaje visual, una fila por pantalla: cada plano, su imagen, cómo entra y dónde siguen las luces"
+
+msgid "Keep This Screen"
+msgstr "Mantener esta pantalla"
+
+msgid "Choose a shot or a screen of the montage first."
+msgstr "Elige primero un plano o una pantalla del montaje."
+
+msgid "No screen for pictures in this show."
+msgstr "Este espectáculo no tiene pantallas para imágenes."
+
+msgid "Screens: %s. Words and pictures: %s."
+msgstr "Pantallas: %s. Letra e imágenes: %s."
+
+msgid ", %.0f%% of the song"
+msgstr ", el %.0f%% de la canción"
+
+msgid ", between phrases"
+msgstr ", entre frases"
+
+msgid "Shots of %.1f s on average; transitions: %s; %d pictures between phrases; %d moving clips. Related shots one after another: %.0f%%; between the screens at the same time: %.0f%%."
+msgstr "Planos de %.1f s de media; transiciones: %s; %d imágenes entre frases; %d clips en movimiento. Planos relacionados uno tras otro: %.0f%%; entre las pantallas a la vez: %.0f%%."
+
+msgid "Train"
+msgstr "Tren"
+
+msgid "A person's face"
+msgstr "Cara de una persona"
+
+msgid "Musical notes"
+msgstr "Notas musicales"
+
+msgid "Holly"
+msgstr "Acebo"
+
+msgid "Planet"
+msgstr "Planeta"

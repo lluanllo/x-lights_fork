@@ -589,3 +589,13 @@ Un `.xsq` generado **no contiene referencias rotas**, porque un recurso solo se 
 - `ChoreographyEvent.plannedTransitions`: las transiciones de un plano las decide el storyboard.
 - Plantillas `tree-picture` y `tree-video` (papel `mega-tree`, intención `media`).
 
+### Cambios de la Fase 12
+
+- `screens` en las correcciones y en `media` del sidecar (`ScreenSettings`): `lyricsMode` (`lyrics-first`, `smart`, `free`) y `screens`, una lista de `{target, role, frontOffset, turn}`; `role` solo si lo eligió la persona (`main`, `secondary`, `tree`, `lyrics`, `narration`, `media`, `support`, `off`), `frontOffset` (0..1 de la vuelta, -1 automático) y `turn` (1, -1, 0 automático) solo en árboles. Un sidecar de la Fase 11 se lee igual (sin `screens`).
+- `screens.json` y `screens-report.txt` en el informe: cada superficie con tipo, búfer, luces, densidad, proporción, orientación, grados, visibilidad, soporte de imagen y vídeo, `nativeOk`, controlador, conflictos de canales, proporción con letra y libre, papel, origen del papel, puntuación y motivos; y los avisos.
+- `storyboard.json`: los carriles ganan `screen` (papel) y `gapsOnly` (solo entre frases); los planos ganan `layer`, `transition` (`cut`, `fade`, `crossfade`, `zoom`, `wipe`, `rest`), `overlay` (entre frases de una pantalla con letra), `pieces` (piezas sincronizadas en un árbol), `relation` y `overlapMS` (solape de un fundido encadenado); el storyboard gana `lyricsMode`; las estadísticas ganan `meanShotMS`, `transitions`, `coherence`, `crossScreen`, `overlays` y `motionClips`. `MEDIA_DIRECTOR_VERSION` pasa a `3.0.0`.
+- `MediaAssignment` gana `layer`, `overlapMS`, `overlay`, `transition` y `pieces` (`subBuffer` en porcentajes `x1xy1xx2xy2` y ajustes propios de cada pieza). Una pieza se escribe como un efecto nativo con `B_CUSTOM_SubBuffer`; el validador lo admite solo para la intención `media` y con cuatro porcentajes.
+- `ShowComposer/media-derived/`: además de imágenes, clips `.mp4` de movimiento (hash del original y del encuadre, vistas inicial y final, tamaño y duración) e `index.json` con la última fecha de uso de cada derivado; lo que nadie usa en 60 días se borra.
+- `resources/composer/visual-concepts.json` pasa a la versión 2 con `train`, `portrait`, `music-notes`, `holly` y `planet`; el cambio de vocabulario invalida la caché de análisis semántico (su hash forma parte de la clave).
+- Conjunto de validación (`--composer-media-eval`, `validation-set.json`): por archivo, lo que propuso el modelo y `labels` (`source` `person` o `assistant-provisional`, `reviewer`, `reviewedAt`, `present`, `poiUseful`, `descriptionOk`, `notes`). Solo `person` produce métricas.
+

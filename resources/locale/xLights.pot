@@ -11130,3 +11130,234 @@ msgstr ""
 
 msgid "Magical"
 msgstr ""
+
+msgid "Tree"
+msgstr ""
+
+msgid "Pixel grid"
+msgstr ""
+
+msgid "Part of a matrix"
+msgstr ""
+
+msgid "shows words %s of the song"
+msgstr ""
+
+msgid "the largest screen that is seen and free"
+msgstr ""
+
+msgid "the mega tree"
+msgstr ""
+
+msgid "big enough for a second screen"
+msgstr ""
+
+msgid "plays with the lights"
+msgstr ""
+
+msgid "too few lights for a picture"
+msgstr ""
+
+msgid "not known to draw a picture: choose it to try"
+msgstr ""
+
+msgid "check in xLights that the picture looks right"
+msgstr ""
+
+msgid "only if you choose it"
+msgstr ""
+
+msgid "few lights: the picture will be coarse"
+msgstr ""
+
+msgid "shares its lights with %s"
+msgstr ""
+
+msgid "no controller"
+msgstr ""
+
+msgid "%s and %s share lights: they never show pictures at the same time."
+msgstr ""
+
+msgid "%s has no controller: its pictures will only be seen once it is wired."
+msgstr ""
+
+msgid "%s is not known to draw a picture well: check it in xLights."
+msgstr ""
+
+msgid "%s has few lights (%s): its pictures will be coarse."
+msgstr ""
+
+msgid "Main screen"
+msgstr ""
+
+msgid "Second screen"
+msgstr ""
+
+msgid "Tree screen"
+msgstr ""
+
+msgid "Words"
+msgstr ""
+
+msgid "Narration"
+msgstr ""
+
+msgid "Extra pictures"
+msgstr ""
+
+msgid "Lights only"
+msgstr ""
+
+msgid "Not used"
+msgstr ""
+
+msgid "Words first"
+msgstr ""
+
+msgid "Smart"
+msgstr ""
+
+msgid "Free"
+msgstr ""
+
+msgid "Screens"
+msgstr ""
+
+msgid "Words and pictures:"
+msgstr ""
+
+msgid "Screen"
+msgstr ""
+
+msgid "Part it plays"
+msgstr ""
+
+msgid "Part it plays:"
+msgstr ""
+
+msgid "Front of a round tree:"
+msgstr ""
+
+msgid "% of the way round from its first string"
+msgstr ""
+
+msgid "Turns:"
+msgstr ""
+
+msgid "Clockwise"
+msgstr ""
+
+msgid "Counter-clockwise"
+msgstr ""
+
+msgid "The program proposes; you correct. Your choices are kept with the show and used every time it is composed."
+msgstr ""
+
+msgid "A screen showing words keeps them all the song; pictures go on the other screens."
+msgstr ""
+
+msgid "Words while they are sung; between phrases, in the opening and the instrumentals, pictures there too."
+msgstr ""
+
+msgid "Every part is yours to choose; a picture still never covers a phrase."
+msgstr ""
+
+msgid "No figure in this show can show a picture: matrices, mega trees and dense pixel grids can."
+msgstr ""
+
+msgid "Choose a screen to change the part it plays."
+msgstr ""
+
+msgid "%s: %s, %dx%d, %d lights, seen %.0f%% as much as the largest; free of words %.0f%% of the song."
+msgstr ""
+
+msgid "Videos play on both faces of a round tree, in step; the front sets where the first face is."
+msgstr ""
+
+msgid "cut"
+msgstr ""
+
+msgid "fade"
+msgstr ""
+
+msgid "cross-fade"
+msgstr ""
+
+msgid "zoom"
+msgstr ""
+
+msgid "wipe"
+msgstr ""
+
+msgid "all screens"
+msgstr ""
+
+msgid "between phrases"
+msgstr ""
+
+msgid "between the sung phrases"
+msgstr ""
+
+msgid "same air as the shot before"
+msgstr ""
+
+msgid "same motif as the shot before"
+msgstr ""
+
+msgid "contrasts with the shot before"
+msgstr ""
+
+msgid "answers the opening"
+msgstr ""
+
+msgid "follows on from the shot before"
+msgstr ""
+
+msgid "comes in with a %s"
+msgstr ""
+
+msgid "Screens..."
+msgstr ""
+
+msgid "Only your own files are used, on the screens of the show (\"Screens...\"); a picture never covers a sung phrase, and the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere."
+msgstr ""
+
+msgid "Visual montage, one row per screen: each shot, its picture, how it comes in, and where the lights carry on"
+msgstr ""
+
+msgid "Keep This Screen"
+msgstr ""
+
+msgid "Choose a shot or a screen of the montage first."
+msgstr ""
+
+msgid "No screen for pictures in this show."
+msgstr ""
+
+msgid "Screens: %s. Words and pictures: %s."
+msgstr ""
+
+msgid ", %.0f%% of the song"
+msgstr ""
+
+msgid ", between phrases"
+msgstr ""
+
+msgid "Shots of %.1f s on average; transitions: %s; %d pictures between phrases; %d moving clips. Related shots one after another: %.0f%%; between the screens at the same time: %.0f%%."
+msgstr ""
+
+msgid "Train"
+msgstr ""
+
+msgid "A person's face"
+msgstr ""
+
+msgid "Musical notes"
+msgstr ""
+
+msgid "Holly"
+msgstr ""
+
+msgid "Planet"
+msgstr ""
