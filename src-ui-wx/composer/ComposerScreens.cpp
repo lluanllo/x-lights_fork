@@ -11,6 +11,7 @@
 #include "ComposerScreens.h"
 
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/listctrl.h>
 #include <wx/sizer.h>
@@ -74,6 +75,8 @@ wxString Why(const Surface& s) {
             add(_("plays with the lights"));
         } else if (r == "support:not-a-picture") {
             add(_("too few lights for a picture"));
+        } else if (r == "support:no-controller") {
+            add(_("no controller: its pictures would only be seen on the computer"));
         } else if (r == "support:shape-unknown") {
             add(_("not known to draw a picture: choose it to try"));
         } else if (r == "unchecked-shape-chosen-by-person") {
@@ -183,6 +186,10 @@ ScreensDialog::ScreensDialog(wxWindow* parent, const ModelCapabilities& caps, co
     _modeInfo = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(420, -1));
     modeRow->Add(_modeInfo, 1, wxALIGN_CENTER_VERTICAL);
     sizer->Add(modeRow, 0, wxEXPAND | wxALL, 8);
+    _forPreview = new wxCheckBox(this, wxID_ANY, _("Only to watch on the computer: screens with no controller may get pictures too"));
+    _forPreview->SetValue(_settings.preview);
+    _forPreview->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { SetPreview(_forPreview->GetValue()); });
+    sizer->Add(_forPreview, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
 
     _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(760, 220), wxLC_REPORT | wxLC_SINGLE_SEL);
     for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("Screen"), 170 }, { _("Kind"), 95 }, { _("Size"), 70 }, { _("Lights"), 60 }, { _("Words"), 55 }, { _("Part it plays"), 120 }, { _("Why"), 330 } }) {
@@ -259,6 +266,15 @@ ScreenChoice& ScreensDialog::ChoiceFor(const std::string& target) {
     c.target = target;
     _settings.screens.push_back(c);
     return _settings.screens.back();
+}
+
+void ScreensDialog::SetPreview(bool preview) {
+    _settings.set = true;
+    _settings.preview = preview;
+    if (_forPreview != nullptr && _forPreview->GetValue() != preview) {
+        _forPreview->SetValue(preview);
+    }
+    Replan();
 }
 
 void ScreensDialog::SetMode(LyricsMode mode) {

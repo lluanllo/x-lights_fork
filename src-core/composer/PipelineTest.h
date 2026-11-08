@@ -40,6 +40,7 @@ struct GenerateCommandOptions {
     std::string visionModel;   // the image-text model's folder, for --analyze-media
     std::string mediaVariant;  // another montage from the same files
     std::string lyricsMode;    // "lyrics-first", "smart" or "free"
+    std::string screensFor;    // "installation" (default) or "preview"
     std::string screens;       // "Name=role;Name=role", roles as in screens.json
 };
 

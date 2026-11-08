@@ -901,6 +901,47 @@ private:
         Check(lyrics != nullptr && lyrics->role == SurfaceRole::Lyrics && main != nullptr && main->target == "Matriz Dos", fmt::format("the matrix with words keeps them; the main screen is {}", main ? main->target : "none"));
         Check(shared != nullptr && !shared->conflicts.empty() && shared->role != SurfaceRole::Main, "a matrix sharing another's channels is seen and never the main screen");
         Check(loose != nullptr && loose->noController && loose->role != SurfaceRole::Main, "a matrix with no controller is seen as such, and is not the main screen");
+        // The best screen loses its controller: for the installation the program no
+        // longer gives it pictures; for a preview it may; a person may still choose it.
+        {
+            ModelCapabilities caps = a.capabilities;
+            for (TargetInfo& t : caps.targets) {
+                if (t.name == "Matriz Dos") {
+                    t.noController = true;
+                    t.controller = "No Controller";
+                }
+            }
+            ScreenSettings install;
+            install.set = true;
+            const SurfacePlan forReal = PlanSurfaces(caps, &a.plan, install);
+            const Surface* dos = forReal.Find("Matriz Dos");
+            Check(dos != nullptr && dos->role == SurfaceRole::Support && dos->availability == "preview" && std::find(dos->reasons.begin(), dos->reasons.end(), "support:no-controller") != dos->reasons.end(),
+                  fmt::format("for the installation, a screen with no controller gets no pictures by itself ({}, {})", dos != nullptr ? SurfaceRoleId(dos->role) : "-", dos != nullptr ? dos->availability : "-"));
+            bool wiredOnly = true;
+            for (const Surface& s : forReal.surfaces) {
+                wiredOnly = wiredOnly && (s.roleSource != "auto" || s.role == SurfaceRole::Support || s.role == SurfaceRole::Off || s.role == SurfaceRole::Lyrics || !s.noController);
+            }
+            Check(wiredOnly, "every screen the program chose for pictures is wired");
+            ScreenSettings preview = install;
+            preview.preview = true;
+            const SurfacePlan forPreview = PlanSurfaces(caps, &a.plan, preview);
+            const Surface* p = forPreview.Find("Matriz Dos");
+            Check(p != nullptr && p->role == SurfaceRole::Main && p->availability == "preview", "for a preview on the computer it may be the main screen again");
+            ScreenSettings chosen = install;
+            ScreenChoice main2;
+            main2.target = "Matriz Dos";
+            main2.role = SurfaceRole::Main;
+            main2.roleSet = true;
+            chosen.screens = { main2 };
+            const SurfacePlan byPerson = PlanSurfaces(caps, &a.plan, chosen);
+            const Surface* c = byPerson.Find("Matriz Dos");
+            Check(c != nullptr && c->role == SurfaceRole::Main && c->roleSource == "person" &&
+                      std::find(byPerson.warnings.begin(), byPerson.warnings.end(), "surface-no-controller:Matriz Dos") != byPerson.warnings.end(),
+                  "a person may still choose it, and is warned it will only be seen on the computer");
+            std::string error;
+            ScreenSettings back;
+            Check(ScreenSettingsFrom(ScreenSettingsJson(preview), back, error) && back.preview && ScreenSettingsFrom(ScreenSettingsJson(install), back, error) && !back.preview, "preview or installation is kept with the show");
+        }
         const VisualMediaStoryboard& b = a.media.storyboard;
         const StoryboardLane* gl = lane(b, "Matriz Prueba");
         Check(gl != nullptr && gl->gapsOnly && lane(b, "Matriz Dos") != nullptr && lane(b, "Arbol Grande") != nullptr, fmt::format("{} screens in the montage: the main matrix, the tree and the matrix with words between its phrases", b.lanes.size()));
@@ -1793,9 +1834,14 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     if (!o.mediaVariant.empty()) {
         r.mediaVariant = static_cast<int>(std::strtol(o.mediaVariant.c_str(), nullptr, 10));
     }
-    if (!o.lyricsMode.empty() || !o.screens.empty()) {
+    if (!o.lyricsMode.empty() || !o.screens.empty() || !o.screensFor.empty()) {
         ScreenSettings ss;
         ss.set = true;
+        if (!o.screensFor.empty() && o.screensFor != "installation" && o.screensFor != "preview") {
+            printf("composer-generate: REFUSED: --screens-for is installation or preview\n");
+            return 2;
+        }
+        ss.preview = o.screensFor == "preview";
         if (!o.lyricsMode.empty() && !LyricsModeFromId(o.lyricsMode, ss.mode)) {
             printf("composer-generate: REFUSED: unknown lyrics mode '%s' (lyrics-first, smart or free)\n", o.lyricsMode.c_str());
             return 2;

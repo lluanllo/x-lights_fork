@@ -38,6 +38,9 @@ struct ScreenChoice {
 struct ScreenSettings {
     bool set = false; // anything chosen at all
     LyricsMode mode = LyricsMode::Smart;
+    // A show for the real installation (the default) only gives pictures automatically to
+    // screens wired to a controller; a preview may use any screen that draws a picture.
+    bool preview = false;
     std::vector<ScreenChoice> screens;
 
     [[nodiscard]] const ScreenChoice* Find(const std::string& target) const;
@@ -59,6 +62,11 @@ struct Surface {
     Support video = Support::Unknown;
     bool nativeOk = false;   // Pictures and Video draw it as a picture
     bool noController = false;
+    // Where it can be used: "layout" (it is there but draws no picture), "preview" (it
+    // draws pictures but no controller drives it: only seen on the screen) or
+    // "installation" (it draws pictures and is wired). Controllers set inactive (as in
+    // tests) still count as wired: what matters is that the figure has one.
+    std::string availability;
     std::vector<std::string> conflicts; // figures sharing its channels
     double lyricShare = 0;   // of the song with words planned on it
     double freeShare = 0;    // of the song free of words and singing faces
@@ -70,6 +78,7 @@ struct Surface {
 
 struct SurfacePlan {
     LyricsMode mode = LyricsMode::Smart;
+    bool preview = false;
     std::vector<Surface> surfaces; // best first
     std::vector<std::string> warnings;
 

@@ -1259,6 +1259,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "copy-media", "with --composer-generate: the person agreed to copy media outside the show into its Images and Videos folders" },
         { wxCMD_LINE_SWITCH, "", "analyze-media", "with --composer-generate: look at the pictures and videos again before planning (with --vision-model, also with the image-text model)" },
         { wxCMD_LINE_OPTION, "", "media-variant", "with --composer-generate: another visual montage from the same files (a number)" },
+        { wxCMD_LINE_OPTION, "", "screens-for", "with --composer-generate: installation (only screens wired to a controller get pictures automatically, the default) or preview" },
         { wxCMD_LINE_OPTION, "", "lyrics-mode", "with --composer-generate: how words and pictures share the screens: lyrics-first, smart or free" },
         { wxCMD_LINE_OPTION, "", "screens", "with --composer-generate: screen roles, \"Name=role;Name=role\" (main, secondary, tree, lyrics, narration, media, support, off)" },
         { wxCMD_LINE_OPTION, "", "stop-after", "with --composer-generate: inputs, layout, analysis, lyrics, plan, choreography, spec, write or publish" },
@@ -2155,7 +2156,7 @@ bool xLightsApp::OnInit()
             { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
             { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
             { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare }, { "vision-model", &command.visionModel }, { "media-variant", &command.mediaVariant },
-            { "lyrics-mode", &command.lyricsMode }, { "screens", &command.screens },
+            { "lyrics-mode", &command.lyricsMode }, { "screens", &command.screens }, { "screens-for", &command.screensFor },
         };
         for (const auto& [name, target] : options) {
             if (parser.Found(name, &value)) {

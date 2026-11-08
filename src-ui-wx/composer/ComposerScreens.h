@@ -19,6 +19,7 @@
 #include "composer/MediaSurfaces.h"
 #include "composer/ModelCapabilities.h"
 
+class wxCheckBox;
 class wxChoice;
 class wxListCtrl;
 class wxSpinCtrl;
@@ -37,6 +38,7 @@ public:
 
     // The same calls the controls make, for the UI test.
     void SetMode(composer::LyricsMode mode);
+    void SetPreview(bool preview);
     bool SetRole(const std::string& target, composer::SurfaceRole role);
     bool SetAutomatic(const std::string& target);
     bool SetTreeFront(const std::string& target, double frontOffset, int turn);
@@ -56,6 +58,7 @@ private:
 
     wxChoice* _mode = nullptr;
     wxStaticText* _modeInfo = nullptr;
+    wxCheckBox* _forPreview = nullptr;
     wxListCtrl* _list = nullptr;
     wxChoice* _role = nullptr;
     wxSpinCtrl* _front = nullptr;
