@@ -1,6 +1,7 @@
 #include "composer/MediaLibrary.h"
 
 #include "composer/ComposerText.h"
+#include "composer/MediaAnalysis.h"
 #include "media/VideoFrame.h"
 #include "media/VideoReader.h"
 #include "utils/ExternalHooks.h"
@@ -612,6 +613,63 @@ bool MakeMediaThumbnail(MediaItem& item, const std::string& showDir) {
     return true;
 }
 
+bool LoadMediaPicture(const MediaItem& item, int maxSide, xlImage& out) {
+    out = xlImage();
+    if (!item.Usable() || item.kind == MediaKind::Video) {
+        return false;
+    }
+    std::vector<uint8_t> bytes;
+    if (!ReadBytes(P(item.path), bytes, MAX_IMAGE_BYTES)) {
+        return false;
+    }
+    if (item.extension == "svg") {
+        int w = 0, h = 0;
+        if (!RasterSVG(bytes, 8, 8, &w, &h).IsOk() || w <= 0 || h <= 0) {
+            return false;
+        }
+        const double s = static_cast<double>(maxSide) / std::max(w, h);
+        out = RasterSVG(std::move(bytes), std::max(1, static_cast<int>(std::lround(w * s))), std::max(1, static_cast<int>(std::lround(h * s))));
+        return out.IsOk();
+    }
+    if (item.kind == MediaKind::Animation) {
+        AnimatedImageData gif = LoadAnimatedGIFFromMemory(bytes.data(), bytes.size());
+        if (gif.frames.empty()) {
+            return false;
+        }
+        out = std::move(gif.frames[0]);
+    } else if (!out.LoadFromMemory(bytes.data(), bytes.size())) {
+        return false;
+    }
+    if (!out.IsOk()) {
+        return false;
+    }
+    int tw = 0, th = 0;
+    FitInto(out.GetWidth(), out.GetHeight(), maxSide, maxSide, tw, th);
+    if (tw != out.GetWidth() || th != out.GetHeight()) {
+        out = ResampleImage(out, tw, th);
+    }
+    return true;
+}
+
+bool LoadMediaAnimation(const MediaItem& item, int maxSide, int limit, std::vector<xlImage>& frames, std::vector<long>& times) {
+    frames.clear();
+    times.clear();
+    std::vector<uint8_t> bytes;
+    if (!item.Usable() || item.kind != MediaKind::Animation || !ReadBytes(P(item.path), bytes, MAX_IMAGE_BYTES)) {
+        return false;
+    }
+    AnimatedImageData gif = LoadAnimatedGIFFromMemory(bytes.data(), bytes.size());
+    const size_t n = std::min(gif.frames.size(), static_cast<size_t>(std::max(1, limit)));
+    for (size_t i = 0; i < n; ++i) {
+        const size_t at = gif.frames.size() <= n ? i : i * gif.frames.size() / n;
+        int tw = 0, th = 0;
+        FitInto(gif.frames[at].GetWidth(), gif.frames[at].GetHeight(), maxSide, maxSide, tw, th);
+        frames.push_back(ResampleImage(gif.frames[at], tw, th));
+        times.push_back(at < gif.frameTimes.size() ? gif.frameTimes[at] : 100);
+    }
+    return !frames.empty();
+}
+
 namespace {
 
 struct Walker {
@@ -692,6 +750,8 @@ void Carry(MediaItem& to, const MediaItem& from) {
     to.categorySource = from.categorySource;
     to.disabled = from.disabled;
     to.reviewed = from.reviewed;
+    // Its key says which file version it describes: a changed file is analysed again.
+    to.analysis = from.analysis;
 }
 
 void AssignIds(std::vector<MediaItem>& items) {
@@ -851,6 +911,7 @@ int RelocateMissingMedia(MediaLibrary& library, const std::vector<std::string>& 
             again.thumbnail = m->thumbnail;
             again.brightness = m->brightness;
             again.color = m->color;
+            again.analysis = m->analysis;
             *m = std::move(again);
             ++found;
             break;
@@ -928,6 +989,9 @@ json ItemJson(const MediaItem& m) {
     if (m.reviewed) {
         j["reviewed"] = true;
     }
+    if (m.analysis.Done() || !m.analysis.error.empty()) {
+        j["analysis"] = MediaAnalysisJson(m.analysis);
+    }
     return j;
 }
 
@@ -958,6 +1022,9 @@ MediaItem ItemFrom(const json& j) {
     m.color = j.value("color", std::string());
     m.disabled = j.value("disabled", false);
     m.reviewed = j.value("reviewed", false);
+    if (j.contains("analysis") && j["analysis"].is_object()) {
+        m.analysis = MediaAnalysisFrom(j["analysis"]);
+    }
     return m;
 }
 
@@ -1014,7 +1081,7 @@ bool ReadMediaLibrary(const std::string& path, MediaLibrary& library, std::strin
         return false;
     }
     library.version = root.value("version", 1);
-    if (library.version > 1) {
+    if (library.version > 2) {
         error = "newer";
         return false;
     }
