@@ -472,6 +472,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerTimeline.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerMediaDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerMediaDialogs.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerStoryboard.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerStoryboard.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.h" />
 		<Unit filename="../dependencies/midifile/src/Binasc.cpp" />

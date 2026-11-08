@@ -54,6 +54,8 @@
 #include <spdlog/spdlog.h>
 
 #include "ComposerMediaDialogs.h"
+#include "ComposerStoryboard.h"
+#include "composer/VisualModel.h"
 #include "ComposerTimeline.h"
 #include "ai/WxServiceSettingsStore.h"
 #include "composer/LyricDocument.h"
@@ -122,6 +124,12 @@ enum {
     ID_MEDIA_ASSIGN,
     ID_MEDIA_REMOVE,
     ID_MEDIA_LOCK,
+    ID_MEDIA_ANALYZE,
+    ID_MEDIA_MODEL,
+    ID_SCENE_LOCK,
+    ID_SHOT_MOVE,
+    ID_MONTAGE_REBUILD,
+    ID_MONTAGE_VERSIONS,
 };
 
 constexpr int FRAME_MS = 25;
@@ -694,7 +702,15 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     mediaBox->Add(_mediaAuto, 0, wxALL, 4);
     _copyMedia = new wxCheckBox(mediaBox->GetStaticBox(), wxID_ANY, _("Copy the files that are outside the show folder into it (Images, Videos), so the show can be moved"));
     mediaBox->Add(_copyMedia, 0, wxALL, 4);
-    mediaBox->Add(Muted(mediaBox->GetStaticBox(), _("Only your own files are used, on the matrices and mega trees, where no lyrics are shown. Originals are never moved or changed.")), 0, wxLEFT | wxBOTTOM, 6);
+    auto* analysisRow = new wxBoxSizer(wxHORIZONTAL);
+    _analyzeButton = new wxButton(mediaBox->GetStaticBox(), ID_MEDIA_ANALYZE, _("Analyze the Library"));
+    analysisRow->Add(_analyzeButton, 0, wxRIGHT, 4);
+    _modelButton = new wxButton(mediaBox->GetStaticBox(), ID_MEDIA_MODEL, _("Get the Image Model..."));
+    analysisRow->Add(_modelButton, 0, wxRIGHT, 8);
+    _analysisState = new wxStaticText(mediaBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1), wxST_ELLIPSIZE_END);
+    analysisRow->Add(_analysisState, 1, wxALIGN_CENTER_VERTICAL);
+    mediaBox->Add(analysisRow, 0, wxEXPAND | wxALL, 4);
+    mediaBox->Add(Muted(mediaBox->GetStaticBox(), _("Only your own files are used, on the main matrix and the mega tree, where no lyrics are shown; the montage is planned for you. Originals are never moved or changed, and nothing is sent anywhere.")), 0, wxLEFT | wxBOTTOM, 6);
 
     wxStaticBoxSizer* output = box(_("Sequence"));
     auto* nameRow = new wxBoxSizer(wxHORIZONTAL);
@@ -777,6 +793,14 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     }, ID_DESCRIBE);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (MediaAnalysisRunning()) {
+            _analysisRunner->Cancel();
+        } else {
+            StartMediaAnalysis();
+        }
+    }, ID_MEDIA_ANALYZE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { GetVisualModel(); }, ID_MEDIA_MODEL);
     _mediaAuto->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { RefreshAll(); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         wxFileDialog dialog(this, _("Choose the Synchronization"), U(_showDir), "", _("xLights timing (*.xtiming)|*.xtiming"), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
@@ -1080,7 +1104,17 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     _correctionInfo = Muted(page, "");
     sizer->Add(_correctionInfo, 0, wxEXPAND | wxBOTTOM, 6);
 
-    sizer->Add(new wxStaticText(page, wxID_ANY, _("Pictures and videos: the ones chosen, and where one would fit if you had a file")), 0, wxBOTTOM, 2);
+    sizer->Add(new wxStaticText(page, wxID_ANY, _("Visual montage of the main matrix and the mega tree: each shot, its picture, and where the lights carry on")), 0, wxBOTTOM, 2);
+    _storyboardView = new StoryboardView(page);
+    sizer->Add(_storyboardView, 0, wxEXPAND | wxBOTTOM, 4);
+    _storyboardView->onSelect = [this](int shot) {
+        for (size_t i = 0; i < _rowShot.size(); ++i) {
+            if (_rowShot[i] == shot) {
+                _cueList->SetItemState(static_cast<long>(i), wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
+                _cueList->EnsureVisible(static_cast<long>(i));
+            }
+        }
+    };
     _cueList = new wxListCtrl(page, wxID_ANY, wxDefaultPosition, wxSize(-1, 110), wxLC_REPORT | wxLC_SINGLE_SEL);
     for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 70 }, { _("To"), 70 }, { _("Figure"), 160 }, { _("File"), 200 }, { _("State"), 110 }, { _("Why"), 320 } }) {
         _cueList->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
@@ -1089,9 +1123,37 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     auto* mediaActions = new wxBoxSizer(wxHORIZONTAL);
     mediaActions->Add(new wxButton(page, ID_MEDIA_ASSIGN, _("Choose a File...")), 0, wxRIGHT, 4);
     mediaActions->Add(new wxButton(page, ID_MEDIA_REMOVE, _("No Picture Here")), 0, wxRIGHT, 4);
-    mediaActions->Add(new wxButton(page, ID_MEDIA_LOCK, _("Keep This One")), 0, wxRIGHT, 12);
+    mediaActions->Add(new wxButton(page, ID_MEDIA_LOCK, _("Keep This One")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_SCENE_LOCK, _("Keep the Whole Scene")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_SHOT_MOVE, _("On the Other Screen")), 0, wxRIGHT, 12);
+    mediaActions->Add(new wxButton(page, ID_MONTAGE_REBUILD, _("Rebuild the Montage")), 0, wxRIGHT, 4);
+    mediaActions->Add(new wxButton(page, ID_MONTAGE_VERSIONS, _("Earlier Versions...")), 0, wxRIGHT, 12);
     mediaActions->Add(new wxButton(page, ID_MEDIA_LIBRARY, _("Pictures and Videos...")), 0);
     sizer->Add(mediaActions, 0);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const long selected = _cueList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        if (selected < 0 || selected >= static_cast<long>(_mediaRows.size()) || _mediaRows[selected].segmentId.empty()) {
+            wxMessageBox(_("Choose a row of the list first."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        LockStoryboardScene(_mediaRows[selected].segmentId);
+    }, ID_SCENE_LOCK);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const long selected = _cueList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        if (selected < 0 || selected >= static_cast<long>(_rowShot.size()) || _rowShot[selected] < 0) {
+            wxMessageBox(_("Choose a shot of the montage first."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        MoveShotToOtherScreen(_rowShot[selected]);
+    }, ID_SHOT_MOVE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { RebuildMontage(); }, ID_MONTAGE_REBUILD);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChooseStoryboardVersion(); }, ID_MONTAGE_VERSIONS);
+    _cueList->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& e) {
+        const long i = e.GetIndex();
+        if (_storyboardView != nullptr && i >= 0 && i < static_cast<long>(_rowShot.size())) {
+            _storyboardView->Select(_rowShot[i]);
+        }
+    });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(0); }, ID_MEDIA_ASSIGN);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(1); }, ID_MEDIA_REMOVE);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChangeMedia(2); }, ID_MEDIA_LOCK);
@@ -1863,6 +1925,9 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     if (_mediaAuto != nullptr && !_mediaAuto->GetValue()) {
         a.push_back("--media-manual-only");
     }
+    if (_mediaVariant != 0) {
+        add("--media-variant", std::to_string(_mediaVariant));
+    }
     // A copy is made only by the generation the person asked for, never by a preview.
     if (_copyMedia != nullptr && _copyMedia->GetValue() && stopAfter.empty()) {
         a.push_back("--copy-media");
@@ -1874,7 +1939,8 @@ std::string ShowComposerDialog::InputsKey() const {
     return fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", _audioPath, _showDir, _lyricsPath, _timingPath, _sessionPath.empty() ? std::string() : ReadFile(fs::path(_sessionPath)), _profilePath, _templatesDir, _rolesPath,
                        _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath) +
            fmt::format("|{}|{}", std::accumulate(_mediaFolders.begin(), _mediaFolders.end(), std::string(), [](std::string x, const std::string& y) { return x + ";" + y; }),
-                       _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0);
+                       _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0) +
+           fmt::format("|{}|{}", _mediaVariant, _mediaStamp);
 }
 
 void ShowComposerDialog::RunNext() {
@@ -2304,6 +2370,31 @@ void ShowComposerDialog::OnTimer(wxTimerEvent&) {
     if (_job.Running() && _purpose == Purpose::Generation) {
         _gauge->Pulse();
     }
+    if (_analysisRunner != nullptr && (_analysisRunner->Running() || _analysisRunner->Finished())) {
+        if (_analysisRunner->Finished()) {
+            _analysisRunner->Join();
+            _lastMediaAnalysis = _analysisRunner->Summary();
+            _analysisRunner.reset();
+            ++_mediaStamp;
+            RefreshAll();
+        } else {
+            RefreshMediaAnalysisState();
+        }
+    }
+    if (_modelRunner != nullptr) {
+        if (_modelRunner->Finished()) {
+            _modelRunner->Join();
+            const bool ok = _modelRunner->Ok();
+            const std::string error = _modelRunner->Error();
+            _modelRunner.reset();
+            if (!ok && !_testMode) {
+                wxMessageBox(wxString::Format(_("The image model could not be downloaded: %s. The library is still analysed without it."), U(error)), _("Pictures and Videos"), wxOK | wxICON_WARNING, this);
+            }
+            RefreshAll();
+        } else if (_analysisState != nullptr) {
+            _analysisState->SetLabel(wxString::Format(_("Downloading the image model: %d%%"), _modelRunner->Percent()));
+        }
+    }
 }
 
 // ------------------------------------------------------------------ refresh
@@ -2370,6 +2461,7 @@ void ShowComposerDialog::RefreshCreate() {
             _mediaInfo->SetLabel(wxString::Format(_("%d folders, %d files that can be used."), static_cast<int>(_mediaFolders.size()), usable));
         }
     }
+    RefreshMediaAnalysisState();
     if (_audioPath.empty()) {
         _audioName->SetLabel(_("No song chosen"));
         SetWrapped(_audioInfo, _("Choose the song the show is for."));
@@ -2658,7 +2750,52 @@ void ShowComposerDialog::RefreshComposition() {
     _correctionInfo->SetLabel(wxString::Format(_("Your decisions: %d locked effects, %d excluded figures. %d could not be applied (see the figure). They are kept for every version, whatever the level or seed."), locks, exclusions, conflicts));
     _cueList->DeleteAllItems();
     _mediaRows.clear();
-    const json media = r.media.empty() ? json() : json::parse(r.media, nullptr, false);
+    _rowShot.clear();
+    _storyboard = VisualMediaStoryboard();
+    std::string boardError;
+    const json board = r.storyboard.empty() ? json() : json::parse(r.storyboard, nullptr, false);
+    const bool hasBoard = board.is_object() && StoryboardFrom(board, _storyboard, boardError);
+    if (hasBoard && !_storyboard.shots.empty() && (_storyboardHistory.empty() || _storyboardHistory.back().hash != _storyboard.hash)) {
+        // Each montage seen here can be brought back; the last five are kept.
+        const wxString now = wxDateTime::Now().Format("%H:%M:%S");
+        _storyboardHistory.push_back(StoryboardVersionOf(_storyboard, _storyboardHistory.empty() ? 1 : _storyboardHistory.back().number + 1, S(now)));
+        while (_storyboardHistory.size() > STORYBOARD_HISTORY + 1) {
+            _storyboardHistory.erase(_storyboardHistory.begin());
+        }
+    }
+    if (_storyboardView != nullptr) {
+        std::map<std::string, wxBitmap> thumbs;
+        MediaLibrary library;
+        std::string error;
+        if (hasBoard && ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+            for (const StoryboardShot& s : _storyboard.shots) {
+                const MediaItem* m = library.Find(s.mediaId);
+                wxImage image;
+                if (m != nullptr && !m->thumbnail.empty() && !thumbs.contains(s.mediaId) && image.LoadFile(U(MediaAbsolutePath(m->thumbnail, _showDir)), wxBITMAP_TYPE_PNG) && image.IsOk()) {
+                    const double k = 54.0 / std::max(1, image.GetHeight());
+                    image.Rescale(std::max(1, static_cast<int>(image.GetWidth() * k)), 54, wxIMAGE_QUALITY_HIGH);
+                    thumbs[s.mediaId] = wxBitmap(image);
+                }
+            }
+        }
+        _storyboardView->SetStoryboard(hasBoard ? &_storyboard : nullptr, r.hasPlan ? r.plan.durationMS : 0, std::move(thumbs));
+    }
+    const json media = hasBoard ? json() : r.media.empty() ? json() : json::parse(r.media, nullptr, false);
+    for (size_t i = 0; hasBoard && i < _storyboard.shots.size(); ++i) {
+        const StoryboardShot& s = _storyboard.shots[i];
+        MediaRow row;
+        row.segmentId = s.sceneId;
+        row.startMS = s.startMS;
+        row.endMS = s.endMS;
+        row.target = s.lane;
+        row.mediaId = s.mediaId;
+        row.name = s.name;
+        row.path = s.source;
+        row.state = DecisionStateId(s.state);
+        row.why = ShotWhy(s);
+        _mediaRows.push_back(std::move(row));
+        _rowShot.push_back(static_cast<int>(i));
+    }
     if (media.is_object()) {
         for (const json& a : media.value("assignments", json::array())) {
             MediaRow row;
@@ -2685,6 +2822,7 @@ void ShowComposerDialog::RefreshComposition() {
                 }
             }
             _mediaRows.push_back(std::move(row));
+            _rowShot.push_back(-1);
         }
     }
     for (const MediaCue& m : r.choreography.mediaCues) {
@@ -2697,6 +2835,7 @@ void ShowComposerDialog::RefreshComposition() {
         row.target = m.target;
         row.why = m.kind == "video" ? _("a video would fit here") : _("a picture would fit here");
         _mediaRows.push_back(std::move(row));
+        _rowShot.push_back(-1);
     }
     long cue = 0;
     for (const MediaRow& m : _mediaRows) {
@@ -2852,6 +2991,17 @@ void ShowComposerDialog::RefreshResult() {
     const json assigned = mediaSummary.value("assignments", json::array());
     if (!assigned.empty()) {
         extra += "\n" + wxString::Format(_("Pictures and videos: %d, %.0f%% of the song, from your files."), static_cast<int>(assigned.size()), mediaSummary.value("share", 0.0) * 100);
+    }
+    const json montage = s.value("storyboard", json());
+    if (montage.is_object()) {
+        wxString lanes;
+        for (const json& l : montage.value("lanes", json::array())) {
+            lanes += wxString::Format(_("%s %d shots, %.0f%% of its free time; "), U(l.value("lane", std::string())), l.value("shots", 0), l.value("ofFree", 0.0) * 100);
+        }
+        const std::string mode = montage.value("analysis", std::string());
+        extra += "\n" + wxString::Format(_("Visual montage: %s%d files (%d pictures, %d videos), %d prepared pictures, %d repeats (%d where the music repeats), %d stretches left to the lights. Analysis: %s."), lanes,
+                                         montage.value("files", 0), montage.value("images", 0), montage.value("videos", 0), montage.value("derived", 0), montage.value("repeats", 0), montage.value("repeatsByMusic", 0),
+                                         montage.value("gaps", 0), mode == "semantic" ? _("what each file shows, with the image model") : mode == "mixed" ? _("partly with the image model") : _("colours, light and motion only"));
     }
     SetWrapped(_resultFacts, facts + extra);
     fs::path review = _resultSequence;
@@ -3087,4 +3237,163 @@ void ShowComposerDialog::ChangeMedia(int action) {
         c.path = m->relative.empty() ? m->path : m->relative;
     }
     ApplyMediaCorrection(c);
+}
+
+// ------------------------------------------------------------------ visual montage
+
+std::string ShowComposerDialog::VisualModelDir() const {
+    if (!VisualModelSupported() || _showDir.empty()) {
+        return {};
+    }
+    std::vector<std::string> roots = { _showDir };
+    roots.insert(roots.end(), _mediaFolders.begin(), _mediaFolders.end());
+    return FindVisualModel(roots);
+}
+
+bool ShowComposerDialog::MediaAnalysisRunning() const {
+    return _analysisRunner != nullptr && _analysisRunner->Running();
+}
+
+void ShowComposerDialog::StartMediaAnalysis() {
+    if (MediaAnalysisRunning() || _mediaFolders.empty() || _showDir.empty()) {
+        return;
+    }
+    _analysisRunner = std::make_unique<MediaAnalysisRunner>();
+    _analysisRunner->Start(_showDir, _mediaFolders, VisualModelDir());
+    RefreshMediaAnalysisState();
+}
+
+void ShowComposerDialog::RefreshMediaAnalysisState() {
+    if (_analysisState == nullptr) {
+        return;
+    }
+    const bool running = MediaAnalysisRunning();
+    _analyzeButton->SetLabel(running ? _("Stop the Analysis") : _("Analyze the Library"));
+    _analyzeButton->Enable(running || (!_mediaFolders.empty() && _showOk && _modelRunner == nullptr));
+    const bool offerModel = VisualModelSupported() && !_showDir.empty() && VisualModelDir().empty();
+    _modelButton->Enable(offerModel && _modelRunner == nullptr && !running);
+    if (running) {
+        const int total = _analysisRunner->Total();
+        _analysisState->SetLabel(total > 0 ? wxString::Format(_("Analysing %d of %d: %s"), _analysisRunner->Done(), total, U(_analysisRunner->Current()))
+                                           : wxString::Format(_("Searching the folders: %d files read"), _analysisRunner->Done()));
+        return;
+    }
+    if (_modelRunner != nullptr) {
+        return;
+    }
+    MediaLibrary library;
+    std::string error;
+    if (_mediaFolders.empty() || !ReadMediaLibrary(MediaLibraryPath(_showDir), library, error)) {
+        _analysisState->SetLabel(_mediaFolders.empty() ? wxString() : _("Not analysed yet."));
+        return;
+    }
+    int images = 0, videos = 0, usable = 0, unsupported = 0, damaged = 0, analysed = 0, semantic = 0;
+    for (const MediaItem& m : library.items) {
+        images += m.kind == MediaKind::Image || m.kind == MediaKind::Animation ? 1 : 0;
+        videos += m.kind == MediaKind::Video ? 1 : 0;
+        usable += m.Usable() ? 1 : 0;
+        unsupported += m.status == MediaStatus::Unsupported ? 1 : 0;
+        damaged += m.status == MediaStatus::Unreadable ? 1 : 0;
+        analysed += m.Usable() && m.analysis.Done() ? 1 : 0;
+        semantic += m.analysis.mode == "semantic" ? 1 : 0;
+    }
+    wxString text = wxString::Format(_("%d files: %d pictures, %d videos; %d usable, %d not supported, %d damaged. Analysed: %d of %d"), static_cast<int>(library.items.size()), images, videos, usable,
+                                     unsupported, damaged, analysed, usable);
+    text += semantic > 0 ? wxString::Format(_(", %d with the image model"), semantic) : wxString(_(", colours, light and motion only (no image model)"));
+    if (_lastMediaAnalysis.total > 0) {
+        text += wxString::Format(_("; last run: %d looked at, %d from the cache%s"), _lastMediaAnalysis.analysed, _lastMediaAnalysis.cached, _lastMediaAnalysis.cancelled ? wxString(_(", stopped")) : wxString());
+    }
+    _analysisState->SetLabel(text + ".");
+    _analysisState->SetToolTip(text);
+}
+
+void ShowComposerDialog::GetVisualModel() {
+    if (!VisualModelSupported()) {
+        wxMessageBox(_("This build of xLights cannot run the image model. The library is analysed by its colours, light and motion."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    if (_showDir.empty() || _modelRunner != nullptr) {
+        return;
+    }
+    const bool yes = _testMode ? _testConsent
+                               : wxMessageBox(_("Download the image model SigLIP (Google, Apache 2.0 licence), about 210 MB, from Hugging Face into the show's ai-models folder?\n\n"
+                                                "It is downloaded once and runs on this computer: your pictures and videos are never sent anywhere."),
+                                              _("Image Model"), wxYES_NO | wxICON_QUESTION, this) == wxYES;
+    if (!yes) {
+        return;
+    }
+    _modelRunner = std::make_unique<ModelDownloadRunner>();
+    _modelRunner->Start(_showDir);
+    RefreshMediaAnalysisState();
+}
+
+void ShowComposerDialog::LockStoryboardScene(const std::string& sceneId) {
+    for (const MediaCorrection& c : composer::LockStoryboardScene(_storyboard, sceneId)) {
+        UpsertMediaCorrection(_corrections.media, c);
+    }
+    RefreshAll();
+}
+
+void ShowComposerDialog::MoveShotToOtherScreen(int shot) {
+    if (shot < 0 || shot >= static_cast<int>(_storyboard.shots.size())) {
+        return;
+    }
+    const StoryboardShot s = _storyboard.shots[static_cast<size_t>(shot)];
+    const auto other = std::find_if(_storyboard.lanes.begin(), _storyboard.lanes.end(), [&](const StoryboardLane& l) { return l.target != s.lane; });
+    const StoryboardScene* scene = _storyboard.Scene(s.sceneId);
+    if (other == _storyboard.lanes.end() || scene == nullptr) {
+        return;
+    }
+    MediaCorrection off;
+    off.action = MediaCorrection::Action::Remove;
+    off.segmentId = s.sceneId;
+    off.startMS = scene->startMS;
+    off.target = s.lane;
+    UpsertMediaCorrection(_corrections.media, off);
+    MediaCorrection on;
+    on.action = MediaCorrection::Action::Lock;
+    on.segmentId = s.sceneId;
+    on.startMS = scene->startMS;
+    on.target = other->target;
+    on.mediaId = s.mediaId;
+    on.path = s.source;
+    UpsertMediaCorrection(_corrections.media, on);
+    RefreshAll();
+}
+
+void ShowComposerDialog::RebuildMontage() {
+    ++_mediaVariant;
+    RefreshAll();
+    if (!_job.Running()) {
+        StartComposition();
+    }
+}
+
+void ShowComposerDialog::RestoreStoryboardVersion(size_t index) {
+    if (index >= _storyboardHistory.size()) {
+        return;
+    }
+    for (const MediaCorrection& c : RestoreStoryboard(_storyboardHistory[index], _storyboard)) {
+        UpsertMediaCorrection(_corrections.media, c);
+    }
+    RefreshAll();
+    if (!_job.Running()) {
+        StartComposition();
+    }
+}
+
+void ShowComposerDialog::ChooseStoryboardVersion() {
+    if (_storyboardHistory.size() < 2) {
+        wxMessageBox(_("There is no earlier montage yet: rebuild it or change it first."), _("Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    wxArrayString names;
+    for (size_t i = 0; i + 1 < _storyboardHistory.size(); ++i) {
+        const StoryboardVersion& v = _storyboardHistory[i];
+        names.Add(wxString::Format(_("Version %d, made at %s: %d shots"), v.number, U(v.created), static_cast<int>(v.shots.size())));
+    }
+    wxSingleChoiceDialog pick(this, _("Which montage should come back? Every shot is kept as it was."), _("Earlier Versions"), names);
+    if (pick.ShowModal() == wxID_OK) {
+        RestoreStoryboardVersion(static_cast<size_t>(pick.GetSelection()));
+    }
 }

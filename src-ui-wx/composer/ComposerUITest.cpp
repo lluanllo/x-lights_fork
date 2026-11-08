@@ -39,6 +39,7 @@
 #include "composer/LyricDocument.h"
 #include "composer/MediaLibrary.h"
 #include "composer/MediaTest.h"
+#include "composer/VisualTest.h"
 #include "composer/WriterTest.h"
 #include "utils/ExternalHooks.h"
 #include "xLightsMain.h"
@@ -310,17 +311,67 @@ private:
                               Check(usable == 7, fmt::format("{} pictures, animations and videos found, each with a thumbnail", usable));
                               library->SelectItem(first);
                               library->SetItemCategories({ "christmas", "snow" });
+                              // Several at once: the two first pictures get the same categories.
+                              std::vector<std::string> two;
+                              for (const MediaItem& m : found.items) {
+                                  if (m.Usable() && m.kind == MediaKind::Image && two.size() < 2) {
+                                      two.push_back(m.id);
+                                  }
+                              }
+                              library->SelectItems(two);
+                              library->SetItemCategories({ "christmas", "snow", "lights" });
+                              const int given = library->ApplyCategoriesToSelected();
+                              bool both = given == 2;
+                              for (const std::string& id : two) {
+                                  const MediaItem* m = library->Library().Find(id);
+                                  both = both && m != nullptr && m->categories.size() == 3 && m->categorySource == "manual";
+                              }
+                              Check(both, "the categories ticked go to every file selected at once");
                               library->Show();
                               library->Update();
                               Capture(library, "biblioteca-medios");
                               Check(library->SaveLibrary() && FileExists(MediaLibraryPath(_frame->GetShowDirectory())), "the library is kept in the show's Show Composer folder");
+                              // And the folder of Phase 11: many pictures and videos to make a montage of.
+                              const fs::path more = fs::path(_frame->GetShowDirectory()) / "Medios Fase 11";
+                              Check(WriteVisualFixtures(more.string(), error), "a second folder with many original pictures and videos " + error);
+                              Check(library->AddFolder(more.string(), refused), "added to the library");
+                              Check(library->SaveLibrary(), "and kept");
                               _dialog->SetMediaFolders(library->Folders());
                               library->Destroy();
-                              Check(_dialog->MediaFolders().size() == 1, "the window uses the folder for the show");
+                              Check(_dialog->MediaFolders().size() == 2, "the window uses both folders for the show");
+                              _dialog->StartMediaAnalysis();
+                              Check(_dialog->MediaAnalysisRunning(), "the library is analysed on its own thread, the window still usable");
                               Capture(_dialog, "crear-con-medios");
                               return true;
                           },
                            60 });
+        _steps.push_back({ "the library analysed", [this]() {
+                              if (_dialog->MediaAnalysisRunning() || !Waited(0.5)) {
+                                  return false;
+                              }
+                              const MediaAnalysisSummary& a = _dialog->LastMediaAnalysis();
+                              Check(a.total > 25 && a.analysed + a.cached == a.usable && a.damaged >= 1 && a.unsupported >= 0,
+                                    fmt::format("{} files analysed in {} ms: {} pictures, {} videos, {} usable, {} damaged, {} duplicates, mode {}", a.total, a.elapsedMS, a.images + a.animations, a.videos, a.usable,
+                                                a.damaged, a.duplicates, a.mode));
+                              MediaLibrary library;
+                              std::string error;
+                              const bool read = ReadMediaLibrary(MediaLibraryPath(_frame->GetShowDirectory()), library, error);
+                              const bool kept = read && std::all_of(library.items.begin(), library.items.end(), [](const MediaItem& m) { return !m.Usable() || m.analysis.Done(); });
+                              Check(kept, "every usable file keeps its analysis in the library");
+                              _dialog->StartMediaAnalysis();
+                              return true;
+                          },
+                           300 });
+        _steps.push_back({ "the library analysed again from the cache", [this]() {
+                              if (_dialog->MediaAnalysisRunning() || !Waited(0.5)) {
+                                  return false;
+                              }
+                              const MediaAnalysisSummary& a = _dialog->LastMediaAnalysis();
+                              Check(a.analysed == 0 && a.cached == a.usable, fmt::format("a second analysis takes everything from the cache ({} files in {} ms)", a.cached, a.elapsedMS));
+                              Capture(_dialog, "biblioteca-analizada");
+                              return true;
+                          },
+                           120 });
         _steps.push_back({ "analysis and lyrics", [this]() {
                               if (!_started) {
                                   _started = true;
@@ -393,6 +444,70 @@ private:
                               Check(balanced.directionReport.find("Theme:") != std::string::npos && balanced.direction.find("\"scenes\"") != std::string::npos,
                                     "the art direction is shown: theme, colours and scenes");
                               Capture(_dialog, "composicion");
+                              return true;
+                          },
+                           1800 });
+        _steps.push_back({ "the visual montage", [this]() {
+                              if (!_started) {
+                                  const VisualMediaStoryboard& b = _dialog->ShownStoryboard();
+                                  Check(!b.lanes.empty() && !b.shots.empty(), fmt::format("a visual storyboard for {} screens with {} shots is shown", b.lanes.size(), b.shots.size()));
+                                  if (b.shots.empty()) {
+                                      return true;
+                                  }
+                                  Capture(_dialog, "storyboard");
+                                  _montageScene = b.shots.front().sceneId;
+                                  _montageHash = b.hash;
+                                  _montageBefore.clear();
+                                  _montageAll.clear();
+                                  for (const StoryboardShot& s : b.shots) {
+                                      _montageAll.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                                      if (s.sceneId == _montageScene) {
+                                          _montageBefore.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                                      }
+                                  }
+                                  _dialog->LockStoryboardScene(_montageScene);
+                                  _dialog->RebuildMontage();
+                                  Check(_dialog->MontageVariant() == 1 && _dialog->JobRunning(), "\"Rebuild the Montage\" plans it again, keeping the scene locked");
+                                  _started = true;
+                                  return false;
+                              }
+                              if (!JobDone() || !_dialog->LevelReport(AutomationLevel::Creative).hasChoreography || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              const VisualMediaStoryboard& b = _dialog->ShownStoryboard();
+                              std::set<std::string> after;
+                              for (const StoryboardShot& s : b.shots) {
+                                  if (s.sceneId == _montageScene) {
+                                      after.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                                  }
+                              }
+                              Check(after == _montageBefore, "the locked scene is exactly as it was");
+                              Check(_dialog->StoryboardHistory().size() >= 2, fmt::format("{} montages to choose from in \"Earlier Versions\"", _dialog->StoryboardHistory().size()));
+                              Capture(_dialog, "storyboard-reconstruido");
+                              return true;
+                          },
+                           1800 });
+        _steps.push_back({ "an earlier montage back", [this]() {
+                              if (!_started) {
+                                  const auto& history = _dialog->StoryboardHistory();
+                                  size_t index = 0;
+                                  for (size_t i = 0; i < history.size(); ++i) {
+                                      index = history[i].hash == _montageHash ? i : index;
+                                  }
+                                  _dialog->RestoreStoryboardVersion(index);
+                                  _started = true;
+                                  return false;
+                              }
+                              if (!JobDone() || !_dialog->LevelReport(AutomationLevel::Creative).hasChoreography || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              std::set<std::string> now;
+                              for (const StoryboardShot& s : _dialog->ShownStoryboard().shots) {
+                                  now.insert(fmt::format("{}|{}|{}|{}", s.lane, s.startMS, s.endMS, s.mediaId));
+                              }
+                              Check(now == _montageAll, fmt::format("the first montage is back, shot by shot ({} shots)", now.size()));
                               return true;
                           },
                            1800 });
@@ -687,6 +802,10 @@ private:
     bool _closeSent = false;
     bool _midShot = false;
     std::string _locked;
+    std::string _montageScene;
+    std::string _montageHash;
+    std::set<std::string> _montageBefore;
+    std::set<std::string> _montageAll;
     std::string _excluded;
     std::set<std::string> _lockedEvents;
     std::string _sequence;

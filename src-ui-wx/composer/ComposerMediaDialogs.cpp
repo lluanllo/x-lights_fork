@@ -35,6 +35,8 @@
 #include <filesystem>
 
 #include "utils/ExternalHooks.h"
+#include "composer/MediaAnalysis.h"
+#include "ComposerStoryboard.h"
 
 namespace fs = std::filesystem;
 using namespace composer;
@@ -113,7 +115,23 @@ void FillList(wxListCtrl* list, wxImageList* images, const std::vector<const Med
         list->SetItem(row, 2, m->width > 0 ? wxString::Format("%dx%d", m->width, m->height) : wxString());
         list->SetItem(row, 3, m->durationMS > 0 ? Clock(m->durationMS) : wxString());
         list->SetItem(row, 4, Categories(*m));
-        list->SetItem(row, 5, StatusName(*m));
+        wxString shows;
+        for (const std::string& id : m->analysis.description) {
+            shows += (shows.empty() ? "" : ", ") + VisualConceptName(id);
+        }
+        const bool weak = !m->analysis.concepts.empty() && m->analysis.concepts.front().level == "weak";
+        list->SetItem(row, 5, shows.empty() ? wxString() : (weak ? _("perhaps ") : wxString()) + shows);
+        list->SetItem(row, 6, m->analysis.Done() ? wxString::Format("%.0f%%", m->analysis.matrixFit * 100) : wxString());
+        list->SetItem(row, 7, m->analysis.Done() ? wxString::Format("%.0f%%", m->analysis.treeFit * 100) : wxString());
+        wxString state = StatusName(*m);
+        if (m->Usable()) {
+            state += m->analysis.mode == "semantic" ? _(", described") : m->analysis.mode == "basic" ? _(", measured") : _(", not analysed");
+            for (const std::string& i : m->analysis.issues) {
+                state += i == "very-dark" ? _(", very dark") : i == "very-bright" ? _(", very bright") : i == "low-resolution" ? _(", too small") : i == "too-short" ? _(", too short")
+                       : i == "static-video" ? _(", does not move") : i.rfind("duplicate-of:", 0) == 0 ? _(", a copy of another") : i.rfind("similar-to:", 0) == 0 ? _(", like another") : wxString();
+            }
+        }
+        list->SetItem(row, 8, state);
         ++row;
     }
 }
@@ -123,8 +141,11 @@ void Columns(wxListCtrl* list) {
     list->AppendColumn(_("Kind"), wxLIST_FORMAT_LEFT, 90);
     list->AppendColumn(_("Size"), wxLIST_FORMAT_LEFT, 80);
     list->AppendColumn(_("Length"), wxLIST_FORMAT_LEFT, 70);
-    list->AppendColumn(_("Categories"), wxLIST_FORMAT_LEFT, 180);
-    list->AppendColumn(_("State"), wxLIST_FORMAT_LEFT, 150);
+    list->AppendColumn(_("Categories"), wxLIST_FORMAT_LEFT, 150);
+    list->AppendColumn(_("What it shows"), wxLIST_FORMAT_LEFT, 170);
+    list->AppendColumn(_("Matrix"), wxLIST_FORMAT_LEFT, 60);
+    list->AppendColumn(_("Mega tree"), wxLIST_FORMAT_LEFT, 75);
+    list->AppendColumn(_("State"), wxLIST_FORMAT_LEFT, 220);
 }
 
 wxString RefusedReason(const std::string& reason) {
@@ -176,7 +197,7 @@ wxString VoiceRoleName(VoiceRole role) {
 // ------------------------------------------------------------------ library
 
 MediaLibraryDialog::MediaLibraryDialog(wxWindow* parent, const std::string& showDir, const std::vector<std::string>& folders) :
-    wxDialog(parent, wxID_ANY, _("Pictures and Videos of the Show"), wxDefaultPosition, wxSize(980, 680), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    wxDialog(parent, wxID_ANY, _("Pictures and Videos of the Show"), wxDefaultPosition, wxSize(1240, 700), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
     _showDir(showDir),
     _folders(folders) {
     std::string error;
@@ -214,7 +235,7 @@ MediaLibraryDialog::MediaLibraryDialog(wxWindow* parent, const std::string& show
     sizer->Add(filterRow, 0, wxEXPAND | wxALL, 8);
 
     auto* body = new wxBoxSizer(wxHORIZONTAL);
-    _items = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL);
+    _items = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT);
     _images = new wxImageList(ICON_W, ICON_H, false);
     _items->SetImageList(_images, wxIMAGE_LIST_SMALL);
     Columns(_items);
@@ -222,7 +243,7 @@ MediaLibraryDialog::MediaLibraryDialog(wxWindow* parent, const std::string& show
     auto* side = new wxBoxSizer(wxVERTICAL);
     _preview = new wxStaticBitmap(this, wxID_ANY, wxBitmap(160, 120));
     side->Add(_preview, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 6);
-    _info = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(240, 60));
+    _info = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(240, 150));
     side->Add(_info, 0, wxEXPAND | wxBOTTOM, 6);
     side->Add(new wxStaticText(this, wxID_ANY, _("Categories (they decide which songs it suits):")), 0, wxBOTTOM, 2);
     wxArrayString names;
@@ -230,7 +251,10 @@ MediaLibraryDialog::MediaLibraryDialog(wxWindow* parent, const std::string& show
         names.Add(MediaCategoryName(c));
     }
     _categories = new wxCheckListBox(this, wxID_ANY, wxDefaultPosition, wxSize(240, 180), names);
-    side->Add(_categories, 0, wxEXPAND | wxBOTTOM, 6);
+    side->Add(_categories, 0, wxEXPAND | wxBOTTOM, 4);
+    auto* toAll = new wxButton(this, wxID_ANY, _("Give These Categories to All Selected"));
+    side->Add(toAll, 0, wxEXPAND | wxBOTTOM, 6);
+    toAll->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { (void)ApplyCategoriesToSelected(); });
     side->Add(new wxStaticText(this, wxID_ANY, _("Your own words, separated by commas:")), 0, wxBOTTOM, 2);
     _tags = new wxTextCtrl(this, wxID_ANY);
     side->Add(_tags, 0, wxEXPAND | wxBOTTOM, 6);
@@ -376,6 +400,24 @@ void MediaLibraryDialog::ShowSelected() {
     _disabled->SetValue(m->disabled);
     _preview->SetBitmap(Thumb(*m, _showDir, 160, 120));
     wxString info = U(m->path) + "\n" + KindName(m->kind) + " - " + StatusName(*m);
+    if (m->analysis.Done()) {
+        wxString shows;
+        for (const MediaConcept& c : m->analysis.concepts) {
+            if (shows.length() < 120) {
+                shows += (shows.empty() ? "" : ", ") + VisualConceptName(c.id) + " (" + (c.level == "strong" ? _("clear") : c.level == "probable" ? _("probable") : _("doubtful")) + ")";
+            }
+        }
+        wxString colours;
+        for (const MediaColor& c : m->analysis.colors) {
+            colours += (colours.empty() ? "" : " ") + U(c.hex);
+        }
+        info += "\n" + (shows.empty() ? _("Nothing recognised.") : wxString::Format(_("Seems to show: %s."), shows));
+        info += "\n" + wxString::Format(_("Colours %s; light %.0f%%, contrast %.0f%%, detail %.0f%%. Matrix %.0f%%, mega tree %.0f%%."), colours, m->analysis.brightness * 100, m->analysis.contrast * 100,
+                                         m->analysis.complexity * 100, m->analysis.matrixFit * 100, m->analysis.treeFit * 100);
+        if (m->analysis.mode != "semantic") {
+            info += "\n" + _("Measured without the image model: what it shows is only a guess from its colours.");
+        }
+    }
     if (m->categorySource == "name") {
         info += "\n" + _("Categories suggested from the file's name: check them.");
     }
@@ -410,6 +452,47 @@ void MediaLibraryDialog::StoreSelected() {
         m->categorySource = "manual";
         m->reviewed = true;
     }
+}
+
+std::vector<std::string> MediaLibraryDialog::SelectedIds() const {
+    std::vector<std::string> ids;
+    for (long i = _items->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED); i >= 0; i = _items->GetNextItem(i, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) {
+        if (i < static_cast<long>(_shown.size())) {
+            ids.push_back(_shown[static_cast<size_t>(i)]);
+        }
+    }
+    return ids;
+}
+
+void MediaLibraryDialog::SelectItems(const std::vector<std::string>& ids) {
+    StoreSelected();
+    for (size_t i = 0; i < _shown.size(); ++i) {
+        const bool on = std::find(ids.begin(), ids.end(), _shown[i]) != ids.end();
+        _items->SetItemState(static_cast<long>(i), on ? wxLIST_STATE_SELECTED : 0, wxLIST_STATE_SELECTED);
+    }
+    _selected = ids.empty() ? std::string() : ids.front();
+    ShowSelected();
+}
+
+int MediaLibraryDialog::ApplyCategoriesToSelected() {
+    std::vector<std::string> categories;
+    for (unsigned i = 0; i < _categories->GetCount(); ++i) {
+        if (_categories->IsChecked(i)) {
+            categories.push_back(MediaCategories()[i]);
+        }
+    }
+    int changed = 0;
+    for (const std::string& id : SelectedIds()) {
+        MediaItem* m = _library.Find(id);
+        if (m != nullptr) {
+            m->categories = categories;
+            m->categorySource = "manual";
+            m->reviewed = true;
+            ++changed;
+        }
+    }
+    Refill();
+    return changed;
 }
 
 void MediaLibraryDialog::SelectItem(const std::string& id) {

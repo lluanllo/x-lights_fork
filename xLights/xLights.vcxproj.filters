@@ -83,6 +83,7 @@
     <ClCompile Include="..\src-ui-wx\composer\ComposerJob.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerTimeline.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerMediaDialogs.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerStoryboard.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
@@ -1691,6 +1692,7 @@
     <ClInclude Include="..\src-ui-wx\composer\ComposerJob.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerTimeline.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerMediaDialogs.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerStoryboard.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />

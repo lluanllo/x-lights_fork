@@ -48,6 +48,9 @@ public:
     void SelectItem(const std::string& id);
     void SetItemCategories(const std::vector<std::string>& categories);
     void SetItemDisabled(bool disabled);
+    // Several files at once: the categories ticked go to every one selected.
+    void SelectItems(const std::vector<std::string>& ids);
+    int ApplyCategoriesToSelected();
     bool SaveLibrary();
     void SetQuiet(bool quiet) { _quiet = quiet; }
 
@@ -55,6 +58,7 @@ private:
     void Refill();
     void ShowSelected();
     void StoreSelected();
+    [[nodiscard]] std::vector<std::string> SelectedIds() const;
 
     std::string _showDir;
     std::vector<std::string> _folders;

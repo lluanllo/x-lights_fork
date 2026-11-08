@@ -23,6 +23,7 @@
 
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/MediaAnalysis.h"
 #include "composer/MediaDirection.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/TemplateLibrary.h"
@@ -31,6 +32,9 @@
 
 class AudioManager;
 class ComposerTimeline;
+class MediaAnalysisRunner;
+class ModelDownloadRunner;
+class StoryboardView;
 class wxButton;
 class wxCheckBox;
 class wxChoice;
@@ -150,6 +154,18 @@ public:
         wxString why;
     };
     [[nodiscard]] const std::vector<MediaRow>& MediaRows() const { return _mediaRows; }
+    // The visual montage: the library analysed on a thread of its own, the storyboard of
+    // the level shown, and the changes a person makes to it.
+    void StartMediaAnalysis();
+    [[nodiscard]] bool MediaAnalysisRunning() const;
+    [[nodiscard]] const composer::MediaAnalysisSummary& LastMediaAnalysis() const { return _lastMediaAnalysis; }
+    [[nodiscard]] const composer::VisualMediaStoryboard& ShownStoryboard() const { return _storyboard; }
+    void LockStoryboardScene(const std::string& sceneId);
+    void MoveShotToOtherScreen(int shot);
+    void RebuildMontage();
+    [[nodiscard]] int MontageVariant() const { return _mediaVariant; }
+    [[nodiscard]] const std::vector<composer::StoryboardVersion>& StoryboardHistory() const { return _storyboardHistory; }
+    void RestoreStoryboardVersion(size_t index);
     // The voices and phrases the voice editor starts from, from the last analysis.
     [[nodiscard]] std::vector<composer::VoiceDef> CurrentVoices() const;
     void OpenResult(); // what "Open the Sequence in xLights" does
@@ -209,6 +225,10 @@ private:
     void EditMediaLibrary();
     void EditVoices();
     void ChangeMedia(int action);
+    void GetVisualModel();
+    void ChooseStoryboardVersion();
+    void RefreshMediaAnalysisState();
+    [[nodiscard]] std::string VisualModelDir() const;
 
     xLightsFrame* _frame = nullptr;
     std::vector<std::string> _mediaFolders;
@@ -217,6 +237,18 @@ private:
     wxCheckBox* _mediaAuto = nullptr;
     wxCheckBox* _copyMedia = nullptr;
     wxStaticText* _voicesInfo = nullptr;
+    std::unique_ptr<MediaAnalysisRunner> _analysisRunner;
+    std::unique_ptr<ModelDownloadRunner> _modelRunner;
+    composer::MediaAnalysisSummary _lastMediaAnalysis;
+    wxStaticText* _analysisState = nullptr;
+    wxButton* _analyzeButton = nullptr;
+    wxButton* _modelButton = nullptr;
+    int _mediaVariant = 0;
+    int _mediaStamp = 0; // changes when the library is analysed again
+    StoryboardView* _storyboardView = nullptr;
+    composer::VisualMediaStoryboard _storyboard;
+    std::vector<composer::StoryboardVersion> _storyboardHistory;
+    std::vector<int> _rowShot; // _mediaRows -> the storyboard shot, or -1
     Step _step = Step::Create;
     bool _testMode = false;
 
