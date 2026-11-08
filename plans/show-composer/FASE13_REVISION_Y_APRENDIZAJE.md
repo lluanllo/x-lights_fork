@@ -70,7 +70,8 @@ Decisiones de arquitectura. Los formatos están en `MODELO_DE_DATOS.md` («Cambi
   - siempre está en (−1, 1);
   - empieza tímido;
   - la recencia es `max(0,25; 0,85^sesiones)`: lo reciente pesa más y lo antiguo nunca desaparece del todo.
-- **Respaldo.** Un valor aprendido solo actúa con respaldo ≥ 1,75, es decir, dos decisiones completas. **Un rechazo no prohíbe nada.**
+- **Respaldo.** Un valor aprendido solo actúa con respaldo ≥ 1,75 (dos decisiones completas) **y** con señales de las revisiones de al menos dos espectáculos. **Un rechazo no prohíbe nada, y un solo espectáculo no hace una regla.** En la prueba real, una revisión con cinco decisiones ya activaba «vídeos frente a imágenes» y hacía desaparecer un vídeo aprobado dos veces; de ahí el mínimo de dos revisiones y que aprobar un archivo en una pantalla cuente a su favor (`file.<archivo>@<pantalla>`, peso 1).
+- **Sesión.** Una sesión es una revisión, no cada vez que se edita: cambiar una decisión de una revisión ya aprendida no envejece las demás.
 - **Ámbitos separados:**
   - global: tipo, oscuridad, movimiento, transiciones, repetición, cantidad, conceptos;
   - por pantalla (presencia, conceptos);
@@ -80,7 +81,7 @@ Decisiones de arquitectura. Los formatos están en `MODELO_DE_DATOS.md` («Cambi
 - **Exclusión permanente.** Es «No usar nunca este archivo», es decir `MediaItem.disabled`. Es una decisión de la persona, no algo aprendido.
 - **Qué hace en el director** (valor `v` entre −1 y 1, sobre una puntuación de 0 a 1):
   - **Puntuación de cada archivo:**
-    - vídeo frente a imagen: ±0,06·v;
+    - vídeo frente a imagen: ±0,15·v (con 0,06, una preferencia de −0,89 no cambiaba ningún plano en la prueba);
     - archivo oscuro: 0,08·v;
     - cada concepto (global, en esa escena y en esa pantalla): 0,08·v;
     - el archivo en esa pantalla: 0,15·v;
