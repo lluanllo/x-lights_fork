@@ -33,6 +33,7 @@
 
 #include "ComposerJob.h"
 #include "ComposerMediaDialogs.h"
+#include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
@@ -727,6 +728,100 @@ private:
                               return true;
                           },
                            5 });
+        _steps.push_back({ "the review of the pictures and videos", [this]() {
+                              const VisualReview start = _dialog->ResultReview();
+                              Check(!start.clips.empty() && CountReview(start).pending == static_cast<int>(start.clips.size()) && start.state == "pending",
+                                    fmt::format("the result has a review of its {} shots, all pending", start.clips.size()));
+                              if (start.clips.size() < 2) {
+                                  return true;
+                              }
+                              MediaLibrary library;
+                              std::string error;
+                              (void)ReadMediaLibrary(MediaLibraryPath(_frame->GetShowDirectory()), library, error);
+                              ReviewContext context;
+                              context.sequence = "demo-ui.xsq";
+                              context.song = "demo-sintetica.wav";
+                              auto* review = new ReviewDialog(_dialog, start, context, library, _frame->GetShowDirectory());
+                              const std::string a = start.clips[0].decisionId, b = start.clips[1].decisionId;
+                              Check(review->Decide(a, ClipState::Approved) && review->Decide(b, ClipState::Rejected, { "wrong-motion" }, "se mueve demasiado"), "a shot approved, another rejected for its movement, with a note");
+                              review->SetOrderByScreen(true);
+                              const std::vector<std::string> byScreen = review->RowOrder();
+                              review->SetOrderByScreen(false);
+                              Check(byScreen.size() == start.clips.size() && review->RowOrder().size() == start.clips.size(), "the shots can be seen screen by screen or as they come");
+                              std::string why;
+                              Check(!review->Approve("Juan", why) && review->Review().state != "approved", "the show cannot be approved before saying it was watched in xLights");
+                              review->SetChecklist({ true, true, true, true, true });
+                              Check(!review->Approve("Juan", why) && why == "corrections-not-applied", "nor while a shot is rejected");
+                              review->Show();
+                              review->Update();
+                              Capture(review, "revision");
+                              const VisualReview decided = review->Review();
+                              review->Destroy();
+                              Check(_dialog->SaveReview(decided, {}), "the review is kept");
+                              const VisualReview back = _dialog->ResultReview();
+                              Check(back.Find(a) != nullptr && back.Find(a)->state == ClipState::Approved && back.Find(b)->state == ClipState::Rejected && back.state != "approved",
+                                    "read again from the sidecar: the decisions are there, the show still not approved");
+                              const ArtisticPreferences prefs = _dialog->ShowPreferences();
+                              Check(!prefs.signals.empty(), fmt::format("the decisions are learned ({} signals)", prefs.signals.size()));
+                              auto* learned = new PreferencesDialog(_dialog, prefs, &library);
+                              learned->SetValue("amount", -0.4);
+                              learned->Show();
+                              learned->Update();
+                              Capture(learned, "lo-aprendido");
+                              const ArtisticPreferences edited = learned->Preferences();
+                              learned->Destroy();
+                              Check(EffectivePreferences(edited).contains("amount") && _dialog->SetShowPreferences(edited), "\"fewer pictures\" set by hand and kept");
+                              // The person approves once the rejected shot is taken back.
+                              VisualReview fixed = back;
+                              DecideClip(fixed, b, ClipState::Pending, {}, "", "now");
+                              fixed.checklist = { true, true, true, true, true };
+                              Check(ApproveShow(fixed, "Juan", "2026-11-08 20:00", why) && _dialog->SaveReview(fixed, {}) && _dialog->ResultReview().state == "approved",
+                                    "with everything checked, the person approves the show");
+                              return true;
+                          },
+                           60 });
+        _steps.push_back({ "a person's labels on the library", [this]() {
+                              auto* library = new MediaLibraryDialog(_dialog, _frame->GetShowDirectory(), _dialog->MediaFolders());
+                              library->SetQuiet(true);
+                              const MediaItem* picked = nullptr;
+                              for (const MediaItem& m : library->Library().items) {
+                                  picked = picked == nullptr && m.Usable() && m.analysis.Done() ? &m : picked;
+                              }
+                              if (picked == nullptr) {
+                                  Check(false, "an analysed file to label");
+                                  library->Destroy();
+                                  return true;
+                              }
+                              const std::string id = picked->id;
+                              const std::vector<MediaConcept> model = picked->analysis.concepts;
+                              VisualConcepts concepts;
+                              std::string error;
+                              (void)ReadVisualConcepts(DefaultVisualConceptsPath(), concepts, error);
+                              auto* labels = new MediaLabelsDialog(library, *picked, _frame->GetShowDirectory(), concepts);
+                              if (!model.empty()) {
+                                  labels->SetDecision(model.front().id, "no");
+                              }
+                              labels->AddConcept("ornaments");
+                              labels->SetNotFor({ "tree" });
+                              labels->SetComplete(true, "Juan");
+                              labels->Show();
+                              labels->Update();
+                              Capture(labels, "lo-que-se-ve");
+                              const MediaHumanLabels given = labels->Labels();
+                              labels->Destroy();
+                              library->SelectItem(id);
+                              Check(library->SetSelectedLabels(given) && library->SaveLibrary(), "a file's labels corrected and kept");
+                              MediaLibrary saved;
+                              (void)ReadMediaLibrary(MediaLibraryPath(_frame->GetShowDirectory()), saved, error);
+                              const MediaItem* m = saved.Find(id);
+                              Check(m != nullptr && m->human.complete && m->human.notFor == std::vector<std::string>{ "tree" } && (model.empty() || m->human.rejected.front() == model.front().id) &&
+                                        m->analysis.concepts.size() == model.size(),
+                                    "the person's words are kept beside the program's, which stay as they were");
+                              Check(library->ModelReport().find("TOO FEW FILES") != std::string::npos, "one labelled file is said to be too few to measure the program");
+                              library->Destroy();
+                              return true;
+                          },
+                           60 });
         _steps.push_back({ "open the sequence in xLights", [this]() {
                               if (!_started) {
                                   _started = true;

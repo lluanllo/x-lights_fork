@@ -54,6 +54,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ComposerMediaDialogs.h"
+#include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
@@ -133,6 +134,8 @@ enum {
     ID_MONTAGE_VERSIONS,
     ID_SCREENS,
     ID_LANE_LOCK,
+    ID_REVIEW_CLIPS,
+    ID_LEARNED,
 };
 
 constexpr int FRAME_MS = 25;
@@ -1259,7 +1262,11 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     actions->Add(new wxButton(page, ID_REVIEW_AGAIN, _("Review the Composition Again")), 0, wxRIGHT, 4);
     actions->Add(new wxButton(page, ID_ANOTHER, _("Make Another Version")), 0, wxRIGHT, 4);
     actions->Add(new wxButton(page, ID_APPROVE, _("Mark as Reviewed and Approved...")), 0);
-    sizer->Add(actions, 0, wxBOTTOM, 8);
+    sizer->Add(actions, 0, wxBOTTOM, 4);
+    auto* review = new wxBoxSizer(wxHORIZONTAL);
+    review->Add(new wxButton(page, ID_REVIEW_CLIPS, _("Review the Pictures and Videos...")), 0, wxRIGHT, 4);
+    review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0);
+    sizer->Add(review, 0, wxBOTTOM, 8);
     const auto list = [&](const wxString& label, wxListCtrl*& ctrl, const std::vector<std::pair<wxString, int>>& columns, int height) {
         sizer->Add(new wxStaticText(page, wxID_ANY, label), 0, wxBOTTOM, 2);
         ctrl = new wxListCtrl(page, wxID_ANY, wxDefaultPosition, wxSize(-1, height), wxLC_REPORT | wxLC_SINGLE_SEL);
@@ -1294,24 +1301,10 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
         SetSequenceName("");
         GoTo(Step::Create);
     }, ID_ANOTHER);
-    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-        if (_resultSequence.empty()) {
-            return;
-        }
-        fs::path review = _resultSequence;
-        review.replace_extension(".composer-review.json");
-        if (FileExists(review.string())) {
-            return;
-        }
-        wxTextEntryDialog who(this, _("You have watched this sequence in xLights and approve how it looks. Who reviewed it?"), _("Mark as Reviewed and Approved"), wxGetUserName());
-        if (who.ShowModal() != wxID_OK || who.GetValue().Trim().IsEmpty()) {
-            return;
-        }
-        const json record = { { "schemaVersion", 1 }, { "sequence", fs::path(_resultSequence).filename().string() }, { "reviewedBy", S(who.GetValue()) }, { "reviewedAt", S(wxDateTime::Now().FormatISOCombined(' ')) }, { "state", "approved" } };
-        std::ofstream out(review, std::ios::binary);
-        out << record.dump(1);
-        RefreshResult();
-    }, ID_APPROVE);
+    // Approving goes through the review: what was checked in xLights, then the approval.
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditReview(); }, ID_APPROVE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditReview(); }, ID_REVIEW_CLIPS);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditPreferences(); }, ID_LEARNED);
     return page;
 }
 
@@ -3068,11 +3061,12 @@ void ShowComposerDialog::RefreshResult() {
         }
     }
     SetWrapped(_resultFacts, facts + extra);
-    fs::path review = _resultSequence;
-    review.replace_extension(".composer-review.json");
-    if (FileExists(review.string())) {
-        const json r = json::parse(ReadFile(review), nullptr, false);
-        _reviewState->SetLabel(wxString::Format(_("Reviewed and approved by a person: %s, %s."), U(r.is_discarded() ? std::string() : r.value("reviewedBy", std::string())), U(r.is_discarded() ? std::string() : r.value("reviewedAt", std::string()))));
+    const VisualReview shown = ResultReview();
+    if (shown.state == "approved") {
+        _reviewState->SetLabel(wxString::Format(_("Reviewed and approved by a person: %s, %s."), U(shown.reviewer), U(shown.approvedAt)));
+    } else if (shown.state == "in-progress") {
+        const ReviewCounts n = CountReview(shown);
+        _reviewState->SetLabel(wxString::Format(_("Review in progress: %d of %d shots decided. Pending visual review: watch it in xLights before showing it."), n.clips - n.pending, n.clips));
     } else {
         _reviewState->SetLabel(render.value("ran", false) ? _("Rendered correctly. Pending visual review: watch it in xLights before showing it.") : _("Pending visual review: watch it in xLights before showing it."));
     }
@@ -3436,6 +3430,190 @@ void ShowComposerDialog::EditScreens() {
     ScreensDialog dialog(this, _capabilities, level.hasPlan ? &level.plan : nullptr, _corrections.screens);
     if (dialog.ShowModal() == wxID_OK) {
         SetScreens(dialog.Settings());
+    }
+}
+
+VisualReview ShowComposerDialog::ResultReview() const {
+    VisualReview r;
+    if (_resultSequence.empty()) {
+        return r;
+    }
+    GenerationSidecar sidecar;
+    std::string error;
+    if (ReadSidecar(SidecarPathFor(_resultSequence), sidecar, error) == SidecarStatus::Ok) {
+        r = sidecar.review;
+    }
+    // A show approved with the old window: its record still counts.
+    fs::path legacy = _resultSequence;
+    legacy.replace_extension(".composer-review.json");
+    if (r.state != "approved" && FileExists(legacy.string())) {
+        VisualReview old;
+        if (LegacyReviewFrom(json::parse(ReadFile(legacy), nullptr, false), old)) {
+            r.state = old.state;
+            r.reviewer = old.reviewer;
+            r.approvedAt = old.approvedAt;
+            r.legacy = true;
+        }
+    }
+    return r;
+}
+
+ArtisticPreferences ShowComposerDialog::ShowPreferences() const {
+    ArtisticPreferences p;
+    std::string error;
+    if (!_showDir.empty()) {
+        (void)ReadPreferences(PreferencesPath(_showDir), p, error);
+    }
+    return p;
+}
+
+bool ShowComposerDialog::SetShowPreferences(const ArtisticPreferences& prefs) {
+    std::string error;
+    return !_showDir.empty() && SavePreferences(PreferencesPath(_showDir), prefs, error);
+}
+
+bool ShowComposerDialog::SaveReview(const VisualReview& review, const std::vector<std::string>& neverUse) {
+    if (_resultSequence.empty()) {
+        return false;
+    }
+    const std::string path = SidecarPathFor(_resultSequence);
+    GenerationSidecar sidecar;
+    std::string error;
+    if (ReadSidecar(path, sidecar, error) != SidecarStatus::Ok) {
+        ShowError(_("The review could not be kept."), U(error));
+        return false;
+    }
+    sidecar.review = review;
+    sidecar.visualReview = review.state == "approved" ? "approved" : "not-reviewed";
+    const std::string tmp = path + ".tmp";
+    {
+        std::ofstream out(fs::path(tmp), std::ios::binary | std::ios::trunc);
+        out << ToJson(sidecar);
+        if (!out) {
+            return false;
+        }
+    }
+    std::error_code ec;
+    fs::rename(tmp, path, ec);
+    if (ec) {
+        return false;
+    }
+    if (review.state == "approved") {
+        // The record older versions of the window read.
+        fs::path legacy = _resultSequence;
+        legacy.replace_extension(".composer-review.json");
+        const json record = { { "schemaVersion", 1 }, { "sequence", fs::path(_resultSequence).filename().string() }, { "reviewedBy", review.reviewer }, { "reviewedAt", review.approvedAt }, { "state", "approved" } };
+        std::ofstream(legacy, std::ios::binary) << record.dump(1);
+    }
+    MediaLibrary library;
+    const bool haveLibrary = ReadMediaLibrary(MediaLibraryPath(_showDir), library, error);
+    if (haveLibrary && !neverUse.empty()) {
+        for (const std::string& id : neverUse) {
+            if (MediaItem* m = library.Find(id); m != nullptr) {
+                m->disabled = true; // a person's permanent choice, not something learned
+            }
+        }
+        (void)SaveMediaLibrary(MediaLibraryPath(_showDir), library, error);
+    }
+    ArtisticPreferences prefs = ShowPreferences();
+    if (LearnFromReview(prefs, review, haveLibrary ? &library : nullptr, _result.plan.profileId) > 0) {
+        (void)SetShowPreferences(prefs);
+    }
+    RefreshResult();
+    return true;
+}
+
+void ShowComposerDialog::ApplyReview(const VisualReview& review) {
+    VisualMediaStoryboard board;
+    std::string error;
+    const json j = _result.storyboard.empty() ? json() : json::parse(_result.storyboard, nullptr, false);
+    if (!j.is_object() || !StoryboardFrom(j, board, error)) {
+        return;
+    }
+    for (const MediaCorrection& c : ReviewCorrections(review, board)) {
+        UpsertMediaCorrection(_corrections.media, c);
+    }
+    _corrections.review = review;
+    // A new version beside this one: generation never replaces a file.
+    const fs::path stem = fs::path(_resultSequence).stem();
+    std::string base = stem.string();
+    if (const size_t v = base.rfind("-v"); v != std::string::npos && v + 2 < base.size() && std::all_of(base.begin() + static_cast<long>(v) + 2, base.end(), ::isdigit)) {
+        base = base.substr(0, v);
+    }
+    for (int n = 2; n < 1000; ++n) {
+        const std::string name = fmt::format("{}-v{}.xsq", base, n);
+        if (!FileExists((fs::path(_showDir) / name).string())) {
+            SetSequenceName(name);
+            break;
+        }
+    }
+    StartGeneration();
+}
+
+ReviewContext ShowComposerDialog::MakeReviewContext() const {
+    ReviewContext c;
+    c.sequence = fs::path(_resultSequence).filename().string();
+    c.song = fs::path(_audioPath).filename().string();
+    c.durationMS = _result.hasPlan ? _result.plan.durationMS : 0;
+    VisualMediaStoryboard board;
+    std::string error;
+    const json j = _result.storyboard.empty() ? json() : json::parse(_result.storyboard, nullptr, false);
+    if (j.is_object() && StoryboardFrom(j, board, error)) {
+        for (const StoryboardLane& l : board.lanes) {
+            c.screens.push_back(l.target + " (" + S(ScreenRoleNameOf(l.screen)) + ")");
+        }
+        c.transitions = board.stats.transitions;
+        int doubtful = 0;
+        for (const StoryboardShot& s : board.shots) {
+            doubtful += s.level == "doubtful" ? 1 : 0;
+        }
+        if (doubtful > 0) {
+            c.warnings.push_back(wxString::Format(_("%d shots the program was not sure about."), doubtful));
+        }
+    }
+    const json screens = _result.screens.empty() ? json() : json::parse(_result.screens, nullptr, false);
+    if (screens.is_object()) {
+        SurfacePlan sp;
+        for (const json& x : screens.value("warnings", json::array())) {
+            sp.warnings.push_back(x.get<std::string>());
+        }
+        for (const wxString& line : ScreenWarnings(sp)) {
+            c.warnings.push_back(line);
+        }
+    }
+    return c;
+}
+
+void ShowComposerDialog::EditReview() {
+    if (_resultSequence.empty()) {
+        return;
+    }
+    const VisualReview current = ResultReview();
+    if (current.clips.empty() && current.state != "approved") {
+        wxMessageBox(_("This show has no pictures or videos to review. Watch it in xLights before showing it."), _("Review the Pictures and Videos"), wxOK | wxICON_INFORMATION, this);
+    }
+    MediaLibrary library;
+    std::string error;
+    (void)ReadMediaLibrary(MediaLibraryPath(_showDir), library, error);
+    ReviewDialog dialog(this, current, MakeReviewContext(), library, _showDir);
+    if (dialog.ShowModal() != wxID_OK) {
+        return;
+    }
+    if (SaveReview(dialog.Review(), dialog.NeverUse()) && dialog.ApplyAsked()) {
+        ApplyReview(dialog.Review());
+    }
+}
+
+void ShowComposerDialog::EditPreferences() {
+    if (_showDir.empty()) {
+        return;
+    }
+    MediaLibrary library;
+    std::string error;
+    const bool have = ReadMediaLibrary(MediaLibraryPath(_showDir), library, error);
+    PreferencesDialog dialog(this, ShowPreferences(), have ? &library : nullptr);
+    if (dialog.ShowModal() == wxID_OK) {
+        (void)SetShowPreferences(dialog.Preferences());
     }
 }
 

@@ -36,6 +36,9 @@
 
 #include "utils/ExternalHooks.h"
 #include "composer/MediaAnalysis.h"
+#include "composer/MediaValidation.h"
+#include "composer/VisualModel.h"
+#include "ComposerReviewDialogs.h"
 #include "ComposerStoryboard.h"
 
 namespace fs = std::filesystem;
@@ -260,6 +263,40 @@ MediaLibraryDialog::MediaLibraryDialog(wxWindow* parent, const std::string& show
     side->Add(_tags, 0, wxEXPAND | wxBOTTOM, 6);
     _disabled = new wxCheckBox(this, wxID_ANY, _("Only when I choose it (never automatically)"));
     side->Add(_disabled, 0, wxBOTTOM, 6);
+    auto* labels = new wxButton(this, wxID_ANY, _("What It Shows..."));
+    side->Add(labels, 0, wxEXPAND | wxBOTTOM, 4);
+    auto* measure = new wxButton(this, wxID_ANY, _("How Well the Program Sees..."));
+    side->Add(measure, 0, wxEXPAND | wxBOTTOM, 6);
+    labels->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        StoreSelected();
+        const MediaItem* m = _library.Find(_selected);
+        if (m == nullptr) {
+            return;
+        }
+        VisualConcepts concepts;
+        std::string error;
+        (void)ReadVisualConcepts(DefaultVisualConceptsPath(), concepts, error);
+        MediaLabelsDialog dialog(this, *m, _showDir, concepts);
+        if (dialog.ShowModal() == wxID_OK) {
+            (void)SetSelectedLabels(dialog.Labels());
+        }
+    });
+    measure->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const MediaValidationSet set = MediaValidationSetFromLibrary(_library);
+        const MediaValidationMetrics m = EvaluateMediaValidation(set, "person", 3);
+        wxString text;
+        if (m.files == 0) {
+            text = _("No file has been labelled completely yet: open a file with \"What It Shows...\", say what is really there and tick \"I went through everything it shows\".");
+        } else {
+            text = wxString::Format(_("Measured on %d files you labelled (duplicates counted once).\nOf what the program said first, %.0f%% was right; of what is really there, it saw %.0f%%."), m.files,
+                                    m.precision * 100, m.recall * 100);
+            if (!m.reliable) {
+                text += "\n\n" + wxString::Format(_("Only %d files: label at least %d before trusting these numbers."), m.files, MIN_VALIDATION_FILES);
+            }
+            text += "\n\n" + _("Details:") + "\n" + U(ModelReport());
+        }
+        wxMessageBox(text, _("How Well the Program Sees"), wxOK | wxICON_INFORMATION, this);
+    });
     body->Add(side, 0, wxEXPAND);
     sizer->Add(body, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
     sizer->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 8);
@@ -452,6 +489,21 @@ void MediaLibraryDialog::StoreSelected() {
         m->categorySource = "manual";
         m->reviewed = true;
     }
+}
+
+bool MediaLibraryDialog::SetSelectedLabels(const MediaHumanLabels& labels) {
+    MediaItem* m = _library.Find(_selected);
+    if (m == nullptr) {
+        return false;
+    }
+    m->human = labels;
+    ShowSelected();
+    return true;
+}
+
+std::string MediaLibraryDialog::ModelReport() const {
+    const MediaValidationSet set = MediaValidationSetFromLibrary(_library);
+    return MediaValidationReport(set, { EvaluateMediaValidation(set, "person", 3) });
 }
 
 std::vector<std::string> MediaLibraryDialog::SelectedIds() const {

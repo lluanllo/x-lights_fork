@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "composer/ArtisticPreferences.h"
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
 #include "composer/MediaAnalysis.h"
@@ -35,6 +36,7 @@ class ComposerTimeline;
 class MediaAnalysisRunner;
 class ModelDownloadRunner;
 class StoryboardView;
+struct ReviewContext;
 class wxButton;
 class wxCheckBox;
 class wxChoice;
@@ -174,6 +176,16 @@ public:
     // The voices and phrases the voice editor starts from, from the last analysis.
     [[nodiscard]] std::vector<composer::VoiceDef> CurrentVoices() const;
     void OpenResult(); // what "Open the Sequence in xLights" does
+    // The review of the result's pictures and videos, kept in its sidecar.
+    [[nodiscard]] composer::VisualReview ResultReview() const;
+    // Keeps a review: in the sidecar (and the old approval file once approved), what it
+    // teaches in the show's preferences, and the files never to use in the library.
+    bool SaveReview(const composer::VisualReview& review, const std::vector<std::string>& neverUse);
+    // The review's corrections applied: the same show made again as a new version, with
+    // the approved shots kept and the rejected ones chosen again.
+    void ApplyReview(const composer::VisualReview& review);
+    [[nodiscard]] composer::ArtisticPreferences ShowPreferences() const;
+    bool SetShowPreferences(const composer::ArtisticPreferences& prefs);
     // Lets a UI test drive the window once it exists; called at the end of the constructor.
     static std::function<void(ShowComposerDialog*)>& OpenedHook();
 
@@ -229,6 +241,9 @@ private:
     void OnFigureSelected(wxListEvent& event);
     void EditMediaLibrary();
     void EditScreens();
+    void EditReview();
+    void EditPreferences();
+    [[nodiscard]] ReviewContext MakeReviewContext() const;
     void EditVoices();
     void ChangeMedia(int action);
     void GetVisualModel();

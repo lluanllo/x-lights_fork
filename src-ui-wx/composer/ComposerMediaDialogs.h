@@ -53,6 +53,10 @@ public:
     int ApplyCategoriesToSelected();
     bool SaveLibrary();
     void SetQuiet(bool quiet) { _quiet = quiet; }
+    // A person's labels for the selected file (what "What It Shows..." keeps).
+    bool SetSelectedLabels(const composer::MediaHumanLabels& labels);
+    // How well the program sees, measured only against files a person labelled.
+    [[nodiscard]] std::string ModelReport() const;
 
 private:
     void Refill();
