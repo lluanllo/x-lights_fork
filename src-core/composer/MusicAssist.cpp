@@ -714,9 +714,9 @@ TranscriptLrc TranscriptToLrc(const Transcript& t, int durationMS) {
             l.text = Trimmed(s);
             l.doubtful = unsure;
             l.why = why;
-            // The same word twice in a row, with nothing between ("voy voy camino camino"):
-            // two voices heard at once and written as one. A refrain with commas ("tuqui,
-            // tuqui") is sung that way and is not counted.
+            // The same word twice in a row, with nothing between ("va va camino camino"):
+            // two voices heard at once and written as one. A refrain with commas ("din,
+            // din") is sung that way and is not counted.
             {
                 std::istringstream in(l.text);
                 std::string w, prev;

@@ -423,13 +423,13 @@ private:
         Transcript t;
         t.durationMS = 60000;
         t.segments = { { " Subtítulos realizados por la comunidad de Amara.org", 0, 4000, -0.9, 0.3 },
-                       { "Con mi burrito vengo cantando", 5000, 8000, -0.2, 0.05 },
+                       { "Luces en la ventana encendidas", 5000, 8000, -0.2, 0.05 },
                        { "algo que no se entiende", 12000, 14000, -1.4, 0.2 },
-                       { "Ya voy, ya voy", 20000, 22000, -1.6, 0.9 },
+                       { "Ya llego, ya llego", 20000, 22000, -1.6, 0.9 },
                        { "uno dos tres cuatro cinco seis siete ocho", 30000, 42000, -0.3, 0.1 },
                        { "y la última se sale", 57000, 63000, -0.3, 0.1 },
-                       { "voy voy camino camino de Belén", 15000, 18000, -0.2, 0.05 },
-                       { "Tuqui, tuqui, tuqui, tuqui, ta", 24000, 27000, -0.2, 0.05 } };
+                       { "va va camino camino del pueblo", 15000, 18000, -0.2, 0.05 },
+                       { "Din, din, din, din, don", 24000, 27000, -0.2, 0.05 } };
         const int ws[][2] = { { 30000, 30500 }, { 30600, 31000 }, { 31200, 31600 }, { 31800, 32300 }, { 36000, 36500 }, { 36600, 37200 }, { 37300, 37800 }, { 37900, 41800 } };
         const char* names[] = { "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho" };
         for (int i = 0; i < 8; ++i) {
@@ -437,20 +437,20 @@ private:
         }
         const TranscriptLrc lrc = TranscriptToLrc(t, 60000);
         const auto has = [&](const std::string& s) { return std::any_of(lrc.lines.begin(), lrc.lines.end(), [&](const TranscriptLrcLine& l) { return l.text == s; }); };
-        Check(lrc.dropped.size() == 2 && !has("Subtítulos realizados por la comunidad de Amara.org") && !has("Ya voy, ya voy"),
+        Check(lrc.dropped.size() == 2 && !has("Subtítulos realizados por la comunidad de Amara.org") && !has("Ya llego, ya llego"),
               "words written over music and a segment with no voice are left out, and said so");
-        Check(has("Con mi burrito vengo cantando") && !lrc.lines.empty() && !lrc.lines.front().doubtful, "a clear sung line is kept as heard");
+        Check(has("Luces en la ventana encendidas") && !lrc.lines.empty() && !lrc.lines.front().doubtful, "a clear sung line is kept as heard");
         const auto line = [&](const std::string& s) {
             const auto it = std::find_if(lrc.lines.begin(), lrc.lines.end(), [&](const TranscriptLrcLine& l) { return l.text == s; });
             return it != lrc.lines.end() ? &*it : nullptr;
         };
         Check(line("algo que no se entiende") != nullptr && line("algo que no se entiende")->doubtful && !line("algo que no se entiende")->why.empty(), "an unsure line is kept and marked doubtful, with why");
         Check(has("uno dos tres cuatro") && has("cinco seis siete ocho"), "a 12 s line is split where the singing pauses");
-        Check(line("voy voy camino camino de Belén") != nullptr && line("voy voy camino camino de Belén")->doubtful && line("Tuqui, tuqui, tuqui, tuqui, ta") != nullptr &&
-                  !line("Tuqui, tuqui, tuqui, tuqui, ta")->doubtful,
+        Check(line("va va camino camino del pueblo") != nullptr && line("va va camino camino del pueblo")->doubtful && line("Din, din, din, din, don") != nullptr &&
+                  !line("Din, din, din, din, don")->doubtful,
               "words heard twice in a row (two voices at once) make a line doubtful; a refrain with commas does not");
         Check(lrc.lines.back().endMS <= 60000 && lrc.lrc.find("[01:00.00]") != std::string::npos, "nothing goes past the end of the song");
-        Check(lrc.lrc.rfind("[00:05.00]Con mi burrito vengo cantando\n", 0) == 0 && lrc.lrc.find("[00:08.00]\n") != std::string::npos, "LRC lines with their times, and an empty line where a pause follows");
+        Check(lrc.lrc.rfind("[00:05.00]Luces en la ventana encendidas\n", 0) == 0 && lrc.lrc.find("[00:08.00]\n") != std::string::npos, "LRC lines with their times, and an empty line where a pause follows");
         Check(lrc.lrc.find("Amara") == std::string::npos, "nothing invented, nothing filled in");
     }
 

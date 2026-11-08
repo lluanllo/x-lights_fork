@@ -1504,14 +1504,14 @@ private:
         // A line sung twice in a row (as in many carols) is two phrases on the matrix, not
         // one long effect the validator would refuse.
         const fs::path twice = _root / "dos-veces.lrc";
-        (void)WriteText(twice, "[00:02.00]Si me ven, si me ven\n[00:06.00]Si me ven, si me ven\n[00:10.00]\n");
+        (void)WriteText(twice, "[00:02.00]Nieve en el tejado, nieve en el tejado\n[00:06.00]Nieve en el tejado, nieve en el tejado\n[00:10.00]\n");
         GenerationRequest rt = Request("lrc-dos-veces");
         rt.lyricsPath = twice.string();
         const GenerationRun repeated = Generate(rt);
         std::map<std::string, int> shown;
         for (const ChoreographyEvent& e : repeated.choreography.events) {
             for (const auto& [k, v] : e.settings) {
-                if (e.effect == "Text" && k == "E_TEXTCTRL_Text" && v == "Si me ven, si me ven") {
+                if (e.effect == "Text" && k == "E_TEXTCTRL_Text" && v == "Nieve en el tejado, nieve en el tejado") {
                     ++shown[e.target];
                 }
             }
