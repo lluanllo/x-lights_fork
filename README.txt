@@ -12,6 +12,21 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: recipes read from finished shows (which effects run together on which
+                                 figures, in which layers) play in the new shows; a Recipes window to see them, mark
+                                 favourites, leave some out, say you reviewed one, correct a setting or read more
+    -enh (lluanllo)              Show Composer: an artistic director plans the whole song (where it builds and rests,
+                                 the recipe of each part, the same look when the music comes back, which figures lead
+                                 or rest) and the colours come from the song, with a slider towards Christmas colours,
+                                 a variety slider and optional colour ideas from the lyrics' text through Groq
+    -enh (lluanllo)              Show Composer: evaluate a whole show (a score, nine criteria or a quick opinion, notes)
+                                 and choose which observations become rules for the next shows
+    -bug (lluanllo)              Show Composer: one tempo per song instead of jumping to its double halfway, bars found
+                                 when the accents fall on beats 1 and 3, and the chorus, verses, bridge and interludes
+                                 found from the lyrics; you can say the pulse goes at half or double
+    -bug (lluanllo)              Show Composer: its render check now decodes videos as xLights does, so what it checks
+                                 and shows is what xLights plays; a screen given to pictures in free mode no longer
+                                 receives the lyrics; Bars no longer stays dark on a one-pixel line
     -enh (lluanllo)              Show Composer: a song with no lyrics gets them from what Groq hears (sung lines only,
                                  doubtful lines marked, nothing filled in), ready to read and correct before generating
     -bug (lluanllo)              Show Composer: a line sung twice in a row is shown twice instead of stopping the

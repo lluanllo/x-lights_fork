@@ -29,9 +29,9 @@ fine-grained — a menu entry, a dialog field, a gesture):
 | 09 Render & playback | 63 | 11 | 18 | 9 | 14 | No render dependency tracking (stale effects); no per-model render progress; no FSEQ version selector |
 | 10 Presets, views, jukebox | 56 | 14 | 15 | 6 | 3 | Preset formats don't interchange; jukebox ported 2026-08-10; no workspace layouts |
 | 11 Preferences & shortcuts | 33 | 19 | 51 | 0 | 2 | No unified settings surface — 33 parity settings scattered across six unrelated places (redo approved 2026-08-01; see Decisions) |
-| 12 AI, automation, scripting | 41 | 14 | 4 | 111 | 4 | AI at near-parity; automation/scripting at zero (no HTTP listener, no interpreter on iOS — App Intents is the sanctioned path); the fork's Show Composer window is desktop-only (r161) |
+| 12 AI, automation, scripting | 41 | 18 | 4 | 111 | 4 | AI at near-parity; automation/scripting at zero (no HTTP listener, no interpreter on iOS — App Intents is the sanctioned path); the fork's Show Composer window is desktop-only (r161) |
 | 13 Tools, diagnostics, help | 58 | 13 | 12 | 4 | 6 | Light test & Check Sequence share core engines; gaps are targeting trees, report export, crash-time capture |
-| **Total (01–13)** | **1024** | **293** | **346** | **168** | **88** | |
+| **Total (01–13)** | **1024** | **297** | **346** | **168** | **88** | |
 
 Theme 11 additionally has 8 ➖ rows. Theme 14 (reverse parity) now has **49** 🔵 rows with a
 14-rank desktop-adoption shortlist. Theme 15 has 143 desktop cross-OS rows with no iPad status.
