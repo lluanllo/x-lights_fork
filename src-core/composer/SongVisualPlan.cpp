@@ -198,46 +198,58 @@ double AnchorHue(const SongAnalysis& analysis, const SongVisualBrief* brief, std
     return 30;
 }
 
-ColorChoice ColorsForPart(double anchorHue, const std::string& kind, double energy, bool minor, double christmasInfluence, const std::vector<std::string>& briefColors) {
+double CompanionHue(double anchorHue, const SongVisualBrief* brief, std::string& reason) {
+    if (brief != nullptr) {
+        int coloured = 0;
+        for (const std::string& c : brief->colors) {
+            double s = 0;
+            const double h = HueOf(FromHex(c), s);
+            if (s < 0.25) {
+                continue;
+            }
+            // The first coloured one is the anchor; the next far enough from it is the companion.
+            if (++coloured >= 2 && std::fabs(std::fmod(h - anchorHue + 540.0, 360.0) - 180.0) >= 60) {
+                reason = fmt::format("the next colour the lyrics suggest ({})", c);
+                return h;
+            }
+        }
+    }
+    reason = "the anchor's near opposite";
+    return std::fmod(anchorHue + 150.0, 360.0);
+}
+
+ColorChoice ColorsForPart(double anchorHue, double companionHue, const std::string& kind, double energy, bool minor, double christmasInfluence) {
+    // Two hues carry a whole song, as in the references (two hues hold most of the
+    // colour time): the anchor and its companion, each full or light; the parts change
+    // which one leads, and white crowns the chorus.
     struct Shape {
-        std::vector<double> offsets;
+        std::string tones; // A anchor, a anchor light, C companion, c companion light
         double saturation;
         double value;
         bool white;
         const char* why;
     };
     static const std::map<std::string, Shape> SHAPES = {
-        // Two hues carry a whole song, as in the references (two hues hold most of the
-        // colour time): the anchor and its companion; the parts change which leads.
-        { "intro", { { 0 }, 0.55, 0.7, false, "the anchor alone, soft: the show starts quiet" } },
-        { "verse", { { 0, 30 }, 0.75, 0.8, false, "the anchor and its neighbour: a verse tells, it does not shout" } },
-        { "pre-chorus", { { 0, 150 }, 0.85, 0.85, false, "the companion appears: the chorus is coming" } },
-        { "chorus", { { 0, 150 }, 0.95, 1.0, true, "the anchor against its companion, with white: the chorus is the fullest" } },
-        { "bridge", { { 150, 180 }, 0.8, 0.85, false, "the companion leads: the bridge goes somewhere else" } },
-        { "interlude", { { 150, 0 }, 0.6, 0.75, false, "the companion, soft: a pause without words" } },
-        { "instrumental", { { 150, 0 }, 0.7, 0.85, false, "the companion first: the music without words" } },
-        { "outro", { { 0 }, 0.5, 0.65, false, "back to the anchor, soft: the close" } },
+        { "intro", { "A", 0.55, 0.7, false, "the anchor alone, soft: the show starts quiet" } },
+        { "verse", { "Aa", 0.75, 0.8, false, "the anchor, full and light: a verse tells, it does not shout" } },
+        { "pre-chorus", { "AC", 0.85, 0.85, false, "the companion appears: the chorus is coming" } },
+        { "chorus", { "AC", 0.95, 1.0, true, "the anchor against its companion, with white: the chorus is the fullest" } },
+        { "bridge", { "Cc", 0.8, 0.85, false, "the companion leads: the bridge goes somewhere else" } },
+        { "interlude", { "CA", 0.6, 0.75, false, "the companion, soft: a pause without words" } },
+        { "instrumental", { "CA", 0.7, 0.85, false, "the companion first: the music without words" } },
+        { "outro", { "A", 0.5, 0.65, false, "back to the anchor, soft: the close" } },
     };
     const std::string shapeKind = SHAPES.contains(kind) ? kind : energy >= 0.65 ? "chorus" : energy < 0.35 ? "intro" : "verse";
     const Shape& shape = SHAPES.at(shapeKind);
     const double hueShift = minor ? -20.0 : 0.0;
     const double s = std::clamp(shape.saturation * (minor ? 0.9 : 1.0), 0.0, 1.0);
     const double v = std::clamp(shape.value * (0.75 + 0.25 * energy), 0.35, 1.0);
-    ColorChoice out;
-    std::vector<Rgb> colours;
-    for (double offset : shape.offsets) {
-        colours.push_back(FromHsv(anchorHue + offset + hueShift, s, v));
-    }
-    // A colour the lyrics name joins the chorus and the verses, after the anchor.
-    if (!briefColors.empty() && (shapeKind == "chorus" || shapeKind == "verse")) {
-        colours.insert(colours.begin() + 1, FromHex(briefColors[std::min<size_t>(briefColors.size() - 1, shapeKind == "chorus" ? 1 : 0)]));
-    }
     const double influence = std::clamp(christmasInfluence, 0.0, 1.0);
-    for (Rgb& c : colours) {
-        c = TowardsChristmas(c, influence);
-    }
-    for (const Rgb& c : colours) {
-        const std::string hex = Hex(c);
+    ColorChoice out;
+    for (char tone : shape.tones) {
+        const double hue = (tone == 'A' || tone == 'a' ? anchorHue : companionHue) + hueShift;
+        const bool light = tone == 'a' || tone == 'c';
+        const std::string hex = Hex(TowardsChristmas(FromHsv(hue, light ? s * 0.55 : s, light ? std::min(1.0, v + 0.1) : v), influence));
         if (std::find(out.colors.begin(), out.colors.end(), hex) == out.colors.end()) {
             out.colors.push_back(hex);
         }
@@ -245,7 +257,7 @@ ColorChoice ColorsForPart(double anchorHue, const std::string& kind, double ener
     if (shape.white) {
         out.colors.push_back("#FFFFFF");
     }
-    out.accent = shape.white ? "#FFFFFF" : Hex(TowardsChristmas(FromHsv(anchorHue + 180 + hueShift, 0.6, 1.0), influence));
+    out.accent = shape.white ? "#FFFFFF" : Hex(TowardsChristmas(FromHsv(companionHue + hueShift, 0.6, 1.0), influence));
     out.reason = fmt::format("{}; {}{}", shape.why, minor ? "minor key, a little cooler; " : "", influence <= 0 ? std::string("the song's own colours") : fmt::format("{:.0f}% towards the Christmas colours", influence * 100));
     return out;
 }
@@ -262,7 +274,10 @@ SongVisualPlan PlanSongVisuals(const VisualPlanInput& in) {
     const ShowVisualDirection& d = *in.direction;
     p.briefSource = in.brief != nullptr ? in.brief->source : std::string();
     const double anchor = AnchorHue(*in.analysis, in.brief, p.anchorReason);
+    std::string companionReason;
+    const double companion = CompanionHue(anchor, in.brief, companionReason);
     p.anchorHue = fmt::format("{:.0f}", anchor);
+    p.anchorReason += fmt::format("; companion {:.0f}, {}", companion, companionReason);
     const bool minor = in.analysis->key.find("minor") != std::string::npos;
 
     std::vector<const PlanSegment*> music;
@@ -441,7 +456,7 @@ SongVisualPlan PlanSongVisuals(const VisualPlanInput& in) {
             const auto again = coloursByRepeat.find(s.repeatGroup);
             const ColorChoice c = s.repeatGroup >= 0 && again != coloursByRepeat.end()
                                       ? again->second
-                                      : ColorsForPart(anchor, s.sectionKind, scene.arc, minor, in.options.christmasInfluence, in.brief != nullptr ? in.brief->colors : std::vector<std::string>());
+                                      : ColorsForPart(anchor, companion, s.sectionKind, scene.arc, minor, in.options.christmasInfluence);
             if (s.repeatGroup >= 0) {
                 coloursByRepeat.try_emplace(s.repeatGroup, c);
             }

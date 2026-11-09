@@ -270,16 +270,31 @@ private:
         brief.source = "local";
         brief.colors = { "#FFFFFF", "#1E6BFF" };
         Check(std::fabs(AnchorHue(a, &brief, reason) - HueOfHex("#1E6BFF")) < 1, "the first coloured colour of the lyrics wins over the key (white is not a hue)");
-        const ColorChoice verse = ColorsForPart(60, "verse", 0.5, true, 0, {});
-        const ColorChoice verseMajor = ColorsForPart(60, "verse", 0.5, false, 0, {});
-        const ColorChoice chorus = ColorsForPart(60, "chorus", 0.9, true, 0, {});
-        const ColorChoice christmas = ColorsForPart(60, "chorus", 0.9, true, 1, {});
+        const ColorChoice verse = ColorsForPart(60, 210, "verse", 0.5, true, 0);
+        const ColorChoice verseMajor = ColorsForPart(60, 210, "verse", 0.5, false, 0);
+        const ColorChoice chorus = ColorsForPart(60, 210, "chorus", 0.9, true, 0);
+        const ColorChoice christmas = ColorsForPart(60, 210, "chorus", 0.9, true, 1);
         Check(verse.colors != verseMajor.colors, "a minor key changes them");
         Check(std::find(chorus.colors.begin(), chorus.colors.end(), "#FFFFFF") != chorus.colors.end() && verse.colors != chorus.colors, "the chorus is fuller than the verse, with white");
-        Check(ColorsForPart(60, "verse", 0.5, true, 0, {}).colors == verse.colors, "the same inputs give the same colours");
+        Check(ColorsForPart(60, 210, "verse", 0.5, true, 0).colors == verse.colors, "the same inputs give the same colours");
         static const std::set<std::string> POLE = { "#D0001A", "#00A33D", "#FFB627", "#FFFFFF" };
         Check(std::all_of(christmas.colors.begin(), christmas.colors.end(), [](const std::string& c) { return POLE.contains(c); }), "at 100% every colour is a Christmas one");
         Check(christmas.colors != chorus.colors && christmas.reason.find("100%") != std::string::npos, "and the slider says so");
+        std::string why;
+        Check(std::fabs(CompanionHue(60, nullptr, why) - 210) < 0.01, "without colours from the lyrics the companion is the anchor's near opposite");
+        SongVisualBrief two;
+        two.source = "local";
+        two.colors = { "#FF0000", "#FF3300", "#0000FF" };
+        Check(std::fabs(CompanionHue(0, &two, why) - 240) < 1, "with them, the next one far enough from the anchor");
+        std::set<int> steps;
+        for (const char* part : { "intro", "verse", "pre-chorus", "chorus", "bridge", "interlude", "outro" }) {
+            for (const std::string& c : ColorsForPart(60, 210, part, 0.6, false, 0).colors) {
+                if (c != "#FFFFFF") {
+                    steps.insert(static_cast<int>(std::lround(HueOfHex(c) / 30.0)) % 12);
+                }
+            }
+        }
+        Check(steps.size() == 2, fmt::format("a whole song in two hues and white ({} hue steps)", steps.size()));
     }
 
     static double HueOfHex(const std::string& hex) {

@@ -1319,9 +1319,13 @@ bool ChoreographShow(GenerationRun& run) {
                     taught = EffectivePreferences(prefs);
                 }
             }
+            // Without a person's setting, how Christmas the colours go starts from how
+            // Christmas the song itself is, when the brief knows it.
+            const double christmasBase = !run.brief.Empty() && run.brief.christmas >= 0 ? 0.15 + 0.7 * run.brief.christmas : 0.5;
             const auto start = [&](const char* key) {
+                const double base = std::string(key) == "director.christmas" ? christmasBase : 0.5;
                 const auto it = taught.find(key);
-                return it == taught.end() ? 0.5 : std::clamp(0.5 + 0.3 * it->second, 0.0, 1.0);
+                return it == taught.end() ? base : std::clamp(base + 0.3 * it->second, 0.0, 1.0);
             };
             vp.options.recipes = r.useRecipes.value_or(run.hasPrevious ? before.recipes : true);
             vp.options.colorEngine = r.colorEngine.value_or(run.hasPrevious ? before.colorEngine : true);

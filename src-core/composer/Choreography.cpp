@@ -308,7 +308,8 @@ private:
             // The scene's colours for every figure, each starting from a different one so
             // neighbours are not identical.
             const std::vector<std::string>& colors = _scene->colors;
-            const int count = std::clamp(_profile.ensemble.colorsPerEvent, std::max(1, t.minColors), std::max(1, std::min<int>(t.maxColors, static_cast<int>(colors.size()))));
+            const int most = std::max(1, std::min<int>(t.maxColors, static_cast<int>(colors.size())));
+            const int count = std::clamp(_profile.ensemble.colorsPerEvent, std::min(most, std::max(1, t.minColors)), most);
             e.colors.clear();
             for (int k = 0; k < count; ++k) {
                 e.colors.push_back(colors[(static_cast<size_t>(rank) + k) % colors.size()]);

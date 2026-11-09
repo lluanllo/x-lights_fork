@@ -110,10 +110,13 @@ struct ColorChoice {
     std::string accent;
     std::string reason;
 };
-[[nodiscard]] ColorChoice ColorsForPart(double anchorHue, const std::string& sectionKind, double energy, bool minor, double christmasInfluence, const std::vector<std::string>& briefColors);
+[[nodiscard]] ColorChoice ColorsForPart(double anchorHue, double companionHue, const std::string& sectionKind, double energy, bool minor, double christmasInfluence);
 // The hue a song's colours start from: the brief's colours, else its key on the circle
 // of fifths (a convention, said as such), else a neutral warm.
 [[nodiscard]] double AnchorHue(const SongAnalysis& analysis, const SongVisualBrief* brief, std::string& reason);
+// The second hue: the next colour the lyrics suggest far enough from the anchor, else the
+// anchor's near opposite.
+[[nodiscard]] double CompanionHue(double anchorHue, const SongVisualBrief* brief, std::string& reason);
 
 [[nodiscard]] std::string ToJson(const SongVisualPlan& plan);
 [[nodiscard]] std::string VisualPlanReport(const SongVisualPlan& plan);

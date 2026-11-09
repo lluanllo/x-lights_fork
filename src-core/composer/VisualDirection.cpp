@@ -545,6 +545,32 @@ std::string DirectionReport(const ShowVisualDirection& d) {
     return out;
 }
 
+// The hue of a colour in the twelve steps the reference study measured, white, grey and
+// black apart: shades of one hue are one hue, as the references' "two hues" counted them.
+static std::string HueStep(const std::string& hex) {
+    if (hex.size() != 7 || hex[0] != '#') {
+        return hex;
+    }
+    const int r = static_cast<int>(std::strtol(hex.substr(1, 2).c_str(), nullptr, 16));
+    const int g = static_cast<int>(std::strtol(hex.substr(3, 2).c_str(), nullptr, 16));
+    const int b = static_cast<int>(std::strtol(hex.substr(5, 2).c_str(), nullptr, 16));
+    const int mx = std::max({ r, g, b });
+    const int mn = std::min({ r, g, b });
+    if (mx < 30) {
+        return "black";
+    }
+    if (mx - mn < 0.2 * mx) {
+        return mx > 170 ? "white" : "grey";
+    }
+    const double d = mx - mn;
+    double h = mx == r ? std::fmod((g - b) / d, 6.0) : mx == g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) {
+        h += 360;
+    }
+    return std::to_string(static_cast<int>(std::lround(h / 30.0)) % 12);
+}
+
 DirectionMetrics MeasureDirection(const ShowVisualDirection& d, const Choreography& c, const ModelCapabilities& caps) {
     DirectionMetrics m;
     if (c.events.empty()) {
@@ -571,7 +597,7 @@ DirectionMetrics MeasureDirection(const ShowVisualDirection& d, const Choreograp
             inScene += len;
         }
         for (const std::string& col : e.colors) {
-            hueTime[col] += len / e.colors.size();
+            hueTime[HueStep(col)] += len / e.colors.size();
         }
     }
     m.layersUsed = static_cast<int>(layers.size());

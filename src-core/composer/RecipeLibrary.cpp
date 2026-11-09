@@ -513,7 +513,8 @@ std::vector<EffectTemplate> RecipeTemplates(const RecipeLibrary& library, const 
                 if (t.transitions.empty()) {
                     t.transitions = { "Fade" };
                 }
-                t.minColors = 1;
+                // As many colours as the source used: a recipe of two colours is not one of one.
+                t.minColors = std::clamp(r.colors, 1, 3);
                 t.maxColors = std::clamp(r.colors, 1, 4);
                 t.paletteFamilies = { "festive", "warm", "cool", "soft" };
                 // Only the effect's own settings: a group's buffer style stays in the recipe
