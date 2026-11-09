@@ -55,6 +55,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ComposerMediaDialogs.h"
+#include "ComposerRecipeDialogs.h"
 #include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
 #include "ComposerStoryboard.h"
@@ -137,6 +138,7 @@ enum {
     ID_LANE_LOCK,
     ID_REVIEW_CLIPS,
     ID_LEARNED,
+    ID_RECIPES,
 };
 
 // Logs a handler of the window that kept it from answering for long: the window must
@@ -687,6 +689,24 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     _level->SetSelection(1);
     style->Add(_level, 0, wxEXPAND | wxALL, 4);
     style->Add(Muted(style->GetStaticBox(), _("The same song, installation, lyrics, level and seed always give the same show.")), 0, wxLEFT | wxBOTTOM, 6);
+    auto* director = new wxFlexGridSizer(4, 6, 8);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("Colours:")), 0, wxALIGN_CENTER_VERTICAL);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("the song's own")), 0, wxALIGN_CENTER_VERTICAL);
+    _christmas = new wxSlider(style->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxSize(200, -1));
+    director->Add(_christmas, 0, wxALIGN_CENTER_VERTICAL);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("Christmas")), 0, wxALIGN_CENTER_VERTICAL);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("Variety:")), 0, wxALIGN_CENTER_VERTICAL);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("keep an idea")), 0, wxALIGN_CENTER_VERTICAL);
+    _variety = new wxSlider(style->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxSize(200, -1));
+    director->Add(_variety, 0, wxALIGN_CENTER_VERTICAL);
+    director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("change often")), 0, wxALIGN_CENTER_VERTICAL);
+    style->Add(director, 0, wxALL, 4);
+    auto* recipes = new wxBoxSizer(wxHORIZONTAL);
+    _useRecipes = new wxCheckBox(style->GetStaticBox(), wxID_ANY, _("Use recipes from the reference shows"));
+    _useRecipes->SetValue(true);
+    recipes->Add(_useRecipes, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+    recipes->Add(new wxButton(style->GetStaticBox(), ID_RECIPES, _("Recipes...")), 0);
+    style->Add(recipes, 0, wxALL, 4);
     auto* look = new wxBoxSizer(wxHORIZONTAL);
     _swatch = new wxPanel(style->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(220, 26), wxBORDER_SIMPLE);
     _swatch->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
@@ -817,6 +837,7 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         }
         StartAssist("describe", AskConsent("Google Gemini (generativelanguage.googleapis.com)", _("to describe its genre, mood and energy; it is only a suggestion and never changes the analysis")));
     }, ID_DESCRIBE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditRecipes(); }, ID_RECIPES);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditScreens(); }, ID_SCREENS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
@@ -1986,6 +2007,13 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     if (_mediaVariant != 0) {
         add("--media-variant", std::to_string(_mediaVariant));
     }
+    if (_christmas != nullptr) {
+        add("--christmas", std::to_string(_christmas->GetValue()));
+        add("--variety", std::to_string(_variety->GetValue()));
+        if (!_useRecipes->GetValue()) {
+            a.push_back("--no-recipes");
+        }
+    }
     // A copy is made only by the generation the person asked for, never by a preview.
     if (_copyMedia != nullptr && _copyMedia->GetValue() && stopAfter.empty()) {
         a.push_back("--copy-media");
@@ -1998,7 +2026,8 @@ std::string ShowComposerDialog::InputsKey() const {
                        _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath) +
            fmt::format("|{}|{}", std::accumulate(_mediaFolders.begin(), _mediaFolders.end(), std::string(), [](std::string x, const std::string& y) { return x + ";" + y; }),
                        _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0) +
-           fmt::format("|{}|{}", _mediaVariant, _mediaStamp);
+           fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
+           (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string());
 }
 
 void ShowComposerDialog::RunNext() {
@@ -3705,6 +3734,44 @@ void ShowComposerDialog::EditPreferences() {
     PreferencesDialog dialog(this, ShowPreferences(), have ? &library : nullptr);
     if (dialog.ShowModal() == wxID_OK) {
         (void)SetShowPreferences(dialog.Preferences());
+    }
+}
+
+std::set<std::string> ShowComposerDialog::HouseFamilies() const {
+    std::set<std::string> families;
+    for (const TargetInfo& t : _capabilities.targets) {
+        if (t.type == TargetType::Model && !t.Excluded() && !t.noController) {
+            families.insert(FamilyIdOf(t));
+        }
+    }
+    return families;
+}
+
+void ShowComposerDialog::SetDirector(int christmas, int variety, bool recipes) {
+    _christmas->SetValue(christmas);
+    _variety->SetValue(variety);
+    _useRecipes->SetValue(recipes);
+}
+
+void ShowComposerDialog::EditRecipes() {
+    if (_showDir.empty()) {
+        return;
+    }
+    const std::string path = RecipeLibraryPath(_showDir);
+    RecipeLibrary library;
+    std::string error;
+    if (FileExists(path) && !ReadRecipeLibrary(path, library, error)) {
+        wxMessageBox(wxString::Format(_("The recipes of this show could not be read: %s"), U(error)), _("Recipes"), wxOK | wxICON_WARNING, this);
+        return;
+    }
+    RecipesDialog dialog(this, library, HouseFamilies(), MetadataFrom(_frame->GetEffectManager()), _showDir);
+    if (dialog.ShowModal() == wxID_OK && dialog.Changed()) {
+        if (!SaveRecipeLibrary(path, dialog.Library(), error)) {
+            wxMessageBox(wxString::Format(_("The recipes could not be saved: %s"), U(error)), _("Recipes"), wxOK | wxICON_WARNING, this);
+            return;
+        }
+        ++_recipesStamp;
+        RefreshAll();
     }
 }
 

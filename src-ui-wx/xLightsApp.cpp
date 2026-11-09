@@ -83,6 +83,8 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "composer/VisualTest.h"
 #include "composer/MusicAssist.h"
 #include "composer/LyricTest.h"
+#include "composer/RecipeLibrary.h"
+#include "composer/RecipeTest.h"
 #include "composer/ReferenceStudy.h"
 #include "composer/VisualDirection.h"
 #include "composer/PipelineTest.h"
@@ -1094,7 +1096,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test") {
             headlessArg = true;
             break;
         }
@@ -1265,6 +1267,16 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "analyze-media", "with --composer-generate: look at the pictures and videos again before planning (with --vision-model, also with the image-text model)" },
         { wxCMD_LINE_OPTION, "", "media-variant", "with --composer-generate: another visual montage from the same files (a number)" },
         { wxCMD_LINE_SWITCH, "", "no-learning", "with --composer-generate: ignore the show maker's preferences (ShowComposer/preferences.json)" },
+        { wxCMD_LINE_OPTION, "", "recipes", "with --composer-generate: a recipes.json instead of <show>/ShowComposer/recipes.json" },
+        { wxCMD_LINE_SWITCH, "", "no-recipes", "with --composer-generate: no recipes, only the templates" },
+        { wxCMD_LINE_SWITCH, "", "no-color-engine", "with --composer-generate: the theme's colours, not the ones made from the song" },
+        { wxCMD_LINE_OPTION, "", "christmas", "with --composer-generate: 0-100, how far the song's colours go towards the Christmas ones (50)" },
+        { wxCMD_LINE_OPTION, "", "variety", "with --composer-generate: 0-100, how much the recipes change from scene to scene (50)" },
+        { wxCMD_LINE_OPTION, "", "brief", "with --composer-generate: a song visual brief saved by the music assistant" },
+        { wxCMD_LINE_SWITCH, "", "composer-recipe-extract", "internal tool: read the recipes of a finished --sequence on its show (-s, a copy with all controllers inactive) into --out <recipes.json>, with --package and --authorship, and exit" },
+        { wxCMD_LINE_OPTION, "", "package", "with --composer-recipe-extract: the show's name, for provenance" },
+        { wxCMD_LINE_OPTION, "", "authorship", "with --composer-recipe-extract: who made the source" },
+        { wxCMD_LINE_SWITCH, "", "composer-recipe-test", "internal test: recipes, the artistic director and the colour engine under --out, and exit" },
         { wxCMD_LINE_OPTION, "", "screens-for", "with --composer-generate: installation (only screens wired to a controller get pictures automatically, the default) or preview" },
         { wxCMD_LINE_OPTION, "", "lyrics-mode", "with --composer-generate: how words and pictures share the screens: lyrics-first, smart or free" },
         { wxCMD_LINE_OPTION, "", "screens", "with --composer-generate: screen roles, \"Name=role;Name=role\" (main, secondary, tree, lyrics, narration, media, support, off)" },
@@ -2181,7 +2193,8 @@ bool xLightsApp::OnInit()
             { "corrections", &command.correctionsPath }, { "previous", &command.previousSidecarPath }, { "level", &command.level }, { "seed", &command.seed }, { "stop-after", &command.stopAfter },
             { "cancel-file", &command.cancelFile }, { "themes", &command.themesPath }, { "character", &command.characterPath }, { "transcript", &command.transcriptPath },
             { "media-folders", &command.mediaFolders }, { "media-share", &command.mediaShare }, { "vision-model", &command.visionModel }, { "media-variant", &command.mediaVariant },
-            { "lyrics-mode", &command.lyricsMode }, { "screens", &command.screens }, { "screens-for", &command.screensFor },
+            { "lyrics-mode", &command.lyricsMode }, { "screens", &command.screens }, { "screens-for", &command.screensFor }, { "recipes", &command.recipesPath },
+            { "christmas", &command.christmas }, { "variety", &command.variety }, { "brief", &command.briefPath },
         };
         for (const auto& [name, target] : options) {
             if (parser.Found(name, &value)) {
@@ -2194,6 +2207,8 @@ bool xLightsApp::OnInit()
         command.copyMedia = parser.Found("copy-media");
         command.analyzeMedia = parser.Found("analyze-media");
         command.noLearning = parser.Found("no-learning");
+        command.noRecipes = parser.Found("no-recipes");
+        command.noColorEngine = parser.Found("no-color-engine");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
             spdlog::error("--composer-generate requires a show directory (-s <dir>), --name <file>.xsq and --out <folder>");
             std::exit(2);
@@ -2229,6 +2244,44 @@ bool xLightsApp::OnInit()
         WxServiceSettingsStore keys;
         std::unique_ptr<composer::IHttpClient> client = composer::MakeCurlHttpClient();
         std::exit(composer::RunAssistCommand(options, *client, &keys));
+    }
+
+    if (parser.Found("composer-recipe-extract")) {
+        composer::RecipeExtractOptions options;
+        wxString value;
+        options.showDir = showDir.ToStdString(wxConvUTF8);
+        if (parser.Found("sequence", &value)) {
+            options.sequencePath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("out", &value)) {
+            options.outPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("package", &value)) {
+            options.package = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("authorship", &value)) {
+            options.authorship = value.ToStdString(wxConvUTF8);
+        }
+        if (options.showDir.empty() || options.sequencePath.empty() || options.outPath.empty() || options.package.empty()) {
+            spdlog::error("--composer-recipe-extract requires -s <show copy>, --sequence <xsq>, --package <name> and --out <recipes.json>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunRecipeExtraction(options));
+    }
+
+    if (parser.Found("composer-recipe-test")) {
+        wxString out;
+        if (!parser.Found("out", &out)) {
+            spdlog::error("--composer-recipe-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunRecipeTest(out.ToStdString(wxConvUTF8), showDir.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-reference-profile")) {

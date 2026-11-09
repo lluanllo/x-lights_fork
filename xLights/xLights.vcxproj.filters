@@ -86,6 +86,7 @@
     <ClCompile Include="..\src-ui-wx\composer\ComposerStoryboard.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerScreens.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerReviewDialogs.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerRecipeDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
@@ -131,6 +132,10 @@
     <ClCompile Include="..\src-core\composer\VisualModel.cpp" />
     <ClCompile Include="..\src-core\composer\VisualDirection.cpp" />
     <ClCompile Include="..\src-core\composer\ReferenceStudy.cpp" />
+    <ClCompile Include="..\src-core\composer\RecipeLibrary.cpp" />
+    <ClCompile Include="..\src-core\composer\RecipeExtraction.cpp" />
+    <ClCompile Include="..\src-core\composer\RecipeTest.cpp" />
+    <ClCompile Include="..\src-core\composer\SongVisualPlan.cpp" />
     <ClCompile Include="..\src-core\composer\MusicStructure.cpp" />
     <ClCompile Include="..\src-core\composer\AssistTest.cpp" />
     <ClCompile Include="..\src-core\composer\MusicAssist.cpp" />
@@ -1703,6 +1708,7 @@
     <ClInclude Include="..\src-ui-wx\composer\ComposerStoryboard.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerScreens.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerReviewDialogs.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerRecipeDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />
@@ -1751,6 +1757,9 @@
     <ClInclude Include="..\src-core\composer\VisualModel.h" />
     <ClInclude Include="..\src-core\composer\VisualDirection.h" />
     <ClInclude Include="..\src-core\composer\ReferenceStudy.h" />
+    <ClInclude Include="..\src-core\composer\RecipeLibrary.h" />
+    <ClInclude Include="..\src-core\composer\RecipeTest.h" />
+    <ClInclude Include="..\src-core\composer\SongVisualPlan.h" />
     <ClInclude Include="..\src-core\composer\MusicStructure.h" />
     <ClInclude Include="..\src-core\composer\AssistTest.h" />
     <ClInclude Include="..\src-core\composer\MusicAssist.h" />

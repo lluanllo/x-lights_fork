@@ -11804,3 +11804,192 @@ msgstr "Groq no ha oído palabras cantadas en esta canción: no se ha hecho ning
 
 msgid "No lyrics were given, so the lyrics are what Groq heard: %d phrases, %d of them doubtful, %d left out (not sung). Read them and correct them before generating: nothing was filled in from memory."
 msgstr "No había letra, así que la letra es lo que ha oído Groq: %d frases, %d de ellas dudosas, %d descartadas (no cantadas). Léela y corrígela antes de generar: no se ha completado nada de memoria."
+
+msgid "Strong"
+msgstr "Fuerte"
+
+msgid "for quiet parts"
+msgstr "para partes tranquilas"
+
+msgid "hits on the beat"
+msgstr "golpes al ritmo"
+
+msgid "a figure leads"
+msgstr "una figura manda"
+
+msgid "the whole house moves"
+msgstr "se mueve toda la casa"
+
+msgid "(hits)"
+msgstr "(golpes)"
+
+msgid "Arches"
+msgstr "Arcos"
+
+msgid "Trees"
+msgstr "Árboles"
+
+msgid "Figures"
+msgstr "Figuras"
+
+msgid "Props"
+msgstr "Adornos"
+
+msgid "Read from a show, not reviewed"
+msgstr "Leída de un espectáculo, sin revisar"
+
+msgid "Reviewed"
+msgstr "Revisada"
+
+msgid "Corrected by hand"
+msgstr "Corregida a mano"
+
+msgid "Made by the composer"
+msgstr "Hecha por el compositor"
+
+msgid "Recipes"
+msgstr "Recetas"
+
+msgid "A recipe is how a show combines effects on several figures at once. The composer plays them in its scenes; you choose which."
+msgstr "Una receta es cómo un espectáculo combina efectos en varias figuras a la vez. El compositor las usa en sus escenas; tú eliges cuáles."
+
+msgid "Every recipe"
+msgstr "Todas las recetas"
+
+msgid "The ones that fit my house"
+msgstr "Las que encajan en mi casa"
+
+msgid "Favourites"
+msgstr "Favoritas"
+
+msgid "Left out"
+msgstr "Apartadas"
+
+msgid "Recipe"
+msgstr "Receta"
+
+msgid "Use"
+msgstr "Para qué"
+
+msgid "Strength"
+msgstr "Fuerza"
+
+msgid "Seen"
+msgstr "Vista"
+
+msgid "Favourite"
+msgstr "Favorita"
+
+msgid "Do Not Use"
+msgstr "No usar"
+
+msgid "Use Again"
+msgstr "Volver a usar"
+
+msgid "I Have Reviewed It..."
+msgstr "La he revisado..."
+
+msgid "Correct a Setting..."
+msgstr "Corregir un ajuste..."
+
+msgid "Read Recipes from a Sequence..."
+msgstr "Leer recetas de una secuencia..."
+
+msgid "Who reviewed it? Only a person who looked at it in xLights should say so."
+msgstr "¿Quién la ha revisado? Solo debe decirlo una persona que la haya visto en xLights."
+
+msgid "A note (optional): what you liked or not."
+msgstr "Una nota (opcional): qué te ha gustado o no."
+
+msgid "Which effect?"
+msgstr "¿Qué efecto?"
+
+msgid "Correct a Setting"
+msgstr "Corregir un ajuste"
+
+msgid "The setting as xLights saves it, for example E_SLIDER_Spirals_Count:"
+msgstr "El ajuste tal como lo guarda xLights, por ejemplo E_SLIDER_Spirals_Count:"
+
+msgid "Its new value:"
+msgstr "Su nuevo valor:"
+
+msgid "Who makes the correction?"
+msgstr "¿Quién hace la corrección?"
+
+msgid "The correction was not accepted: %s"
+msgstr "No se ha aceptado la corrección: %s"
+
+msgid "%d recipes; %d fit this house, %d favourites, %d not used."
+msgstr "%d recetas; %d encajan en esta casa, %d favoritas, %d sin usar."
+
+msgid "Use: %s. Strength: %s. Seen %d times. Confidence %.0f%%."
+msgstr "Para qué: %s. Fuerza: %s. Vista %d veces. Confianza %.0f%%."
+
+msgid " by %s on %s"
+msgstr " por %s el %s"
+
+msgid "Who made the original: %s"
+msgstr "Quién hizo el original: %s"
+
+msgid "  from \"%s\", %.1f s to %.1f s"
+msgstr "  de «%s», del segundo %.1f al %.1f"
+
+msgid "This house does not have the figures this recipe needs."
+msgstr "Esta casa no tiene las figuras que necesita esta receta."
+
+msgid "Choose a finished sequence"
+msgstr "Elige una secuencia terminada"
+
+msgid "xLights sequences (*.xsq)|*.xsq"
+msgstr "Secuencias de xLights (*.xsq)|*.xsq"
+
+msgid "Its show folder (with xlights_rgbeffects.xml) was not found next to the sequence."
+msgstr "No se ha encontrado su carpeta del show (con xlights_rgbeffects.xml) junto a la secuencia."
+
+msgid "Read Recipes"
+msgstr "Leer recetas"
+
+msgid "Who made this sequence? It is kept with every recipe read from it."
+msgstr "¿Quién hizo esta secuencia? Se guarda con cada receta que se lea de ella."
+
+msgid "someone else"
+msgstr "otra persona"
+
+msgid "No recipes could be read from that sequence."
+msgstr "No se han podido leer recetas de esa secuencia."
+
+msgid "%d new recipes read. They are not reviewed: look at them in xLights before marking them."
+msgstr "Se han leído %d recetas nuevas. No están revisadas: míralas en xLights antes de marcarlas."
+
+msgid "Colours:"
+msgstr "Colores:"
+
+msgid "the song's own"
+msgstr "los de la canción"
+
+msgid "Variety:"
+msgstr "Variedad:"
+
+msgid "keep an idea"
+msgstr "mantener una idea"
+
+msgid "change often"
+msgstr "cambiar a menudo"
+
+msgid "Use recipes from the reference shows"
+msgstr "Usar recetas de los espectáculos de referencia"
+
+msgid "Recipes..."
+msgstr "Recetas..."
+
+msgid "Pre-chorus"
+msgstr "Preestribillo"
+
+msgid "Interlude"
+msgstr "Interludio"
+
+msgid "The recipes of this show could not be read: %s"
+msgstr "No se han podido leer las recetas de este show: %s"
+
+msgid "The recipes could not be saved: %s"
+msgstr "No se han podido guardar las recetas: %s"

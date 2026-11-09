@@ -125,6 +125,7 @@ std::string ToJson(const GenerationSidecar& s) {
     }
     if (!s.media.Empty()) {
         root["media"] = MediaSessionJson(s.media);
+        root["visualPlan"] = { { "recipes", s.visualPlan.recipes }, { "colorEngine", s.visualPlan.colorEngine }, { "christmasInfluence", s.visualPlan.christmasInfluence }, { "variety", s.visualPlan.variety } };
     }
     if (!s.review.Empty()) {
         root["review"] = VisualReviewJson(s.review);
@@ -204,6 +205,13 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         s.characterCache = assist.value("character", std::string());
         if (root.contains("media") && !MediaSessionFrom(root["media"], s.media, error)) {
             return SidecarStatus::Damaged;
+        }
+        if (root.contains("visualPlan") && root["visualPlan"].is_object()) {
+            const json& v = root["visualPlan"];
+            s.visualPlan.recipes = v.value("recipes", true);
+            s.visualPlan.colorEngine = v.value("colorEngine", true);
+            s.visualPlan.christmasInfluence = std::clamp(v.value("christmasInfluence", 0.5), 0.0, 1.0);
+            s.visualPlan.variety = std::clamp(v.value("variety", 0.5), 0.0, 1.0);
         }
         if (root.contains("review") && !VisualReviewFrom(root["review"], s.review, error)) {
             return SidecarStatus::Damaged;

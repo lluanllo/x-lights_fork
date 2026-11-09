@@ -11802,3 +11802,192 @@ msgstr ""
 
 msgid "No lyrics were given, so the lyrics are what Groq heard: %d phrases, %d of them doubtful, %d left out (not sung). Read them and correct them before generating: nothing was filled in from memory."
 msgstr ""
+
+msgid "Strong"
+msgstr ""
+
+msgid "for quiet parts"
+msgstr ""
+
+msgid "hits on the beat"
+msgstr ""
+
+msgid "a figure leads"
+msgstr ""
+
+msgid "the whole house moves"
+msgstr ""
+
+msgid "(hits)"
+msgstr ""
+
+msgid "Arches"
+msgstr ""
+
+msgid "Trees"
+msgstr ""
+
+msgid "Figures"
+msgstr ""
+
+msgid "Props"
+msgstr ""
+
+msgid "Read from a show, not reviewed"
+msgstr ""
+
+msgid "Reviewed"
+msgstr ""
+
+msgid "Corrected by hand"
+msgstr ""
+
+msgid "Made by the composer"
+msgstr ""
+
+msgid "Recipes"
+msgstr ""
+
+msgid "A recipe is how a show combines effects on several figures at once. The composer plays them in its scenes; you choose which."
+msgstr ""
+
+msgid "Every recipe"
+msgstr ""
+
+msgid "The ones that fit my house"
+msgstr ""
+
+msgid "Favourites"
+msgstr ""
+
+msgid "Left out"
+msgstr ""
+
+msgid "Recipe"
+msgstr ""
+
+msgid "Use"
+msgstr ""
+
+msgid "Strength"
+msgstr ""
+
+msgid "Seen"
+msgstr ""
+
+msgid "Favourite"
+msgstr ""
+
+msgid "Do Not Use"
+msgstr ""
+
+msgid "Use Again"
+msgstr ""
+
+msgid "I Have Reviewed It..."
+msgstr ""
+
+msgid "Correct a Setting..."
+msgstr ""
+
+msgid "Read Recipes from a Sequence..."
+msgstr ""
+
+msgid "Who reviewed it? Only a person who looked at it in xLights should say so."
+msgstr ""
+
+msgid "A note (optional): what you liked or not."
+msgstr ""
+
+msgid "Which effect?"
+msgstr ""
+
+msgid "Correct a Setting"
+msgstr ""
+
+msgid "The setting as xLights saves it, for example E_SLIDER_Spirals_Count:"
+msgstr ""
+
+msgid "Its new value:"
+msgstr ""
+
+msgid "Who makes the correction?"
+msgstr ""
+
+msgid "The correction was not accepted: %s"
+msgstr ""
+
+msgid "%d recipes; %d fit this house, %d favourites, %d not used."
+msgstr ""
+
+msgid "Use: %s. Strength: %s. Seen %d times. Confidence %.0f%%."
+msgstr ""
+
+msgid " by %s on %s"
+msgstr ""
+
+msgid "Who made the original: %s"
+msgstr ""
+
+msgid "  from \"%s\", %.1f s to %.1f s"
+msgstr ""
+
+msgid "This house does not have the figures this recipe needs."
+msgstr ""
+
+msgid "Choose a finished sequence"
+msgstr ""
+
+msgid "xLights sequences (*.xsq)|*.xsq"
+msgstr ""
+
+msgid "Its show folder (with xlights_rgbeffects.xml) was not found next to the sequence."
+msgstr ""
+
+msgid "Read Recipes"
+msgstr ""
+
+msgid "Who made this sequence? It is kept with every recipe read from it."
+msgstr ""
+
+msgid "someone else"
+msgstr ""
+
+msgid "No recipes could be read from that sequence."
+msgstr ""
+
+msgid "%d new recipes read. They are not reviewed: look at them in xLights before marking them."
+msgstr ""
+
+msgid "Colours:"
+msgstr ""
+
+msgid "the song's own"
+msgstr ""
+
+msgid "Variety:"
+msgstr ""
+
+msgid "keep an idea"
+msgstr ""
+
+msgid "change often"
+msgstr ""
+
+msgid "Use recipes from the reference shows"
+msgstr ""
+
+msgid "Recipes..."
+msgstr ""
+
+msgid "Pre-chorus"
+msgstr ""
+
+msgid "Interlude"
+msgstr ""
+
+msgid "The recipes of this show could not be read: %s"
+msgstr ""
+
+msgid "The recipes could not be saved: %s"
+msgstr ""

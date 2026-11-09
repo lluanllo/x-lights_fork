@@ -43,6 +43,12 @@ struct GenerateCommandOptions {
     std::string lyricsMode;    // "lyrics-first", "smart" or "free"
     std::string screensFor;    // "installation" (default) or "preview"
     std::string screens;       // "Name=role;Name=role", roles as in screens.json
+    std::string recipesPath;   // a recipes.json; empty: the show's, when it has one
+    bool noRecipes = false;
+    bool noColorEngine = false;
+    std::string christmas;     // 0-100: how far the colours go towards the Christmas ones
+    std::string variety;       // 0-100
+    std::string briefPath;     // a song visual brief
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

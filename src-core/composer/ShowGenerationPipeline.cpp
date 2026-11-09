@@ -373,6 +373,11 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.analysisCorrections = run.corrections.analysis;
     s.lyrics = run.lyricSession;
     s.media = run.mediaSession;
+    if (run.visualPlan.enabled) {
+        s.visualPlan = { run.visualPlan.options.recipes, run.visualPlan.options.colorEngine, run.visualPlan.options.christmasInfluence, run.visualPlan.options.variety };
+    } else if (run.hasPrevious) {
+        s.visualPlan = run.previous.visualPlan;
+    }
     s.media.corrections = run.corrections.media;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
                                           LevelId(s.level), s.seed, s.frameMS, s.pipelineVersion, s.plannerVersion, s.choreographerVersion, ToJson(run.corrections)));
@@ -592,6 +597,27 @@ bool LoadLayout(GenerationRun& run) {
         }
         for (const RejectedTemplate& t : run.library.rejected) {
             Note(run, S, "template-rejected", fmt::format("{}: {}", t.file, t.errors.empty() ? std::string() : t.errors.front()));
+        }
+        {
+            const std::string path = !r.recipesPath.empty() ? r.recipesPath : r.showDir.empty() ? std::string() : RecipeLibraryPath(r.showDir);
+            const bool want = r.useRecipes.value_or(run.hasPrevious ? run.previous.visualPlan.recipes : true);
+            if (want && !path.empty() && FileExists(path)) {
+                std::string error;
+                if (!ReadRecipeLibrary(path, run.recipes, error)) {
+                    return Fail(run, S, "recipes-invalid", error);
+                }
+                run.recipesFrom = path;
+                std::vector<EffectTemplate> extra = RecipeTemplates(run.recipes, run.metadata);
+                int excluded = 0;
+                for (const Recipe& rc : run.recipes.recipes) {
+                    excluded += rc.excluded ? 1 : 0;
+                }
+                Note(run, S, "recipes", fmt::format("{} recipes ({} excluded) from {}, {} templates", run.recipes.recipes.size(), excluded, path, extra.size()));
+                for (EffectTemplate& t : extra) {
+                    run.library.templates.push_back(std::move(t));
+                }
+                run.library.hash += fmt::format("+recipes:{}", extra.size());
+            }
         }
         run.profile = NeutralStarterProfile();
         if (!r.profilePath.empty()) {
@@ -1241,6 +1267,44 @@ bool ChoreographShow(GenerationRun& run) {
             d.title = run.request.audioPath;
             run.direction = DirectShow(d);
             in.direction = &run.direction;
+            // The director: the arc, the recipe of each scene, who rests, and colours from the song.
+            const GenerationRequest& r = run.request;
+            if (!r.briefPath.empty()) {
+                std::string text;
+                if (!ReadText(r.briefPath, text) || !ParseVisualBrief(text, "file", run.brief, error)) {
+                    Note(run, S, "brief-unusable", r.briefPath + (error.empty() ? std::string() : ": " + error));
+                    run.brief = SongVisualBrief();
+                }
+            }
+            if (run.brief.Empty() && run.hasLyrics) {
+                std::string words;
+                for (const LyricLine* l : run.lyrics.Lines()) {
+                    words += l->text + " ";
+                }
+                run.brief = LocalVisualBrief(words, run.request.audioPath);
+            }
+            VisualPlanInput vp;
+            vp.plan = &run.plan;
+            vp.analysis = &run.analysis;
+            vp.direction = &run.direction;
+            vp.recipes = run.recipes.recipes.empty() ? nullptr : &run.recipes;
+            vp.brief = run.brief.Empty() ? nullptr : &run.brief;
+            const VisualPlanSettings& before = run.previous.visualPlan;
+            vp.options.recipes = r.useRecipes.value_or(run.hasPrevious ? before.recipes : true);
+            vp.options.colorEngine = r.colorEngine.value_or(run.hasPrevious ? before.colorEngine : true);
+            vp.options.christmasInfluence = std::clamp(r.christmasInfluence.value_or(run.hasPrevious ? before.christmasInfluence : 0.5), 0.0, 1.0);
+            vp.options.variety = std::clamp(r.variety.value_or(run.hasPrevious ? before.variety : 0.5), 0.0, 1.0);
+            vp.options.seed = run.plan.seed;
+            run.visualPlan = PlanSongVisuals(vp);
+            ApplyPlanColors(run.visualPlan, run.direction);
+            in.visualPlan = &run.visualPlan;
+            in.recipes = run.recipes.recipes.empty() ? nullptr : &run.recipes;
+            Note(run, S, "visual-plan", fmt::format("{}: {} distinct recipes over {} scenes (most used {:.0f}%), colours from hue {}, Christmas {:.0f}%, brief {}", run.visualPlan.arcShape,
+                                                    run.visualPlan.distinctRecipes, run.visualPlan.recipeScenes, run.visualPlan.longestRepeatShare * 100, run.visualPlan.anchorHue,
+                                                    vp.options.christmasInfluence * 100, run.brief.Empty() ? std::string("none") : run.brief.source));
+            for (const std::string& w : run.visualPlan.warnings) {
+                Note(run, S, "visual-plan-warning", w);
+            }
             Note(run, S, "visual-direction", fmt::format("theme {} from {} ({:.2f}), {} families, {} scenes", run.direction.themeId, run.direction.themeSource, run.direction.themeConfidence,
                                                          run.direction.families.size(), run.direction.scenes.size()));
         }
@@ -1263,7 +1327,8 @@ bool ChoreographShow(GenerationRun& run) {
             warnings[w.substr(0, w.find(':'))]++;
         }
         for (const auto& [code, count] : warnings) {
-            Note(run, S, "not-choreographed", fmt::format("{} x{}", code, count));
+            // A family the director rests is a choice, not something left undone.
+            Note(run, S, code == "family-resting" ? "director-rest" : "not-choreographed", fmt::format("{} x{}", code, count));
         }
         const ChoreographyMetrics& m = run.choreography.metrics;
         run.Stage(S).notes.push_back(fmt::format("{} events on {} targets, {} templates (top {} {:.0f}%), {} palettes, {} accents, {} to review, {} media cues", m.events, m.targets, m.distinctTemplates, m.topTemplate,
@@ -1548,6 +1613,13 @@ void WriteDiagnostics(GenerationRun& run) {
         if (run.direction.enabled) {
             ok &= WriteText(report / "visual-direction.json", ToJson(run.direction));
             ok &= WriteText(report / "visual-direction-report.txt", DirectionReport(run.direction));
+        }
+        if (run.visualPlan.enabled) {
+            ok &= WriteText(report / "visual-plan.json", ToJson(run.visualPlan));
+            ok &= WriteText(report / "visual-plan-report.txt", VisualPlanReport(run.visualPlan));
+            if (!run.brief.Empty()) {
+                ok &= WriteText(report / "visual-brief.json", ToJson(run.brief));
+            }
             ok &= WriteText(report / "direction-metrics.json", ToJson(run.directionMetrics));
         }
         if (!run.mediaLibrary.items.empty() || !run.media.assignments.empty() || !run.media.warnings.empty()) {

@@ -33,6 +33,7 @@
 
 #include "ComposerJob.h"
 #include "ComposerMediaDialogs.h"
+#include "ComposerRecipeDialogs.h"
 #include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
 #include "ShowComposerDialog.h"
@@ -287,6 +288,47 @@ private:
                               _dialog->SetProfile(reference);
                               Check(!_dialog->StyleColors().empty() && !_dialog->StyleTheme().empty(), fmt::format("the reference style shows its theme {} and {} colours", _dialog->StyleTheme(), _dialog->StyleColors().size()));
                               Capture(_dialog, "estilo-referencias");
+                              {
+                                  // The artistic director's controls reach the generator as they are set.
+                                  _dialog->SetDirector(80, 20, false);
+                                  const std::vector<std::string> args = _dialog->GenerateArguments();
+                                  const auto value = [&](const char* option) {
+                                      const auto at = std::find(args.begin(), args.end(), option);
+                                      return at != args.end() && at + 1 != args.end() ? *(at + 1) : std::string();
+                                  };
+                                  Check(value("--christmas") == "80" && value("--variety") == "20" && std::find(args.begin(), args.end(), "--no-recipes") != args.end(),
+                                        "the Christmas colours, the variety and the recipes switch go to the generator");
+                                  _dialog->SetDirector(50, 50, true);
+                                  const std::vector<std::string> again = _dialog->GenerateArguments();
+                                  Check(std::find(again.begin(), again.end(), "--no-recipes") == again.end(), "and the recipes back on");
+                                  RecipeLibrary lib;
+                                  Recipe r;
+                                  r.id = "ui0000000001";
+                                  r.origin = RecipeOrigin::Extracted;
+                                  r.authorship = "third-party test";
+                                  r.function = "bed";
+                                  r.energy = 0.5;
+                                  r.support = 3;
+                                  r.surfaces = { { "matrix", "lead", { { 0, "Bars", {}, "Normal" } }, { "model" } }, { "mega-tree", "complement", { { 0, "Spirals", {}, "Normal" } }, { "model" } } };
+                                  lib.recipes.push_back(r);
+                                  Recipe distant = r;
+                                  distant.id = "ui0000000002";
+                                  distant.surfaces = { { "no-such", "lead", { { 0, "Bars", {}, "Normal" } }, { "model" } } };
+                                  lib.recipes.push_back(distant);
+                                  RecipesDialog recipes(_dialog, lib, { "matrix", "mega-tree" }, MetadataFrom(_frame->GetEffectManager()), _frame->GetShowDirectory());
+                                  recipes.SetFilter(1);
+                                  Check(recipes.Rows() == std::vector<std::string>{ "ui0000000001" }, "the recipes list shows the ones that fit the house");
+                                  Check(recipes.Favorite("ui0000000001", true) && recipes.Library().Find("ui0000000001")->favorite, "a recipe marked as favourite");
+                                  Check(recipes.Exclude("ui0000000001", true) && recipes.Library().Find("ui0000000001")->excluded && !recipes.Library().Find("ui0000000001")->favorite, "and left out");
+                                  recipes.SetFilter(3);
+                                  Check(recipes.Rows() == std::vector<std::string>{ "ui0000000001" }, "the left-out ones are listed apart");
+                                  Check(recipes.Review("ui0000000001", "Padre", "") && recipes.Library().Find("ui0000000001")->origin == RecipeOrigin::Reviewed, "a review says who made it");
+                                  std::string error;
+                                  Check(recipes.Correct("ui0000000001", "matrix", 0, "E_SLIDER_Bars_BarCount", "3", "Padre", error) && recipes.Library().Find("ui0000000001")->origin == RecipeOrigin::Corrected,
+                                        "a setting corrected and checked " + error);
+                                  Check(!recipes.Correct("ui0000000001", "matrix", 0, "E_SLIDER_Bars_BarCount", "999", "Padre", error), "an impossible value refused: " + error);
+                                  Check(recipes.Describe("ui0000000001").Contains("third-party test") && recipes.Changed(), "who made the original is shown");
+                              }
                               _dialog->SetSequenceName("demo-ui.xsq");
                               Check(_dialog->CanGoTo(ShowComposerDialog::Step::Analysis) && _dialog->CanGoTo(ShowComposerDialog::Step::Generate), "with a song, the next steps open");
                               Capture(_dialog, "crear-completo");
