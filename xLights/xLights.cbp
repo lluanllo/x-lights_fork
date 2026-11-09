@@ -608,6 +608,8 @@
 		<Unit filename="../src-core/composer/VisualDirection.h" />
 		<Unit filename="../src-core/composer/ReferenceStudy.cpp" />
 		<Unit filename="../src-core/composer/ReferenceStudy.h" />
+		<Unit filename="../src-core/composer/MusicStructure.cpp" />
+		<Unit filename="../src-core/composer/MusicStructure.h" />
 		<Unit filename="../src-core/composer/AssistTest.cpp" />
 		<Unit filename="../src-core/composer/AssistTest.h" />
 		<Unit filename="../src-core/composer/MusicAssist.cpp" />

@@ -131,6 +131,7 @@
     <ClCompile Include="..\src-core\composer\VisualModel.cpp" />
     <ClCompile Include="..\src-core\composer\VisualDirection.cpp" />
     <ClCompile Include="..\src-core\composer\ReferenceStudy.cpp" />
+    <ClCompile Include="..\src-core\composer\MusicStructure.cpp" />
     <ClCompile Include="..\src-core\composer\AssistTest.cpp" />
     <ClCompile Include="..\src-core\composer\MusicAssist.cpp" />
     <ClCompile Include="..\src-core\composer\ChoreographyTest.cpp" />
@@ -1750,6 +1751,7 @@
     <ClInclude Include="..\src-core\composer\VisualModel.h" />
     <ClInclude Include="..\src-core\composer\VisualDirection.h" />
     <ClInclude Include="..\src-core\composer\ReferenceStudy.h" />
+    <ClInclude Include="..\src-core\composer\MusicStructure.h" />
     <ClInclude Include="..\src-core\composer\AssistTest.h" />
     <ClInclude Include="..\src-core\composer\MusicAssist.h" />
     <ClInclude Include="..\src-core\composer\SyntheticAudio.h" />

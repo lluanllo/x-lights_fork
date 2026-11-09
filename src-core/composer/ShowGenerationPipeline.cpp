@@ -1,6 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
 #include "composer/ArtisticPreferences.h"
+#include "composer/MusicStructure.h"
 
 #include "composer/SequenceWriter.h"
 #include "composer/MediaFraming.h"
@@ -649,11 +650,11 @@ bool AnalyzeAudio(GenerationRun& run) {
         run.analysis = result.analysis;
         run.analysisFromCache = result.reusedCache;
         const AnalysisCorrections& fixes = run.corrections.analysis;
-        if (!fixes.events.empty() || !fixes.sections.empty() || fixes.bar.firstDownbeatMS >= 0) {
+        if (!fixes.events.empty() || !fixes.sections.empty() || fixes.bar.firstDownbeatMS >= 0 || fixes.tempoFactor != 1) {
             // A person's beats, bars and sections win over the detection, here as in the cache.
             MergeAnalysisCorrections(run.analysis.corrections, fixes);
             ApplyCorrections(run.analysis);
-            run.Stage(GenerationStage::Analysis).notes.push_back(fmt::format("music corrections applied: {} marks, {} sections{}", fixes.events.size(), fixes.sections.size(), fixes.bar.firstDownbeatMS >= 0 ? ", the bar" : ""));
+            run.Stage(GenerationStage::Analysis).notes.push_back(fmt::format("music corrections applied: {} marks, {} sections{}{}", fixes.events.size(), fixes.sections.size(), fixes.bar.firstDownbeatMS >= 0 ? ", the bar" : "", fixes.tempoFactor != 1 ? fmt::format(", the pulse x{}", fixes.tempoFactor) : std::string()));
         }
         const SongAnalysis& a = run.analysis;
         if (a.durationMS < 2 * r.frameMS) {
@@ -848,6 +849,18 @@ bool PrepareLyrics(GenerationRun& run) {
             return Fail(run, S, "lyrics-invalid", fmt::format("{} errors", report.ErrorCount()));
         }
         run.lyricTrack = std::move(track);
+        if (r.lyricStructure) {
+            // The words say which part is the chorus, which the audio alone cannot.
+            const StructureResult structure = RefineSectionsWithLyrics(run.analysis, TimedLinesFrom(run.alignment));
+            if (structure.applied) {
+                Note(run, S, "structure", fmt::format("sections from the lyrics: {} choruses, {} verses, {} parts sung again", structure.choruses, structure.verses, structure.families));
+                for (const std::string& n : structure.notes) {
+                    Note(run, S, "structure-section", n);
+                }
+            } else {
+                Note(run, S, "structure-kept", structure.reason);
+            }
+        }
         run.cast = EffectiveCast(run.lyrics.cast, run.lyricSession.voices);
         if (!run.cast.Empty()) {
             std::vector<std::string> warnings;
@@ -1570,7 +1583,8 @@ void WriteDiagnostics(GenerationRun& run) {
     const auto dump = [&](const char* what, const ValidationReport& v) {
         for (const ValidationIssue& i : v.issues) {
             const char* severity = i.severity == IssueSeverity::Error ? "error" : i.severity == IssueSeverity::Warning ? "warning" : "info";
-            validation += fmt::format("{}\t{}\t{}\t{}\t{}\n", what, severity, i.code, i.model, DescribeIssue(i));
+            const std::string when = i.startMS >= 0 ? fmt::format(" [{}-{} ms]", i.startMS, i.endMS) : std::string();
+            validation += fmt::format("{}\t{}\t{}\t{}\t{}{}\n", what, severity, i.code, i.model, DescribeIssue(i), when);
         }
     };
     dump("plan", run.planValidation);

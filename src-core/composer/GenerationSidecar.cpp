@@ -256,7 +256,7 @@ std::string SidecarPathFor(const std::string& sequencePath) {
 
 bool CorrectionSet::Empty() const {
     return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && voices.empty() && screens.Empty() && review.Empty() && analysis.events.empty() && analysis.sections.empty() &&
-           analysis.bar.firstDownbeatMS < 0;
+           analysis.bar.firstDownbeatMS < 0 && analysis.tempoFactor == 1;
 }
 
 void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra) {
@@ -264,6 +264,9 @@ void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrectio
     into.sections.insert(into.sections.end(), extra.sections.begin(), extra.sections.end());
     if (extra.bar.firstDownbeatMS >= 0) {
         into.bar = extra.bar;
+    }
+    if (extra.tempoFactor != 1) {
+        into.tempoFactor = extra.tempoFactor;
     }
 }
 

@@ -105,6 +105,8 @@ struct GenerationRequest {
     // The show maker's preferences (<showDir>/ShowComposer/preferences.json) shape the
     // montage; false: generate as if nothing had been learned (a person's own values too).
     bool learning = true;
+    // Synchronized lyrics lay the sections out again: what is sung again is the chorus.
+    bool lyricStructure = true;
     // Looks at the files again before planning (otherwise only the ones never analysed
     // are, without a model); with `visionModelDir` the image-text model is used too.
     bool analyzeMedia = false;

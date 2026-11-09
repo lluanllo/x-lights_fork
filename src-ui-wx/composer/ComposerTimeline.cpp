@@ -55,6 +55,10 @@ wxColour SectionColour(composer::SectionKind kind) {
         return wxColour(150, 150, 110);
     case composer::SectionKind::Outro:
         return wxColour(120, 140, 170);
+    case composer::SectionKind::PreChorus:
+        return wxColour(200, 170, 90);
+    case composer::SectionKind::Interlude:
+        return wxColour(130, 160, 150);
     default:
         return wxColour(140, 140, 140);
     }
@@ -74,6 +78,10 @@ wxString SectionName(composer::SectionKind kind) {
         return _("Instrumental");
     case composer::SectionKind::Outro:
         return _("Outro");
+    case composer::SectionKind::PreChorus:
+        return _("Pre-chorus");
+    case composer::SectionKind::Interlude:
+        return _("Interlude");
     default:
         return _("Section");
     }

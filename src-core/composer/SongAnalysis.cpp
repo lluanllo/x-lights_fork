@@ -437,6 +437,7 @@ private:
         _rhythmicity.assign(windows, 0.0);
         std::vector<double> correlation(static_cast<size_t>(2 * maxLag + 2), 0.0);
         std::vector<std::vector<float>> plain(windows);
+        std::vector<std::vector<double>> full(windows);
         std::vector<double> prominence(windows, 0.0);
         double globalMean = 0;
         for (float value : smooth) {
@@ -487,6 +488,7 @@ private:
                 correlation[lag] = sum / zero;
             }
             plain[w].resize(lags);
+            full[w].assign(correlation.begin(), correlation.end());
             for (int l = 0; l < lags; ++l) {
                 const int lag = minLag + l;
                 const double direct = std::max(0.0, correlation[lag]);
@@ -509,7 +511,12 @@ private:
         }
 
         // The cost of a change is in log-tempo: a tenth faster costs the same at any tempo.
+        // A jump of exactly an octave is nearly always the same pulse read at its double
+        // or half, not the band changing tempo, and flipping between the two readings
+        // breaks the beat grid the bar is counted on.
         constexpr double CHANGE_COST = 5.0;
+        constexpr double OCTAVE_JUMP_COST = 40.0;
+        constexpr double OCTAVE_REACH = 0.08;
         std::vector<float> best(score.begin(), score.begin() + lags);
         std::vector<int> back(static_cast<size_t>(windows) * lags, 0);
         std::vector<float> next(lags);
@@ -525,7 +532,9 @@ private:
                 double top = -1e18;
                 int from = l;
                 for (int p = 0; p < lags; ++p) {
-                    const double candidate = best[p] - CHANGE_COST * std::fabs(logLag[l] - logLag[p]);
+                    const double distance = std::fabs(logLag[l] - logLag[p]);
+                    const double octave = std::fabs(distance - std::log(2.0)) < OCTAVE_REACH ? OCTAVE_JUMP_COST : 0.0;
+                    const double candidate = best[p] - CHANGE_COST * distance - octave;
                     if (candidate > top) {
                         top = candidate;
                         from = p;
@@ -537,15 +546,118 @@ private:
             best = next;
         }
         int current = static_cast<int>(std::max_element(best.begin(), best.end()) - best.begin());
-        _period.assign(windows, 0);
+        std::vector<int> path(windows, 0);
         for (int w = windows - 1; w >= 0; --w) {
-            _period[w] = minLag + current;
-            if (!plain[w].empty()) {
-                _rhythmicity[w] = Clamp01(plain[w][current]) * prominence[w];
-            }
+            path[w] = current;
             current = back[static_cast<size_t>(w) * lags + current];
         }
+        FoldOctaves(path, plain, minLag);
+        _period.assign(windows, 0);
+        for (int w = 0; w < windows; ++w) {
+            _period[w] = minLag + path[w];
+            if (!plain[w].empty()) {
+                _rhythmicity[w] = Clamp01(plain[w][path[w]]) * prominence[w];
+            }
+        }
         _tempoStep = step;
+        ListTempoCandidates(full, prominence, hopMS);
+    }
+
+    // Even with the jump made expensive, a song whose second half doubles its
+    // percussion can be followed at 105 and then at 210: the same pulse, counted two
+    // ways. The reading that covers most of the song decides, and the stretches read
+    // an octave away are read again inside the chosen octave. A real change of tempo
+    // that is not an octave stays as it was.
+    void FoldOctaves(std::vector<int>& path, const std::vector<std::vector<float>>& plain, int minLag) {
+        std::map<int, int> votes;
+        for (size_t w = 0; w < path.size(); ++w) {
+            if (!plain[w].empty()) {
+                ++votes[path[w]];
+            }
+        }
+        if (votes.empty()) {
+            return;
+        }
+        // Readings within a few percent of each other are one reading.
+        int reference = minLag + votes.begin()->first;
+        int bestVotes = -1;
+        for (const auto& [l, count] : votes) {
+            int near = 0;
+            for (const auto& [other, otherCount] : votes) {
+                if (std::fabs(std::log(static_cast<double>(minLag + other) / (minLag + l))) < 0.06) {
+                    near += otherCount;
+                }
+            }
+            if (near > bestVotes) {
+                bestVotes = near;
+                reference = minLag + l;
+            }
+        }
+        int folded = 0;
+        for (size_t w = 0; w < path.size(); ++w) {
+            const double ratio = static_cast<double>(minLag + path[w]) / reference;
+            const bool octaveAway = std::fabs(std::log(ratio) - std::log(2.0)) < 0.08 || std::fabs(std::log(ratio) + std::log(2.0)) < 0.08;
+            if (!octaveAway || plain[w].empty()) {
+                continue;
+            }
+            const double target = (minLag + path[w]) / (ratio > 1 ? 2.0 : 0.5);
+            int bestLag = -1;
+            float bestFit = -1;
+            for (int l = 0; l < static_cast<int>(plain[w].size()); ++l) {
+                if (std::fabs(std::log((minLag + l) / target)) < 0.06 && plain[w][l] > bestFit) {
+                    bestFit = plain[w][l];
+                    bestLag = l;
+                }
+            }
+            if (bestLag >= 0) {
+                path[w] = bestLag;
+                ++folded;
+            }
+        }
+        if (folded > 0) {
+            _a.warnings.push_back("tempo-octave-folded");
+        }
+    }
+
+    // The pulse that was followed, and its half and double with how well each fits
+    // the same windows: the octave of a pulse is the classic doubt, and a person can
+    // choose another reading without the analysis being thrown away.
+    void ListTempoCandidates(const std::vector<std::vector<double>>& full, const std::vector<double>& prominence, double hopMS) {
+        std::vector<double> lagsUsed;
+        double fit[3] = { 0, 0, 0 };
+        double weight = 0;
+        for (size_t w = 0; w < full.size(); ++w) {
+            if (full[w].empty() || prominence[w] <= 0) {
+                continue;
+            }
+            const int lag = static_cast<int>(std::lround(_period[w]));
+            const int size = static_cast<int>(full[w].size());
+            const auto at = [&](double l) {
+                const int lo = static_cast<int>(std::floor(l));
+                const int hi = static_cast<int>(std::ceil(l));
+                if (lo < 1 || hi >= size) {
+                    return 0.0;
+                }
+                return std::max(0.0, std::max(full[w][lo], full[w][hi]));
+            };
+            lagsUsed.push_back(lag);
+            fit[0] += prominence[w] * at(lag);
+            fit[1] += prominence[w] * at(lag * 2.0);
+            fit[2] += prominence[w] * at(lag / 2.0);
+            weight += prominence[w];
+        }
+        if (lagsUsed.empty() || weight <= 0) {
+            return;
+        }
+        const double bpm = 60000.0 / (Median(lagsUsed) * hopMS);
+        const double sum = std::max(1e-9, fit[0] + fit[1] + fit[2]);
+        const std::pair<double, const char*> readings[3] = { { bpm, "followed" }, { bpm / 2, "half" }, { bpm * 2, "double" } };
+        for (int i = 0; i < 3; ++i) {
+            if (readings[i].first < 40 || readings[i].first > 260 || (i > 0 && fit[i] <= 0)) {
+                continue;
+            }
+            _a.tempoCandidates.push_back({ Round3(readings[i].first), Round3(fit[i] / sum), readings[i].second });
+        }
     }
 
     double PeriodAt(int frame) const {
@@ -834,7 +946,7 @@ private:
             const Hypothesis& top = hypotheses[0];
 
             // The same answer must keep coming from separate stretches of the song.
-            int agreeing = 0;
+            double agreeing = 0;
             int blocks = 0;
             const int blockSize = top.meter * 4;
             for (int from = 0; from + blockSize <= count; from += blockSize) {
@@ -847,12 +959,16 @@ private:
                         bestPhase = phase;
                     }
                 }
-                agreeing += bestPhase == top.phase ? 1 : 0;
+                // In a bar of four, accents on the first and third beats are the same
+                // bar read half a bar late: it is the pair of beats that agrees.
+                agreeing += bestPhase == top.phase ? 1.0 : (top.meter == 4 && bestPhase == (top.phase + 2) % 4) ? 0.5 : 0.0;
                 ++blocks;
             }
-            const double consistency = blocks == 0 ? 0 : static_cast<double>(agreeing) / blocks;
+            const double consistency = blocks == 0 ? 0 : agreeing / blocks;
             const double margin = top.score - hypotheses[1].score;
-            const double confidence = Clamp01(std::min(margin, top.score) / 2.0) * consistency;
+            // The scores are differences of standardized accents: over a whole song, two
+            // thirds of a deviation between the downbeat and the rest is already a bar.
+            const double confidence = Clamp01(std::min(margin, top.score) / 1.2) * consistency;
             if (confidence < MIN_DOWNBEAT_CONFIDENCE) {
                 continue;
             }
@@ -1591,7 +1707,7 @@ Provenance ProvenanceFor(bool locked) {
 }
 
 const char* const EVENT_IDS[] = { "beat", "downbeat", "onset", "sectionStart", "sectionEnd", "climax", "silence", "vocalStart", "vocalEnd", "ending" };
-const char* const SECTION_IDS[] = { "intro", "verse", "chorus", "bridge", "instrumental", "outro", "unknown" };
+const char* const SECTION_IDS[] = { "intro", "verse", "chorus", "bridge", "instrumental", "outro", "unknown", "pre-chorus", "interlude" };
 const char* const PROVENANCE_IDS[] = { "detected", "corrected", "locked", "confirmed" };
 const char* const ACTION_IDS[] = { "add", "move", "remove", "confirm" };
 
@@ -1920,7 +2036,97 @@ MusicSnapshot SnapshotAt(const SongAnalysis& analysis, int timeMS) {
     return snapshot;
 }
 
+namespace {
+
+// Halving keeps the beats of the stronger phase; doubling adds one in the middle of
+// each pair that is a beat apart. The downbeats on beats that stay are kept, and the
+// bar is counted again from them.
+void ApplyTempoFactor(SongAnalysis& analysis) {
+    const double factor = analysis.corrections.tempoFactor;
+    if (factor == analysis.appliedTempoFactor || analysis.appliedTempoFactor != 1 || (factor != 0.5 && factor != 2.0)) {
+        return;
+    }
+    auto& events = analysis.events;
+    std::vector<MusicalEvent> beats;
+    std::vector<int> downbeatTimes;
+    for (const MusicalEvent& e : events) {
+        if (e.type == MusicalEventType::Beat) {
+            beats.push_back(e);
+        } else if (e.type == MusicalEventType::Downbeat) {
+            downbeatTimes.push_back(e.timeMS);
+        }
+    }
+    std::sort(beats.begin(), beats.end(), [](const MusicalEvent& a, const MusicalEvent& b) { return a.timeMS < b.timeMS; });
+    if (beats.size() < 4) {
+        return;
+    }
+    std::vector<MusicalEvent> kept;
+    if (factor == 0.5) {
+        double phase[2] = { 0, 0 };
+        for (size_t b = 0; b < beats.size(); ++b) {
+            const bool down = std::find(downbeatTimes.begin(), downbeatTimes.end(), beats[b].timeMS) != downbeatTimes.end();
+            phase[b % 2] += beats[b].intensity + (down ? 1.0 : 0.0);
+        }
+        const size_t chosen = phase[1] > phase[0] ? 1 : 0;
+        for (size_t b = chosen; b < beats.size(); b += 2) {
+            kept.push_back(beats[b]);
+        }
+    } else {
+        std::vector<double> gaps;
+        for (size_t b = 1; b < beats.size(); ++b) {
+            gaps.push_back(beats[b].timeMS - beats[b - 1].timeMS);
+        }
+        const double typical = Median(gaps);
+        for (size_t b = 0; b < beats.size(); ++b) {
+            kept.push_back(beats[b]);
+            if (b + 1 < beats.size() && beats[b + 1].timeMS - beats[b].timeMS <= typical * 1.5) {
+                MusicalEvent middle = beats[b];
+                middle.timeMS = (beats[b].timeMS + beats[b + 1].timeMS) / 2;
+                middle.intensity = Round3(std::min(beats[b].intensity, beats[b + 1].intensity) * 0.5);
+                middle.source = SOURCE_MANUAL;
+                kept.push_back(std::move(middle));
+            }
+        }
+    }
+    std::vector<MusicalEvent> downbeats;
+    int index = 0;
+    int position = -1;
+    std::vector<int> barLengths;
+    for (MusicalEvent& beat : kept) {
+        beat.beatIndex = index++;
+        if (std::find(downbeatTimes.begin(), downbeatTimes.end(), beat.timeMS) != downbeatTimes.end()) {
+            if (position > 0) {
+                barLengths.push_back(position + 1);
+            }
+            position = 0;
+            for (const MusicalEvent& e : events) {
+                if (e.type == MusicalEventType::Downbeat && e.timeMS == beat.timeMS) {
+                    downbeats.push_back(e);
+                    break;
+                }
+            }
+        } else if (position >= 0) {
+            ++position;
+        }
+        beat.barPosition = position;
+    }
+    events.erase(std::remove_if(events.begin(), events.end(), [](const MusicalEvent& e) { return e.type == MusicalEventType::Beat || e.type == MusicalEventType::Downbeat; }), events.end());
+    events.insert(events.end(), kept.begin(), kept.end());
+    events.insert(events.end(), downbeats.begin(), downbeats.end());
+    std::stable_sort(events.begin(), events.end(), [](const MusicalEvent& a, const MusicalEvent& b) { return a.timeMS < b.timeMS; });
+    analysis.globalBpm = Round3(analysis.globalBpm * factor);
+    for (TempoPoint& point : analysis.tempo) {
+        point.bpm = Round3(point.bpm * factor);
+    }
+    std::vector<double> lengths(barLengths.begin(), barLengths.end());
+    analysis.beatsPerBar = lengths.empty() ? 0 : static_cast<int>(std::lround(Median(lengths)));
+    analysis.appliedTempoFactor = factor;
+}
+
+} // namespace
+
 void ApplyCorrections(SongAnalysis& analysis) {
+    ApplyTempoFactor(analysis);
     auto& events = analysis.events;
     const auto applyEvents = [&](bool beats, const auto& findDetected) {
         for (const EventCorrection& correction : analysis.corrections.events) {
@@ -2020,6 +2226,10 @@ void ApplyCorrections(SongAnalysis& analysis) {
 
     applyEvents(false, findDetected);
 
+    ApplySectionCorrections(analysis);
+}
+
+void ApplySectionCorrections(SongAnalysis& analysis) {
     for (const SectionCorrection& correction : analysis.corrections.sections) {
         const int start = std::max(0, correction.startMS);
         const int end = std::min(analysis.durationMS, correction.endMS);
@@ -2085,6 +2295,12 @@ std::string ToJson(const SongAnalysis& analysis) {
     root["initialBpm"] = analysis.initialBpm;
     root["initialBpmConfidence"] = analysis.initialBpmConfidence;
     root["tempoIsStable"] = analysis.tempoIsStable;
+    json candidates = json::array();
+    for (const TempoCandidate& c : analysis.tempoCandidates) {
+        candidates.push_back({ { "bpm", c.bpm }, { "confidence", c.confidence }, { "reason", c.reason } });
+    }
+    root["tempoCandidates"] = candidates;
+    root["appliedTempoFactor"] = analysis.appliedTempoFactor;
     root["beatsPerBar"] = analysis.beatsPerBar;
     root["barConfidence"] = analysis.barConfidence;
     root["musicStartMS"] = analysis.musicStartMS;
@@ -2145,7 +2361,7 @@ std::string ToJson(const SongAnalysis& analysis) {
     for (const SectionCorrection& c : analysis.corrections.sections) {
         sectionCorrections.push_back({ { "startMS", c.startMS }, { "endMS", c.endMS }, { "kind", SectionKindId(c.kind) }, { "locked", c.locked } });
     }
-    root["corrections"] = { { "events", std::move(eventCorrections) }, { "sections", std::move(sectionCorrections) }, { "bar", { { "firstDownbeatMS", analysis.corrections.bar.firstDownbeatMS }, { "beatsPerBar", analysis.corrections.bar.beatsPerBar }, { "locked", analysis.corrections.bar.locked } } } };
+    root["corrections"] = { { "events", std::move(eventCorrections) }, { "sections", std::move(sectionCorrections) }, { "bar", { { "firstDownbeatMS", analysis.corrections.bar.firstDownbeatMS }, { "beatsPerBar", analysis.corrections.bar.beatsPerBar }, { "locked", analysis.corrections.bar.locked } } }, { "tempoFactor", analysis.corrections.tempoFactor } };
     return root.dump(1);
 }
 
@@ -2175,6 +2391,10 @@ bool FromJson(const std::string& text, SongAnalysis& analysis, std::string& erro
         out.initialBpm = root.value("initialBpm", 0.0);
         out.initialBpmConfidence = root.value("initialBpmConfidence", 0.0);
         out.tempoIsStable = root.value("tempoIsStable", false);
+        for (const json& c : root.value("tempoCandidates", json::array())) {
+            out.tempoCandidates.push_back({ c.value("bpm", 0.0), c.value("confidence", 0.0), c.value("reason", std::string()) });
+        }
+        out.appliedTempoFactor = root.value("appliedTempoFactor", 1.0);
         out.beatsPerBar = root.value("beatsPerBar", 0);
         out.barConfidence = root.value("barConfidence", 0.0);
         out.musicStartMS = root.value("musicStartMS", 0);
@@ -2246,6 +2466,8 @@ bool FromJson(const std::string& text, SongAnalysis& analysis, std::string& erro
             const json& bar = corrections.at("bar");
             out.corrections.bar = { bar.value("firstDownbeatMS", -1), bar.value("beatsPerBar", 4), bar.value("locked", true) };
         }
+        const double factor = corrections.value("tempoFactor", 1.0);
+        out.corrections.tempoFactor = (factor == 0.5 || factor == 2.0) ? factor : 1.0;
         analysis = std::move(out);
     } catch (const json::exception& e) {
         error = e.what();

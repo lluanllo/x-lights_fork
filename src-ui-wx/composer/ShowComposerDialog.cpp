@@ -952,10 +952,10 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     auto* section = new wxBoxSizer(wxHORIZONTAL);
     section->Add(new wxStaticText(fix->GetStaticBox(), wxID_ANY, _("The section at the cursor is:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
     _sectionKind = new wxChoice(fix->GetStaticBox(), wxID_ANY);
-    for (const wxString& k : { _("Intro"), _("Verse"), _("Chorus"), _("Bridge"), _("Instrumental"), _("Outro") }) {
+    for (const wxString& k : { _("Intro"), _("Verse"), _("Pre-chorus"), _("Chorus"), _("Bridge"), _("Interlude"), _("Instrumental"), _("Outro") }) {
         _sectionKind->Append(k);
     }
-    _sectionKind->SetSelection(2);
+    _sectionKind->SetSelection(3);
     section->Add(_sectionKind, 0, wxRIGHT, 4);
     section->Add(new wxButton(fix->GetStaticBox(), ID_SET_SECTION, _("Change It")), 0, wxRIGHT, 12);
     section->Add(new wxButton(fix->GetStaticBox(), ID_CLEAR_MUSIC, _("Undo All Music Corrections")), 0);
@@ -1033,7 +1033,7 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         for (const SongSection& s : _shownAnalysis.sections) {
             if (_timeline->Cursor() >= s.startMS && _timeline->Cursor() < s.endMS) {
-                const SectionKind kinds[] = { SectionKind::Intro, SectionKind::Verse, SectionKind::Chorus, SectionKind::Bridge, SectionKind::Instrumental, SectionKind::Outro };
+                const SectionKind kinds[] = { SectionKind::Intro, SectionKind::Verse, SectionKind::PreChorus, SectionKind::Chorus, SectionKind::Bridge, SectionKind::Interlude, SectionKind::Instrumental, SectionKind::Outro };
                 _corrections.analysis.sections.push_back({ s.startMS, s.endMS, kinds[std::max(0, _sectionKind->GetSelection())], true });
                 ApplyMusicCorrectionsLocally();
                 return;

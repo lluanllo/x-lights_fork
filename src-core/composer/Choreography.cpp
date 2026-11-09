@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <set>
 
@@ -129,6 +130,7 @@ public:
         }
         ApplyCorrections();
         Continuity();
+        FitGeometry();
         std::sort(_out.events.begin(), _out.events.end(), [](const ChoreographyEvent& a, const ChoreographyEvent& b) {
             return a.startMS != b.startMS ? a.startMS < b.startMS : a.target != b.target ? a.target < b.target : a.layer < b.layer;
         });
@@ -137,6 +139,59 @@ public:
     }
 
 private:
+    // Bars shade each bar from full to dark in 3D, so a bar one pixel thick is dark from
+    // end to end: on a line one pixel high, bars moving down never light it. The motion
+    // goes along the long side, and a bar still that thin loses the shading.
+    void FitGeometry() {
+        static const std::vector<std::pair<std::string, std::string>> across = {
+            { "up", "Left" }, { "down", "Right" }, { "expand", "H-expand" }, { "compress", "H-compress" },
+            { "Alternate Up", "Alternate Left" }, { "Alternate Down", "Alternate Right" }, { "Custom Vert", "Custom Horz" }
+        };
+        for (ChoreographyEvent& e : _out.events) {
+            if (e.effect != "Bars") {
+                continue;
+            }
+            const TargetInfo* t = _caps.Find(e.target);
+            if (t == nullptr || t->bufferWi <= 0 || t->bufferHt <= 0) {
+                continue;
+            }
+            const auto setting = [&](const std::string& key) -> std::string* {
+                for (auto& [k, v] : e.settings) {
+                    if (k == key) {
+                        return &v;
+                    }
+                }
+                return nullptr;
+            };
+            std::string* direction = setting("E_CHOICE_Bars_Direction");
+            if (direction == nullptr) {
+                e.settings.emplace_back("E_CHOICE_Bars_Direction", "up");
+                direction = setting("E_CHOICE_Bars_Direction");
+            }
+            const std::string* repeat = setting("E_SLIDER_Bars_BarCount");
+            const int bars = std::max(1, repeat == nullptr ? 1 : static_cast<int>(std::strtol(repeat->c_str(), nullptr, 10))) * std::max<int>(1, static_cast<int>(e.colors.size()));
+            const auto vertical = [&](const std::string& d) {
+                return std::any_of(across.begin(), across.end(), [&](const auto& p) { return p.first == d; });
+            };
+            const auto along = [&]() { return vertical(*direction) ? t->bufferHt : t->bufferWi; };
+            const int other = vertical(*direction) ? t->bufferWi : t->bufferHt;
+            if (along() < 2 * bars && other > along() && *direction != "Custom") {
+                for (const auto& [v, h] : across) {
+                    if (*direction == v || *direction == h) {
+                        *direction = *direction == v ? h : v;
+                        break;
+                    }
+                }
+                e.reasons.push_back({ "geometry", fmt::format("bars along the long side ({}x{})", t->bufferWi, t->bufferHt) });
+            }
+            std::string* shade = setting("E_CHECKBOX_Bars_3D");
+            if (shade != nullptr && *shade == "1" && along() < 2 * bars) {
+                *shade = "0";
+                e.reasons.push_back({ "geometry", "bars too thin to shade" });
+            }
+        }
+    }
+
     Band BandOf(const PlanSegment& s) const {
         if (Has(s.flags, "silence")) {
             return Band::Rest;
