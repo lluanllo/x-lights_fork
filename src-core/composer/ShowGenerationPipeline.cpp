@@ -339,6 +339,38 @@ void ReadRenderSummary(GenerationRun& run, HeadlessRenderContext& ctx, const std
     r.fileBytes = static_cast<long long>(fs::file_size(fseq, ec));
 }
 
+void CheckRenderAgainstUnderstanding(GenerationRun& run) {
+    std::vector<std::string> figures;
+    for (const PerformerAssignment& a : run.performers.assignments) {
+        figures.insert(figures.end(), a.figures.begin(), a.figures.end());
+    }
+    for (const FigureProfile& p : run.semantics.profiles) {
+        if (p.CanSpeak()) {
+            figures.push_back(p.figure);
+        }
+    }
+    std::sort(figures.begin(), figures.end());
+    figures.erase(std::unique(figures.begin(), figures.end()), figures.end());
+    if (figures.empty()) {
+        return;
+    }
+    RenderCheckOptions options;
+    RenderTraces traces;
+    std::string error;
+    if (!ReadRenderTraces(run.fseqPath, run.figures, run.semantics, figures, options, traces, error, run.request.cancel)) {
+        run.findings.push_back("info understanding-render-unread: " + error);
+        return;
+    }
+    RenderIntention intention{ &run.performers, &run.understanding.audio, &run.understanding.voices, &run.semantics };
+    run.renderUnderstanding = CompareRender(traces, intention, options);
+    run.renderUnderstanding.sequence = fs::path(run.sequencePath).filename().string();
+    run.renderUnderstood = true;
+    for (const RenderFinding& f : run.renderUnderstanding.findings) {
+        // To look at, never to fail a show: a person decides.
+        run.findings.push_back(fmt::format("info understanding-{}: {} {} {}-{} ms {}", f.kind, f.figure, f.region, f.startMS, f.endMS, f.detail));
+    }
+}
+
 GenerationSidecar MakeSidecar(const GenerationRun& run) {
     GenerationSidecar s;
     s.pipelineVersion = PIPELINE_VERSION;
@@ -377,6 +409,10 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
         s.visualPlan = { run.visualPlan.options.recipes, run.visualPlan.options.colorEngine, run.visualPlan.options.christmasInfluence, run.visualPlan.options.variety };
     } else if (run.hasPrevious) {
         s.visualPlan = run.previous.visualPlan;
+    }
+    if (run.understood) {
+        s.understanding = { true, fs::path(run.understanding.folder).filename().string(), run.understanding.audio.version, static_cast<int>(run.understanding.audio.corrections.size()),
+                            static_cast<int>(run.understanding.manual.size()) };
     }
     s.media.corrections = run.corrections.media;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
@@ -914,6 +950,73 @@ bool PrepareLyrics(GenerationRun& run) {
     });
 }
 
+// What the recording says, given to the show: the voices heard name the lyrics' unnamed
+// phrases, so each face sings only its own; a person's figures for a voice win. It
+// never stops a generation: when it cannot be read the show is made as before.
+void UnderstandRecording(GenerationRun& run, GenerationStage S) {
+    const GenerationRequest& r = run.request;
+    bool on = false;
+    if (r.understanding.has_value()) {
+        on = *r.understanding;
+    } else if (run.hasPrevious && run.previous.understanding.enabled) {
+        on = true;
+    } else if (!run.analysis.audioHash.empty()) {
+        std::error_code ec;
+        on = fs::is_directory(fs::path(UnderstandingFolder(r.showDir, run.analysis.audioHash)), ec);
+    }
+    if (!on) {
+        return;
+    }
+    UnderstandRequest q;
+    q.showDir = r.showDir;
+    q.audioPath = r.audioPath;
+    q.stems = r.stems;
+    q.alignment = run.hasLyrics ? &run.alignment : nullptr;
+    q.lyrics = run.hasLyrics ? &run.lyrics : nullptr;
+    q.cast = run.cast.Empty() ? nullptr : &run.cast;
+    q.transcript = run.transcript.segments.empty() ? nullptr : &run.transcript;
+    q.cancel = r.cancel;
+    UnderstandOutcome o = UnderstandSong(q);
+    if (!o.ok) {
+        Note(run, S, "understanding-not-used", o.errorCode + (o.errorDetail.empty() ? "" : " " + o.errorDetail));
+        return;
+    }
+    run.understanding = std::move(o.song);
+    run.understood = true;
+    run.figures = DescribeFigures(*run.context, run.capabilities, true);
+    FigureChoices choices;
+    std::string text, error;
+    if (ReadTextFile(FigureChoicesPath(r.showDir), text) && !FromJson(text, choices, error)) {
+        Note(run, S, "figure-choices-unreadable", error);
+    }
+    run.semantics = DescribeSemantics(*run.context, run.figures, run.capabilities, &choices);
+    MappingInput mi;
+    mi.audio = &run.understanding.audio;
+    mi.voices = &run.understanding.voices;
+    mi.geometry = &run.figures;
+    mi.semantics = &run.semantics;
+    mi.manual = &run.understanding.manual;
+    run.performers = MapPerformance(mi);
+    const AudioUnderstanding& a = run.understanding.audio;
+    Note(run, S, "understanding", fmt::format("{} stretches, {} moments, {} voices, {} interventions, {} assignments ({} by a person), {} conflicts; {}", a.activities.size(), a.events.size(),
+                                              run.understanding.voices.tracks.size(), run.understanding.voices.interventions.size(), run.performers.assignments.size(),
+                                              run.understanding.manual.size(), run.performers.conflicts.size(), run.understanding.fromCache ? "reading reused" : "audio heard"));
+    for (const std::string& c : run.performers.conflicts) {
+        Note(run, S, "understanding-conflict", c);
+    }
+    if (run.hasLyrics) {
+        run.castFromUnderstanding = ApplyPerformersToCast(run.understanding.voices, run.performers, run.semantics, run.alignment, run.cast);
+        const CastFromUnderstanding& c = run.castFromUnderstanding;
+        if (c.phrasesNamed > 0 || c.facesChanged > 0) {
+            run.voiceTracks = BuildVoiceTracks(run.alignment, run.cast, r.lyricTrackName);
+            Note(run, S, "understanding-voices", fmt::format("{} phrases given to the voice heard in them, {} voices added, {} voices with a person's figures", c.phrasesNamed, c.voicesAdded, c.facesChanged));
+        }
+        for (const std::string& n : c.notes) {
+            Note(run, S, "understanding-voice-note", n);
+        }
+    }
+}
+
 bool PlanShow(GenerationRun& run) {
     return RunStage(run, GenerationStage::Plan, [&]() {
         const GenerationStage S = GenerationStage::Plan;
@@ -934,6 +1037,7 @@ bool PlanShow(GenerationRun& run) {
                 run.Stage(S).notes.push_back("excluded by a correction: " + c.target);
             }
         }
+        UnderstandRecording(run, S);
         PlannerInput in;
         in.analysis = &run.analysis;
         in.capabilities = &run.capabilities;
@@ -1495,6 +1599,10 @@ bool WriteAndPublish(GenerationRun& run) {
                     return false;
                 }
                 BuildCoverage(run);
+                if (run.understood) {
+                    Progress(run, S, "check what the figures did");
+                    CheckRenderAgainstUnderstanding(run);
+                }
                 if (run.render.layoutChannels != 0 && run.render.channels != run.render.layoutChannels) {
                     // As on the desktop, the file only carries the controllers' channels.
                     run.findings.push_back(fmt::format("info fseq-channels: the file has {} channels and the layout {}; models without a controller are outside the file", run.render.channels, run.render.layoutChannels));
@@ -1644,6 +1752,15 @@ void WriteDiagnostics(GenerationRun& run) {
     }
     if (run.hasLyrics) {
         ok &= WriteText(report / "lyrics-alignment.json", ToJson(run.alignment));
+    }
+    if (run.understood) {
+        ok &= WriteText(report / "understanding-voices.json", ToJson(run.understanding.voices));
+        ok &= WriteText(report / "figures.json", ToJson(run.figures, false));
+        ok &= WriteText(report / "figure-semantics.json", ToJson(run.semantics));
+        ok &= WriteText(report / "performers.json", ToJson(run.performers));
+    }
+    if (run.renderUnderstood) {
+        ok &= WriteText(report / "render-understanding.json", ToJson(run.renderUnderstanding));
     }
     if (!run.plan.segments.empty()) {
         ok &= WriteText(report / "composition-plan.json", ToJson(run.plan));

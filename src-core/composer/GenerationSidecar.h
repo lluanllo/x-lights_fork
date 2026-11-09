@@ -20,7 +20,20 @@ namespace composer {
 
 // 2: a person's review of the pictures and videos (`review`). A version 1 file reads as
 // a show nobody reviewed.
-inline constexpr int SIDECAR_SCHEMA_VERSION = 2;
+// 3: the song's understanding (`understanding`): whether the voices and figures heard in
+// the recording were used, and which reading. A version 1 or 2 file reads as a show made
+// without it.
+inline constexpr int SIDECAR_SCHEMA_VERSION = 3;
+
+// Whether a show used the understanding of its recording, and which one. The reading,
+// the corrections and the person's assignments live in their own files (UnderstandingStore.h).
+struct UnderstandingSettings {
+    bool enabled = false;
+    std::string audioId;       // the folder under ShowComposer/understanding
+    std::string readerVersion;
+    int corrections = 0;
+    int manualAssignments = 0;
+};
 
 // The artistic director's settings a show was made with, so a regeneration keeps them.
 struct VisualPlanSettings {
@@ -76,6 +89,7 @@ struct GenerationSidecar {
     // The media folders, a person's picture and video choices, and what plays where.
     MediaSession media;
     VisualPlanSettings visualPlan;
+    UnderstandingSettings understanding;
 };
 
 enum class SidecarStatus {
