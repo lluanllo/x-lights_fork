@@ -533,6 +533,68 @@ void DumpConfig()
     }
 }
 
+static bool HeadlessOpenGLCanRenderShaders();
+
+// A render with no window must make the same choices the desktop does, or the same
+// .xsq renders differently: the video decoder and GPU compute follow the preferences.
+// Used by --headless and by every Show Composer mode that renders.
+static void MirrorDesktopRenderPreferences(const char* who) {
+    // Video decode backend: mirror the desktop's hardware-accel preference.
+    // The flag defaults false, so without this headless picks FFmpeg while the
+    // desktop picks AVFoundation (macOS) for the same file — different decoders
+    // yield different frames and a large fseq divergence on video effects.
+    {
+        auto* cfg = GetXLightsConfig();
+#ifdef __APPLE__
+        bool hwVideo = true;
+        cfg->Read("xLightsVideoReaderAccelerated", &hwVideo, true);
+        if (getenv("XL_HEADLESS_NO_HWVIDEO") != nullptr) {
+            hwVideo = false;
+            spdlog::warn("{}: XL_HEADLESS_NO_HWVIDEO set — hardware video decode disabled", who);
+        }
+        VideoReader::SetHardwareAcceleratedVideo(hwVideo);
+        VideoReader::InitHWAcceleration();
+#else
+        bool hwVideo = true;
+        int hwRenderer = 0;
+        cfg->Read("xLightsVideoReaderAccelerated", &hwVideo, true);
+        cfg->Read("xLightsVideoReaderRenderer", &hwRenderer, 0);
+        if (getenv("XL_HEADLESS_NO_HWVIDEO") != nullptr) {
+            hwVideo = false;
+            spdlog::warn("{}: XL_HEADLESS_NO_HWVIDEO set — hardware video decode disabled", who);
+        }
+        VideoReader::SetHardwareAcceleratedVideo(hwVideo);
+        VideoReader::SetHardwareRenderType(hwRenderer);
+#endif
+    }
+
+    // GPU compute: mirror the desktop's preference (xLightsMain.cpp reads
+    // xLightsGPURendering into GPURenderUtils::SetEnabled). XL_NO_GPU_COMPUTE=1
+    // overrides for CPU-only A/B determinism testing.
+    {
+        bool gpuRendering = true;
+        GetXLightsConfig()->Read("xLightsGPURendering", &gpuRendering, true);
+        if (getenv("XL_NO_GPU_COMPUTE") != nullptr) {
+            gpuRendering = false;
+            spdlog::warn("{}: XL_NO_GPU_COMPUTE set — GPU compute disabled", who);
+        } else if (!gpuRendering && !HeadlessOpenGLCanRenderShaders()) {
+            // The Shader effect is the one effect with no CPU implementation:
+            // its renderers are OpenGL and the GPU (Metal/Vulkan) path, and
+            // nothing else.  With neither, it fills solid cyan - a silently
+            // wrong render rather than a slow one.  A headless box commonly
+            // has no usable GL (no display, or a server with software Mesa),
+            // so honouring the stored preference there would quietly ruin any
+            // sequence using a shader.  Turn it back on and say so.  The
+            // explicit XL_NO_GPU_COMPUTE above is NOT overridden - that one
+            // is a deliberate CPU-only A/B knob and must stay authoritative.
+            gpuRendering = true;
+            spdlog::warn("{}: GPU rendering is disabled in preferences but OpenGL is unavailable; "
+                         "enabling it so Shader effects render (they have no CPU implementation)", who);
+        }
+        GPURenderUtils::SetEnabled(gpuRendering);
+    }
+}
+
 #ifdef __APPLE__
 #include <sys/stat.h>
 #include <unistd.h>
@@ -2216,6 +2278,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-generate");
         std::exit(composer::RunGenerateCommand(command));
     }
 
@@ -2337,6 +2400,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-reference-study");
         std::exit(composer::RunReferenceStudy(options));
     }
 
@@ -2398,6 +2462,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-pipeline-test");
         std::exit(composer::RunPipelineTest(options));
     }
 
@@ -2445,60 +2510,7 @@ bool xLightsApp::OnInit()
         // Text/Shape effects need a backend; same choice the GUI makes.
         RegisterPlatformTextDrawingContext();
 
-        // Video decode backend: mirror the desktop's hardware-accel preference.
-        // The flag defaults false, so without this headless picks FFmpeg while the
-        // desktop picks AVFoundation (macOS) for the same file — different decoders
-        // yield different frames and a large fseq divergence on video effects.
-        {
-            auto* cfg = GetXLightsConfig();
-#ifdef __APPLE__
-            bool hwVideo = true;
-            cfg->Read("xLightsVideoReaderAccelerated", &hwVideo, true);
-            if (getenv("XL_HEADLESS_NO_HWVIDEO") != nullptr) {
-                hwVideo = false;
-                spdlog::warn("--headless: XL_HEADLESS_NO_HWVIDEO set — hardware video decode disabled");
-            }
-            VideoReader::SetHardwareAcceleratedVideo(hwVideo);
-            VideoReader::InitHWAcceleration();
-#else
-            bool hwVideo = true;
-            int hwRenderer = 0;
-            cfg->Read("xLightsVideoReaderAccelerated", &hwVideo, true);
-            cfg->Read("xLightsVideoReaderRenderer", &hwRenderer, 0);
-            if (getenv("XL_HEADLESS_NO_HWVIDEO") != nullptr) {
-                hwVideo = false;
-                spdlog::warn("--headless: XL_HEADLESS_NO_HWVIDEO set — hardware video decode disabled");
-            }
-            VideoReader::SetHardwareAcceleratedVideo(hwVideo);
-            VideoReader::SetHardwareRenderType(hwRenderer);
-#endif
-        }
-
-        // GPU compute: mirror the desktop's preference (xLightsMain.cpp reads
-        // xLightsGPURendering into GPURenderUtils::SetEnabled). XL_NO_GPU_COMPUTE=1
-        // overrides for CPU-only A/B determinism testing.
-        {
-            bool gpuRendering = true;
-            GetXLightsConfig()->Read("xLightsGPURendering", &gpuRendering, true);
-            if (getenv("XL_NO_GPU_COMPUTE") != nullptr) {
-                gpuRendering = false;
-                spdlog::warn("--headless: XL_NO_GPU_COMPUTE set — GPU compute disabled");
-            } else if (!gpuRendering && !HeadlessOpenGLCanRenderShaders()) {
-                // The Shader effect is the one effect with no CPU implementation:
-                // its renderers are OpenGL and the GPU (Metal/Vulkan) path, and
-                // nothing else.  With neither, it fills solid cyan - a silently
-                // wrong render rather than a slow one.  A headless box commonly
-                // has no usable GL (no display, or a server with software Mesa),
-                // so honouring the stored preference there would quietly ruin any
-                // sequence using a shader.  Turn it back on and say so.  The
-                // explicit XL_NO_GPU_COMPUTE above is NOT overridden - that one
-                // is a deliberate CPU-only A/B knob and must stay authoritative.
-                gpuRendering = true;
-                spdlog::warn("--headless: GPU rendering is disabled in preferences but OpenGL is unavailable; "
-                             "enabling it so Shader effects render (they have no CPU implementation)");
-            }
-            GPURenderUtils::SetEnabled(gpuRendering);
-        }
+        MirrorDesktopRenderPreferences("--headless");
 
         std::list<std::string> mediaFolders;
         if (!mediaDir.IsEmpty() && mediaDir != showDir) {

@@ -947,6 +947,25 @@ bool PlanShow(GenerationRun& run) {
         in.options.seed = *run.request.seed;
         in.options.frameMS = run.request.frameMS;
         in.corrections = run.corrections.plan;
+        // In free mode the person's screens decide where the words go, as they decide
+        // where the pictures go: the plan is told before it places any text.
+        ScreenSettings screens = run.hasPrevious ? run.previous.media.screens : ScreenSettings();
+        MergeScreenSettings(screens, run.corrections.screens);
+        if (screens.set && screens.mode == LyricsMode::Free) {
+            for (const ScreenChoice& c : screens.screens) {
+                if (!c.roleSet) {
+                    continue;
+                }
+                if (c.role == SurfaceRole::Lyrics || c.role == SurfaceRole::Narration) {
+                    in.options.textOnly.insert(c.target);
+                } else if (c.role == SurfaceRole::Main || c.role == SurfaceRole::Secondary || c.role == SurfaceRole::Tree || c.role == SurfaceRole::Media) {
+                    in.options.noText.insert(c.target);
+                }
+            }
+            if (!in.options.textOnly.empty() || !in.options.noText.empty()) {
+                Note(run, S, "screens-words", fmt::format("free mode: words only on {} screens chosen for them, never on {} chosen for pictures", in.options.textOnly.size(), in.options.noText.size()));
+            }
+        }
         run.plan = PlanComposition(in);
         run.planValidation = ValidateCompositionPlan(run.plan, run.capabilities, &run.profile);
         AddValidationNotes(run, S, run.planValidation, "plan");
