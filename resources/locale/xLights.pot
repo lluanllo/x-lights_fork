@@ -11991,3 +11991,156 @@ msgstr ""
 
 msgid "The recipes could not be saved: %s"
 msgstr ""
+
+msgid "Evaluate the Show..."
+msgstr ""
+
+msgid "More variety from scene to scene"
+msgstr ""
+
+msgid "Christmas colours rather than the song's"
+msgstr ""
+
+msgid "Follows the music"
+msgstr ""
+
+msgid "Variety"
+msgstr ""
+
+msgid "Richness"
+msgstr ""
+
+msgid "The house moves together"
+msgstr ""
+
+msgid "Colour"
+msgstr ""
+
+msgid "Artistic direction"
+msgstr ""
+
+msgid "Flows without jumps"
+msgstr ""
+
+msgid "Personality"
+msgstr ""
+
+msgid "I liked it"
+msgstr ""
+
+msgid "Monotonous"
+msgstr ""
+
+msgid "Too busy"
+msgstr ""
+
+msgid "Too calm"
+msgstr ""
+
+msgid "Too Christmas-coloured"
+msgstr ""
+
+msgid "Not Christmas enough"
+msgstr ""
+
+msgid "Change the looks more from scene to scene"
+msgstr ""
+
+msgid "Keep an idea longer"
+msgstr ""
+
+msgid "Use more Christmas colours"
+msgstr ""
+
+msgid "Use more of the song's own colours"
+msgstr ""
+
+msgid "Mark this show's recipes as favourites"
+msgstr ""
+
+msgid "Evaluate the Show"
+msgstr ""
+
+msgid "How did the show turn out? Only what you saw in xLights counts. The measures below are the program's, not a judgement."
+msgstr ""
+
+msgid "Who evaluates:"
+msgstr ""
+
+msgid "Your score:"
+msgstr ""
+
+msgid "Quick evaluation: only the score and a few words"
+msgstr ""
+
+msgid "Not rated"
+msgstr ""
+
+msgid "1 - Poor"
+msgstr ""
+
+msgid "5 - Very good"
+msgstr ""
+
+msgid "In a few words:"
+msgstr ""
+
+msgid "Notes:"
+msgstr ""
+
+msgid "What should the next shows take from this one? Only what you tick becomes a rule (marked: suggested by your answers)."
+msgstr ""
+
+msgid "No measures for this show."
+msgstr ""
+
+msgid "not given"
+msgstr ""
+
+msgid "Say who evaluates the show."
+msgstr ""
+
+msgid "Two of the rules you ticked contradict each other."
+msgstr ""
+
+msgid "The evaluation is not complete."
+msgstr ""
+
+msgid "(suggested)"
+msgstr ""
+
+msgid "Colour Ideas from the Lyrics (Groq)..."
+msgstr ""
+
+msgid "Give the song's lyrics first: only their text is described."
+msgstr ""
+
+msgid "to suggest colours and a mood from the text of the lyrics; only the text is sent, never the song"
+msgstr ""
+
+msgid "Sending the text of the lyrics to Groq and waiting for colour ideas..."
+msgstr ""
+
+msgid "The colour ideas could not be read."
+msgstr ""
+
+msgid "Groq reads the lyrics as %s, with %d colours; Christmas %.0f%%. Only a suggestion: the song's key and your sliders still decide."
+msgstr ""
+
+msgid "joyful"
+msgstr ""
+
+msgid "tender"
+msgstr ""
+
+msgid "epic"
+msgstr ""
+
+msgid "playful"
+msgstr ""
+
+msgid "nostalgic"
+msgstr ""
+
+msgid "festive"
+msgstr ""

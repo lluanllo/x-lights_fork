@@ -11993,3 +11993,156 @@ msgstr "No se han podido leer las recetas de este show: %s"
 
 msgid "The recipes could not be saved: %s"
 msgstr "No se han podido guardar las recetas: %s"
+
+msgid "Evaluate the Show..."
+msgstr "Valorar el espectáculo..."
+
+msgid "More variety from scene to scene"
+msgstr "Más variedad de una escena a otra"
+
+msgid "Christmas colours rather than the song's"
+msgstr "Colores navideños en vez de los de la canción"
+
+msgid "Follows the music"
+msgstr "Sigue la música"
+
+msgid "Variety"
+msgstr "Variedad"
+
+msgid "Richness"
+msgstr "Riqueza"
+
+msgid "The house moves together"
+msgstr "La casa se mueve a la vez"
+
+msgid "Colour"
+msgstr "Color"
+
+msgid "Artistic direction"
+msgstr "Dirección artística"
+
+msgid "Flows without jumps"
+msgstr "Fluye sin saltos"
+
+msgid "Personality"
+msgstr "Personalidad"
+
+msgid "I liked it"
+msgstr "Me ha gustado"
+
+msgid "Monotonous"
+msgstr "Monótono"
+
+msgid "Too busy"
+msgstr "Demasiado cargado"
+
+msgid "Too calm"
+msgstr "Demasiado tranquilo"
+
+msgid "Too Christmas-coloured"
+msgstr "Demasiado de colores navideños"
+
+msgid "Not Christmas enough"
+msgstr "Poco navideño"
+
+msgid "Change the looks more from scene to scene"
+msgstr "Cambiar más el aspecto de una escena a otra"
+
+msgid "Keep an idea longer"
+msgstr "Mantener una idea más tiempo"
+
+msgid "Use more Christmas colours"
+msgstr "Usar más colores navideños"
+
+msgid "Use more of the song's own colours"
+msgstr "Usar más los colores de la canción"
+
+msgid "Mark this show's recipes as favourites"
+msgstr "Marcar como favoritas las recetas de este espectáculo"
+
+msgid "Evaluate the Show"
+msgstr "Valorar el espectáculo"
+
+msgid "How did the show turn out? Only what you saw in xLights counts. The measures below are the program's, not a judgement."
+msgstr "¿Cómo ha quedado el espectáculo? Solo cuenta lo que hayas visto en xLights. Las medidas de abajo son del programa, no un juicio."
+
+msgid "Who evaluates:"
+msgstr "Quién valora:"
+
+msgid "Your score:"
+msgstr "Tu nota:"
+
+msgid "Quick evaluation: only the score and a few words"
+msgstr "Valoración rápida: solo la nota y unas palabras"
+
+msgid "Not rated"
+msgstr "Sin valorar"
+
+msgid "1 - Poor"
+msgstr "1 - Flojo"
+
+msgid "5 - Very good"
+msgstr "5 - Muy bien"
+
+msgid "In a few words:"
+msgstr "En pocas palabras:"
+
+msgid "Notes:"
+msgstr "Notas:"
+
+msgid "What should the next shows take from this one? Only what you tick becomes a rule (marked: suggested by your answers)."
+msgstr "¿Qué deberían tomar de este los próximos espectáculos? Solo lo que marques se convierte en regla (señalado: sugerido por tus respuestas)."
+
+msgid "No measures for this show."
+msgstr "No hay medidas de este espectáculo."
+
+msgid "not given"
+msgstr "sin nota"
+
+msgid "Say who evaluates the show."
+msgstr "Di quién valora el espectáculo."
+
+msgid "Two of the rules you ticked contradict each other."
+msgstr "Dos de las reglas que has marcado se contradicen."
+
+msgid "The evaluation is not complete."
+msgstr "La valoración no está completa."
+
+msgid "(suggested)"
+msgstr "(sugerida)"
+
+msgid "Colour Ideas from the Lyrics (Groq)..."
+msgstr "Ideas de color desde la letra (Groq)..."
+
+msgid "Give the song's lyrics first: only their text is described."
+msgstr "Primero indica la letra de la canción: solo se describe su texto."
+
+msgid "to suggest colours and a mood from the text of the lyrics; only the text is sent, never the song"
+msgstr "para sugerir colores y un ambiente a partir del texto de la letra; solo se envía el texto, nunca la canción"
+
+msgid "Sending the text of the lyrics to Groq and waiting for colour ideas..."
+msgstr "Enviando el texto de la letra a Groq y esperando ideas de color..."
+
+msgid "The colour ideas could not be read."
+msgstr "No se han podido leer las ideas de color."
+
+msgid "Groq reads the lyrics as %s, with %d colours; Christmas %.0f%%. Only a suggestion: the song's key and your sliders still decide."
+msgstr "Groq lee la letra como %s, con %d colores; navideña al %.0f%%. Solo es una sugerencia: siguen mandando la tonalidad de la canción y tus deslizadores."
+
+msgid "joyful"
+msgstr "alegre"
+
+msgid "tender"
+msgstr "tierna"
+
+msgid "epic"
+msgstr "épica"
+
+msgid "playful"
+msgstr "juguetona"
+
+msgid "nostalgic"
+msgstr "nostálgica"
+
+msgid "festive"
+msgstr "festiva"

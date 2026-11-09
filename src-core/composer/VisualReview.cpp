@@ -160,6 +160,13 @@ VisualReview BuildReview(const VisualMediaStoryboard& b, const std::string& sequ
         } else if (carried) {
             r.state = "in-progress";
         }
+        // An evaluation is of one show: it stays with that show and is not carried to another.
+        if (previous->specHash == specHash && !specHash.empty() && !previous->evaluation.Empty()) {
+            r.evaluation = previous->evaluation;
+            if (r.state == "pending") {
+                r.state = "in-progress";
+            }
+        }
     }
     return r;
 }
@@ -271,6 +278,93 @@ void ReleaseReviewHolds(std::vector<MediaCorrection>& list) {
     std::erase_if(list, [](const MediaCorrection& c) { return c.origin == "review"; });
 }
 
+const std::vector<std::string>& EvaluationCriteria() {
+    static const std::vector<std::string> C = { "musicality", "variety", "complexity", "coordination", "colour", "direction", "continuity", "personality", "multimedia" };
+    return C;
+}
+
+const std::vector<std::string>& EvaluationTags() {
+    static const std::vector<std::string> T = { "liked", "monotonous", "too-busy", "too-calm", "too-christmas", "not-christmas" };
+    return T;
+}
+
+const std::vector<std::string>& EvaluationRules() {
+    static const std::vector<std::string> R = { "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes" };
+    return R;
+}
+
+std::vector<std::string> SuggestRules(const ShowEvaluation& e) {
+    std::vector<std::string> out;
+    const auto has = [&](const char* tag) { return std::find(e.tags.begin(), e.tags.end(), tag) != e.tags.end(); };
+    const auto rating = [&](const char* c) {
+        const auto it = e.ratings.find(c);
+        return it == e.ratings.end() ? 0 : it->second;
+    };
+    const auto add = [&](const char* rule) {
+        if (std::find(out.begin(), out.end(), rule) == out.end()) {
+            out.push_back(rule);
+        }
+    };
+    if (has("monotonous") || (rating("variety") > 0 && rating("variety") <= 2)) {
+        add("more-variety");
+    }
+    if (has("too-busy") || (rating("continuity") > 0 && rating("continuity") <= 2)) {
+        add("less-variety");
+    }
+    if (has("not-christmas")) {
+        add("more-christmas");
+    }
+    if (has("too-christmas")) {
+        add("more-song-colours");
+    }
+    if (has("liked") || e.overall >= 70 || rating("direction") >= 4) {
+        add("keep-recipes");
+    }
+    return out;
+}
+
+bool EvaluateShow(VisualReview& review, const ShowEvaluation& e, std::string& why) {
+    const auto known = [](const std::vector<std::string>& list, const std::string& x) { return std::find(list.begin(), list.end(), x) != list.end(); };
+    if (e.reviewer.empty()) {
+        why = "no-reviewer";
+        return false;
+    }
+    for (const auto& [criterion, value] : e.ratings) {
+        if (!known(EvaluationCriteria(), criterion) || value < 1 || value > 5) {
+            why = "rating:" + criterion;
+            return false;
+        }
+    }
+    if (e.overall < 0 || e.overall > 100) {
+        why = "overall";
+        return false;
+    }
+    for (const std::string& t : e.tags) {
+        if (!known(EvaluationTags(), t)) {
+            why = "tag:" + t;
+            return false;
+        }
+    }
+    for (const std::string& r : e.rules) {
+        if (!known(EvaluationRules(), r)) {
+            why = "rule:" + r;
+            return false;
+        }
+    }
+    if ((known(e.rules, "more-variety") && known(e.rules, "less-variety")) || (known(e.rules, "more-christmas") && known(e.rules, "more-song-colours"))) {
+        why = "rules-contradict";
+        return false;
+    }
+    review.evaluation = e;
+    if (e.quick) {
+        review.evaluation.ratings.clear();
+    }
+    if (review.state == "pending") {
+        review.state = "in-progress";
+    }
+    return true;
+}
+
 json VisualReviewJson(const VisualReview& r) {
     json clips = json::array();
     for (const ClipReview& c : r.clips) {
@@ -302,6 +396,11 @@ json VisualReviewJson(const VisualReview& r) {
     if (!r.approvedAt.empty()) {
         root["approvedAt"] = r.approvedAt;
     }
+    if (!r.evaluation.Empty()) {
+        const ShowEvaluation& e = r.evaluation;
+        root["evaluation"] = { { "ratings", e.ratings }, { "overall", e.overall }, { "quick", e.quick }, { "tags", e.tags }, { "notes", e.notes }, { "rules", e.rules },
+                               { "reviewer", e.reviewer }, { "at", e.at }, { "measured", e.measured } };
+    }
     if (r.legacy) {
         root["legacy"] = true;
     }
@@ -330,6 +429,25 @@ bool VisualReviewFrom(const json& j, VisualReview& r, std::string& error) {
     r.reviewer = j.value("reviewer", std::string());
     r.approvedAt = j.value("approvedAt", std::string());
     r.legacy = j.value("legacy", false);
+    if (j.contains("evaluation") && j["evaluation"].is_object()) {
+        const json& e = j["evaluation"];
+        const json ratings = e.value("ratings", json::object());
+        for (const auto& [criterion, value] : ratings.items()) {
+            if (value.is_number_integer() && value.get<int>() >= 1 && value.get<int>() <= 5) {
+                r.evaluation.ratings[criterion] = value.get<int>();
+            }
+        }
+        r.evaluation.overall = std::clamp(e.value("overall", 0), 0, 100);
+        r.evaluation.quick = e.value("quick", false);
+        r.evaluation.tags = e.value("tags", std::vector<std::string>());
+        r.evaluation.notes = e.value("notes", std::string());
+        r.evaluation.rules = e.value("rules", std::vector<std::string>());
+        r.evaluation.reviewer = e.value("reviewer", std::string());
+        r.evaluation.at = e.value("at", std::string());
+        r.evaluation.measured = e.value("measured", std::map<std::string, double>());
+    }
+    // Read as the current version from now on.
+    r.version = VISUAL_REVIEW_VERSION;
     const json k = j.value("checklist", json::object());
     if (k.is_object()) {
         r.checklist.opened = k.value("opened", false);

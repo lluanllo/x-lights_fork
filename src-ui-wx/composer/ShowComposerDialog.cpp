@@ -65,6 +65,7 @@
 #include "composer/LyricDocument.h"
 #include "composer/MusicAssist.h"
 #include "composer/VisualDirection.h"
+#include "composer/SongVisualPlan.h"
 #include "composer/SequenceWriter.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "media/AudioManager.h"
@@ -139,6 +140,8 @@ enum {
     ID_REVIEW_CLIPS,
     ID_LEARNED,
     ID_RECIPES,
+    ID_EVALUATE,
+    ID_BRIEF,
 };
 
 // Logs a handler of the window that kept it from answering for long: the window must
@@ -729,7 +732,8 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     look->Add(_swatch, 0, wxRIGHT, 8);
     _styleInfo = new wxStaticText(style->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1));
     look->Add(_styleInfo, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
-    look->Add(new wxButton(style->GetStaticBox(), ID_DESCRIBE, _("Describe the Song with AI (Gemini)...")), 0, wxALIGN_CENTER_VERTICAL);
+    look->Add(new wxButton(style->GetStaticBox(), ID_DESCRIBE, _("Describe the Song with AI (Gemini)...")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 4);
+    look->Add(new wxButton(style->GetStaticBox(), ID_BRIEF, _("Colour Ideas from the Lyrics (Groq)...")), 0, wxALIGN_CENTER_VERTICAL);
     style->Add(look, 0, wxEXPAND | wxALL, 4);
 
     wxStaticBoxSizer* mediaBox = box(_("Pictures and videos"));
@@ -837,6 +841,13 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         }
         StartAssist("describe", AskConsent("Google Gemini (generativelanguage.googleapis.com)", _("to describe its genre, mood and energy; it is only a suggestion and never changes the analysis")));
     }, ID_DESCRIBE);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_lyricsPath.empty()) {
+            ShowError(_("Give the song's lyrics first: only their text is described."), wxString());
+            return;
+        }
+        StartAssist("brief", AskConsent("Groq (api.groq.com)", _("to suggest colours and a mood from the text of the lyrics; only the text is sent, never the song")));
+    }, ID_BRIEF);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditRecipes(); }, ID_RECIPES);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditScreens(); }, ID_SCREENS);
@@ -1301,6 +1312,7 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     sizer->Add(actions, 0, wxBOTTOM, 4);
     auto* review = new wxBoxSizer(wxHORIZONTAL);
     review->Add(new wxButton(page, ID_REVIEW_CLIPS, _("Review the Pictures and Videos...")), 0, wxRIGHT, 4);
+    review->Add(new wxButton(page, ID_EVALUATE, _("Evaluate the Show...")), 0, wxRIGHT, 4);
     review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0);
     sizer->Add(review, 0, wxBOTTOM, 8);
     const auto list = [&](const wxString& label, wxListCtrl*& ctrl, const std::vector<std::pair<wxString, int>>& columns, int height) {
@@ -1341,6 +1353,12 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditReview(); }, ID_APPROVE);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditReview(); }, ID_REVIEW_CLIPS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditPreferences(); }, ID_LEARNED);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        EvaluationDialog dialog(this, ResultReview().evaluation, ResultMeasures());
+        if (dialog.ShowModal() == wxID_OK) {
+            (void)SaveEvaluation(dialog.Evaluation());
+        }
+    }, ID_EVALUATE);
     return page;
 }
 
@@ -1475,6 +1493,10 @@ void ShowComposerDialog::StartAssist(const std::string& action, bool consent, co
     if (consent) {
         args.push_back("--allow-upload");
     }
+    if (action == "brief") {
+        args.push_back("--lyrics");
+        args.push_back(_lyricsPath);
+    }
     if (!query.empty()) {
         args.push_back("--query");
         args.push_back(query);
@@ -1489,7 +1511,10 @@ void ShowComposerDialog::StartAssist(const std::string& action, bool consent, co
         ShowError(_("The assistant could not be started."), U(error));
         return;
     }
-    _assistInfo->SetLabel(action == "lrclib" ? _("Searching LRCLIB...") : action == "transcribe" ? _("Sending the song to Groq and waiting for the words...") : _("Sending the song to Gemini and waiting for its description..."));
+    _assistInfo->SetLabel(action == "lrclib"       ? _("Searching LRCLIB...")
+                          : action == "transcribe" ? _("Sending the song to Groq and waiting for the words...")
+                          : action == "brief"      ? _("Sending the text of the lyrics to Groq and waiting for colour ideas...")
+                                                   : _("Sending the song to Gemini and waiting for its description..."));
 }
 
 void ShowComposerDialog::OnAssistJob(const ComposerJob::Update& u) {
@@ -1592,6 +1617,26 @@ void ShowComposerDialog::AssistFinished(int exitCode) {
             _assistMessage = S(wxString::Format(_("%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."), static_cast<int>(t.words.size()), U(t.model)));
         }
         SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    if (_assistAction == "brief") {
+        SongVisualBrief brief;
+        std::string error;
+        const std::string text = ReadFile(fs::path(_assistResultPath));
+        const json root = json::parse(text, nullptr, false);
+        if (!root.is_object() || !ParseVisualBrief(text, root.value("source", std::string("groq")), brief, error)) {
+            _assistMessage = S(_("The colour ideas could not be read."));
+        } else {
+            _briefPath = _assistResultPath;
+            static const std::map<std::string, wxString> MOODS = { { "joyful", _("joyful") }, { "tender", _("tender") }, { "epic", _("epic") }, { "playful", _("playful") },
+                                                                   { "nostalgic", _("nostalgic") }, { "dark", _("dark") }, { "calm", _("calm") }, { "festive", _("festive") } };
+            const auto mood = MOODS.find(brief.mood);
+            _assistMessage = S(wxString::Format(_("Groq reads the lyrics as %s, with %d colours; Christmas %.0f%%. Only a suggestion: the song's key and your sliders still decide."),
+                                                mood != MOODS.end() ? mood->second : U(brief.mood),
+                                                static_cast<int>(brief.colors.size()), std::max(0.0, brief.christmas) * 100));
+            RefreshAll();
+        }
+        SetWrapped(_styleInfo, U(_assistMessage));
         return;
     }
     SongCharacter ch;
@@ -1989,6 +2034,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     add("--roles", _rolesPath);
     add("--transcript", _transcriptPath);
     add("--character", _characterPath);
+    add("--brief", _briefPath);
     add("--stop-after", stopAfter);
     if (!_corrections.Empty()) {
         const fs::path file = fs::path(reportDir).parent_path() / (fs::path(reportDir).filename().string() + ".corrections.json");
@@ -2023,7 +2069,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
 
 std::string ShowComposerDialog::InputsKey() const {
     return fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", _audioPath, _showDir, _lyricsPath, _timingPath, _sessionPath.empty() ? std::string() : ReadFile(fs::path(_sessionPath)), _profilePath, _templatesDir, _rolesPath,
-                       _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath) +
+                       _seed->GetValue(), ToJson(_corrections), _transcriptPath, _characterPath + "|" + _briefPath) +
            fmt::format("|{}|{}", std::accumulate(_mediaFolders.begin(), _mediaFolders.end(), std::string(), [](std::string x, const std::string& y) { return x + ";" + y; }),
                        _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0) +
            fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
@@ -3735,6 +3781,55 @@ void ShowComposerDialog::EditPreferences() {
     if (dialog.ShowModal() == wxID_OK) {
         (void)SetShowPreferences(dialog.Preferences());
     }
+}
+
+// The program's own measures of the result, shown beside the person's evaluation.
+std::map<std::string, double> ShowComposerDialog::ResultMeasures() const {
+    std::map<std::string, double> out;
+    const fs::path report(_resultReportDir);
+    const json metrics = json::parse(ReadFile(report / "direction-metrics.json"), nullptr, false);
+    if (metrics.is_object()) {
+        for (const char* k : { "coverageMean", "paletteCoherence", "hueConcentration", "startsTogether", "eventsPerMinute", "repeatConsistency", "lookDiversity" }) {
+            if (metrics.contains(k) && metrics[k].is_number()) {
+                out[k] = metrics[k].get<double>();
+            }
+        }
+    }
+    const json plan = json::parse(ReadFile(report / "visual-plan.json"), nullptr, false);
+    if (plan.is_object()) {
+        out["distinctRecipes"] = plan.value("distinctRecipes", 0);
+        out["longestRepeatShare"] = plan.value("longestRepeatShare", 0.0);
+    }
+    return out;
+}
+
+bool ShowComposerDialog::SaveEvaluation(const ShowEvaluation& evaluation) {
+    VisualReview review = ResultReview();
+    if (review.sequence.empty()) {
+        review.sequence = fs::path(_resultSequence).filename().string();
+    }
+    std::string why;
+    if (!EvaluateShow(review, evaluation, why) || !SaveReview(review, {})) {
+        return false;
+    }
+    // A rule the person chose: the recipes this show played become favourites.
+    if (std::find(evaluation.rules.begin(), evaluation.rules.end(), "keep-recipes") != evaluation.rules.end()) {
+        const json plan = json::parse(ReadFile(fs::path(_resultReportDir) / "visual-plan.json"), nullptr, false);
+        const std::string path = RecipeLibraryPath(_showDir);
+        RecipeLibrary library;
+        std::string error;
+        if (plan.is_object() && FileExists(path) && ReadRecipeLibrary(path, library, error)) {
+            for (const json& scene : plan.value("scenes", json::array())) {
+                const std::string id = scene.value("recipe", std::string());
+                if (!id.empty()) {
+                    (void)SetRecipeFavorite(library, id, true);
+                }
+            }
+            (void)SaveRecipeLibrary(path, library, error);
+        }
+    }
+    RefreshAll();
+    return true;
 }
 
 std::set<std::string> ShowComposerDialog::HouseFamilies() const {

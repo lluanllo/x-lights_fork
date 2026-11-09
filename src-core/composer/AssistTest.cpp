@@ -4,6 +4,7 @@
 #include "composer/LyricAligner.h"
 #include "composer/LyricDocument.h"
 #include "composer/MusicAssist.h"
+#include "composer/SongVisualPlan.h"
 #include "composer/GenerationValidator.h"
 #include "utils/ExternalHooks.h"
 
@@ -131,6 +132,7 @@ public:
         TestLrclib();
         TestGroq();
         TestGemini();
+        TestBrief();
         TestCacheAndFiles();
         TestTranscriptLrc();
         TestTranscriptAlignment();
@@ -390,6 +392,44 @@ private:
         limited.Answer(429, "{}", { { "retry-after", "3" } });
         limited.Answer(200, answer);
         Check(!DescribeWithGemini(limited, song.string(), key, true, options, Policy(), c, f) && f.error == AssistError::RateLimited && limited.requests.size() == 3, "429 three times: it stops at three");
+    }
+
+    void TestBrief() {
+        Title("Groq colour brief: the lyrics' text only, a model the service lists, the answer checked");
+        ApiKey key { FakeKey("gsk_", 24), "environment" };
+        SongVisualBrief b;
+        AssistFailure f;
+        std::string model;
+        StandIn s;
+        const std::string lines = "una estrella en la ventana\nfarolillos rojos en la plaza";
+        Check(!BriefWithGroq(s, lines, "cancion", key, false, Policy(), model, b, f) && f.error == AssistError::NoConsent && s.requests.empty(), "no consent: nothing is sent");
+        Check(!BriefWithGroq(s, lines, "cancion", ApiKey(), true, Policy(), model, b, f) && f.error == AssistError::NoCredentials && s.requests.empty(), "no key: nothing is sent");
+        std::vector<std::string> offered;
+        std::string error;
+        Check(ParseGroqModels(R"({"data":[{"id":"whisper-large-v3"},{"id":"llama-3.1-8b-instant"},{"id":"retired","active":false}]})", offered, error) && offered.size() == 2,
+              "the model list is read, retired models left out");
+        Check(ChooseGroqChatModel(offered) == "llama-3.1-8b-instant" && ChooseGroqChatModel({ "whisper-large-v3" }).empty() && ChooseGroqChatModel(offered, "invented-model") == "llama-3.1-8b-instant",
+              "a chat model is only one the service lists; a name not listed is never used");
+        StandIn none;
+        none.Answer(200, R"({"data":[{"id":"whisper-large-v3"}]})");
+        Check(!BriefWithGroq(none, lines, "cancion", key, true, Policy(), model, b, f) && f.error == AssistError::NotFound && none.requests.size() == 1, "no chat model offered: nothing else is sent");
+        StandIn ok;
+        ok.Answer(200, R"({"data":[{"id":"llama-3.3-70b-versatile"},{"id":"whisper-large-v3"}]})");
+        ok.Answer(200, R"({"choices":[{"message":{"content":"{\"mood\":\"festive\",\"colors\":[\"#ff0000\",\"oro\"],\"christmas\":0.9,\"energy\":0.7}"}}]})");
+        model.clear();
+        Check(BriefWithGroq(ok, lines, "cancion", key, true, Policy(), model, b, f) && model == "llama-3.3-70b-versatile" && b.source == "groq:llama-3.3-70b-versatile" && b.colors.size() == 1 &&
+                  b.mood == "festive" && b.christmas == 0.9,
+              "a brief: the listed model, a bad colour dropped " + f.message);
+        if (ok.requests.size() == 2) {
+            const HttpRequest& r = ok.requests[1];
+            Check(r.method == "POST" && r.url == "https://api.groq.com/openai/v1/chat/completions" && Header(r, "Authorization") == "Bearer " + key.value && r.multipart.empty() &&
+                      r.body.find("farolillos") != std::string::npos && r.body.find(key.value) == std::string::npos,
+                  "the lyrics' text in the body, no file, the key only in the header");
+        }
+        StandIn bad;
+        bad.Answer(200, R"({"data":[{"id":"llama-3.3-70b-versatile"}]})");
+        bad.Answer(200, R"({"choices":[{"message":{"content":"not json at all"}}]})");
+        Check(!BriefWithGroq(bad, lines, "cancion", key, true, Policy(), model, b, f) && f.error == AssistError::BadResponse, "an answer that is not the brief is refused");
     }
 
     void TestCacheAndFiles() {

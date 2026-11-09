@@ -22,6 +22,7 @@
 #include <wx/msgdlg.h>
 #include <wx/numdlg.h>
 #include <wx/sizer.h>
+#include <wx/slider.h>
 #include <wx/statbmp.h>
 #include <wx/statbox.h>
 #include <wx/stattext.h>
@@ -30,6 +31,7 @@
 #include <wx/utils.h>
 
 #include <algorithm>
+#include <map>
 #include <cmath>
 
 #include "ComposerMediaDialogs.h"
@@ -145,6 +147,12 @@ wxString PreferenceName(const std::string& key, const MediaLibrary* library) {
     const auto after = [&](const std::string& prefix) { return key.substr(prefix.size()); };
     if (key == "kind.video") {
         return _("Videos rather than pictures");
+    }
+    if (key == "director.variety") {
+        return _("More variety from scene to scene");
+    }
+    if (key == "director.christmas") {
+        return _("Christmas colours rather than the song's");
     }
     if (key == "light.dark") {
         return _("Dark pictures and videos");
@@ -848,4 +856,179 @@ void PreferencesDialog::Fill() {
     _sentences->SetLabel(text.empty() ? _("Nothing learned yet: review the pictures and videos of a show to teach the program your taste.") : text);
     _sentences->Wrap(860);
     Layout();
+}
+
+// ------------------------------------------------------------------ evaluation
+
+wxString CriterionName(const std::string& c) {
+    static const std::map<std::string, wxString> NAMES = { { "musicality", _("Follows the music") }, { "variety", _("Variety") }, { "complexity", _("Richness") },
+                                                           { "coordination", _("The house moves together") }, { "colour", _("Colour") }, { "direction", _("Artistic direction") },
+                                                           { "continuity", _("Flows without jumps") }, { "personality", _("Personality") }, { "multimedia", _("Pictures and videos") } };
+    const auto it = NAMES.find(c);
+    return it != NAMES.end() ? it->second : U(c);
+}
+
+wxString EvaluationTagName(const std::string& t) {
+    static const std::map<std::string, wxString> NAMES = { { "liked", _("I liked it") }, { "monotonous", _("Monotonous") }, { "too-busy", _("Too busy") }, { "too-calm", _("Too calm") },
+                                                           { "too-christmas", _("Too Christmas-coloured") }, { "not-christmas", _("Not Christmas enough") } };
+    const auto it = NAMES.find(t);
+    return it != NAMES.end() ? it->second : U(t);
+}
+
+wxString EvaluationRuleName(const std::string& r) {
+    static const std::map<std::string, wxString> NAMES = { { "more-variety", _("Change the looks more from scene to scene") }, { "less-variety", _("Keep an idea longer") },
+                                                           { "more-christmas", _("Use more Christmas colours") }, { "more-song-colours", _("Use more of the song's own colours") },
+                                                           { "keep-recipes", _("Mark this show's recipes as favourites") } };
+    const auto it = NAMES.find(r);
+    return it != NAMES.end() ? it->second : U(r);
+}
+
+EvaluationDialog::EvaluationDialog(wxWindow* parent, ShowEvaluation evaluation, const std::map<std::string, double>& measured) :
+    wxDialog(parent, wxID_ANY, _("Evaluate the Show"), wxDefaultPosition, wxSize(820, 760), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    _measured(measured),
+    _ruleIds(EvaluationRules()) {
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("How did the show turn out? Only what you saw in xLights counts. The measures below are the program's, not a judgement.")), 0, wxALL, 8);
+    auto* who = new wxBoxSizer(wxHORIZONTAL);
+    who->Add(new wxStaticText(this, wxID_ANY, _("Who evaluates:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    _reviewer = new wxTextCtrl(this, wxID_ANY);
+    who->Add(_reviewer, 1);
+    sizer->Add(who, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    auto* score = new wxBoxSizer(wxHORIZONTAL);
+    score->Add(new wxStaticText(this, wxID_ANY, _("Your score:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    _overall = new wxSlider(this, wxID_ANY, 0, 0, 100, wxDefaultPosition, wxSize(300, -1));
+    score->Add(_overall, 0, wxRIGHT, 8);
+    _overallText = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(120, -1));
+    score->Add(_overallText, 0, wxALIGN_CENTER_VERTICAL);
+    sizer->Add(score, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    _quick = new wxCheckBox(this, wxID_ANY, _("Quick evaluation: only the score and a few words"));
+    sizer->Add(_quick, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    auto* grid = new wxFlexGridSizer(2, 4, 12);
+    wxArrayString levels;
+    for (const wxString& l : { _("Not rated"), _("1 - Poor"), wxString("2"), wxString("3"), wxString("4"), _("5 - Very good") }) {
+        levels.Add(l);
+    }
+    for (const std::string& c : EvaluationCriteria()) {
+        grid->Add(new wxStaticText(this, wxID_ANY, CriterionName(c)), 0, wxALIGN_CENTER_VERTICAL);
+        auto* choice = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, levels);
+        choice->SetSelection(0);
+        grid->Add(choice, 0);
+        _ratings[c] = choice;
+    }
+    sizer->Add(grid, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("In a few words:")), 0, wxLEFT | wxRIGHT, 8);
+    wxArrayString tags;
+    for (const std::string& t : EvaluationTags()) {
+        tags.Add(EvaluationTagName(t));
+    }
+    _tags = new wxCheckListBox(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 100), tags);
+    sizer->Add(_tags, 0, wxEXPAND | wxALL, 8);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("Notes:")), 0, wxLEFT | wxRIGHT, 8);
+    _notes = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, 60), wxTE_MULTILINE);
+    sizer->Add(_notes, 0, wxEXPAND | wxALL, 8);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("What should the next shows take from this one? Only what you tick becomes a rule (marked: suggested by your answers).")), 0, wxLEFT | wxRIGHT, 8);
+    _rules = new wxCheckListBox(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 100));
+    sizer->Add(_rules, 0, wxEXPAND | wxALL, 8);
+    wxString measures;
+    for (const auto& [k, v] : _measured) {
+        measures += wxString::Format("%s: %.2f   ", U(k), v);
+    }
+    auto* m = new wxTextCtrl(this, wxID_ANY, measures.empty() ? _("No measures for this show.") : measures, wxDefaultPosition, wxSize(-1, 50), wxTE_MULTILINE | wxTE_READONLY);
+    sizer->Add(m, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    sizer->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 8);
+    SetSizer(sizer);
+
+    const auto refresh = [this]() {
+        _overallText->SetLabel(_overall->GetValue() == 0 ? _("not given") : wxString::Format("%d%%", _overall->GetValue()));
+        for (auto& [c, choice] : _ratings) {
+            choice->Enable(!_quick->GetValue());
+        }
+        Suggest();
+    };
+    _overall->Bind(wxEVT_SLIDER, [refresh](wxCommandEvent&) { refresh(); });
+    _quick->Bind(wxEVT_CHECKBOX, [refresh](wxCommandEvent&) { refresh(); });
+    _tags->Bind(wxEVT_CHECKLISTBOX, [refresh](wxCommandEvent&) { refresh(); });
+    for (auto& [c, choice] : _ratings) {
+        choice->Bind(wxEVT_CHOICE, [refresh](wxCommandEvent&) { refresh(); });
+    }
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) {
+        VisualReview probe;
+        std::string why;
+        if (!Accept(probe, why)) {
+            wxMessageBox(why == "no-reviewer" ? _("Say who evaluates the show.") : why == "rules-contradict" ? _("Two of the rules you ticked contradict each other.") : _("The evaluation is not complete."),
+                         _("Evaluate the Show"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        e.Skip();
+    }, wxID_OK);
+    Set(evaluation);
+}
+
+void EvaluationDialog::Suggest() {
+    const ShowEvaluation now = Evaluation();
+    const std::vector<std::string> suggested = SuggestRules(now);
+    for (size_t i = 0; i < _ruleIds.size(); ++i) {
+        const bool exists = i < _rules->GetCount();
+        const bool ticked = exists && _rules->IsChecked(static_cast<unsigned>(i));
+        const bool s = std::find(suggested.begin(), suggested.end(), _ruleIds[i]) != suggested.end();
+        const wxString label = EvaluationRuleName(_ruleIds[i]) + (s ? wxString(" ") + _("(suggested)") : wxString());
+        if (exists) {
+            _rules->SetString(static_cast<unsigned>(i), label);
+        } else {
+            _rules->Append(label);
+        }
+        _rules->Check(static_cast<unsigned>(i), ticked);
+    }
+}
+
+void EvaluationDialog::Set(const ShowEvaluation& e) {
+    _reviewer->SetValue(U(e.reviewer));
+    _overall->SetValue(e.overall);
+    _quick->SetValue(e.quick);
+    for (auto& [c, choice] : _ratings) {
+        const auto it = e.ratings.find(c);
+        choice->SetSelection(it == e.ratings.end() ? 0 : it->second);
+        choice->Enable(!e.quick);
+    }
+    for (size_t i = 0; i < EvaluationTags().size(); ++i) {
+        _tags->Check(static_cast<unsigned>(i), std::find(e.tags.begin(), e.tags.end(), EvaluationTags()[i]) != e.tags.end());
+    }
+    _notes->SetValue(U(e.notes));
+    Suggest();
+    for (size_t i = 0; i < _ruleIds.size(); ++i) {
+        _rules->Check(static_cast<unsigned>(i), std::find(e.rules.begin(), e.rules.end(), _ruleIds[i]) != e.rules.end());
+    }
+    _overallText->SetLabel(e.overall == 0 ? _("not given") : wxString::Format("%d%%", e.overall));
+}
+
+ShowEvaluation EvaluationDialog::Evaluation() const {
+    ShowEvaluation e;
+    e.reviewer = std::string(wxString(_reviewer->GetValue()).Trim().ToUTF8());
+    e.overall = _overall->GetValue();
+    e.quick = _quick->GetValue();
+    if (!e.quick) {
+        for (const auto& [c, choice] : _ratings) {
+            if (choice->GetSelection() > 0) {
+                e.ratings[c] = choice->GetSelection();
+            }
+        }
+    }
+    for (size_t i = 0; i < EvaluationTags().size(); ++i) {
+        if (_tags->IsChecked(static_cast<unsigned>(i))) {
+            e.tags.push_back(EvaluationTags()[i]);
+        }
+    }
+    e.notes = std::string(_notes->GetValue().ToUTF8());
+    for (size_t i = 0; i < _ruleIds.size() && i < _rules->GetCount(); ++i) {
+        if (_rules->IsChecked(static_cast<unsigned>(i))) {
+            e.rules.push_back(_ruleIds[i]);
+        }
+    }
+    e.measured = _measured;
+    e.at = std::string(wxDateTime::Now().FormatISOCombined(' ').ToUTF8());
+    return e;
+}
+
+bool EvaluationDialog::Accept(VisualReview& review, std::string& why) const {
+    return EvaluateShow(review, Evaluation(), why);
 }

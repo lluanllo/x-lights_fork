@@ -39,6 +39,7 @@ public:
         TestLabels();
         TestEvaluation();
         TestLearning();
+        TestShowEvaluation();
         printf("composer-learning-test: %d passed, %d failed (%s)\n", _passed, _failed, S(_root).c_str());
         return _failed == 0 ? 0 : 1;
     }
@@ -306,6 +307,73 @@ private:
         Check(big.files >= MIN_VALIDATION_FILES && big.reliable, "with enough files it is a measure");
         Check(MediaValidationReport(MediaValidationSetFromLibrary(lib), { big }).find("(few files)") != std::string::npos, "a concept with few files is still marked as such");
         Check(lib.items[0].analysis.concepts[1].id == "stars", "measuring changes nothing in the library");
+    }
+
+    void TestShowEvaluation() {
+        Title("the evaluation of the whole show, and the rules a person chooses");
+        const VisualMediaStoryboard b = Board();
+        VisualReview r = BuildReview(b, "uno.xsq", "s1", nullptr);
+        ShowEvaluation e;
+        std::string why;
+        e.overall = 60;
+        Check(!EvaluateShow(r, e, why) && why == "no-reviewer" && r.evaluation.Empty(), "an evaluation needs who made it");
+        e.reviewer = "prueba";
+        e.ratings = { { "variety", 7 } };
+        Check(!EvaluateShow(r, e, why) && why == "rating:variety", "a rating outside 1-5 is refused");
+        e.ratings = { { "smell", 3 } };
+        Check(!EvaluateShow(r, e, why) && why == "rating:smell", "an unknown criterion is refused");
+        e.ratings = { { "variety", 2 }, { "colour", 4 }, { "musicality", 3 } };
+        e.tags = { "monotonous", "too-christmas" };
+        e.rules = { "more-variety", "less-variety" };
+        Check(!EvaluateShow(r, e, why) && why == "rules-contradict", "contradictory rules are refused");
+        const std::vector<std::string> suggested = SuggestRules(e);
+        Check(std::find(suggested.begin(), suggested.end(), "more-variety") != suggested.end() && std::find(suggested.begin(), suggested.end(), "more-song-colours") != suggested.end(),
+              "the ratings and words suggest rules: more variety, the song's colours");
+        e.rules = { "more-variety", "more-song-colours" };
+        e.notes = "texto de prueba";
+        e.measured = { { "paletteCoherence", 1.0 } };
+        Check(EvaluateShow(r, e, why) && r.evaluation.overall == 60 && r.state == "in-progress", "a complete evaluation is kept, and the review is in progress, not approved");
+        ShowEvaluation quick = e;
+        quick.quick = true;
+        VisualReview q = r;
+        Check(EvaluateShow(q, quick, why) && q.evaluation.ratings.empty() && q.evaluation.overall == 60, "a quick evaluation keeps the score and the words, not the criteria");
+
+        VisualReview back;
+        Check(VisualReviewFrom(VisualReviewJson(r), back, why) && back.evaluation.overall == 60 && back.evaluation.ratings == r.evaluation.ratings && back.evaluation.rules == r.evaluation.rules &&
+                  back.evaluation.measured.at("paletteCoherence") == 1.0 && back.version == VISUAL_REVIEW_VERSION,
+              "written and read back " + why);
+        nlohmann::json old = VisualReviewJson(r);
+        old.erase("evaluation");
+        old["version"] = 1;
+        VisualReview first;
+        Check(VisualReviewFrom(old, first, why) && first.evaluation.Empty() && first.version == VISUAL_REVIEW_VERSION, "a version 1 review reads, with no evaluation");
+        nlohmann::json future = VisualReviewJson(r);
+        future["version"] = VISUAL_REVIEW_VERSION + 1;
+        Check(!VisualReviewFrom(future, first, why), "a later version is not read");
+        const VisualReview same = BuildReview(b, "uno.xsq", "s1", &r);
+        const VisualReview other = BuildReview(b, "uno.xsq", "s2", &r);
+        Check(same.evaluation.overall == 60 && other.evaluation.Empty(), "the evaluation stays with the same show, never carried to another");
+
+        ArtisticPreferences prefs;
+        VisualReview scoreOnly = BuildReview(b, "solo-nota.xsq", "s3", nullptr);
+        ShowEvaluation noRules = e;
+        noRules.rules.clear();
+        Check(EvaluateShow(scoreOnly, noRules, why) && LearnFromReview(prefs, scoreOnly, nullptr, "winter") == 0, "a score and words alone teach nothing");
+        Check(LearnFromReview(prefs, r, nullptr, "winter") > 0, "a chosen rule is a signal");
+        const auto find = [&](const std::string& key) {
+            for (const Preference& p : ComputePreferences(prefs)) {
+                if (p.key == key) {
+                    return p;
+                }
+            }
+            return Preference();
+        };
+        Check(find("director.variety").learned > 0 && find("director.christmas").learned < 0 && !find("director.variety").active, "more variety, fewer Christmas colours: waiting for a second show");
+        VisualReview second = BuildReview(b, "dos.xsq", "s4", nullptr);
+        ShowEvaluation again = e;
+        Check(EvaluateShow(second, again, why) && LearnFromReview(prefs, second, nullptr, "winter") > 0 && find("director.variety").active && EffectivePreferences(prefs).at("director.variety") > 0,
+              "the same rule from two shows acts");
+        Check(ForgetReview(prefs, "dos.xsq") > 0 && !find("director.variety").active, "and forgetting one show takes it back");
     }
 
     void TestLearning() {

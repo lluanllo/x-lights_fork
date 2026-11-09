@@ -263,6 +263,19 @@ struct CharacterOptions {
                                       SongCharacter& character, AssistFailure& failure);
 [[nodiscard]] std::string AudioMimeType(const std::string& path);
 
+// ------------------------------------------------------------------ visual brief (Groq)
+
+struct SongVisualBrief;
+
+// The chat models a Groq key can use, from the service itself: no name is taken on trust.
+[[nodiscard]] bool ParseGroqModels(const std::string& body, std::vector<std::string>& models, std::string& error);
+// The first of the preferred chat models the service offers; "" when none is.
+[[nodiscard]] std::string ChooseGroqChatModel(const std::vector<std::string>& offered, const std::string& wanted = "");
+[[nodiscard]] std::string VisualBriefPrompt();
+// Only the lyrics' text goes, never the audio. `model` comes back with the one used.
+[[nodiscard]] bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std::string& title, const ApiKey& key, bool consent, const RetryPolicy& policy,
+                                 std::string& model, SongVisualBrief& brief, AssistFailure& failure);
+
 [[nodiscard]] std::string ToJson(const SongCharacter& character);
 [[nodiscard]] bool FromJson(const std::string& text, SongCharacter& character, std::string& error);
 
@@ -316,8 +329,10 @@ struct TimedLine {
 // freezes it. The answer goes to `outPath` as JSON; a transcription or description is
 // also kept in the show's cache, where a later generation finds it offline.
 struct AssistCommandOptions {
-    std::string action;   // "lrclib", "transcribe", "describe" or "transcript-lrc"
+    std::string action;   // "lrclib", "transcribe", "describe", "brief" or "transcript-lrc"
     std::string transcriptPath; // transcript-lrc: the transcription to make lyrics from
+    std::string lyricsPath;     // brief: the lyrics whose text is described
+    std::string briefModel;     // brief: a chat model to prefer, if Groq offers it
     std::string audioPath;
     std::string showDir;  // for the cache; empty: no cache
     std::string outPath;

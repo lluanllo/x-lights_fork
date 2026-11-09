@@ -1309,10 +1309,29 @@ bool ChoreographShow(GenerationRun& run) {
             vp.recipes = run.recipes.recipes.empty() ? nullptr : &run.recipes;
             vp.brief = run.brief.Empty() ? nullptr : &run.brief;
             const VisualPlanSettings& before = run.previous.visualPlan;
+            // What the maker's evaluations taught moves the starting point, never a choice
+            // made for this show or the one before.
+            std::map<std::string, double> taught;
+            if (r.learning && !r.showDir.empty()) {
+                ArtisticPreferences prefs;
+                std::string perr;
+                if (ReadPreferences(PreferencesPath(r.showDir), prefs, perr)) {
+                    taught = EffectivePreferences(prefs);
+                }
+            }
+            const auto start = [&](const char* key) {
+                const auto it = taught.find(key);
+                return it == taught.end() ? 0.5 : std::clamp(0.5 + 0.3 * it->second, 0.0, 1.0);
+            };
             vp.options.recipes = r.useRecipes.value_or(run.hasPrevious ? before.recipes : true);
             vp.options.colorEngine = r.colorEngine.value_or(run.hasPrevious ? before.colorEngine : true);
-            vp.options.christmasInfluence = std::clamp(r.christmasInfluence.value_or(run.hasPrevious ? before.christmasInfluence : 0.5), 0.0, 1.0);
-            vp.options.variety = std::clamp(r.variety.value_or(run.hasPrevious ? before.variety : 0.5), 0.0, 1.0);
+            vp.options.christmasInfluence = std::clamp(r.christmasInfluence.value_or(run.hasPrevious ? before.christmasInfluence : start("director.christmas")), 0.0, 1.0);
+            vp.options.variety = std::clamp(r.variety.value_or(run.hasPrevious ? before.variety : start("director.variety")), 0.0, 1.0);
+            for (const char* key : { "director.variety", "director.christmas" }) {
+                if (taught.contains(key)) {
+                    Note(run, S, "director-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
+                }
+            }
             vp.options.seed = run.plan.seed;
             run.visualPlan = PlanSongVisuals(vp);
             ApplyPlanColors(run.visualPlan, run.direction);

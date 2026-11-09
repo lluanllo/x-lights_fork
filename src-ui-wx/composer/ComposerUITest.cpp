@@ -819,6 +819,32 @@ private:
                               fixed.checklist = { true, true, true, true, true };
                               Check(ApproveShow(fixed, "Juan", "2026-11-08 20:00", why) && _dialog->SaveReview(fixed, {}) && _dialog->ResultReview().state == "approved",
                                     "with everything checked, the person approves the show");
+                              // The evaluation of the whole show: a test entry, never presented as a real person's.
+                              auto* evaluate = new EvaluationDialog(_dialog, ShowEvaluation(), _dialog->ResultMeasures());
+                              ShowEvaluation e;
+                              e.reviewer = "prueba automatica";
+                              e.overall = 60;
+                              e.ratings = { { "variety", 2 }, { "colour", 4 } };
+                              e.tags = { "monotonous" };
+                              e.notes = "texto de prueba";
+                              e.rules = { "more-variety" };
+                              evaluate->Set(e);
+                              VisualReview probe;
+                              Check(evaluate->Accept(probe, why) && probe.evaluation.overall == 60 && probe.evaluation.ratings.at("variety") == 2 && probe.evaluation.rules == std::vector<std::string>{ "more-variety" },
+                                    "the evaluation dialog gives back what was set " + why);
+                              evaluate->Show();
+                              evaluate->Update();
+                              Capture(evaluate, "valoracion");
+                              const ShowEvaluation chosen = evaluate->Evaluation();
+                              evaluate->Destroy();
+                              ShowEvaluation contradictory = chosen;
+                              contradictory.rules = { "more-variety", "less-variety" };
+                              Check(!_dialog->SaveEvaluation(contradictory), "rules that contradict each other are refused");
+                              Check(_dialog->SaveEvaluation(chosen) && _dialog->ResultReview().evaluation.overall == 60 && _dialog->ResultReview().state == "approved",
+                                    "the evaluation is kept with the review, the approval untouched");
+                              const std::vector<Preference> taught = ComputePreferences(_dialog->ShowPreferences());
+                              Check(std::any_of(taught.begin(), taught.end(), [](const Preference& p) { return p.key == "director.variety" && !p.active; }),
+                                    "the chosen rule is learned, waiting for a second show to back it");
                               return true;
                           },
                            60 });

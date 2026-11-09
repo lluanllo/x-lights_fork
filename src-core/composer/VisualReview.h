@@ -6,6 +6,7 @@
 
 #include <nlohmann/json_fwd.hpp>
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -68,7 +69,33 @@ struct ReviewChecklist {
     [[nodiscard]] bool Complete() const { return opened && composition && surfaces && motion && finished; }
 };
 
-inline constexpr int VISUAL_REVIEW_VERSION = 1;
+// Version 2 added the evaluation of the whole show; version 1 files read as before.
+inline constexpr int VISUAL_REVIEW_VERSION = 2;
+
+// What a person thinks of the whole show, beside the clip by clip review. Only a person
+// fills it in; the measures are kept with it so the two can be compared, never mixed.
+// Criteria: musicality, variety, complexity, coordination, colour, direction,
+// continuity, personality, multimedia. Each 1-5; absent when not rated.
+struct ShowEvaluation {
+    std::map<std::string, int> ratings;
+    int overall = 0;    // 0-100, the person's own score (the "60%"); 0: not given
+    bool quick = false; // only the score and a few words
+    std::vector<std::string> tags; // "monotonous", "too-busy", "too-calm", "too-christmas", "not-christmas", "liked"
+    std::string notes;
+    // The observations the person chose to turn into rules for the next shows.
+    std::vector<std::string> rules; // "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes"
+    std::string reviewer;
+    std::string at;
+    std::map<std::string, double> measured; // the objective measures of the same show, for comparison
+
+    [[nodiscard]] bool Empty() const { return ratings.empty() && overall == 0 && tags.empty() && notes.empty() && rules.empty(); }
+};
+
+[[nodiscard]] const std::vector<std::string>& EvaluationCriteria();
+[[nodiscard]] const std::vector<std::string>& EvaluationTags();
+[[nodiscard]] const std::vector<std::string>& EvaluationRules();
+// The rules the ratings and words suggest; the person picks which ones to keep.
+[[nodiscard]] std::vector<std::string> SuggestRules(const ShowEvaluation& evaluation);
 
 struct VisualReview {
     int version = VISUAL_REVIEW_VERSION;
@@ -83,8 +110,9 @@ struct VisualReview {
     std::string state = "pending";
     std::string approvedAt;
     bool legacy = false; // approved before reviews had clips (a Phase 8 record)
+    ShowEvaluation evaluation;
 
-    [[nodiscard]] bool Empty() const { return clips.empty() && !checklist.opened && state == "pending"; }
+    [[nodiscard]] bool Empty() const { return clips.empty() && !checklist.opened && state == "pending" && evaluation.Empty(); }
     [[nodiscard]] const ClipReview* Find(const std::string& decisionId) const;
     [[nodiscard]] ClipReview* Find(const std::string& decisionId);
 };
@@ -122,6 +150,10 @@ bool ApproveShow(VisualReview& review, const std::string& reviewer, const std::s
 [[nodiscard]] std::vector<MediaCorrection> ReviewCorrections(const VisualReview& review, const VisualMediaStoryboard& storyboard);
 // Drops the "keep as it was" locks a review left, so the montage can be planned again.
 void ReleaseReviewHolds(std::vector<MediaCorrection>& corrections);
+
+// The person's evaluation of the whole show, checked: a reviewer, ratings 1-5 of known
+// criteria, a score 0-100, known words and rules. Otherwise it says why and changes nothing.
+bool EvaluateShow(VisualReview& review, const ShowEvaluation& evaluation, std::string& why);
 
 [[nodiscard]] nlohmann::json VisualReviewJson(const VisualReview& review);
 [[nodiscard]] bool VisualReviewFrom(const nlohmann::json& object, VisualReview& review, std::string& error);

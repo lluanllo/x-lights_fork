@@ -1,5 +1,7 @@
 #include "composer/MusicAssist.h"
 
+#include "composer/SongVisualPlan.h"
+
 #include "ai/IServiceSettingsStore.h"
 #include "composer/ComposerText.h"
 #include "composer/CompositionPlan.h"
@@ -1046,6 +1048,108 @@ bool DescribeWithGemini(IHttpClient& client, const std::string& audioPath, const
     return true;
 }
 
+bool ParseGroqModels(const std::string& body, std::vector<std::string>& models, std::string& error) {
+    models.clear();
+    const json root = json::parse(body, nullptr, false);
+    if (!root.is_object() || !root.contains("data") || !root["data"].is_array()) {
+        error = "no model list";
+        return false;
+    }
+    for (const json& m : root["data"]) {
+        if (m.is_object() && m.value("id", std::string()) != "" && m.value("active", true)) {
+            models.push_back(m["id"].get<std::string>());
+        }
+    }
+    return true;
+}
+
+std::string ChooseGroqChatModel(const std::vector<std::string>& offered, const std::string& wanted) {
+    const auto has = [&](const std::string& id) { return std::find(offered.begin(), offered.end(), id) != offered.end(); };
+    if (!wanted.empty() && has(wanted)) {
+        return wanted;
+    }
+    // Preferred in this order; only what the service lists is ever used.
+    static const std::vector<std::string> PREFERRED = { "llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant" };
+    for (const std::string& id : PREFERRED) {
+        if (has(id)) {
+            return id;
+        }
+    }
+    return "";
+}
+
+std::string VisualBriefPrompt() {
+    return "You help light a Christmas house show to a song. From the song's lyrics, answer only with a JSON object with these fields: "
+           "\"mood\": one of joyful, tender, epic, playful, nostalgic, dark, calm, festive; "
+           "\"colors\": up to 4 colours the words suggest, as #RRGGBB; "
+           "\"imagery\": up to 6 short images the words evoke, in the song's language; "
+           "\"christmas\": 0 to 1, how much the song itself is about Christmas; "
+           "\"energy\": 0 to 1, how lively it reads. Do not quote the lyrics.";
+}
+
+bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std::string& title, const ApiKey& key, bool consent, const RetryPolicy& policy, std::string& model,
+                   SongVisualBrief& brief, AssistFailure& failure) {
+    failure = AssistFailure();
+    if (!consent) {
+        failure = { AssistError::NoConsent, 0, -1, 0, "the lyrics are only sent when the person allows it" };
+        return false;
+    }
+    if (key.value.empty()) {
+        failure = { AssistError::NoCredentials, 0, -1, 0, "no Groq key: set it in the window or GROQ_API_KEY" };
+        return false;
+    }
+    if (lyricsText.empty()) {
+        failure = { AssistError::UnsupportedFile, 0, -1, 0, "no lyrics to describe" };
+        return false;
+    }
+    HttpRequest list;
+    list.url = "https://api.groq.com/openai/v1/models";
+    list.headers.push_back({ "Authorization", "Bearer " + key.value });
+    list.timeoutS = 30;
+    const HttpResponse offered = SendWithRetry(client, list, policy, failure);
+    failure.message = RedactSecrets(failure.message, { key.value });
+    if (failure.error != AssistError::None) {
+        return false;
+    }
+    std::vector<std::string> models;
+    std::string error;
+    if (!ParseGroqModels(offered.body, models, error)) {
+        failure = { AssistError::BadResponse, offered.status, -1, failure.attempts, error };
+        return false;
+    }
+    model = ChooseGroqChatModel(models, model);
+    if (model.empty()) {
+        failure = { AssistError::NotFound, offered.status, -1, failure.attempts, "the key offers none of the chat models this program uses" };
+        return false;
+    }
+    HttpRequest chat;
+    chat.method = "POST";
+    chat.url = "https://api.groq.com/openai/v1/chat/completions";
+    chat.headers.push_back({ "Authorization", "Bearer " + key.value });
+    chat.headers.push_back({ "Content-Type", "application/json" });
+    chat.timeoutS = 60;
+    chat.body = json({ { "model", model },
+                       { "temperature", 0 },
+                       { "response_format", { { "type", "json_object" } } },
+                       { "messages", json::array({ { { "role", "system" }, { "content", VisualBriefPrompt() } }, { { "role", "user" }, { "content", "Title: " + title + "\n\n" + lyricsText } } }) } })
+                    .dump();
+    const HttpResponse answer = SendWithRetry(client, chat, policy, failure);
+    failure.message = RedactSecrets(failure.message, { key.value });
+    if (failure.error != AssistError::None) {
+        return false;
+    }
+    const json root = json::parse(answer.body, nullptr, false);
+    std::string content;
+    if (root.is_object() && root.contains("choices") && root["choices"].is_array() && !root["choices"].empty()) {
+        content = root["choices"][0].value("message", json::object()).value("content", std::string());
+    }
+    if (content.empty() || !ParseVisualBrief(content, "groq:" + model, brief, error)) {
+        failure = { AssistError::BadResponse, answer.status, -1, failure.attempts, content.empty() ? std::string("no answer text") : error };
+        return false;
+    }
+    return true;
+}
+
 std::string ToJson(const SongCharacter& c) {
     json sections = json::array();
     for (const CharacterSection& s : c.sections) {
@@ -1320,6 +1424,16 @@ bool WriteJson(const std::string& path, const std::string& text) {
     return !out.fail();
 }
 
+// A key for the cache from a text: FNV-1a, stable across runs and machines.
+std::string TextKey(const std::string& text) {
+    uint64_t h = 1469598103934665603ULL;
+    for (unsigned char c : text) {
+        h ^= c;
+        h *= 1099511628211ULL;
+    }
+    return fmt::format("{:016x}", h);
+}
+
 int Refused(const AssistCommandOptions& o, const AssistFailure& f) {
     const json root = { { "kind", "composer-assist-result" }, { "action", o.action }, { "ok", false }, { "error", AssistErrorId(f.error) }, { "message", f.message }, { "status", f.status },
                         { "retryAfterS", f.retryAfterS } };
@@ -1384,8 +1498,56 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
         printf("composer-assist: transcript-lrc: %zu lines, %d doubtful, %zu left out\n", lrc.lines.size(), doubtful, lrc.dropped.size());
         return lrc.lines.empty() ? 1 : 0;
     }
+    if (o.action == "brief") {
+        std::ifstream in(fs::path(std::u8string(o.lyricsPath.begin(), o.lyricsPath.end())), std::ios::binary);
+        std::ostringstream raw;
+        raw << in.rdbuf();
+        // Only the words go: the times and tags of an LRC are not lyrics.
+        std::string words;
+        std::istringstream lines(raw.str());
+        for (std::string line; std::getline(lines, line);) {
+            while (!line.empty() && line.front() == '[') {
+                const size_t close = line.find(']');
+                line = close == std::string::npos ? std::string() : line.substr(close + 1);
+            }
+            line = text::Trim(line);
+            if (!line.empty()) {
+                words += line + "\n";
+            }
+        }
+        const std::string title = fs::path(o.audioPath).stem().string();
+        const std::string key = AssistCacheKey("", TextKey(words), "groq", o.briefModel.empty() ? std::string("auto") : o.briefModel, "brief-v1");
+        const std::string cached = o.showDir.empty() ? std::string() : AssistCachePath(o.showDir, key, "brief");
+        if (!cached.empty() && FileExists(cached)) {
+            std::ifstream c(fs::path(cached), std::ios::binary);
+            std::ostringstream text;
+            text << c.rdbuf();
+            SongVisualBrief b;
+            std::string error;
+            const json root = json::parse(text.str(), nullptr, false);
+            if (root.is_object() && ParseVisualBrief(text.str(), root.value("source", std::string("groq")), b, error)) {
+                (void)WriteJson(o.outPath, text.str());
+                printf("composer-assist: brief: from the cache, nothing sent (%s)\n", cached.c_str());
+                return 0;
+            }
+        }
+        const ApiKey apiKey = ResolveApiKey(keys, "Groq", "GROQ_API_KEY");
+        AssistFailure failure;
+        std::string model = o.briefModel;
+        SongVisualBrief brief;
+        if (!BriefWithGroq(client, words, title, apiKey, o.allowUpload, policy, model, brief, failure)) {
+            return Refused(o, failure);
+        }
+        const std::string out = ToJson(brief);
+        if (!cached.empty()) {
+            (void)WriteJson(cached, out);
+        }
+        (void)WriteJson(o.outPath, out);
+        printf("composer-assist: brief: %s, mood %s, %zu colours, Christmas %.2f, key from %s\n", brief.source.c_str(), brief.mood.c_str(), brief.colors.size(), brief.christmas, apiKey.source.c_str());
+        return 0;
+    }
     if (o.action != "transcribe" && o.action != "describe") {
-        printf("composer-assist: unknown action '%s' (lrclib, transcribe, describe)\n", o.action.c_str());
+        printf("composer-assist: unknown action '%s' (lrclib, transcribe, describe, brief)\n", o.action.c_str());
         return 2;
     }
     const bool transcribe = o.action == "transcribe";

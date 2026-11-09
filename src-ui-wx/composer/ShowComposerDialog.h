@@ -252,6 +252,9 @@ private:
 public:
     // The artistic director's settings, for the UI test.
     void SetDirector(int christmas, int variety, bool recipes);
+    // The person's evaluation of the result, kept with its review; false when refused.
+    bool SaveEvaluation(const composer::ShowEvaluation& evaluation);
+    [[nodiscard]] std::map<std::string, double> ResultMeasures() const;
     [[nodiscard]] std::vector<std::string> GenerateArguments() const { return Arguments("", "report", "test.xsq", -1); }
 
 private:
@@ -404,6 +407,7 @@ private:
     std::vector<std::string> _profilePaths;
     wxRadioBox* _level = nullptr;
     wxSpinCtrl* _seed = nullptr;
+    std::string _briefPath; // colour ideas from the lyrics (Groq), when asked for
     int _recipesStamp = 0; // the recipes file changed: the composition is worked out again
     wxSlider* _christmas = nullptr;
     wxSlider* _variety = nullptr;

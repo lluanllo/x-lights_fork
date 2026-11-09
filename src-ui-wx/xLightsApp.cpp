@@ -1348,7 +1348,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
-        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, or transcript-lrc (lyrics from --transcript), answer to --out, and exit; nothing is sent without --allow-upload" },
+        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, brief (colour ideas from the text of --lyrics, through Groq), or transcript-lrc (lyrics from --transcript), answer to --out, and exit; nothing is sent without --allow-upload" },
         { wxCMD_LINE_SWITCH, "", "allow-upload", "with --composer-assist: the person agreed in the window to send this song to the service" },
         { wxCMD_LINE_OPTION, "", "query", "with --composer-assist lrclib: \"Artist - Title\"" },
         { wxCMD_LINE_OPTION, "", "duration", "with --composer-assist lrclib: the song's length in seconds" },
@@ -2298,6 +2298,9 @@ bool xLightsApp::OnInit()
         }
         if (parser.Found("transcript", &value)) {
             options.transcriptPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("lyrics", &value)) {
+            options.lyricsPath = value.ToStdString(wxConvUTF8);
         }
         if (parser.Found("duration", &value)) {
             options.durationS = std::strtod(value.ToStdString().c_str(), nullptr);
