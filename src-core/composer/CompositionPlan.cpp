@@ -184,7 +184,8 @@ private:
             if (t.type == TargetType::Model && t.Can(Capability::Face).support == Support::Yes) {
                 _faces.push_back(c);
             }
-            if (t.Can(Capability::Text).support == Support::Yes) {
+            const bool wordsAllowed = !_in.options.noText.contains(t.name) && (_in.options.textOnly.empty() || _in.options.textOnly.contains(t.name));
+            if (t.Can(Capability::Text).support == Support::Yes && wordsAllowed) {
                 _texts.push_back(c);
             }
         }

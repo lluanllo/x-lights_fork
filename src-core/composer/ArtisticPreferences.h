@@ -28,6 +28,8 @@
 //   scene.<role>.motion.moving        movement in that part of a song
 //   profile.<id>.kind.video, profile.<id>.motion.moving   the same, within one artistic profile
 //   file.<media>@<screen>             one file on one screen
+//   director.variety                  recipes changing more from scene to scene
+//   director.christmas                colours nearer the Christmas ones than the song's
 namespace composer {
 
 inline constexpr int PREFERENCES_VERSION = 1;

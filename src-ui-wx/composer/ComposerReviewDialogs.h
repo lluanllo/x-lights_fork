@@ -155,3 +155,36 @@ private:
 [[nodiscard]] wxString ClipStateName(composer::ClipState state);
 // Why a clip does not work, for a person.
 [[nodiscard]] wxString ClipFlagName(const std::string& flag);
+
+class wxSlider;
+
+// What a person thinks of the whole show: a score (their own, like "60%"), the nine
+// criteria or only a few words, notes, and which observations become rules for the next
+// shows. The measures of the same show are shown beside it, never mixed with it.
+class EvaluationDialog : public wxDialog {
+public:
+    EvaluationDialog(wxWindow* parent, composer::ShowEvaluation evaluation, const std::map<std::string, double>& measured);
+
+    // The evaluation as the controls hold it; Accept() checks it like the OK button.
+    [[nodiscard]] composer::ShowEvaluation Evaluation() const;
+    void Set(const composer::ShowEvaluation& evaluation);
+    bool Accept(composer::VisualReview& review, std::string& why) const;
+
+private:
+    void Suggest();
+
+    std::map<std::string, double> _measured;
+    std::vector<std::string> _ruleIds;
+    wxTextCtrl* _reviewer = nullptr;
+    wxCheckBox* _quick = nullptr;
+    wxSlider* _overall = nullptr;
+    wxStaticText* _overallText = nullptr;
+    std::map<std::string, wxChoice*> _ratings;
+    wxCheckListBox* _tags = nullptr;
+    wxTextCtrl* _notes = nullptr;
+    wxCheckListBox* _rules = nullptr;
+};
+
+[[nodiscard]] wxString CriterionName(const std::string& criterion);
+[[nodiscard]] wxString EvaluationTagName(const std::string& tag);
+[[nodiscard]] wxString EvaluationRuleName(const std::string& rule);

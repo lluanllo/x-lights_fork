@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -245,6 +246,18 @@ private:
     void EditScreens();
     void EditReview();
     void EditPreferences();
+    void EditRecipes();
+    [[nodiscard]] std::set<std::string> HouseFamilies() const;
+
+public:
+    // The artistic director's settings, for the UI test.
+    void SetDirector(int christmas, int variety, bool recipes);
+    // The person's evaluation of the result, kept with its review; false when refused.
+    bool SaveEvaluation(const composer::ShowEvaluation& evaluation);
+    [[nodiscard]] std::map<std::string, double> ResultMeasures() const;
+    [[nodiscard]] std::vector<std::string> GenerateArguments() const { return Arguments("", "report", "test.xsq", -1); }
+
+private:
     [[nodiscard]] ReviewContext MakeReviewContext() const;
     void EditVoices();
     void ChangeMedia(int action);
@@ -394,6 +407,11 @@ private:
     std::vector<std::string> _profilePaths;
     wxRadioBox* _level = nullptr;
     wxSpinCtrl* _seed = nullptr;
+    std::string _briefPath; // colour ideas from the lyrics (Groq), when asked for
+    int _recipesStamp = 0; // the recipes file changed: the composition is worked out again
+    wxSlider* _christmas = nullptr;
+    wxSlider* _variety = nullptr;
+    wxCheckBox* _useRecipes = nullptr;
     wxTextCtrl* _name = nullptr;
     wxStaticText* _nameInfo = nullptr;
     wxCollapsiblePane* _advanced = nullptr;

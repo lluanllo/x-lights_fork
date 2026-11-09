@@ -26,7 +26,7 @@ const std::set<std::string> INTENTS = { "feature", "accompany", "beat-accent", "
 const std::set<std::string> BINDINGS = { "", "lyrics-phrase", "face-track" };
 const std::set<std::string> RHYTHMS = { "", "downbeat" };
 const std::set<std::string> MEDIA = { "", "image", "video" };
-const char* const SECTION_IDS[] = { "intro", "verse", "chorus", "bridge", "instrumental", "outro", "unknown" };
+const char* const SECTION_IDS[] = { "intro", "verse", "chorus", "bridge", "instrumental", "outro", "unknown", "pre-chorus", "interlude" };
 
 std::string Format(double value, int decimals) {
     std::string s = fmt::format("{:.{}f}", value, decimals);

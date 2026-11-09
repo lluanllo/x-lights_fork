@@ -3,6 +3,8 @@
 #include "composer/Choreography.h"
 #include "composer/MusicAssist.h"
 #include "composer/VisualDirection.h"
+#include "composer/RecipeLibrary.h"
+#include "composer/SongVisualPlan.h"
 #include "composer/ComposerTypes.h"
 #include "composer/CompositionPlan.h"
 #include "composer/GenerationSidecar.h"
@@ -82,6 +84,14 @@ struct GenerationRequest {
     std::string previousSidecarPath; // regenerate: its corrections and locks are kept
     std::string themesPath;     // empty: resources/composer/themes.json
     std::string characterPath;  // a song description saved by the music assistant
+    // The artistic director (needs a profile whose ensemble is on). Recipes come from
+    // `recipesPath`, or <showDir>/ShowComposer/recipes.json when it exists.
+    std::string recipesPath;
+    std::optional<bool> useRecipes;           // default: on, or the previous show's
+    std::optional<bool> colorEngine;          // default: on, or the previous show's
+    std::optional<double> christmasInfluence; // 0-1; default 0.5, or the previous show's
+    std::optional<double> variety;            // 0-1; default 0.5, or the previous show's
+    std::string briefPath;                    // a SongVisualBrief (from the music assistant); empty: read from the lyrics, locally
     std::string transcriptPath; // a transcription saved by the music assistant: word times for the lyrics
     std::optional<AutomationLevel> level; // default: balanced, or the previous sidecar's
     std::optional<uint64_t> seed;         // default: 1, or the previous sidecar's
@@ -105,6 +115,8 @@ struct GenerationRequest {
     // The show maker's preferences (<showDir>/ShowComposer/preferences.json) shape the
     // montage; false: generate as if nothing had been learned (a person's own values too).
     bool learning = true;
+    // Synchronized lyrics lay the sections out again: what is sung again is the chorus.
+    bool lyricStructure = true;
     // Looks at the files again before planning (otherwise only the ones never analysed
     // are, without a model); with `visionModelDir` the image-text model is used too.
     bool analyzeMedia = false;
@@ -179,6 +191,10 @@ struct GenerationRun {
     CompositionPlan plan;
     ShowVisualDirection direction;
     DirectionMetrics directionMetrics;
+    RecipeLibrary recipes;
+    std::string recipesFrom;
+    SongVisualBrief brief;
+    SongVisualPlan visualPlan;
     ThemeCatalog themes;
     SongCharacter character;
     bool hasCharacter = false;

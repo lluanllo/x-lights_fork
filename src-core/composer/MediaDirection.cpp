@@ -79,10 +79,10 @@ std::string RoleOf(const PlanSegment& s, const std::string& band) {
     if (s.sectionKind == "bridge") {
         return "bridge";
     }
-    if (s.sectionKind == "instrumental") {
+    if (s.sectionKind == "instrumental" || s.sectionKind == "interlude") {
         return "instrumental";
     }
-    if (s.sectionKind == "verse") {
+    if (s.sectionKind == "verse" || s.sectionKind == "pre-chorus") {
         return "verse";
     }
     return band == "high" ? "chorus" : band == "low" || band == "rest" ? "breath" : "verse";

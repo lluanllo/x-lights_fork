@@ -21,7 +21,7 @@ struct SongStructureRegion;
 namespace composer {
 
 inline constexpr int ANALYSIS_SCHEMA_VERSION = 1;
-inline constexpr const char* ANALYZER_VERSION = "1.0.0";
+inline constexpr const char* ANALYZER_VERSION = "1.1.0";
 
 // Quality on real music has never been measured, and only a reference reviewed by
 // a person can change that.
@@ -47,7 +47,9 @@ enum class SectionKind {
     Bridge,
     Instrumental,
     Outro,
-    Unknown
+    Unknown,
+    PreChorus, // after Unknown, so the ids written before keep their numbers
+    Interlude
 };
 
 // Where a value came from, so that a new analysis can tell what it may replace.
@@ -99,6 +101,14 @@ struct TempoPoint {
     double confidence = 0;
 };
 
+// One reading of the pulse. The octave of a pulse is the classic doubt: the same song
+// can be counted at 105 or at 210, and both readings fit its attacks.
+struct TempoCandidate {
+    double bpm = 0;
+    double confidence = 0; // share of the fit among the readings listed
+    std::string reason;    // "followed", "half", "double"
+};
+
 struct TimeRange {
     int startMS = 0;
     int endMS = 0;
@@ -145,6 +155,9 @@ struct AnalysisCorrections {
     std::vector<EventCorrection> events;
     std::vector<SectionCorrection> sections;
     BarCorrection bar;
+    // A person hearing the pulse at half or double what was followed: 0.5 keeps every
+    // other beat, 2 adds one between each pair. 1 changes nothing.
+    double tempoFactor = 1;
 };
 
 struct AnalysisOptions {
@@ -188,6 +201,8 @@ struct SongAnalysis {
     std::vector<VocalSegment> vocalSegments;
     std::vector<EnergyPoint> energy;
     std::vector<TempoPoint> tempo;
+    std::vector<TempoCandidate> tempoCandidates; // the followed reading first
+    double appliedTempoFactor = 1; // what corrections.tempoFactor already did to the beats
     std::vector<TimeRange> lowEnergy;
     std::vector<std::string> warnings; // stable codes
     AnalysisCorrections corrections;
@@ -261,6 +276,10 @@ struct MusicSnapshot {
 
 // Applies the corrections stored in `analysis`. Safe to apply more than once.
 void ApplyCorrections(SongAnalysis& analysis);
+
+// Only the section corrections, for when the sections were laid out again after the
+// analysis, as the lyrics do. Safe to apply more than once.
+void ApplySectionCorrections(SongAnalysis& analysis);
 
 [[nodiscard]] std::string ToJson(const SongAnalysis& analysis);
 [[nodiscard]] bool FromJson(const std::string& text, SongAnalysis& analysis, std::string& error);

@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -122,6 +123,10 @@ struct GenerationOptions {
     int frameMS = 25;
     double minVocalConfidence = 0.5; // the analyzer's voice hint is 0.3, so it stays unused
     bool useSubModels = false;       // submodels only join through roles.json or a correction
+    // Where the words may go, from the screens a person chose in free mode: only the
+    // screens given to the lyrics when there are any, never one given to pictures.
+    std::set<std::string> textOnly;
+    std::set<std::string> noText;
 };
 
 struct Reason {

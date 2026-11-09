@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "surface-picture",
+  "version": 1,
+  "effect": "Pictures",
+  "roles": [
+    "matrix",
+    "mega-tree",
+    "small-tree",
+    "window",
+    "prop",
+    "figure",
+    "arch",
+    "star"
+  ],
+  "targetTypes": [
+    "model",
+    "submodel"
+  ],
+  "intents": [
+    "media"
+  ],
+  "prominence": [
+    "lead",
+    "support"
+  ],
+  "requires": [
+    "image"
+  ],
+  "sections": [],
+  "energy": [
+    0.0,
+    1.0
+  ],
+  "intensity": 0.7,
+  "durationMS": [
+    3000,
+    30000
+  ],
+  "maxPerMinute": 3,
+  "transitions": [
+    "Fade",
+    "Dissolve"
+  ],
+  "palette": {
+    "colors": [
+      0,
+      0
+    ],
+    "families": []
+  },
+  "parameters": [
+    {
+      "id": "Scaling",
+      "value": "Scale Keep Aspect Ratio"
+    }
+  ],
+  "media": "image",
+  "minBuffer": [
+    8,
+    8
+  ],
+  "weight": 0.3,
+  "provenance": "neutral-starter",
+  "visuallyValidated": false,
+  "notes": "Any other screen a person chooses for a picture (a matrix's submodel, a dense figure): the native Pictures effect, used only when no template for that kind of figure fits."
+}

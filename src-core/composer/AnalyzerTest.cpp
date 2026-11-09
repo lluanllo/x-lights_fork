@@ -1,5 +1,6 @@
 #include "composer/AnalyzerTest.h"
 
+#include "composer/MusicStructure.h"
 #include "composer/SongAnalysis.h"
 #include "composer/SyntheticAudio.h"
 #include "media/AudioManager.h"
@@ -171,6 +172,9 @@ public:
         TestSnapshot();
         TestExport();
         TestReference();
+        TestOctaves();
+        TestTempoFactor();
+        TestLyricStructure();
         printf("composer-analyzer-test: %d checks passed, %d failed (%s)\n", _passed, _failed, _root.string().c_str());
         printf("composer-analyzer-test: real music quality: %s\n", MUSIC_QUALITY_NOT_VALIDATED);
         return _failed == 0 ? 0 : 1;
@@ -738,6 +742,173 @@ private:
         const AnalysisResult otherAudio = AnalyzeSongCached(audio, json, other);
         Check(otherAudio.status == AnalysisStatus::Ok && otherAudio.analysis.corrections.events.size() == 4, "new audio keeps the corrections");
         Check(HasWarning(otherAudio.analysis, "corrections-from-other-audio"), "and warns that they came from other audio");
+    }
+
+    void TestOctaves() {
+        Title("O. A song that doubles its percussion is followed at one tempo");
+        // 100 BPM with the bar accented; after 36 s, a louder click on every half beat,
+        // as when a band brings in eighth notes: the same pulse, counted twice as fast.
+        constexpr double BEAT = 0.6;
+        SyntheticSong song(62);
+        std::vector<int> truth;
+        for (int i = 0; 1.0 + i * BEAT < 60; ++i) {
+            const double at = 1.0 + i * BEAT;
+            truth.push_back(static_cast<int>(std::lround(at * 1000)));
+            if (i % 4 == 0) {
+                song.Kick(at, 0.9);
+            }
+            song.Click(at, 0.5);
+            if (at >= 36) {
+                song.Click(at + BEAT / 2, 0.55);
+            }
+        }
+        const AnalysisResult r = Analyze(song, "o_doubled");
+        const SongAnalysis& a = r.analysis;
+        Check(std::fabs(a.globalBpm / 100.0 - 1.0) <= 0.03, fmt::format("one tempo for the whole song: {} BPM (100)", a.globalBpm));
+        std::vector<double> late;
+        int previous = -1;
+        for (int t : TimesOf(a, MusicalEventType::Beat)) {
+            if (t > 40000 && previous > 40000) {
+                late.push_back(t - previous);
+            }
+            previous = t;
+        }
+        std::sort(late.begin(), late.end());
+        const double lateGap = late.empty() ? 0 : late[late.size() / 2];
+        Check(std::fabs(lateGap - 600) <= 30, fmt::format("the beats after the eighth notes keep the same pulse: {} ms apart (600)", lateGap));
+        const auto has = [&](const char* reason, double bpm) {
+            return std::any_of(a.tempoCandidates.begin(), a.tempoCandidates.end(), [&](const TempoCandidate& c) { return c.reason == reason && std::fabs(c.bpm / bpm - 1.0) <= 0.05 && c.confidence >= 0 && c.confidence <= 1; });
+        };
+        Check(!a.tempoCandidates.empty() && a.tempoCandidates.front().reason == "followed" && has("double", 200), fmt::format("the double reading is kept as a candidate ({} candidates)", a.tempoCandidates.size()));
+        SongAnalysis back;
+        std::string error;
+        Check(FromJson(ToJson(a), back, error) && back.tempoCandidates.size() == a.tempoCandidates.size() && ToJson(back) == ToJson(a), "the candidates are written and read back " + error);
+    }
+
+    void TestTempoFactor() {
+        Title("T. A person hears the pulse at half or double");
+        SyntheticSong song(32);
+        for (int i = 0; 1.0 + i * 0.5 < 31; ++i) {
+            const double at = 1.0 + i * 0.5;
+            if (i % 4 == 0) {
+                song.Kick(at, 0.9);
+                song.Click(at, 0.8);
+            } else {
+                song.Click(at, 0.35);
+            }
+        }
+        const AnalysisResult r = Analyze(song, "t_factor");
+        const auto beats = TimesOf(r.analysis, MusicalEventType::Beat);
+        const auto downbeats = TimesOf(r.analysis, MusicalEventType::Downbeat);
+        if (beats.size() < 16 || downbeats.size() < 4) {
+            Check(false, fmt::format("enough beats and downbeats to correct ({} and {})", beats.size(), downbeats.size()));
+            return;
+        }
+        SongAnalysis half = r.analysis;
+        half.corrections.tempoFactor = 0.5;
+        ApplyCorrections(half);
+        const auto halfBeats = TimesOf(half, MusicalEventType::Beat);
+        Check(std::abs(static_cast<int>(halfBeats.size()) - static_cast<int>(beats.size() / 2)) <= 1, fmt::format("at half: {} beats of {}", halfBeats.size(), beats.size()));
+        Check(std::fabs(half.globalBpm - r.analysis.globalBpm / 2) <= 0.01 && half.appliedTempoFactor == 0.5, fmt::format("at half: {} BPM", half.globalBpm));
+        const auto halfDown = TimesOf(half, MusicalEventType::Downbeat);
+        Check(halfDown.size() == downbeats.size() && half.beatsPerBar == 2, fmt::format("at half the downbeats stay on beats that stay: {} of {}, bar of {}", halfDown.size(), downbeats.size(), half.beatsPerBar));
+        const std::string once = ToJson(half);
+        ApplyCorrections(half);
+        Check(ToJson(half) == once, "applying it twice changes nothing");
+        SongAnalysis back;
+        std::string error;
+        Check(FromJson(once, back, error) && back.corrections.tempoFactor == 0.5 && back.appliedTempoFactor == 0.5, "the correction and what it did are written and read back " + error);
+        ApplyCorrections(back);
+        Check(ToJson(back) == once, "and a read copy is not halved again");
+
+        SongAnalysis twice = r.analysis;
+        twice.corrections.tempoFactor = 2;
+        ApplyCorrections(twice);
+        const auto twiceBeats = TimesOf(twice, MusicalEventType::Beat);
+        Check(std::abs(static_cast<int>(twiceBeats.size()) - static_cast<int>(beats.size() * 2 - 1)) <= 1, fmt::format("at double: {} beats of {}", twiceBeats.size(), beats.size()));
+        Check(TimesOf(twice, MusicalEventType::Downbeat).size() == downbeats.size() && twice.beatsPerBar == 8, fmt::format("at double the downbeats stay, bar of {}", twice.beatsPerBar));
+        CheckInvariants(twice, "t_factor at double");
+
+        SongAnalysis odd = r.analysis;
+        odd.corrections.tempoFactor = 3;
+        std::string text = ToJson(odd);
+        SongAnalysis read;
+        Check(FromJson(text, read, error) && read.corrections.tempoFactor == 1, "a factor other than a half or a double is not accepted");
+    }
+
+    static SongAnalysis PlainSong(int durationMS) {
+        SongAnalysis a;
+        a.durationMS = durationMS;
+        a.musicStartMS = 500;
+        a.musicEndMS = durationMS - 1000;
+        a.sections.push_back({ 0, 500, SectionKind::Unknown, -1, 0, 0.9, { "silence" } });
+        a.sections.push_back({ 500, durationMS - 1000, SectionKind::Unknown, -1, 0.5, 0.3, { "self-similarity-novelty" } });
+        a.sections.push_back({ durationMS - 1000, durationMS, SectionKind::Unknown, -1, 0, 0.9, { "silence" } });
+        for (int t = 0; t < durationMS; t += 100) {
+            EnergyPoint p;
+            p.timeMS = t;
+            p.intensity = t >= 500 && t < durationMS - 1000 ? 0.5 : 0;
+            a.energy.push_back(p);
+        }
+        return a;
+    }
+
+    void TestLyricStructure() {
+        Title("S. The parts of a song from its lyrics");
+        Check(LineWords("Canci\xC3\xB3n, \xC2\xA1" "A\xC3\x91O!  de-luz") == std::vector<std::string>{ "cancion", "ano", "de", "luz" }, "words compared without accents, case or punctuation");
+
+        // Invented lines: a verse, a chorus sung three times, a second verse, a pause
+        // without words and a part sung once before the last chorus.
+        std::vector<SungLine> lines;
+        const auto sing = [&](int start, std::initializer_list<const char*> texts) {
+            for (const char* t : texts) {
+                lines.push_back({ start, start + 2500, t });
+                start += 3000;
+            }
+        };
+        const std::initializer_list<const char*> chorus = { "luces de papel en la plaza", "suben y bajan sin parar", "luces de papel en la plaza", "nadie las puede apagar" };
+        sing(8000, { "las farolas cuentan pasos", "sobre el puente de madera", "una vela en la ventana", "y el reloj que no se espera" });
+        sing(20000, chorus);
+        sing(32000, { "el panadero canta bajo", "la escalera huele a pan", "los vecinos rien tanto", "que la noche tiembla ya" });
+        sing(44000, { "luces de papel en la plaza", "suben y bajan sin parar", "luces de papel en plaza", "nadie las puede apagar" });
+        sing(64000, { "y si el viento se lo lleva", "volveremos a empezar" });
+        sing(71000, chorus);
+        SongAnalysis a = PlainSong(100000);
+        const StructureResult r = RefineSectionsWithLyrics(a, lines);
+        Check(r.applied && r.choruses == 3, fmt::format("laid out from the lyrics: {} choruses ({})", r.choruses, r.reason));
+        const auto kindAt = [&](int ms) {
+            const SongSection* s = SectionAt(a, ms);
+            return s == nullptr ? std::string("none") : std::string(SectionKindId(s->kind));
+        };
+        const std::vector<std::pair<int, const char*>> expected = { { 4000, "intro" }, { 12000, "verse" }, { 25000, "chorus" }, { 38000, "verse" }, { 50000, "chorus" },
+                                                                     { 60000, "interlude" }, { 66000, "bridge" }, { 76000, "chorus" }, { 92000, "outro" }, { 99500, "unknown" } };
+        for (const auto& [ms, kind] : expected) {
+            Check(kindAt(ms) == kind, fmt::format("at {} ms: {} ({})", ms, kindAt(ms), kind));
+        }
+        const SongSection* c1 = SectionAt(a, 25000);
+        const SongSection* c3 = SectionAt(a, 76000);
+        Check(c1 != nullptr && c3 != nullptr && c1->repeatGroup == 0 && c3->repeatGroup == 0, "the choruses are one repeat group");
+        CheckInvariants(a, "s_lyrics");
+        Check(std::all_of(a.sections.begin(), a.sections.end(), [](const SongSection& s) { return s.kind == SectionKind::Unknown || !s.evidence.empty(); }), "every named part says why");
+
+        SongAnalysis corrected = PlainSong(100000);
+        corrected.corrections.sections.push_back({ 56000, 64000, SectionKind::Instrumental, true });
+        ApplyCorrections(corrected);
+        (void)RefineSectionsWithLyrics(corrected, lines);
+        const SongSection* kept = SectionAt(corrected, 60000);
+        Check(kept != nullptr && kept->kind == SectionKind::Instrumental && kept->provenance == Provenance::Locked, "a part a person named stays named");
+
+        std::vector<SungLine> once;
+        for (int i = 0; i < 8; ++i) {
+            once.push_back({ 5000 + i * 3000, 7500 + i * 3000, fmt::format("linea distinta numero {}", i) });
+        }
+        SongAnalysis untouched = PlainSong(60000);
+        const std::string before = ToJson(untouched);
+        const StructureResult none = RefineSectionsWithLyrics(untouched, once);
+        Check(!none.applied && ToJson(untouched) == before, fmt::format("nothing sung again: the sections stay as they were ({})", none.reason));
+        SongAnalysis same = PlainSong(100000);
+        (void)RefineSectionsWithLyrics(same, lines);
+        Check(ToJson(same) == ToJson(a), "the same lyrics give the same parts");
     }
 
     void TestCancelAndThread() {

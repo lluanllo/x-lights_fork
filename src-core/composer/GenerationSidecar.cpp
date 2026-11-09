@@ -125,6 +125,7 @@ std::string ToJson(const GenerationSidecar& s) {
     }
     if (!s.media.Empty()) {
         root["media"] = MediaSessionJson(s.media);
+        root["visualPlan"] = { { "recipes", s.visualPlan.recipes }, { "colorEngine", s.visualPlan.colorEngine }, { "christmasInfluence", s.visualPlan.christmasInfluence }, { "variety", s.visualPlan.variety } };
     }
     if (!s.review.Empty()) {
         root["review"] = VisualReviewJson(s.review);
@@ -205,6 +206,13 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         if (root.contains("media") && !MediaSessionFrom(root["media"], s.media, error)) {
             return SidecarStatus::Damaged;
         }
+        if (root.contains("visualPlan") && root["visualPlan"].is_object()) {
+            const json& v = root["visualPlan"];
+            s.visualPlan.recipes = v.value("recipes", true);
+            s.visualPlan.colorEngine = v.value("colorEngine", true);
+            s.visualPlan.christmasInfluence = std::clamp(v.value("christmasInfluence", 0.5), 0.0, 1.0);
+            s.visualPlan.variety = std::clamp(v.value("variety", 0.5), 0.0, 1.0);
+        }
         if (root.contains("review") && !VisualReviewFrom(root["review"], s.review, error)) {
             return SidecarStatus::Damaged;
         }
@@ -256,7 +264,7 @@ std::string SidecarPathFor(const std::string& sequencePath) {
 
 bool CorrectionSet::Empty() const {
     return plan.empty() && choreography.empty() && lyrics.empty() && media.empty() && voices.empty() && screens.Empty() && review.Empty() && analysis.events.empty() && analysis.sections.empty() &&
-           analysis.bar.firstDownbeatMS < 0;
+           analysis.bar.firstDownbeatMS < 0 && analysis.tempoFactor == 1;
 }
 
 void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrections& extra) {
@@ -264,6 +272,9 @@ void MergeAnalysisCorrections(AnalysisCorrections& into, const AnalysisCorrectio
     into.sections.insert(into.sections.end(), extra.sections.begin(), extra.sections.end());
     if (extra.bar.firstDownbeatMS >= 0) {
         into.bar = extra.bar;
+    }
+    if (extra.tempoFactor != 1) {
+        into.tempoFactor = extra.tempoFactor;
     }
 }
 

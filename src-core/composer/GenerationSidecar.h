@@ -22,6 +22,14 @@ namespace composer {
 // a show nobody reviewed.
 inline constexpr int SIDECAR_SCHEMA_VERSION = 2;
 
+// The artistic director's settings a show was made with, so a regeneration keeps them.
+struct VisualPlanSettings {
+    bool recipes = true;
+    bool colorEngine = true;
+    double christmasInfluence = 0.5;
+    double variety = 0.5;
+};
+
 struct GenerationSidecar {
     int schemaVersion = SIDECAR_SCHEMA_VERSION;
     std::string pipelineVersion;
@@ -67,6 +75,7 @@ struct GenerationSidecar {
     std::string characterCache;
     // The media folders, a person's picture and video choices, and what plays where.
     MediaSession media;
+    VisualPlanSettings visualPlan;
 };
 
 enum class SidecarStatus {

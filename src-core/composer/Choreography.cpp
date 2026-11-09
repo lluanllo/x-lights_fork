@@ -1,6 +1,8 @@
 #include "composer/Choreography.h"
 
 #include "composer/MediaDirection.h"
+#include "composer/RecipeLibrary.h"
+#include "composer/SongVisualPlan.h"
 
 #include "composer/ComposerText.h"
 #include "composer/VisualDirection.h"
@@ -10,8 +12,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <set>
+#include <tuple>
 
 using json = nlohmann::json;
 
@@ -129,6 +133,7 @@ public:
         }
         ApplyCorrections();
         Continuity();
+        FitGeometry();
         std::sort(_out.events.begin(), _out.events.end(), [](const ChoreographyEvent& a, const ChoreographyEvent& b) {
             return a.startMS != b.startMS ? a.startMS < b.startMS : a.target != b.target ? a.target < b.target : a.layer < b.layer;
         });
@@ -137,6 +142,59 @@ public:
     }
 
 private:
+    // Bars shade each bar from full to dark in 3D, so a bar one pixel thick is dark from
+    // end to end: on a line one pixel high, bars moving down never light it. The motion
+    // goes along the long side, and a bar still that thin loses the shading.
+    void FitGeometry() {
+        static const std::vector<std::pair<std::string, std::string>> across = {
+            { "up", "Left" }, { "down", "Right" }, { "expand", "H-expand" }, { "compress", "H-compress" },
+            { "Alternate Up", "Alternate Left" }, { "Alternate Down", "Alternate Right" }, { "Custom Vert", "Custom Horz" }
+        };
+        for (ChoreographyEvent& e : _out.events) {
+            if (e.effect != "Bars") {
+                continue;
+            }
+            const TargetInfo* t = _caps.Find(e.target);
+            if (t == nullptr || t->bufferWi <= 0 || t->bufferHt <= 0) {
+                continue;
+            }
+            const auto setting = [&](const std::string& key) -> std::string* {
+                for (auto& [k, v] : e.settings) {
+                    if (k == key) {
+                        return &v;
+                    }
+                }
+                return nullptr;
+            };
+            std::string* direction = setting("E_CHOICE_Bars_Direction");
+            if (direction == nullptr) {
+                e.settings.emplace_back("E_CHOICE_Bars_Direction", "up");
+                direction = setting("E_CHOICE_Bars_Direction");
+            }
+            const std::string* repeat = setting("E_SLIDER_Bars_BarCount");
+            const int bars = std::max(1, repeat == nullptr ? 1 : static_cast<int>(std::strtol(repeat->c_str(), nullptr, 10))) * std::max<int>(1, static_cast<int>(e.colors.size()));
+            const auto vertical = [&](const std::string& d) {
+                return std::any_of(across.begin(), across.end(), [&](const auto& p) { return p.first == d; });
+            };
+            const auto along = [&]() { return vertical(*direction) ? t->bufferHt : t->bufferWi; };
+            const int other = vertical(*direction) ? t->bufferWi : t->bufferHt;
+            if (along() < 2 * bars && other > along() && *direction != "Custom") {
+                for (const auto& [v, h] : across) {
+                    if (*direction == v || *direction == h) {
+                        *direction = *direction == v ? h : v;
+                        break;
+                    }
+                }
+                e.reasons.push_back({ "geometry", fmt::format("bars along the long side ({}x{})", t->bufferWi, t->bufferHt) });
+            }
+            std::string* shade = setting("E_CHECKBOX_Bars_3D");
+            if (shade != nullptr && *shade == "1" && along() < 2 * bars) {
+                *shade = "0";
+                e.reasons.push_back({ "geometry", "bars too thin to shade" });
+            }
+        }
+    }
+
     Band BandOf(const PlanSegment& s) const {
         if (Has(s.flags, "silence")) {
             return Band::Rest;
@@ -202,6 +260,7 @@ private:
             const auto weight = _profile.templateWeights.find(t.id);
             double score = t.weight * (weight == _profile.templateWeights.end() ? 1.0 : weight->second) * CompatibilityFactor(compat.level) * energyFit;
             score *= MotifFactor(target, t);
+            score *= RecipeFactor(target, t);
             // Two figures running the same effect at once compete; a different one
             // is preferred when there is one. A scene's base is the exception: the
             // references run one effect across many families on purpose.
@@ -249,7 +308,8 @@ private:
             // The scene's colours for every figure, each starting from a different one so
             // neighbours are not identical.
             const std::vector<std::string>& colors = _scene->colors;
-            const int count = std::clamp(_profile.ensemble.colorsPerEvent, std::max(1, t.minColors), std::max(1, std::min<int>(t.maxColors, static_cast<int>(colors.size()))));
+            const int most = std::max(1, std::min<int>(t.maxColors, static_cast<int>(colors.size())));
+            const int count = std::clamp(_profile.ensemble.colorsPerEvent, std::min(most, std::max(1, t.minColors)), most);
             e.colors.clear();
             for (int k = 0; k < count; ++k) {
                 e.colors.push_back(colors[(static_cast<size_t>(rank) + k) % colors.size()]);
@@ -370,6 +430,8 @@ private:
         std::set<std::string> usedEffects;
         _segmentPalettes.clear();
         _scene = _in.direction != nullptr && _in.direction->enabled ? _in.direction->Scene(s.id) : nullptr;
+        _planScene = _in.visualPlan != nullptr ? _in.visualPlan->Scene(s.id) : nullptr;
+        const size_t firstEvent = _out.events.size();
         int rank = 0;
         for (const PlanAssignment* a : active) {
             const TargetInfo* target = _caps.Find(a->target);
@@ -401,7 +463,142 @@ private:
         if (_scene != nullptr) {
             Ensemble(s, band, key, rank, usedEffects);
         }
+        RecipeLayers(s, band, key, firstEvent);
         _scene = nullptr;
+        _planScene = nullptr;
+    }
+
+    // ------------------------------------------------------------ recipes
+
+    // The family a target belongs to: a submodel its model's, a group the one most of
+    // its lights belong to.
+    std::string FamilyFor(const TargetInfo& target) const {
+        if (target.type == TargetType::SubModel) {
+            const TargetInfo* model = _caps.Find(target.parent);
+            return model != nullptr ? FamilyIdOf(*model) : std::string();
+        }
+        if (target.type == TargetType::Model) {
+            return FamilyIdOf(target);
+        }
+        std::map<std::string, int> nodes;
+        for (const std::string& m : target.flatModels) {
+            if (const TargetInfo* model = _caps.Find(m)) {
+                nodes[FamilyIdOf(*model)] += std::max(1, model->nodes);
+            }
+        }
+        std::string best;
+        int most = -1;
+        for (const auto& [family, n] : nodes) {
+            if (n > most) {
+                most = n;
+                best = family;
+            }
+        }
+        return best;
+    }
+
+    // The scene's recipe comes first on the families it has a part for; another
+    // recipe's techniques stay out of the way, and without a recipe they only compete.
+    double RecipeFactor(const TargetInfo& target, const EffectTemplate& t) const {
+        std::string recipe;
+        std::string family;
+        int order = 0;
+        const bool fromRecipe = ParseRecipeTemplateId(t.id, recipe, family, order);
+        if (_planScene == nullptr || _planScene->recipeId.empty()) {
+            return fromRecipe ? 0.6 : 1.0;
+        }
+        const std::string mine = _family.empty() ? FamilyFor(target) : _family;
+        if (fromRecipe) {
+            return recipe == _planScene->recipeId && family == mine ? 4.0 : 0.3;
+        }
+        if (_in.recipes != nullptr) {
+            if (const Recipe* r = _in.recipes->Find(_planScene->recipeId)) {
+                if (const RecipeSurface* rs = r->Surface(mine)) {
+                    for (const RecipeLayer& l : rs->layers) {
+                        if (l.effect == t.effect) {
+                            return 1.5;
+                        }
+                    }
+                }
+            }
+        }
+        return 1.0;
+    }
+
+    // A recipe is more than one effect: the layers above its base on the same figure,
+    // in the same blocks. They go under the base, which then blends with them so both
+    // show, the way a reference stacks a sparkle over a wash.
+    void RecipeLayers(const PlanSegment& s, Band band, const std::string& key, size_t firstEvent) {
+        if (_planScene == nullptr || _planScene->recipeId.empty() || _in.recipes == nullptr) {
+            return;
+        }
+        const Recipe* r = _in.recipes->Find(_planScene->recipeId);
+        if (r == nullptr) {
+            return;
+        }
+        const size_t end = _out.events.size();
+        std::vector<ChoreographyEvent> added;
+        for (size_t i = firstEvent; i < end; ++i) {
+            ChoreographyEvent& base = _out.events[i];
+            std::string recipe;
+            std::string family;
+            int order = 0;
+            if (!ParseRecipeTemplateId(base.templateId, recipe, family, order) || recipe != r->id) {
+                continue;
+            }
+            const RecipeSurface* rs = r->Surface(family);
+            if (rs == nullptr) {
+                continue;
+            }
+            int layer = base.layer;
+            for (const RecipeLayer& l : rs->layers) {
+                if (l.order == order || l.rhythm == "hits") {
+                    continue;
+                }
+                const EffectTemplate* t = _lib.Find(RecipeTemplateId(r->id, family, l.order));
+                if (t == nullptr) {
+                    continue;
+                }
+                const int below = layer + 1;
+                const bool taken = std::any_of(_out.events.begin(), _out.events.end(), [&](const ChoreographyEvent& o) {
+                    return o.target == base.target && o.layer == below && o.startMS < base.endMS && o.endMS > base.startMS;
+                }) || std::any_of(added.begin(), added.end(), [&](const ChoreographyEvent& o) {
+                    return o.target == base.target && o.layer == below && o.startMS < base.endMS && o.endMS > base.startMS;
+                });
+                if (taken) {
+                    continue;
+                }
+                ChoreographyEvent e = base;
+                e.id = base.id + "/recipe" + std::to_string(l.order);
+                e.effect = t->effect;
+                e.templateId = t->id;
+                e.templateVersion = t->version;
+                e.provenance = fmt::format("template:{}@{}", t->id, t->version);
+                e.settings.clear();
+                e.layer = below;
+                e.continuation = "new";
+                e.reasons = { { "recipe-layer", fmt::format("{} layer {} under {}", r->id, l.order, base.effect) } };
+                SetParameters(e, *t, Norm(s, *t), key, 0);
+                (void)band;
+                const std::string blend = l.blend == "Normal" ? std::string("Max") : l.blend;
+                bool hasMethod = false;
+                for (auto& [k, v] : base.settings) {
+                    if (k == "T_CHOICE_LayerMethod") {
+                        v = blend;
+                        hasMethod = true;
+                    }
+                }
+                if (!hasMethod) {
+                    base.settings.emplace_back("T_CHOICE_LayerMethod", blend);
+                }
+                base.reasons.push_back({ "recipe-blend", blend });
+                added.push_back(std::move(e));
+                layer = below;
+            }
+        }
+        for (ChoreographyEvent& e : added) {
+            _out.events.push_back(std::move(e));
+        }
     }
 
     // ------------------------------------------------------------ ensemble
@@ -460,6 +657,12 @@ private:
         for (const VisualFamily* f : order) {
             if (total > 0 && static_cast<double>(covered) >= wanted) {
                 break;
+            }
+            if (_planScene != nullptr) {
+                if (const SurfaceRoleAt* role = _planScene->Role(f->id); role != nullptr && role->role == "rest") {
+                    _out.warnings.push_back(fmt::format("family-resting:{}:{}", f->id, s.id));
+                    continue;
+                }
             }
             for (const FamilyTarget& ft : f->targets) {
                 std::vector<FamilyTarget> parts;
@@ -829,16 +1032,22 @@ private:
         }
         for (size_t shot = 0; shot < shots.size(); ++shot) {
             const MediaAssignment* m = shots[shot];
+            // The template made for this kind of screen first; a general one only where
+            // none is: a matrix's submodel or another figure a person chose.
             const EffectTemplate* chosen = nullptr;
             CompatibilityResult compat;
             for (const EffectTemplate& t : _lib.templates) {
                 if (t.effect != m->effect || t.media.empty() || !Has(t.intents, "media")) {
                     continue;
                 }
-                compat = EvaluateCompatibility(t, target);
-                if (compat.level != Compatibility::Incompatible) {
+                CompatibilityResult c = EvaluateCompatibility(t, target);
+                if (c.level == Compatibility::Incompatible) {
+                    continue;
+                }
+                const auto rank = [](const EffectTemplate& x, const CompatibilityResult& r) { return std::make_tuple(static_cast<int>(r.level), x.roles.size() + x.targetTypes.size(), x.id); };
+                if (chosen == nullptr || rank(t, c) < rank(*chosen, compat)) {
                     chosen = &t;
-                    break;
+                    compat = std::move(c);
                 }
             }
             if (chosen == nullptr) {
@@ -949,7 +1158,7 @@ private:
                 e.continuation = "new";
                 e.fadeInMS = e.fadeInMS / _frame * _frame;
                 e.fadeOutMS = e.fadeOutMS / _frame * _frame;
-                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0; }), e.settings.end());
+                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0 && kv.first != "T_CHOICE_LayerMethod"; }), e.settings.end());
                 if (e.fadeInMS > 0 && !e.transitionIn.empty()) {
                     e.settings.emplace_back("T_CHOICE_In_Transition_Type", e.transitionIn);
                     e.settings.emplace_back("T_TEXTCTRL_Fadein", fmt::format("{:.2f}", e.fadeInMS / 1000.0));
@@ -992,7 +1201,7 @@ private:
                 e.fadeInMS = 0;
                 e.transitionOut = "Fade";
                 e.fadeOutMS = duration * 3 / 5 / _frame * _frame;
-                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0; }), e.settings.end());
+                e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0 && kv.first != "T_CHOICE_LayerMethod"; }), e.settings.end());
                 if (e.fadeOutMS > 0) {
                     e.settings.emplace_back("T_CHOICE_Out_Transition_Type", e.transitionOut);
                     e.settings.emplace_back("T_TEXTCTRL_Fadeout", fmt::format("{:.2f}", e.fadeOutMS / 1000.0));
@@ -1021,7 +1230,7 @@ private:
             }
             e.fadeInMS = e.fadeInMS / _frame * _frame;
             e.fadeOutMS = e.fadeOutMS / _frame * _frame;
-            e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0; }), e.settings.end());
+            e.settings.erase(std::remove_if(e.settings.begin(), e.settings.end(), [](const auto& kv) { return kv.first.rfind("T_", 0) == 0 && kv.first != "T_CHOICE_LayerMethod"; }), e.settings.end());
             if (e.fadeInMS > 0) {
                 e.settings.emplace_back("T_CHOICE_In_Transition_Type", e.transitionIn);
                 e.settings.emplace_back("T_TEXTCTRL_Fadein", fmt::format("{:.2f}", e.fadeInMS / 1000.0));
@@ -1215,6 +1424,7 @@ private:
     std::map<std::string, std::set<std::string>> _segmentPalettes; // palette -> targets, this segment
     const SceneLook* _scene = nullptr; // this segment's, with a direction
     std::string _family;               // the family an ensemble event is for
+    const VisualPlanScene* _planScene = nullptr; // the director's choices for this segment
 };
 
 json ReasonsJson(const std::vector<Reason>& reasons) {

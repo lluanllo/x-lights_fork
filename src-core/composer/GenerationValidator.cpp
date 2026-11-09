@@ -14,6 +14,7 @@
 #include "render/EffectLayer.h"
 #include "render/Element.h"
 #include "render/FSEQFile.h"
+#include "render/PixelBuffer.h"
 #include "render/SequenceElements.h"
 #include "render/SequenceFaces.h"
 #include "render/SequenceMedia.h"
@@ -1567,13 +1568,22 @@ ValidationReport ValidateChoreography(const Choreography& c, const CompositionPl
         bool file = false;
         for (const auto& [key, value] : e.settings) {
             std::string problem;
-            if (key.rfind("E_", 0) == 0) {
+            if (key.rfind("E_VALUECURVE_", 0) == 0) {
+                // As the sequence check reads it: a curve stands for a property the effect has.
+                const std::string id = key.substr(13);
+                const bool known = md->contains("properties") && (*md)["properties"].is_array() &&
+                                   std::any_of((*md)["properties"].begin(), (*md)["properties"].end(), [&](const nlohmann::json& p) { return p.value("id", std::string()) == id; });
+                problem = !known ? "a curve for a property the effect does not have" : value.rfind("Active=TRUE", 0) != 0 ? "a curve that is not active" : "";
+            } else if (key.rfind("E_", 0) == 0) {
                 problem = CheckSetting(*md, key, value);
             } else if (key == "T_CHOICE_In_Transition_Type" || key == "T_CHOICE_Out_Transition_Type") {
                 problem = std::find(TransitionTypes().begin(), TransitionTypes().end(), value) == TransitionTypes().end() ? "unknown transition" : "";
             } else if (key == "T_TEXTCTRL_Fadein" || key == "T_TEXTCTRL_Fadeout") {
                 const double seconds = std::strtod(value.c_str(), nullptr);
                 problem = seconds < 0 || seconds * 1000 > length ? "fade longer than the event" : "";
+            } else if (key == "T_CHOICE_LayerMethod") {
+                static const std::vector<std::string> methods = PixelBufferClass::GetMixTypes();
+                problem = std::find(methods.begin(), methods.end(), value) == methods.end() ? "unknown layer method" : "";
             } else if (key == "B_CUSTOM_SubBuffer" && e.intent == "media") {
                 // A piece of a picture or video on part of a figure: four percentages.
                 int parts = 0;

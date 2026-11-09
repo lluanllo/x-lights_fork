@@ -127,6 +127,16 @@ int LearnFromReview(ArtisticPreferences& prefs, const VisualReview& review, cons
     const auto add = [&](const std::string& origin, const std::string& key, double sign, double weight, const std::string& what) {
         fresh.push_back({ key, sign, weight, session, origin, what });
     };
+    // Only the observations the person chose to turn into rules teach the director;
+    // a score or a word alone never does.
+    for (const std::string& rule : review.evaluation.rules) {
+        const std::string origin = review.sequence + "|evaluation:" + rule;
+        if (rule == "more-variety" || rule == "less-variety") {
+            add(origin, "director.variety", rule == "more-variety" ? 1.0 : -1.0, 1.0, rule);
+        } else if (rule == "more-christmas" || rule == "more-song-colours") {
+            add(origin, "director.christmas", rule == "more-christmas" ? 1.0 : -1.0, 1.0, rule);
+        }
+    }
     for (const ClipReview& c : review.clips) {
         if (c.state == ClipState::Pending) {
             continue; // no decision is not a rejection

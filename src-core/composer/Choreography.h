@@ -22,6 +22,9 @@
 // the report marks which decisions a person should look at.
 namespace composer {
 
+struct SongVisualPlan;
+struct RecipeLibrary;
+
 inline constexpr int CHOREOGRAPHY_SCHEMA_VERSION = 1;
 inline constexpr const char* CHOREOGRAPHER_VERSION = "1.0.0";
 
@@ -160,6 +163,10 @@ struct ChoreographyInput {
     const ShowVisualDirection* direction = nullptr;
     // The pictures and videos chosen for the plan's "media" figures.
     const MediaPlan* media = nullptr;
+    // The artistic director's plan: the recipe each scene plays and which families
+    // rest. Its recipes' templates must be in `library`.
+    const SongVisualPlan* visualPlan = nullptr;
+    const RecipeLibrary* recipes = nullptr;
 };
 
 [[nodiscard]] Choreography Choreograph(const ChoreographyInput& input);

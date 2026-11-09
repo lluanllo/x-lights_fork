@@ -2020,6 +2020,20 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
         r.mediaVariant = static_cast<int>(std::strtol(o.mediaVariant.c_str(), nullptr, 10));
     }
     r.learning = !o.noLearning;
+    r.recipesPath = o.recipesPath;
+    if (o.noRecipes) {
+        r.useRecipes = false;
+    }
+    if (o.noColorEngine) {
+        r.colorEngine = false;
+    }
+    if (!o.christmas.empty()) {
+        r.christmasInfluence = std::clamp(std::strtod(o.christmas.c_str(), nullptr) / 100.0, 0.0, 1.0);
+    }
+    if (!o.variety.empty()) {
+        r.variety = std::clamp(std::strtod(o.variety.c_str(), nullptr) / 100.0, 0.0, 1.0);
+    }
+    r.briefPath = o.briefPath;
     if (!o.lyricsMode.empty() || !o.screens.empty() || !o.screensFor.empty()) {
         ScreenSettings ss;
         ss.set = true;

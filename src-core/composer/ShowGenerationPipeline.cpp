@@ -1,6 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
 #include "composer/ArtisticPreferences.h"
+#include "composer/MusicStructure.h"
 
 #include "composer/SequenceWriter.h"
 #include "composer/MediaFraming.h"
@@ -372,6 +373,11 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.analysisCorrections = run.corrections.analysis;
     s.lyrics = run.lyricSession;
     s.media = run.mediaSession;
+    if (run.visualPlan.enabled) {
+        s.visualPlan = { run.visualPlan.options.recipes, run.visualPlan.options.colorEngine, run.visualPlan.options.christmasInfluence, run.visualPlan.options.variety };
+    } else if (run.hasPrevious) {
+        s.visualPlan = run.previous.visualPlan;
+    }
     s.media.corrections = run.corrections.media;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
                                           LevelId(s.level), s.seed, s.frameMS, s.pipelineVersion, s.plannerVersion, s.choreographerVersion, ToJson(run.corrections)));
@@ -592,6 +598,27 @@ bool LoadLayout(GenerationRun& run) {
         for (const RejectedTemplate& t : run.library.rejected) {
             Note(run, S, "template-rejected", fmt::format("{}: {}", t.file, t.errors.empty() ? std::string() : t.errors.front()));
         }
+        {
+            const std::string path = !r.recipesPath.empty() ? r.recipesPath : r.showDir.empty() ? std::string() : RecipeLibraryPath(r.showDir);
+            const bool want = r.useRecipes.value_or(run.hasPrevious ? run.previous.visualPlan.recipes : true);
+            if (want && !path.empty() && FileExists(path)) {
+                std::string error;
+                if (!ReadRecipeLibrary(path, run.recipes, error)) {
+                    return Fail(run, S, "recipes-invalid", error);
+                }
+                run.recipesFrom = path;
+                std::vector<EffectTemplate> extra = RecipeTemplates(run.recipes, run.metadata);
+                int excluded = 0;
+                for (const Recipe& rc : run.recipes.recipes) {
+                    excluded += rc.excluded ? 1 : 0;
+                }
+                Note(run, S, "recipes", fmt::format("{} recipes ({} excluded) from {}, {} templates", run.recipes.recipes.size(), excluded, path, extra.size()));
+                for (EffectTemplate& t : extra) {
+                    run.library.templates.push_back(std::move(t));
+                }
+                run.library.hash += fmt::format("+recipes:{}", extra.size());
+            }
+        }
         run.profile = NeutralStarterProfile();
         if (!r.profilePath.empty()) {
             std::string text;
@@ -649,11 +676,11 @@ bool AnalyzeAudio(GenerationRun& run) {
         run.analysis = result.analysis;
         run.analysisFromCache = result.reusedCache;
         const AnalysisCorrections& fixes = run.corrections.analysis;
-        if (!fixes.events.empty() || !fixes.sections.empty() || fixes.bar.firstDownbeatMS >= 0) {
+        if (!fixes.events.empty() || !fixes.sections.empty() || fixes.bar.firstDownbeatMS >= 0 || fixes.tempoFactor != 1) {
             // A person's beats, bars and sections win over the detection, here as in the cache.
             MergeAnalysisCorrections(run.analysis.corrections, fixes);
             ApplyCorrections(run.analysis);
-            run.Stage(GenerationStage::Analysis).notes.push_back(fmt::format("music corrections applied: {} marks, {} sections{}", fixes.events.size(), fixes.sections.size(), fixes.bar.firstDownbeatMS >= 0 ? ", the bar" : ""));
+            run.Stage(GenerationStage::Analysis).notes.push_back(fmt::format("music corrections applied: {} marks, {} sections{}{}", fixes.events.size(), fixes.sections.size(), fixes.bar.firstDownbeatMS >= 0 ? ", the bar" : "", fixes.tempoFactor != 1 ? fmt::format(", the pulse x{}", fixes.tempoFactor) : std::string()));
         }
         const SongAnalysis& a = run.analysis;
         if (a.durationMS < 2 * r.frameMS) {
@@ -848,6 +875,18 @@ bool PrepareLyrics(GenerationRun& run) {
             return Fail(run, S, "lyrics-invalid", fmt::format("{} errors", report.ErrorCount()));
         }
         run.lyricTrack = std::move(track);
+        if (r.lyricStructure) {
+            // The words say which part is the chorus, which the audio alone cannot.
+            const StructureResult structure = RefineSectionsWithLyrics(run.analysis, TimedLinesFrom(run.alignment));
+            if (structure.applied) {
+                Note(run, S, "structure", fmt::format("sections from the lyrics: {} choruses, {} verses, {} parts sung again", structure.choruses, structure.verses, structure.families));
+                for (const std::string& n : structure.notes) {
+                    Note(run, S, "structure-section", n);
+                }
+            } else {
+                Note(run, S, "structure-kept", structure.reason);
+            }
+        }
         run.cast = EffectiveCast(run.lyrics.cast, run.lyricSession.voices);
         if (!run.cast.Empty()) {
             std::vector<std::string> warnings;
@@ -908,6 +947,25 @@ bool PlanShow(GenerationRun& run) {
         in.options.seed = *run.request.seed;
         in.options.frameMS = run.request.frameMS;
         in.corrections = run.corrections.plan;
+        // In free mode the person's screens decide where the words go, as they decide
+        // where the pictures go: the plan is told before it places any text.
+        ScreenSettings screens = run.hasPrevious ? run.previous.media.screens : ScreenSettings();
+        MergeScreenSettings(screens, run.corrections.screens);
+        if (screens.set && screens.mode == LyricsMode::Free) {
+            for (const ScreenChoice& c : screens.screens) {
+                if (!c.roleSet) {
+                    continue;
+                }
+                if (c.role == SurfaceRole::Lyrics || c.role == SurfaceRole::Narration) {
+                    in.options.textOnly.insert(c.target);
+                } else if (c.role == SurfaceRole::Main || c.role == SurfaceRole::Secondary || c.role == SurfaceRole::Tree || c.role == SurfaceRole::Media) {
+                    in.options.noText.insert(c.target);
+                }
+            }
+            if (!in.options.textOnly.empty() || !in.options.noText.empty()) {
+                Note(run, S, "screens-words", fmt::format("free mode: words only on {} screens chosen for them, never on {} chosen for pictures", in.options.textOnly.size(), in.options.noText.size()));
+            }
+        }
         run.plan = PlanComposition(in);
         run.planValidation = ValidateCompositionPlan(run.plan, run.capabilities, &run.profile);
         AddValidationNotes(run, S, run.planValidation, "plan");
@@ -1228,6 +1286,67 @@ bool ChoreographShow(GenerationRun& run) {
             d.title = run.request.audioPath;
             run.direction = DirectShow(d);
             in.direction = &run.direction;
+            // The director: the arc, the recipe of each scene, who rests, and colours from the song.
+            const GenerationRequest& r = run.request;
+            if (!r.briefPath.empty()) {
+                std::string text;
+                if (!ReadText(r.briefPath, text) || !ParseVisualBrief(text, "file", run.brief, error)) {
+                    Note(run, S, "brief-unusable", r.briefPath + (error.empty() ? std::string() : ": " + error));
+                    run.brief = SongVisualBrief();
+                }
+            }
+            if (run.brief.Empty() && run.hasLyrics) {
+                std::string words;
+                for (const LyricLine* l : run.lyrics.Lines()) {
+                    words += l->text + " ";
+                }
+                run.brief = LocalVisualBrief(words, run.request.audioPath);
+            }
+            VisualPlanInput vp;
+            vp.plan = &run.plan;
+            vp.analysis = &run.analysis;
+            vp.direction = &run.direction;
+            vp.recipes = run.recipes.recipes.empty() ? nullptr : &run.recipes;
+            vp.brief = run.brief.Empty() ? nullptr : &run.brief;
+            const VisualPlanSettings& before = run.previous.visualPlan;
+            // What the maker's evaluations taught moves the starting point, never a choice
+            // made for this show or the one before.
+            std::map<std::string, double> taught;
+            if (r.learning && !r.showDir.empty()) {
+                ArtisticPreferences prefs;
+                std::string perr;
+                if (ReadPreferences(PreferencesPath(r.showDir), prefs, perr)) {
+                    taught = EffectivePreferences(prefs);
+                }
+            }
+            // Without a person's setting, how Christmas the colours go starts from how
+            // Christmas the song itself is, when the brief knows it.
+            const double christmasBase = !run.brief.Empty() && run.brief.christmas >= 0 ? 0.15 + 0.7 * run.brief.christmas : 0.5;
+            const auto start = [&](const char* key) {
+                const double base = std::string(key) == "director.christmas" ? christmasBase : 0.5;
+                const auto it = taught.find(key);
+                return it == taught.end() ? base : std::clamp(base + 0.3 * it->second, 0.0, 1.0);
+            };
+            vp.options.recipes = r.useRecipes.value_or(run.hasPrevious ? before.recipes : true);
+            vp.options.colorEngine = r.colorEngine.value_or(run.hasPrevious ? before.colorEngine : true);
+            vp.options.christmasInfluence = std::clamp(r.christmasInfluence.value_or(run.hasPrevious ? before.christmasInfluence : start("director.christmas")), 0.0, 1.0);
+            vp.options.variety = std::clamp(r.variety.value_or(run.hasPrevious ? before.variety : start("director.variety")), 0.0, 1.0);
+            for (const char* key : { "director.variety", "director.christmas" }) {
+                if (taught.contains(key)) {
+                    Note(run, S, "director-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
+                }
+            }
+            vp.options.seed = run.plan.seed;
+            run.visualPlan = PlanSongVisuals(vp);
+            ApplyPlanColors(run.visualPlan, run.direction);
+            in.visualPlan = &run.visualPlan;
+            in.recipes = run.recipes.recipes.empty() ? nullptr : &run.recipes;
+            Note(run, S, "visual-plan", fmt::format("{}: {} distinct recipes over {} scenes (most used {:.0f}%), colours from hue {}, Christmas {:.0f}%, brief {}", run.visualPlan.arcShape,
+                                                    run.visualPlan.distinctRecipes, run.visualPlan.recipeScenes, run.visualPlan.longestRepeatShare * 100, run.visualPlan.anchorHue,
+                                                    vp.options.christmasInfluence * 100, run.brief.Empty() ? std::string("none") : run.brief.source));
+            for (const std::string& w : run.visualPlan.warnings) {
+                Note(run, S, "visual-plan-warning", w);
+            }
             Note(run, S, "visual-direction", fmt::format("theme {} from {} ({:.2f}), {} families, {} scenes", run.direction.themeId, run.direction.themeSource, run.direction.themeConfidence,
                                                          run.direction.families.size(), run.direction.scenes.size()));
         }
@@ -1250,7 +1369,8 @@ bool ChoreographShow(GenerationRun& run) {
             warnings[w.substr(0, w.find(':'))]++;
         }
         for (const auto& [code, count] : warnings) {
-            Note(run, S, "not-choreographed", fmt::format("{} x{}", code, count));
+            // A family the director rests is a choice, not something left undone.
+            Note(run, S, code == "family-resting" ? "director-rest" : "not-choreographed", fmt::format("{} x{}", code, count));
         }
         const ChoreographyMetrics& m = run.choreography.metrics;
         run.Stage(S).notes.push_back(fmt::format("{} events on {} targets, {} templates (top {} {:.0f}%), {} palettes, {} accents, {} to review, {} media cues", m.events, m.targets, m.distinctTemplates, m.topTemplate,
@@ -1535,6 +1655,13 @@ void WriteDiagnostics(GenerationRun& run) {
         if (run.direction.enabled) {
             ok &= WriteText(report / "visual-direction.json", ToJson(run.direction));
             ok &= WriteText(report / "visual-direction-report.txt", DirectionReport(run.direction));
+        }
+        if (run.visualPlan.enabled) {
+            ok &= WriteText(report / "visual-plan.json", ToJson(run.visualPlan));
+            ok &= WriteText(report / "visual-plan-report.txt", VisualPlanReport(run.visualPlan));
+            if (!run.brief.Empty()) {
+                ok &= WriteText(report / "visual-brief.json", ToJson(run.brief));
+            }
             ok &= WriteText(report / "direction-metrics.json", ToJson(run.directionMetrics));
         }
         if (!run.mediaLibrary.items.empty() || !run.media.assignments.empty() || !run.media.warnings.empty()) {
@@ -1570,7 +1697,8 @@ void WriteDiagnostics(GenerationRun& run) {
     const auto dump = [&](const char* what, const ValidationReport& v) {
         for (const ValidationIssue& i : v.issues) {
             const char* severity = i.severity == IssueSeverity::Error ? "error" : i.severity == IssueSeverity::Warning ? "warning" : "info";
-            validation += fmt::format("{}\t{}\t{}\t{}\t{}\n", what, severity, i.code, i.model, DescribeIssue(i));
+            const std::string when = i.startMS >= 0 ? fmt::format(" [{}-{} ms]", i.startMS, i.endMS) : std::string();
+            validation += fmt::format("{}\t{}\t{}\t{}\t{}{}\n", what, severity, i.code, i.model, DescribeIssue(i), when);
         }
     };
     dump("plan", run.planValidation);

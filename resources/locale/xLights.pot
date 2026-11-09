@@ -11802,3 +11802,345 @@ msgstr ""
 
 msgid "No lyrics were given, so the lyrics are what Groq heard: %d phrases, %d of them doubtful, %d left out (not sung). Read them and correct them before generating: nothing was filled in from memory."
 msgstr ""
+
+msgid "Strong"
+msgstr ""
+
+msgid "for quiet parts"
+msgstr ""
+
+msgid "hits on the beat"
+msgstr ""
+
+msgid "a figure leads"
+msgstr ""
+
+msgid "the whole house moves"
+msgstr ""
+
+msgid "(hits)"
+msgstr ""
+
+msgid "Arches"
+msgstr ""
+
+msgid "Trees"
+msgstr ""
+
+msgid "Figures"
+msgstr ""
+
+msgid "Props"
+msgstr ""
+
+msgid "Read from a show, not reviewed"
+msgstr ""
+
+msgid "Reviewed"
+msgstr ""
+
+msgid "Corrected by hand"
+msgstr ""
+
+msgid "Made by the composer"
+msgstr ""
+
+msgid "Recipes"
+msgstr ""
+
+msgid "A recipe is how a show combines effects on several figures at once. The composer plays them in its scenes; you choose which."
+msgstr ""
+
+msgid "Every recipe"
+msgstr ""
+
+msgid "The ones that fit my house"
+msgstr ""
+
+msgid "Favourites"
+msgstr ""
+
+msgid "Left out"
+msgstr ""
+
+msgid "Recipe"
+msgstr ""
+
+msgid "Use"
+msgstr ""
+
+msgid "Strength"
+msgstr ""
+
+msgid "Seen"
+msgstr ""
+
+msgid "Favourite"
+msgstr ""
+
+msgid "Do Not Use"
+msgstr ""
+
+msgid "Use Again"
+msgstr ""
+
+msgid "I Have Reviewed It..."
+msgstr ""
+
+msgid "Correct a Setting..."
+msgstr ""
+
+msgid "Read Recipes from a Sequence..."
+msgstr ""
+
+msgid "Who reviewed it? Only a person who looked at it in xLights should say so."
+msgstr ""
+
+msgid "A note (optional): what you liked or not."
+msgstr ""
+
+msgid "Which effect?"
+msgstr ""
+
+msgid "Correct a Setting"
+msgstr ""
+
+msgid "The setting as xLights saves it, for example E_SLIDER_Spirals_Count:"
+msgstr ""
+
+msgid "Its new value:"
+msgstr ""
+
+msgid "Who makes the correction?"
+msgstr ""
+
+msgid "The correction was not accepted: %s"
+msgstr ""
+
+msgid "%d recipes; %d fit this house, %d favourites, %d not used."
+msgstr ""
+
+msgid "Use: %s. Strength: %s. Seen %d times. Confidence %.0f%%."
+msgstr ""
+
+msgid " by %s on %s"
+msgstr ""
+
+msgid "Who made the original: %s"
+msgstr ""
+
+msgid "  from \"%s\", %.1f s to %.1f s"
+msgstr ""
+
+msgid "This house does not have the figures this recipe needs."
+msgstr ""
+
+msgid "Choose a finished sequence"
+msgstr ""
+
+msgid "xLights sequences (*.xsq)|*.xsq"
+msgstr ""
+
+msgid "Its show folder (with xlights_rgbeffects.xml) was not found next to the sequence."
+msgstr ""
+
+msgid "Read Recipes"
+msgstr ""
+
+msgid "Who made this sequence? It is kept with every recipe read from it."
+msgstr ""
+
+msgid "someone else"
+msgstr ""
+
+msgid "No recipes could be read from that sequence."
+msgstr ""
+
+msgid "%d new recipes read. They are not reviewed: look at them in xLights before marking them."
+msgstr ""
+
+msgid "Colours:"
+msgstr ""
+
+msgid "the song's own"
+msgstr ""
+
+msgid "Variety:"
+msgstr ""
+
+msgid "keep an idea"
+msgstr ""
+
+msgid "change often"
+msgstr ""
+
+msgid "Use recipes from the reference shows"
+msgstr ""
+
+msgid "Recipes..."
+msgstr ""
+
+msgid "Pre-chorus"
+msgstr ""
+
+msgid "Interlude"
+msgstr ""
+
+msgid "The recipes of this show could not be read: %s"
+msgstr ""
+
+msgid "The recipes could not be saved: %s"
+msgstr ""
+
+msgid "Evaluate the Show..."
+msgstr ""
+
+msgid "More variety from scene to scene"
+msgstr ""
+
+msgid "Christmas colours rather than the song's"
+msgstr ""
+
+msgid "Follows the music"
+msgstr ""
+
+msgid "Variety"
+msgstr ""
+
+msgid "Richness"
+msgstr ""
+
+msgid "The house moves together"
+msgstr ""
+
+msgid "Colour"
+msgstr ""
+
+msgid "Artistic direction"
+msgstr ""
+
+msgid "Flows without jumps"
+msgstr ""
+
+msgid "Personality"
+msgstr ""
+
+msgid "I liked it"
+msgstr ""
+
+msgid "Monotonous"
+msgstr ""
+
+msgid "Too busy"
+msgstr ""
+
+msgid "Too calm"
+msgstr ""
+
+msgid "Too Christmas-coloured"
+msgstr ""
+
+msgid "Not Christmas enough"
+msgstr ""
+
+msgid "Change the looks more from scene to scene"
+msgstr ""
+
+msgid "Keep an idea longer"
+msgstr ""
+
+msgid "Use more Christmas colours"
+msgstr ""
+
+msgid "Use more of the song's own colours"
+msgstr ""
+
+msgid "Mark this show's recipes as favourites"
+msgstr ""
+
+msgid "Evaluate the Show"
+msgstr ""
+
+msgid "How did the show turn out? Only what you saw in xLights counts. The measures below are the program's, not a judgement."
+msgstr ""
+
+msgid "Who evaluates:"
+msgstr ""
+
+msgid "Your score:"
+msgstr ""
+
+msgid "Quick evaluation: only the score and a few words"
+msgstr ""
+
+msgid "Not rated"
+msgstr ""
+
+msgid "1 - Poor"
+msgstr ""
+
+msgid "5 - Very good"
+msgstr ""
+
+msgid "In a few words:"
+msgstr ""
+
+msgid "Notes:"
+msgstr ""
+
+msgid "What should the next shows take from this one? Only what you tick becomes a rule (marked: suggested by your answers)."
+msgstr ""
+
+msgid "No measures for this show."
+msgstr ""
+
+msgid "not given"
+msgstr ""
+
+msgid "Say who evaluates the show."
+msgstr ""
+
+msgid "Two of the rules you ticked contradict each other."
+msgstr ""
+
+msgid "The evaluation is not complete."
+msgstr ""
+
+msgid "(suggested)"
+msgstr ""
+
+msgid "Colour Ideas from the Lyrics (Groq)..."
+msgstr ""
+
+msgid "Give the song's lyrics first: only their text is described."
+msgstr ""
+
+msgid "to suggest colours and a mood from the text of the lyrics; only the text is sent, never the song"
+msgstr ""
+
+msgid "Sending the text of the lyrics to Groq and waiting for colour ideas..."
+msgstr ""
+
+msgid "The colour ideas could not be read."
+msgstr ""
+
+msgid "Groq reads the lyrics as %s, with %d colours; Christmas %.0f%%. Only a suggestion: the song's key and your sliders still decide."
+msgstr ""
+
+msgid "joyful"
+msgstr ""
+
+msgid "tender"
+msgstr ""
+
+msgid "epic"
+msgstr ""
+
+msgid "playful"
+msgstr ""
+
+msgid "nostalgic"
+msgstr ""
+
+msgid "festive"
+msgstr ""
