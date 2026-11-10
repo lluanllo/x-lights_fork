@@ -40,6 +40,7 @@ bool IsVoice(const std::string& kind) {
 
 // What a voice sounds like over a stretch: its pitch, how far it moves, its brightness.
 struct Print {
+    bool sung = false;
     double semis = 0;
     double spread = 0;
     double brightness = 0;
@@ -71,7 +72,10 @@ Print PrintOf(const AudioUnderstanding& u, int from, int to) {
 
 double Distance(const Print& a, const Print& b) {
     // Pitch weighs most: a phrase's brightness and breathiness move with what is said.
-    return std::fabs(a.semis - b.semis) / 4.0 + std::fabs(a.spread - b.spread) / 4.0 + std::fabs(a.brightness - b.brightness) / 4.0 + std::fabs(a.air - b.air) / 2.0;
+    // A sung melody moves its pitch from phrase to phrase: pitch weighs half as much
+    // between sung phrases as between spoken ones.
+    const double pitch = a.sung && b.sung ? 8.0 : 4.0;
+    return std::fabs(a.semis - b.semis) / pitch + std::fabs(a.spread - b.spread) / 4.0 + std::fabs(a.brightness - b.brightness) / 4.0 + std::fabs(a.air - b.air) / 2.0;
 }
 
 std::string Letter(int n) {
@@ -135,6 +139,7 @@ VocalUnderstanding UnderstandVoices(const VocalInput& in) {
     for (const ActivitySegment& s : u.activities) {
         if (IsVoice(s.kind)) {
             drafts.push_back({ &s, s.track, PrintOf(u, s.startMS, s.endMS) });
+            drafts.back().print.sung = s.kind != "speech";
         }
     }
     // A choir is one track; a voice on its own stem is its own track; a person's track
@@ -174,6 +179,38 @@ VocalUnderstanding UnderstandVoices(const VocalInput& in) {
         } else {
             clusters.push_back({ "voice:" + Letter(static_cast<int>(clusters.size())), d.print });
             d.track = clusters.back().first;
+        }
+    }
+    // A group heard for less than two seconds is too little to be a voice of its own: it
+    // joins the voice it sounds most like.
+    for (bool moved = true; moved && clusters.size() > 1;) {
+        moved = false;
+        std::map<std::string, int> heardMS;
+        for (const Draft& d : drafts) {
+            heardMS[d.track] += d.segment->endMS - d.segment->startMS;
+        }
+        for (size_t c = 0; c < clusters.size() && !moved; ++c) {
+            if (heardMS[clusters[c].first] >= 2000) {
+                continue;
+            }
+            size_t best = c;
+            double nearest = 1e9;
+            for (size_t o = 0; o < clusters.size(); ++o) {
+                const double d = o == c ? 1e9 : Distance(clusters[c].second, clusters[o].second);
+                if (d < nearest) {
+                    nearest = d;
+                    best = o;
+                }
+            }
+            if (best == c || nearest > 3.0) {
+                continue;
+            }
+            for (Draft& d : drafts) {
+                d.track = d.track == clusters[c].first ? clusters[best].first : d.track;
+            }
+            clusters[best].second.frames += clusters[c].second.frames;
+            clusters.erase(clusters.begin() + static_cast<long>(c));
+            moved = true;
         }
     }
     // Groups that ended up sounding alike are one voice; the letters follow the order in

@@ -558,39 +558,55 @@ private:
         const auto phrases = Runs(voiced, 250, _o.minVoiceMS);
         for (size_t p = 0; p < phrases.size(); ++p) {
             const auto [a, b] = phrases[p];
-            // Sung or spoken: held steady pitches, voiced share, long voiced runs.
-            int steady = 0, pitched = 0, longest = 0, run = 0, polyFrames = 0;
-            double width = 0;
-            std::vector<double> semis;
+            // Sung or spoken: singing holds notes (a pitch kept for 160 ms or more, a
+            // vibrato included); speech glides from syllable to syllable, however flat its
+            // tune. The share of voiced time inside notes, the longest note, voiced share.
+            int pitched = 0, polyFrames = 0, inNotes = 0, longestNote = 0, note = 0;
+            double noteStart = 0, width = 0;
+            const int minNote = 160 / UNDERSTANDING_HOP_MS;
+            const auto closeNote = [&]() {
+                if (note >= minNote) {
+                    inNotes += note;
+                    longestNote = std::max(longestNote, note);
+                }
+                note = 0;
+            };
             for (size_t f = a; f < b; ++f) {
                 if (r.f0[f] > 0) {
                     ++pitched;
-                    ++run;
-                    longest = std::max(longest, run);
                     const double s = 12.0 * std::log2(r.f0[f] / 440.0);
-                    semis.push_back(s);
-                    if (f >= a + 3 && r.f0[f - 3] > 0 && std::fabs(s - 12.0 * std::log2(r.f0[f - 3] / 440.0)) < 0.6) {
-                        ++steady;
+                    if (note > 0 && std::fabs(s - noteStart) < 0.7) {
+                        ++note;
+                    } else {
+                        closeNote();
+                        noteStart = s;
+                        note = 1;
                     }
                 } else {
-                    run = 0;
+                    closeNote();
                 }
                 polyFrames += r.poly[f] >= 2 ? 1 : 0;
                 width += r.voiceSide[f] / std::max(1e-12, r.voiceMid[f] + r.voiceSide[f]);
             }
+            closeNote();
             const double frames = static_cast<double>(b - a);
             const double voicedShare = pitched / frames;
-            const double stability = pitched > 0 ? static_cast<double>(steady) / pitched : 0;
-            const double held = std::min(1.0, longest * UNDERSTANDING_HOP_MS / 600.0);
-            const double sung = 0.45 * stability + 0.25 * voicedShare + 0.3 * held;
+            const double stability = pitched > 0 ? static_cast<double>(inNotes) / pitched : 0;
+            const double held = std::min(1.0, longestNote * UNDERSTANDING_HOP_MS / 500.0);
+            const double sung = 0.5 * stability + 0.2 * voicedShare + 0.3 * held;
             const double polyShare = polyFrames / frames;
             width /= frames;
             const bool withMusic = Mean(_music, a, b) >= 0.3 || musicAt((a + b) / 2);
             std::string kind;
             double confidence = 0;
-            std::vector<std::string> evidence = { fmt::format("steady pitch {:.0f}%", stability * 100), fmt::format("voiced {:.0f}%", voicedShare * 100),
-                                                  fmt::format("longest held {} ms", longest * UNDERSTANDING_HOP_MS) };
-            if (sung >= 0.5) {
+            std::vector<std::string> evidence = { fmt::format("in held notes {:.0f}%", stability * 100), fmt::format("voiced {:.0f}%", voicedShare * 100),
+                                                  fmt::format("longest note {} ms", longestNote * UNDERSTANDING_HOP_MS) };
+            // Over music the voice's pitch cannot be followed from the mix (measured on real
+            // songs: held notes are not found in sung phrases, and a narration over chords
+            // borrows their steadiness). A voice over music is taken as sung, and says it is
+            // a guess: a narration needs its own recording, a [Narrador] tag or a correction.
+            const bool guessed = withMusic;
+            if (guessed || sung >= 0.5) {
                 const bool choir = polyShare >= 0.6 || (polyShare >= 0.35 && (!u.stereo || width >= 0.12));
                 kind = choir ? "chorus" : "singing";
                 confidence = choir ? 0.35 + 0.4 * polyShare : 0.4 + 0.5 * std::min(1.0, (sung - 0.5) * 3);
@@ -601,7 +617,10 @@ private:
                 kind = "speech";
                 confidence = 0.4 + 0.5 * std::min(1.0, (0.5 - sung) * 3);
             }
-            if (sung > 0.42 && sung < 0.58) {
+            if (guessed) {
+                evidence.push_back("over the music, sung is assumed: uncertain");
+                confidence = std::min(confidence, 0.4);
+            } else if (sung > 0.42 && sung < 0.58) {
                 evidence.push_back("between speech and singing: uncertain");
                 confidence = std::min(confidence, 0.4);
             }
@@ -1150,8 +1169,11 @@ void ApplyUnderstandingCorrections(AudioUnderstanding& u) {
         }
         case UnderstandingCorrection::Action::Reclassify:
             if (!c.kind.empty()) {
+                // A person said what it is: no longer a guess.
                 s->kind = c.kind;
                 s->provenance = "corrected";
+                s->confidence = 1;
+                std::erase_if(s->evidence, [](const std::string& e) { return e.find("uncertain") != std::string::npos; });
             }
             break;
         case UnderstandingCorrection::Action::Reassign:
@@ -1163,6 +1185,7 @@ void ApplyUnderstandingCorrections(AudioUnderstanding& u) {
             break;
         case UnderstandingCorrection::Action::Confirm:
             s->confidence = 1;
+            std::erase_if(s->evidence, [](const std::string& e) { return e.find("uncertain") != std::string::npos; });
             if (s->provenance == "detected") {
                 s->provenance = "confirmed";
             }

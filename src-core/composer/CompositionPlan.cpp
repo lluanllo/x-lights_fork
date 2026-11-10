@@ -591,24 +591,10 @@ private:
         s.targetIntensity = band == Band::Rest ? 0 : band == Band::Climax ? 1.0 : Round3(std::min(1.0, s.energy * levelIntensity + (userChorus ? 0.1 : 0)));
         s.priority = band == Band::Rest ? 0 : band == Band::Climax ? 3 : (band == Band::High || userChorus) ? 2 : 1;
 
-        if (band == Band::Rest) {
-            s.reasons.push_back({ "silence", "" });
-            FillRests(s, chosen, "silence");
-            return;
-        }
-        s.reasons.push_back({ band == Band::Climax ? "climax" : band == Band::High ? "energy-high" : band == Band::Mid ? "energy-mid" : "energy-low", fmt::format("{:.2f}", s.energy) });
-        if (s.sectionKind == "unknown") {
-            s.reasons.push_back({ "section-unknown-energy-used", "" });
-        }
-        if (userChorus) {
-            s.reasons.push_back({ "user-tagged-chorus", "" });
-        }
-        const std::string key = Key(s);
-
         // With voices, a face sings when its voice does and only then; a phrase nobody
         // was named for gives no face.
         const bool voiced = _in.cast != nullptr && !_in.cast->Empty() && _in.alignment != nullptr && _plan.lyricsSynchronized;
-        if (voiced) {
+        const auto singVoices = [&](double intensity) {
             std::map<std::string, int> heard;
             for (const AlignedPhrase& p : _in.alignment->phrases) {
                 const int overlap = std::min(p.endMS, s.endMS) - std::max(p.startMS, s.startMS);
@@ -631,13 +617,34 @@ private:
                         s.reasons.push_back({ c == _faces.end() ? "voice-face-unavailable" : "voice-face-conflict", id + ":" + face });
                         continue;
                     }
-                    PlanAssignment a = Make(*c, Prominence::Lead, "face-sing", s.targetIntensity);
+                    PlanAssignment a = Make(*c, Prominence::Lead, "face-sing", intensity);
                     a.voice = id;
                     a.reasons.push_back({ "voice", fmt::format("{} ({}), {} ms sung here", v->name, VoiceRoleId(v->role), ms) });
                     a.reasons.push_back({ "face-definition", "" });
                     take(*c, std::move(a));
                 }
             }
+        };
+        if (band == Band::Rest) {
+            s.reasons.push_back({ "silence", "" });
+            // The music rests, a voice may not: a narrator speaks in the quiet parts too.
+            if (voiced) {
+                singVoices(0.6);
+            }
+            FillRests(s, chosen, "silence");
+            return;
+        }
+        s.reasons.push_back({ band == Band::Climax ? "climax" : band == Band::High ? "energy-high" : band == Band::Mid ? "energy-mid" : "energy-low", fmt::format("{:.2f}", s.energy) });
+        if (s.sectionKind == "unknown") {
+            s.reasons.push_back({ "section-unknown-energy-used", "" });
+        }
+        if (userChorus) {
+            s.reasons.push_back({ "user-tagged-chorus", "" });
+        }
+        const std::string key = Key(s);
+
+        if (voiced) {
+            singVoices(s.targetIntensity);
         }
         // A sung phrase gives the faces the lead, if a face can sing it.
         const bool vocal = !voiced && _plan.lyricsSynchronized && s.vocalCoverage >= 0.2;

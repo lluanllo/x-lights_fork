@@ -12,6 +12,22 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: understand the audio (on this computer) to see who speaks, sings or
+                                 answers as a choir, when the instruments play alone, and the hits, drops, tails and
+                                 silences of the music; separate recordings of the voice or the choir can be added;
+                                 voices are told apart by how they sound, never separated or identified
+    -enh (lluanllo)              Show Composer: "What happens in the recording" shows it lane by lane; move, split, join,
+                                 reclassify or give to another voice any piece, and your corrections are kept apart
+                                 and applied again after every new analysis
+    -enh (lluanllo)              Show Composer: "Know my figures" shows each figure as xLights draws it, its parts tied
+                                 to real lights (mouth, eyes, trunk, foliage...) with their own colours, and lets you
+                                 confirm, remove or add parts; "Assign voices and characters" gives each voice and
+                                 each moment of the music to figures, and what you choose always wins
+    -enh (lluanllo)              Show Composer: a face only sings while its own voice is heard, a narrator or a choir
+                                 with no face gets one, and "What the figures did" checks the render against what
+                                 was meant and points at the moments to look at in xLights
+    -bug (lluanllo)              Show Composer: a face whose voice speaks or sings where the music rests (a narration
+                                 with little or no music) now moves its mouth there too
     -enh (lluanllo)              Show Composer: recipes read from finished shows (which effects run together on which
                                  figures, in which layers) play in the new shows; a Recipes window to see them, mark
                                  favourites, leave some out, say you reviewed one, correct a setting or read more

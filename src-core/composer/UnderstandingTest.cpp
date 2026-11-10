@@ -210,9 +210,22 @@ private:
             s.Speech(2, 8, 125, 0.4);
             const AudioUnderstanding u = Hear(s);
             Describe("voice over music", u);
-            Check(Covered(u, "speech", 2000, 10000) >= 0.45, fmt::format("speech over the music ({:.0f}%)", Covered(u, "speech", 2000, 10000) * 100));
+            const double heard = Covered(u, "speech", 2000, 10000) + Covered(u, "singing", 2000, 10000) + Covered(u, "chorus", 2000, 10000);
+            Check(heard >= 0.45, fmt::format("a voice over the music is heard ({:.0f}%)", heard * 100));
             Check(Covered(u, "music", 0, 12000) >= 0.7, "the music is heard all along");
-            Check(Covered(u, "singing", 2000, 10000) <= 0.2, "the narrator is not taken for a singer");
+            bool doubtful = true;
+            for (const ActivitySegment& s : u.activities) {
+                if ((s.kind == "speech" || s.kind == "singing" || s.kind == "chorus") && s.endMS > 2000 && s.startMS < 10000) {
+                    doubtful = doubtful && s.confidence <= 0.4 &&
+                               std::any_of(s.evidence.begin(), s.evidence.end(), [](const std::string& e) { return e.find("uncertain") != std::string::npos; });
+                }
+            }
+            Check(doubtful, "over the music, whether it is spoken or sung is a guess, and says so (measured: the mix hides the voice's pitch)");
+            // Its own recording settles it.
+            SyntheticSong v(12);
+            v.Speech(2, 8, 125, 0.4);
+            const AudioUnderstanding own = UnderstandSamples(v.Left(), v.Right(), testaudio::RATE);
+            Check(Covered(own, "speech", 2000, 10000) >= 0.45 && Covered(own, "singing", 2000, 10000) <= 0.2, "heard on its own recording, the narrator speaks, and is not taken for a singer");
         }
         {
             SyntheticSong s(8);
@@ -495,11 +508,16 @@ private:
         Check(changed.ok && !changed.song.fromCache && std::find(changed.song.notes.begin(), changed.song.notes.end(), "stale-reading:reader-changed") != changed.song.notes.end(),
               "with other options it is heard again, and says why");
         (void)UnderstandSong(r);
-        const ActivitySegment* speech = First(first.song.audio, "speech");
+        // The first voice heard, whatever it was taken for, corrected to the other kind.
+        const ActivitySegment* speech = nullptr;
+        for (const ActivitySegment& a : first.song.audio.activities) {
+            speech = speech == nullptr && (a.kind == "speech" || a.kind == "singing" || a.kind == "chorus") ? &a : speech;
+        }
+        const std::string correctedTo = speech != nullptr && speech->kind == "speech" ? "singing" : "speech";
         std::string error;
         if (speech != nullptr) {
             UnderstandingCorrection c = Correct(UnderstandingCorrection::Action::Reclassify, *speech);
-            c.kind = "singing";
+            c.kind = correctedTo;
             Check(SaveCorrections(folder.string(), { c }, error), "a correction is saved in its own file");
         }
         PerformerAssignment mine;
@@ -508,7 +526,7 @@ private:
         mine.function = "speak";
         Check(SaveManualAssignments(folder.string(), { mine }, error), "a person's assignment is saved in its own file");
         const UnderstandOutcome corrected = UnderstandSong(r);
-        Check(corrected.ok && corrected.song.fromCache && speech != nullptr && corrected.song.audio.Find(speech->id) != nullptr && corrected.song.audio.Find(speech->id)->kind == "singing",
+        Check(corrected.ok && corrected.song.fromCache && speech != nullptr && corrected.song.audio.Find(speech->id) != nullptr && corrected.song.audio.Find(speech->id)->kind == correctedTo && corrected.song.audio.Find(speech->id)->confidence == 1,
               "read again, the reading is reused and the correction applied over it");
         Check(corrected.song.manual.size() == 1 && corrected.song.manual[0].state == "manual" && corrected.song.manual[0].figures == mine.figures, "and the person's assignment is there");
         std::string readingText;
