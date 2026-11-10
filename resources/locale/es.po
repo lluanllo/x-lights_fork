@@ -12884,3 +12884,21 @@ msgstr "Esta voz no tiene cara en el show."
 
 msgid "Bars of the music"
 msgstr "Compases"
+
+msgid "Heard - speech: %d, singing: %d, the choir: %d, the instruments alone: %d."
+msgstr "Se oye: habla %d, canta %d, coro %d, instrumentos solos %d."
+
+msgid "Voices told apart by how they sound (not separated): %d."
+msgstr "Voces distinguidas por cómo suenan (no separadas): %d."
+
+msgid "Corrections of yours applied: %d."
+msgstr "Correcciones tuyas aplicadas: %d."
+
+msgid "The figures did what was meant in %d of %d moments. Below, the moments to look at in xLights."
+msgstr "Las figuras hicieron lo previsto en %d de %d momentos. Debajo, los momentos para mirar en xLights."
+
+msgid "Pictures of the Moments (%d)"
+msgstr "Fotos de los momentos (%d)"
+
+msgid "Choices of yours: %d."
+msgstr "Elecciones tuyas: %d."

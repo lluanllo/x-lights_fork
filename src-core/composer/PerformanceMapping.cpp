@@ -506,8 +506,13 @@ void SyncPerformersWithCast(PerformanceMap& map, const VocalUnderstanding& voice
                 }
             }
         }
+        // No figures left: the problems about the figures it had go with them.
+        const auto dropFigureConflicts = [&]() {
+            std::erase_if(a.conflicts, [](const std::string& c) { return c.find(':') != std::string::npos; });
+        };
         if (d == nullptr || a.windows.empty()) {
             a.figures.clear();
+            dropFigureConflicts();
             a.conflicts.push_back("no-lyrics-for-voice");
             a.reasons.push_back("no synchronized phrase of the lyrics is this voice's: no face sings it in the show");
             a.windows = { { -1, -1 } }; // performs nowhere, rather than whenever it is heard
@@ -515,6 +520,7 @@ void SyncPerformersWithCast(PerformanceMap& map, const VocalUnderstanding& voice
         }
         if (d->faces.empty()) {
             a.figures.clear();
+            dropFigureConflicts();
             a.conflicts.push_back("voice-without-face");
             a.windows = { { -1, -1 } };
             continue;

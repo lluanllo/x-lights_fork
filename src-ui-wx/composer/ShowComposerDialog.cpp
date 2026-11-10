@@ -4328,7 +4328,7 @@ void ShowComposerDialog::RefreshUnderstanding() {
             }
             text = wxString::Format(_("%d figures, %d of them with a mouth tied to lights."), static_cast<int>(parts.profiles.size()), mouths);
             if (_understoodOk) {
-                text += " " + wxString::Format(_("%d choices of yours."), static_cast<int>(_understood.manual.size()));
+                text += " " + wxString::Format(_("Choices of yours: %d."), static_cast<int>(_understood.manual.size()));
             }
         }
         SetWrapped(_performersInfo, text);

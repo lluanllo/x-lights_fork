@@ -136,14 +136,14 @@ wxString ClockText(int ms) {
 wxString UnderstandingSummary(const SongUnderstanding& song) {
     const AudioUnderstanding& a = song.audio;
     const auto n = [&](const char* kind) { return static_cast<int>(a.Of(kind).size()); };
-    wxString text = wxString::Format(_("Heard: speech %d times, singing %d, the choir %d, the instruments alone %d."), n("speech"), n("singing"), n("chorus"), n("instrumental"));
+    wxString text = wxString::Format(_("Heard - speech: %d, singing: %d, the choir: %d, the instruments alone: %d."), n("speech"), n("singing"), n("chorus"), n("instrumental"));
     int people = 0;
     for (const VoiceTrack& t : song.voices.tracks) {
         people += t.id != "chorus" ? 1 : 0;
     }
-    text += " " + wxString::Format(_("%d voices told apart by how they sound (not separated)."), people);
+    text += " " + wxString::Format(_("Voices told apart by how they sound (not separated): %d."), people);
     if (!a.corrections.empty()) {
-        text += " " + wxString::Format(_("%d corrections of yours applied."), static_cast<int>(a.corrections.size()));
+        text += " " + wxString::Format(_("Corrections of yours applied: %d."), static_cast<int>(a.corrections.size()));
     }
     return text;
 }
@@ -1193,7 +1193,7 @@ RenderCheckDialog::RenderCheckDialog(wxWindow* parent, RenderUnderstanding check
         windows += c.windows;
         honoured += c.honoured;
     }
-    sizer->Add(new wxStaticText(this, wxID_ANY, wxString::Format(_("The figures did what was meant %d times out of %d. Below, the moments to look at in xLights."), honoured, windows)), 0,
+    sizer->Add(new wxStaticText(this, wxID_ANY, wxString::Format(_("The figures did what was meant in %d of %d moments. Below, the moments to look at in xLights."), honoured, windows)), 0,
                wxEXPAND | wxALL, 8);
     sizer->Add(Muted(this, _("This reads how much and which lights shine, not whether a picture or a word is the right one. Nothing is approved here: you decide, in xLights.")), 0,
                wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
@@ -1211,7 +1211,7 @@ RenderCheckDialog::RenderCheckDialog(wxWindow* parent, RenderUnderstanding check
     }
     sizer->Add(_list, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
     auto* row = new wxBoxSizer(wxHORIZONTAL);
-    auto* pictures = new wxButton(this, wxID_ANY, wxString::Format(_("Pictures of These %d Moments"), static_cast<int>(_check.captures.size())));
+    auto* pictures = new wxButton(this, wxID_ANY, wxString::Format(_("Pictures of the Moments (%d)"), static_cast<int>(_check.captures.size())));
     pictures->Enable(_takePictures != nullptr && !_check.captures.empty());
     row->Add(pictures, 0);
     sizer->Add(row, 0, wxALL, 8);

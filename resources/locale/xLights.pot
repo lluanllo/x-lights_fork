@@ -12882,3 +12882,21 @@ msgstr ""
 
 msgid "Bars of the music"
 msgstr ""
+
+msgid "Heard - speech: %d, singing: %d, the choir: %d, the instruments alone: %d."
+msgstr ""
+
+msgid "Voices told apart by how they sound (not separated): %d."
+msgstr ""
+
+msgid "Corrections of yours applied: %d."
+msgstr ""
+
+msgid "The figures did what was meant in %d of %d moments. Below, the moments to look at in xLights."
+msgstr ""
+
+msgid "Pictures of the Moments (%d)"
+msgstr ""
+
+msgid "Choices of yours: %d."
+msgstr ""
