@@ -61,6 +61,7 @@
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
 #include "ComposerTimeline.h"
+#include "ComposerUnderstandingDialogs.h"
 #include "ai/WxServiceSettingsStore.h"
 #include "composer/LyricDocument.h"
 #include "composer/MusicAssist.h"
@@ -142,6 +143,13 @@ enum {
     ID_RECIPES,
     ID_EVALUATE,
     ID_BRIEF,
+    ID_UNDERSTAND,
+    ID_UNDERSTAND_CANCEL,
+    ID_STEMS,
+    ID_RECORDING,
+    ID_KNOW_FIGURES,
+    ID_PERFORMERS,
+    ID_RENDER_CHECK,
 };
 
 // Logs a handler of the window that kept it from answering for long: the window must
@@ -519,6 +527,7 @@ ShowComposerDialog::ShowComposerDialog(xLightsFrame* frame) :
     _frame(frame),
     _job([this](const ComposerJob::Update& u) { OnJob(u); }),
     _assistJob([this](const ComposerJob::Update& u) { OnAssistJob(u); }),
+    _understandJob([this](const ComposerJob::Update& u) { OnUnderstandJob(u); }),
     _timer(this) {
     _showDir = _frame->GetShowDirectory();
     const auto stamp = std::chrono::system_clock::now().time_since_epoch().count();
@@ -676,6 +685,25 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     lyrics->Add(assist, 0, wxALL, 4);
     _assistInfo = Muted(lyrics->GetStaticBox(), _("Optional: lyrics from LRCLIB are only read, never published; a song is only sent to an AI service after you say yes, and its answer is kept with the show so it works offline afterwards."));
     lyrics->Add(_assistInfo, 0, wxLEFT | wxRIGHT | wxBOTTOM, 6);
+
+    wxStaticBoxSizer* hear = box(_("Understand the audio"));
+    _understandInfo = new wxStaticText(hear->GetStaticBox(), wxID_ANY, "");
+    hear->Add(_understandInfo, 0, wxEXPAND | wxALL, 4);
+    _stemsInfo = new wxStaticText(hear->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1), wxST_ELLIPSIZE_END);
+    hear->Add(_stemsInfo, 0, wxEXPAND | wxLEFT | wxRIGHT, 4);
+    auto* stemsRow = new wxBoxSizer(wxHORIZONTAL);
+    stemsRow->Add(new wxButton(hear->GetStaticBox(), ID_STEMS, _("Separate Recordings...")), 0, wxRIGHT, 4);
+    _understandButton = new wxButton(hear->GetStaticBox(), ID_UNDERSTAND, _("Understand the Audio"));
+    stemsRow->Add(_understandButton, 0, wxRIGHT, 4);
+    stemsRow->Add(new wxButton(hear->GetStaticBox(), ID_UNDERSTAND_CANCEL, _("Cancel")), 0);
+    hear->Add(stemsRow, 0, wxEXPAND | wxALL, 4);
+    _useUnderstandingBox = new wxCheckBox(hear->GetStaticBox(), wxID_ANY, _("Use what is heard (who speaks or sings, the choir, the instruments) when making the show"));
+    _useUnderstandingBox->SetValue(true);
+    hear->Add(_useUnderstandingBox, 0, wxALL, 4);
+    hear->Add(Muted(hear->GetStaticBox(), _("Worked out on this computer: nothing is sent. Voices are told apart by how they sound, never separated from the music or identified. "
+                                            "If you have the voice or the choir on their own recordings, add them: they are heard much better. To time the words, use "
+                                            "\"Time the Words with AI (Groq)\" above, which asks you first.")),
+              0, wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
     wxStaticBoxSizer* style = box(_("Style and automation"));
     auto* styleRow = new wxBoxSizer(wxHORIZONTAL);
@@ -849,6 +877,10 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         StartAssist("brief", AskConsent("Groq (api.groq.com)", _("to suggest colours and a mood from the text of the lyrics; only the text is sent, never the song")));
     }, ID_BRIEF);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditRecipes(); }, ID_RECIPES);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ChooseStems(); }, ID_STEMS);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { StartUnderstanding(!_testMode && _understoodOk); }, ID_UNDERSTAND);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { CancelUnderstanding(); }, ID_UNDERSTAND_CANCEL);
+    _useUnderstandingBox->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { SetUseUnderstanding(_useUnderstandingBox->GetValue()); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditKeys(); }, ID_AI_KEYS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditScreens(); }, ID_SCREENS);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditMediaLibrary(); }, ID_MEDIA_LIBRARY);
@@ -952,6 +984,12 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     voicesRow->Add(_voicesInfo, 1, wxALIGN_CENTER_VERTICAL);
     sizer->Add(voicesRow, 0, wxEXPAND | wxBOTTOM, 6);
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditVoices(); }, ID_VOICES);
+    auto* recordingRow = new wxBoxSizer(wxHORIZONTAL);
+    recordingRow->Add(new wxButton(page, ID_RECORDING, _("What Happens in the Recording...")), 0, wxRIGHT, 8);
+    _recordingInfo = new wxStaticText(page, wxID_ANY, "");
+    recordingRow->Add(_recordingInfo, 1, wxALIGN_CENTER_VERTICAL);
+    sizer->Add(recordingRow, 0, wxEXPAND | wxBOTTOM, 6);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenRecording(); }, ID_RECORDING);
 
     auto* play = new wxBoxSizer(wxHORIZONTAL);
     play->Add(new wxButton(page, ID_PLAY, _("Play / Pause")), 0, wxRIGHT, 4);
@@ -1096,6 +1134,16 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     sizer->Add(head, 0, wxEXPAND | wxBOTTOM, 6);
     _compositionInfo = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_compositionInfo, 0, wxEXPAND | wxBOTTOM, 6);
+    auto* cast = new wxStaticBoxSizer(wxVERTICAL, page, _("Voices, characters and figures"));
+    auto* castRow = new wxBoxSizer(wxHORIZONTAL);
+    castRow->Add(new wxButton(cast->GetStaticBox(), ID_KNOW_FIGURES, _("Know My Figures...")), 0, wxRIGHT, 4);
+    castRow->Add(new wxButton(cast->GetStaticBox(), ID_PERFORMERS, _("Assign Voices and Characters...")), 0, wxRIGHT, 8);
+    _performersInfo = new wxStaticText(cast->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(120, -1));
+    castRow->Add(_performersInfo, 1, wxALIGN_CENTER_VERTICAL);
+    cast->Add(castRow, 0, wxEXPAND | wxALL, 4);
+    sizer->Add(cast, 0, wxEXPAND | wxBOTTOM, 6);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenFigures(); }, ID_KNOW_FIGURES);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenPerformers(); }, ID_PERFORMERS);
 
     auto* art = new wxStaticBoxSizer(wxVERTICAL, page, _("Art direction: theme, colours and scenes"));
     _sceneView = new wxPanel(art->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(-1, 30), wxBORDER_SIMPLE);
@@ -1313,7 +1361,9 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     auto* review = new wxBoxSizer(wxHORIZONTAL);
     review->Add(new wxButton(page, ID_REVIEW_CLIPS, _("Review the Pictures and Videos...")), 0, wxRIGHT, 4);
     review->Add(new wxButton(page, ID_EVALUATE, _("Evaluate the Show...")), 0, wxRIGHT, 4);
-    review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0);
+    review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0, wxRIGHT, 4);
+    review->Add(new wxButton(page, ID_RENDER_CHECK, _("What the Figures Did...")), 0);
+    page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenRenderCheck(); }, ID_RENDER_CHECK);
     sizer->Add(review, 0, wxBOTTOM, 8);
     const auto list = [&](const wxString& label, wxListCtrl*& ctrl, const std::vector<std::pair<wxString, int>>& columns, int height) {
         sizer->Add(new wxStaticText(page, wxID_ANY, label), 0, wxBOTTOM, 2);
@@ -1376,6 +1426,7 @@ void ShowComposerDialog::SetAudio(const std::string& path) {
     }
     LoadAudio();
     LoadLyricsInfo(); // a line past the end depends on the song
+    LoadUnderstanding();
     RefreshAll();
 }
 
@@ -1737,6 +1788,9 @@ void ShowComposerDialog::RefreshStyle() {
 
 void ShowComposerDialog::SetShowFolder(const std::string& path) {
     _showDir = path;
+    _figuresOk = false;
+    _knownFigures = FigureCatalog();
+    _figuresFound = FigureSemantics();
     _profilePath.clear();
     // The show's media folders are the ones its library was last searched in.
     _mediaFolders.clear();
@@ -2036,6 +2090,12 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     add("--character", _characterPath);
     add("--brief", _briefPath);
     add("--stop-after", stopAfter);
+    if (!_useUnderstanding) {
+        add("--understanding", "off");
+    } else if (_understoodOk) {
+        add("--understanding", "on");
+        add("--stems", StemListText(_stems));
+    }
     if (!_corrections.Empty()) {
         const fs::path file = fs::path(reportDir).parent_path() / (fs::path(reportDir).filename().string() + ".corrections.json");
         std::ofstream(file, std::ios::binary) << ToJson(_corrections);
@@ -2073,7 +2133,8 @@ std::string ShowComposerDialog::InputsKey() const {
            fmt::format("|{}|{}", std::accumulate(_mediaFolders.begin(), _mediaFolders.end(), std::string(), [](std::string x, const std::string& y) { return x + ";" + y; }),
                        _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0) +
            fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
-           (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string());
+           (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string()) +
+           fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp);
 }
 
 void ShowComposerDialog::RunNext() {
@@ -2478,6 +2539,9 @@ void ShowComposerDialog::OnCloseButton(wxCommandEvent&) {
 }
 
 void ShowComposerDialog::OnClose(wxCloseEvent& event) {
+    if (_understandJob.Running()) {
+        _understandJob.Cancel();
+    }
     if (_job.Running()) {
         if (!_testMode && wxMessageBox(_("The generator is still working. Cancel it and close? Nothing will be saved."), _("Show Composer"), wxYES_NO | wxICON_QUESTION, this) != wxYES) {
             event.Veto();
@@ -2572,6 +2636,7 @@ void ShowComposerDialog::RefreshAll() {
     timed("RefreshComposition", [this] { RefreshComposition(); });
     timed("RefreshGenerate", [this] { RefreshGenerate(); });
     timed("RefreshResult", [this] { RefreshResult(); });
+    timed("RefreshUnderstanding", [this] { RefreshUnderstanding(); });
     // Texts change length with what they say; the pages follow them.
     for (size_t i = 0; i < _book->GetPageCount(); ++i) {
         wxWindow* page = _book->GetPage(i);
@@ -3931,5 +3996,341 @@ void ShowComposerDialog::ChooseStoryboardVersion() {
     wxSingleChoiceDialog pick(this, _("Which montage should come back? Every shot is kept as it was."), _("Earlier Versions"), names);
     if (pick.ShowModal() == wxID_OK) {
         RestoreStoryboardVersion(static_cast<size_t>(pick.GetSelection()));
+    }
+}
+
+// ---------------------------------------------------------------- understanding
+
+UnderstandRequest ShowComposerDialog::UnderstandingRequest() const {
+    UnderstandRequest r;
+    r.showDir = _showDir;
+    r.audioPath = _audioPath;
+    r.stems = _stems;
+    r.alignment = _analysisReport.hasLyrics ? &_analysisReport.alignment : nullptr;
+    return r;
+}
+
+void ShowComposerDialog::LoadUnderstanding() {
+    _understoodOk = false;
+    _understood = SongUnderstanding();
+    if (_audioHash.empty() || _showDir.empty()) {
+        return;
+    }
+    std::string error;
+    _understoodOk = LoadSongUnderstanding(UnderstandingFolder(_showDir, _audioHash), UnderstandingRequest(), _understood, error);
+}
+
+void ShowComposerDialog::SetStems(const std::vector<StemInput>& stems) {
+    _stems = stems;
+    RefreshAll();
+}
+
+void ShowComposerDialog::ChooseStems() {
+    if (!_stems.empty()) {
+        wxArrayString what;
+        what.Add(_("Add another recording"));
+        what.Add(_("Use none of them"));
+        wxSingleChoiceDialog ask(this, _("The song has separate recordings."), _("Separate Recordings"), what);
+        if (ask.ShowModal() != wxID_OK) {
+            return;
+        }
+        if (ask.GetSelection() == 1) {
+            SetStems({});
+            return;
+        }
+    }
+    wxFileDialog files(this, _("Choose the separate recordings of this song (the voice, the choir...)"), U(_audioPath.empty() ? _showDir : fs::path(_audioPath).parent_path().string()), "",
+                       _("Audio files (*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff)|*.mp3;*.wav;*.m4a;*.ogg;*.flac;*.aac;*.wma;*.aiff;*.aif|All files (*.*)|*.*"),
+                       wxFD_OPEN | wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
+    if (files.ShowModal() != wxID_OK) {
+        return;
+    }
+    wxArrayString paths;
+    files.GetPaths(paths);
+    const std::vector<std::string> roles = { "voice", "chorus", "narration", "music" };
+    wxArrayString names;
+    names.Add(_("A singing voice"));
+    names.Add(_("The choir"));
+    names.Add(_("A spoken narration"));
+    names.Add(_("The instruments"));
+    std::vector<StemInput> stems = _stems;
+    for (const wxString& path : paths) {
+        wxSingleChoiceDialog ask(this, wxString::Format(_("What is in %s?"), wxFileName(path).GetFullName()), _("Separate Recordings"), names);
+        if (ask.ShowModal() != wxID_OK) {
+            continue;
+        }
+        StemInput stem;
+        stem.path = S(path);
+        stem.role = roles[static_cast<size_t>(ask.GetSelection())];
+        stem.name = fs::path(stem.path).stem().string();
+        ObtainAccessToURL(stem.path, false);
+        stems.push_back(stem);
+    }
+    SetStems(stems);
+}
+
+void ShowComposerDialog::StartUnderstanding(bool again) {
+    if (!_audioOk || _showDir.empty()) {
+        ShowError(_("Choose a song that can be played and the show first."), wxString());
+        return;
+    }
+    if (_understandJob.Running()) {
+        return;
+    }
+    _understandDir = NewWorkFolder("understand");
+    std::vector<std::string> args = { "--composer-understand", "--audio", _audioPath, "-s", _showDir, "--out", _understandDir };
+    if (!_stems.empty()) {
+        args.push_back("--stems");
+        args.push_back(StemListText(_stems));
+    }
+    if (again) {
+        args.push_back("--again");
+    }
+    std::string error;
+    _understandPurpose = "understand";
+    if (!_understandJob.Start(args, _understandDir + ".cancel", error)) {
+        ShowError(_("The audio could not be understood."), U(error));
+        return;
+    }
+    _understandMessage = S(_("Listening to the recording..."));
+    RefreshUnderstanding();
+}
+
+void ShowComposerDialog::CancelUnderstanding() {
+    if (_understandJob.Running()) {
+        _understandJob.Cancel();
+        _understandMessage = S(_("Stopping..."));
+        RefreshUnderstanding();
+    }
+}
+
+void ShowComposerDialog::StartFigures() {
+    if (_showDir.empty() || _understandJob.Running()) {
+        return;
+    }
+    _understandDir = NewWorkFolder("figures");
+    std::string error;
+    _understandPurpose = "figures";
+    if (!_understandJob.Start({ "--composer-figures", "-s", _showDir, "--out", _understandDir }, _understandDir + ".cancel", error)) {
+        ShowError(_("The figures could not be read."), U(error));
+        return;
+    }
+    _understandMessage = S(_("Reading the figures of the show..."));
+    RefreshUnderstanding();
+}
+
+void ShowComposerDialog::OnUnderstandJob(const ComposerJob::Update& u) {
+    if (u.kind == ComposerJob::Update::Kind::Finished) {
+        UnderstandFinished(u.exitCode);
+        return;
+    }
+    // "understand 40% stage": how far the listening is.
+    const std::string& line = u.line.empty() ? u.what : u.line;
+    if (line.rfind("understand ", 0) == 0) {
+        const int percent = static_cast<int>(std::strtol(line.c_str() + 11, nullptr, 10));
+        if (percent > 0) {
+            _understandMessage = S(wxString::Format(_("Listening to the recording... %d%%"), percent));
+            RefreshUnderstanding();
+        }
+    }
+}
+
+void ShowComposerDialog::UnderstandFinished(int exitCode) {
+    const std::string purpose = _understandPurpose;
+    _understandPurpose.clear();
+    if (purpose == "understand") {
+        if (exitCode == 3) {
+            _understandMessage = S(_("Stopped. Nothing was changed."));
+        } else if (exitCode != 0) {
+            _understandMessage = S(_("The audio could not be understood. The show can still be made without it."));
+        } else {
+            LoadUnderstanding();
+            _understandMessage = _understoodOk ? S(UnderstandingSummary(_understood)) : S(_("The audio could not be understood. The show can still be made without it."));
+            ++_understandStamp;
+        }
+    } else if (purpose == "figures") {
+        std::string error;
+        const fs::path dir(_understandDir);
+        _figuresOk = exitCode == 0 && FromJson(ReadFile(dir / "figures.json"), _knownFigures, error) && FromJson(ReadFile(dir / "figure-semantics-found.json"), _figuresFound, error);
+        _understandMessage = _figuresOk ? std::string() : S(exitCode == 2 ? _("The figures are only read from a show whose controllers are all inactive.") : _("The figures could not be read."));
+        if (_figuresOk && _openFiguresWhenKnown && !_testMode) {
+            _openFiguresWhenKnown = false;
+            CallAfter([this]() { OpenFigures(); });
+        }
+    } else if (purpose == "pictures") {
+        if (exitCode == 0) {
+            _understandMessage = S(wxString::Format(_("The pictures are in %s"), U(_understandDir)));
+            if (!_testMode) {
+                wxLaunchDefaultApplication(U(_understandDir));
+            }
+        } else {
+            _understandMessage = S(_("The pictures could not be made."));
+        }
+    }
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetUnderstanding(const SongUnderstanding& song) {
+    _understood = song;
+    _understoodOk = true;
+    ++_understandStamp;
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetUseUnderstanding(bool on) {
+    _useUnderstanding = on;
+    if (_useUnderstandingBox != nullptr) {
+        _useUnderstandingBox->SetValue(on);
+    }
+    RefreshAll();
+}
+
+FigureChoices ShowComposerDialog::FigureChoicesNow() const {
+    FigureChoices choices;
+    std::string text, error;
+    if (ReadTextFile(FigureChoicesPath(_showDir), text)) {
+        (void)FromJson(text, choices, error);
+    }
+    return choices;
+}
+
+FigureSemantics ShowComposerDialog::FigureParts() const {
+    const FigureChoices choices = FigureChoicesNow();
+    return ApplyFigureChoices(_figuresFound, _knownFigures, &choices);
+}
+
+void ShowComposerDialog::OpenRecording() {
+    if (!_understoodOk) {
+        ShowError(_("The recording has not been understood yet."), _("Use \"Understand the Audio\" in the first step."));
+        return;
+    }
+    const FigureSemantics parts = _figuresOk ? FigureParts() : FigureSemantics();
+    RecordingDialog dialog(this, _understood, UnderstandingRequest(), _shownAnalysis.durationMS > 0 ? &_shownAnalysis : nullptr, _figuresOk ? &_knownFigures : nullptr,
+                           _figuresOk ? &parts : nullptr);
+    dialog.ShowModal();
+    if (dialog.Changed()) {
+        SetUnderstanding(dialog.Song());
+    }
+}
+
+void ShowComposerDialog::OpenFigures() {
+    if (!_figuresOk) {
+        _openFiguresWhenKnown = true;
+        StartFigures();
+        return;
+    }
+    FiguresDialog dialog(this, _knownFigures, _figuresFound, FigureChoicesNow(), _showDir);
+    if (dialog.ShowModal() == wxID_OK) {
+        ++_understandStamp;
+        RefreshAll();
+    }
+}
+
+void ShowComposerDialog::OpenPerformers() {
+    if (!_understoodOk) {
+        ShowError(_("The recording has not been understood yet."), _("Use \"Understand the Audio\" in the first step."));
+        return;
+    }
+    if (!_figuresOk) {
+        StartFigures();
+        ShowError(_("The figures are being read."), _("Try again in a moment."));
+        return;
+    }
+    PerformersDialog dialog(this, _understood, _knownFigures, FigureParts());
+    if (dialog.ShowModal() == wxID_OK) {
+        _understood.manual = dialog.Manual();
+        ++_understandStamp;
+        RefreshAll();
+    }
+}
+
+bool ShowComposerDialog::ResultRenderCheck(RenderUnderstanding& check) const {
+    if (_resultReportDir.empty()) {
+        return false;
+    }
+    std::string text, error;
+    return ReadTextFile((fs::path(_resultReportDir) / "render-understanding.json").string(), text) && FromJson(text, check, error);
+}
+
+void ShowComposerDialog::OpenRenderCheck() {
+    RenderUnderstanding check;
+    if (!ResultRenderCheck(check)) {
+        ShowError(_("There is no check of what the figures did."), _("It is made when the show is generated with the recording understood and the render on."));
+        return;
+    }
+    RenderCheckDialog dialog(this, check, [this](const std::vector<int>& times, const std::vector<std::string>& figures) { TakePictures(times, figures); });
+    dialog.ShowModal();
+}
+
+void ShowComposerDialog::TakePictures(const std::vector<int>& times, const std::vector<std::string>& figures) {
+    if (_understandJob.Running() || times.empty() || figures.empty() || _resultSequence.empty()) {
+        return;
+    }
+    // The render the generator made, next to its report.
+    std::string fseq;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(fs::path(_resultReportDir), ec)) {
+        if (entry.path().extension() == ".fseq" && entry.path().string().find(".failed.") == std::string::npos) {
+            fseq = entry.path().string();
+        }
+    }
+    if (fseq.empty()) {
+        ShowError(_("The render of this show is not there any more."), wxString());
+        return;
+    }
+    _understandDir = NewWorkFolder("pictures");
+    std::string models, at;
+    for (const std::string& f : figures) {
+        models += (models.empty() ? "" : ";") + f;
+    }
+    for (int t : times) {
+        at += (at.empty() ? "" : ",") + std::to_string(t);
+    }
+    std::string error;
+    _understandPurpose = "pictures";
+    if (!_understandJob.Start({ "--composer-snapshots", "-s", _showDir, "--fseq", fseq, "--models", models, "--times", at, "--out", _understandDir }, _understandDir + ".cancel", error)) {
+        ShowError(_("The pictures could not be made."), U(error));
+        return;
+    }
+    _understandMessage = S(_("Making pictures of the render..."));
+    RefreshUnderstanding();
+}
+
+void ShowComposerDialog::RefreshUnderstanding() {
+    if (_understandInfo == nullptr) {
+        return;
+    }
+    const bool running = _understandJob.Running();
+    wxString state = !_understandMessage.empty() ? U(_understandMessage)
+                     : _understoodOk           ? UnderstandingSummary(_understood)
+                                               : _("Not understood yet: the composer can still make the show from the music and the lyrics.");
+    SetWrapped(_understandInfo, state);
+    _understandButton->SetLabel(_understoodOk ? _("Understand the Audio Again") : _("Understand the Audio"));
+    _understandButton->Enable(!running && _audioOk && !_showDir.empty());
+    wxString stems;
+    for (const StemInput& s : _stems) {
+        stems += (stems.empty() ? "" : ", ") + U(fs::path(s.path).filename().string()) + " (" +
+                 (s.role == "voice" ? _("voice") : s.role == "chorus" ? _("choir") : s.role == "narration" ? _("narration") : _("instruments")) + ")";
+    }
+    _stemsInfo->SetLabel(stems.empty() ? _("Only the song: no separate recordings.") : stems);
+    if (_recordingInfo != nullptr) {
+        _recordingInfo->SetLabel(_understoodOk ? UnderstandingSummary(_understood) : _("Understand the audio in the first step to see who speaks, sings or plays when."));
+    }
+    if (_performersInfo != nullptr) {
+        wxString text;
+        if (!_figuresOk) {
+            text = _("The figures have not been read yet.");
+        } else {
+            const FigureSemantics parts = FigureParts();
+            int mouths = 0;
+            for (const FigureProfile& p : parts.profiles) {
+                mouths += p.CanSpeak() ? 1 : 0;
+            }
+            text = wxString::Format(_("%d figures, %d of them with a mouth tied to lights."), static_cast<int>(parts.profiles.size()), mouths);
+            if (_understoodOk) {
+                text += " " + wxString::Format(_("%d choices of yours."), static_cast<int>(_understood.manual.size()));
+            }
+        }
+        SetWrapped(_performersInfo, text);
     }
 }

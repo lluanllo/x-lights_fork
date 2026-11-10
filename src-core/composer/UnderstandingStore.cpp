@@ -211,6 +211,28 @@ UnderstandOutcome UnderstandSong(const UnderstandRequest& r) {
     return out;
 }
 
+bool LoadSongUnderstanding(const std::string& folder, const UnderstandRequest& r, SongUnderstanding& song, std::string& error) {
+    std::string text;
+    if (!ReadTextFile(In(folder, "reading.json"), text)) {
+        error = "no-reading";
+        return false;
+    }
+    SongUnderstanding s;
+    s.folder = folder;
+    s.fromCache = true;
+    if (!FromJson(text, s.audio, error)) {
+        return false;
+    }
+    s.audio.corrections.clear();
+    if (!ReadCorrections(folder, s.audio.corrections, error) || !ReadManual(folder, s.manual, error)) {
+        return false;
+    }
+    ApplyUnderstandingCorrections(s.audio);
+    RefreshVoices(s, r);
+    song = std::move(s);
+    return true;
+}
+
 void RefreshVoices(SongUnderstanding& song, const UnderstandRequest& r) {
     VocalInput in;
     in.audio = &song.audio;

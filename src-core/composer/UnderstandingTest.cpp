@@ -519,6 +519,9 @@ private:
         Check(RevertUnderstanding(folder.string(), true, error) && fs::exists(folder / "corrections.json"), "restored, they come back");
         const UnderstandOutcome back = UnderstandSong(r);
         Check(back.ok && back.song.audio.corrections.size() == 1 && back.song.manual.size() == 1, "and apply again");
+        SongUnderstanding quick;
+        Check(LoadSongUnderstanding(folder.string(), r, quick, error) && ToJson(quick.audio) == ToJson(back.song.audio) && quick.manual.size() == 1 && ToJson(quick.voices) == ToJson(back.song.voices),
+              "read back for the window without the audio: the same as understood");
         {
             std::ofstream out(folder / "corrections.json", std::ios::binary | std::ios::trunc);
             out << "{ damaged";
@@ -810,6 +813,9 @@ private:
               "confirmed by a person, with its lights: now it can speak, in the colour chosen");
         plain = _semantics.Find("Arbol Pequeno");
         Check(plain != nullptr && plain->Region("foliage") == nullptr, "a part a person removed stays removed");
+        FigureSemantics found;
+        Check(FromJson(ToJson(DescribeSemantics(*_ctx, _geometry, _caps, nullptr)), found, error) && ToJson(ApplyFigureChoices(found, _geometry, &_choices)) == ToJson(_semantics),
+              "the choices applied over what was found, read back from a file, give the same parts: the window needs no show loaded");
         Check(ParseNodeRanges("1-3,5,99", 10) == std::vector<int>({ 0, 1, 2, 4 }) && NodeRangesText({ 0, 1, 2, 4 }) == "1-3,5", "light ranges as xLights writes them, read and written");
     }
 
@@ -970,7 +976,76 @@ private:
               "each unnamed phrase takes the voice heard in it; the instrumental stays nobody's");
         const VoiceDef* a = cast.Find("u:voice:A");
         Check(a != nullptr && a->faces == narrator->figures && a->source == "understanding" && a->role == VoiceRole::Unknown && a->name == "Voz A",
-              "that voice's faces are its figures, and no role is guessed from the sound");
+              fmt::format("that voice's faces are its figures, and no role is guessed from the sound ({} / {})", a != nullptr && !a->faces.empty() ? a->faces.front() : "-",
+                          narrator->figures.empty() ? "-" : narrator->figures.front()));
+        // A mouth chosen by hand describes the figure; only xLights' own faces sing.
+        PerformanceMap byHand = map;
+        for (PerformerAssignment& x : byHand.assignments) {
+            if (x.source == "track:voice:A") {
+                x.figures = { "Muneco" };
+            }
+        }
+        LyricAlignment al2;
+        for (AlignedPhrase p : al.phrases) {
+            p.voices.clear();
+            p.voice.clear();
+            al2.phrases.push_back(p);
+        }
+        VoiceCast cast2;
+        const CastFromUnderstanding drawn = ApplyPerformersToCast(v, byHand, _semantics, al2, cast2);
+        Check(cast2.Find("u:voice:A") != nullptr && cast2.Find("u:voice:A")->faces.empty() && cast2.Find("u:voice:A")->facesOff &&
+                  std::find(drawn.notes.begin(), drawn.notes.end(), "mouth-not-drawable:Muneco") != drawn.notes.end(),
+              "a mouth chosen by hand is not given to the Faces effect, which draws only xLights' own faces: it is said");
+        // A narrator the lyrics name, with no face: it takes the figure proposed for its voice.
+        VocalUnderstanding namedV = v;
+        for (VoiceTrack& t : namedV.tracks) {
+            if (t.id == "voice:A") {
+                t.evidence.push_back("named in the lyrics: Narrador");
+            }
+        }
+        VoiceCast lyricCast;
+        VoiceDef nd;
+        nd.id = "v:narrador";
+        nd.name = "Narrador";
+        nd.role = VoiceRole::Narrator;
+        nd.delivery = Delivery::Spoken;
+        lyricCast.voices = { nd };
+        LyricAlignment al3;
+        AlignedPhrase q;
+        q.id = "n1";
+        q.text = "palabras inventadas";
+        q.voices = { "v:narrador" };
+        q.startMS = 300;
+        q.endMS = 4700;
+        al3.phrases = { q };
+        const CastFromUnderstanding filled = ApplyPerformersToCast(namedV, map, _semantics, al3, lyricCast);
+        Check(lyricCast.voices[0].faces == narrator->figures && filled.facesChanged == 1, "a narrator the lyrics name, with no face, takes the figure proposed for its voice");
+        PerformanceMap synced = map;
+        SyncPerformersWithCast(synced, namedV, lyricCast, &al3);
+        const PerformerAssignment* sn = synced.For("track:voice:A");
+        Check(sn != nullptr && sn->figures == lyricCast.voices[0].faces && ActiveWindows(*sn, u, namedV) == std::vector<std::pair<int, int>>({ { 300, 4700 } }),
+              "the assignment as the show was made: the voice's faces, during its own phrases");
+        const PerformerAssignment* sb = synced.For("track:voice:B");
+        Check(sb != nullptr && sb->figures.empty() && has(sb, "no-lyrics-for-voice") && !ConflictPhrase("no-lyrics-for-voice").empty(),
+              "a voice with no phrase of its own in the lyrics performs nowhere, and says why");
+        VoiceCast twoCast = lyricCast;
+        VoiceDef echo;
+        echo.id = "v:eco";
+        echo.name = "Eco";
+        echo.faces = { "Carita" };
+        twoCast.voices.push_back(echo);
+        LyricAlignment al4 = al3;
+        AlignedPhrase e4 = q;
+        e4.id = "e1";
+        e4.voices = { "v:eco" };
+        e4.startMS = 21000;
+        e4.endMS = 23000;
+        al4.phrases.push_back(e4);
+        PerformanceMap withEcho = map;
+        SyncPerformersWithCast(withEcho, namedV, twoCast, &al4);
+        const PerformerAssignment* ea = withEcho.For("track:lyric:v:eco");
+        Check(ea != nullptr && ea->figures == std::vector<std::string>({ "Carita" }) && ea->windows == std::vector<std::pair<int, int>>({ { 21000, 23000 } }),
+              "a voice of the lyrics no heard voice stands for still sings, on its faces, in its phrases");
         const std::vector<TimingTrackSpec> tracks = BuildVoiceTracks(al, cast, "Composer Lyrics");
         bool own = tracks.size() == 2;
         for (const TimingTrackSpec& t : tracks) {
@@ -1222,7 +1297,8 @@ private:
         };
         Check(honoured, "the narrating tree's mouth moved while it spoke, the matrix played the instrumental");
         Check(count(fine, "mouth-moves-without-voice", "") == 0 && count(fine, "expected-dark", "") == 0 && count(fine, "mouth-still", "") == 0, "nothing to point at where everything was as meant");
-        Check(count(fine, "figure-silent", "Carita") == 1, "a face that never lit is pointed at, to be looked at");
+        Check(count(fine, "figure-silent", "Carita") == 0 && count(fine, "figure-silent", "Arbol Grande") == 0, "a figure with nothing to do may stay dark: it is not pointed at");
+        Check(count(fine, "region-never-lit", "Arbol Cara") == 1, "a part of a performing figure that never lit (its eyes) is pointed at, to be looked at");
         Check(fine.review == "pending" && std::any_of(fine.limits.begin(), fine.limits.end(), [](const std::string& l) { return l.rfind("no-approval", 0) == 0; }), "nothing is approved: a person decides");
 
         // Not as meant.
@@ -1254,6 +1330,9 @@ private:
         Check(json::parse(text).value("review", std::string()) == "pending" && FindingPhrase("mouth-still") != "mouth-still", "written for the review, with plain words for each problem");
         const RenderUnderstanding again = CompareRender(TracesFromFrames(bad, 50, _geometry, _semantics, traced, o), intention, o);
         Check(ToJson(again) == text, "the same render is judged the same way every time");
+        RenderUnderstanding back;
+        std::string readError;
+        Check(FromJson(text, back, readError) && ToJson(back) == text, "written and read again for the window");
 
         // From a real .fseq file, as xLights writes it: a figure outside the file is not judged.
         const fs::path fseq = _root / "check.fseq";
@@ -1434,7 +1513,8 @@ int RunFiguresCommand(const std::string& showDir, const std::string& outDir) {
     if (ReadTextFile(FigureChoicesPath(showDir), text) && !FromJson(text, choices, error)) {
         printf("composer-figures: figures.json: %s\n", error.c_str());
     }
-    const FigureSemantics semantics = DescribeSemantics(ctx, figures, caps, &choices);
+    const FigureSemantics found = DescribeSemantics(ctx, figures, caps, nullptr);
+    const FigureSemantics semantics = ApplyFigureChoices(found, figures, &choices);
     std::string report;
     int models = 0, irregular = 0, mouths = 0, suggested = 0, preview = 0;
     for (const FigureGeometry& g : figures.figures) {
@@ -1458,7 +1538,9 @@ int RunFiguresCommand(const std::string& showDir, const std::string& outDir) {
     }
     report = fmt::format("{} models ({} irregular, {} without controller), {} with a mouth tied to lights, {} with a mouth only suggested by a name\n", models, irregular, preview, mouths, suggested) + report;
     const fs::path out(outDir);
-    const bool ok = Write(out / "figures.json", ToJson(figures, true)) && Write(out / "figure-semantics.json", ToJson(semantics)) && Write(out / "figures-report.txt", report);
+    // What was found before a person's choices too: the window applies the choices itself.
+    const bool ok = Write(out / "figures.json", ToJson(figures, true)) && Write(out / "figure-semantics.json", ToJson(semantics)) &&
+                    Write(out / "figure-semantics-found.json", ToJson(found)) && Write(out / "figures-report.txt", report);
     printf("%s", report.c_str());
     printf("composer-figures: %s (%s)\n", ok ? "written" : "FAILED", out.string().c_str());
     (void)ctx.CloseSequence();

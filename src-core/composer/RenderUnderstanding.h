@@ -24,6 +24,7 @@ struct RegionTrace {
     std::string region;        // "" the whole figure
     std::vector<float> level;  // 0-1 mean brightness per step
     std::vector<float> motion; // 0-1 share of its lights that turned on or off since the step before
+    std::vector<float> on;     // 0-1 share of its lights on
     std::vector<uint32_t> color; // mean colour per step, 0xRRGGBB
 };
 
@@ -113,6 +114,7 @@ struct RenderIntention {
 [[nodiscard]] RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntention& intention, const RenderCheckOptions& options);
 
 [[nodiscard]] std::string ToJson(const RenderUnderstanding& r);
+[[nodiscard]] bool FromJson(const std::string& text, RenderUnderstanding& r, std::string& error);
 [[nodiscard]] std::string FindingPhrase(const std::string& kind);
 // "12400,31000" (milliseconds) for --composer-snapshots --times, from the capture moments.
 [[nodiscard]] std::string CaptureTimes(const RenderUnderstanding& r);

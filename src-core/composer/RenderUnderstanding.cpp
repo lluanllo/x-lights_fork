@@ -100,6 +100,7 @@ public:
                 s.g += g;
                 s.b += b;
                 const uint8_t on = v > 0.1 ? 1 : 0;
+                s.on += on;
                 changed += on != lit[i] ? 1 : 0;
                 lit[i] = on;
             }
@@ -127,6 +128,7 @@ public:
             r.region = probe.region;
             r.level.resize(t.steps, 0);
             r.motion.resize(t.steps, 0);
+            r.on.resize(t.steps, 0);
             r.color.resize(t.steps, 0);
             f->regions.push_back(std::move(r));
         }
@@ -135,7 +137,7 @@ public:
 
 private:
     struct Sum {
-        double level = 0, r = 0, g = 0, b = 0, lights = 0, motion = 0;
+        double level = 0, r = 0, g = 0, b = 0, lights = 0, motion = 0, on = 0;
     };
 
     void Flush() {
@@ -149,10 +151,12 @@ private:
             const size_t at = static_cast<size_t>(_step);
             r.level.resize(std::max(r.level.size(), at + 1), 0);
             r.motion.resize(std::max(r.motion.size(), at + 1), 0);
+            r.on.resize(std::max(r.on.size(), at + 1), 0);
             r.color.resize(std::max(r.color.size(), at + 1), 0);
             if (s.lights > 0) {
                 r.level[at] = static_cast<float>(s.level / s.lights);
                 r.motion[at] = static_cast<float>(s.motion);
+                r.on[at] = static_cast<float>(s.on / s.lights);
                 const auto channel = [&](double v) { return static_cast<uint32_t>(std::clamp(std::lround(v / s.lights), 0L, 255L)); };
                 r.color[at] = (channel(s.r) << 16) | (channel(s.g) << 8) | channel(s.b);
             }
@@ -276,6 +280,18 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
     };
     std::map<std::string, std::vector<std::pair<int, int>>> speakingWindows; // figure -> when it should speak
     const bool full = in.performers != nullptr && in.audio != nullptr && in.voices != nullptr;
+    std::map<std::string, std::vector<std::pair<int, int>>> ownWindows; // figure -> when it speaks its own voice
+    if (full) {
+        for (const PerformerAssignment& a : in.performers->assignments) {
+            if (SpeaksFunction(a.function)) {
+                for (const auto& w : ActiveWindows(a, *in.audio, *in.voices)) {
+                    for (const std::string& f : a.figures) {
+                        ownWindows[f].push_back(w);
+                    }
+                }
+            }
+        }
+    }
     if (full) {
         for (const PerformerAssignment& a : in.performers->assignments) {
             const auto windows = ActiveWindows(a, *in.audio, *in.voices);
@@ -295,7 +311,7 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
                 }
                 IntentionCheck check{ a.source, figure, region->region, 0, 0 };
                 for (const auto& [from, to] : windows) {
-                    if (to - from < o.minWindowMS) {
+                    if (from < 0 || to - from < o.minWindowMS) {
                         continue;
                     }
                     ++check.windows;
@@ -303,7 +319,8 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
                     const int s1 = std::max(s0 + 1, to / step);
                     const float level = Mean(region->level, s0, s1);
                     const float motion = Mean(region->motion, s0, s1);
-                    const bool shows = speaks && !region->region.empty() ? motion >= o.movingShare : level >= o.litLevel;
+                    const float on = Mean(region->on, s0, s1);
+                    const bool shows = speaks && !region->region.empty() ? motion >= o.movingShare : level >= o.litLevel || on >= 0.05F;
                     if (shows) {
                         ++check.honoured;
                         continue;
@@ -319,9 +336,9 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
                     f.measured = speaks && !region->region.empty() ? motion : level;
                     f.detail = fmt::format("{} {} {:.0f}%", a.sourceLabel, FunctionPhrase(a.function), f.measured * 100);
                     add(std::move(f));
-                    // Was it shown on another figure instead?
+                    // Was it shown on another figure instead? Not one singing its own voice then.
                     for (const FigureTrace& other : traces.figures) {
-                        if (other.figure == figure) {
+                        if (other.figure == figure || Inside(ownWindows[other.figure], (from + to) / 2, 0)) {
                             continue;
                         }
                         const RegionTrace* mouth = other.Region("mouth");
@@ -345,10 +362,13 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
         }
     }
 
-    // Mouths that move when nobody speaks through them, above all in instrumentals.
+    // Mouths that move when nobody speaks through them, above all in instrumentals. Only a
+    // mouth xLights draws as a face: one a person marked by hand moves with any effect.
     for (const FigureTrace& t : traces.figures) {
         const RegionTrace* mouth = t.Region("mouth");
-        if (mouth == nullptr) {
+        const FigureProfile* profile = in.semantics != nullptr ? in.semantics->Find(t.figure) : nullptr;
+        const FigureRegion* drawn = profile != nullptr ? profile->Region("mouth") : nullptr;
+        if (mouth == nullptr || (in.semantics != nullptr && (drawn == nullptr || drawn->source.rfind("face-definition", 0) != 0))) {
             continue;
         }
         const auto& windows = speakingWindows[t.figure];
@@ -371,11 +391,22 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
         }
     }
 
-    // Parts of a figure that never light, and figures that never light at all.
+    // Parts of a figure that never light, and figures that never light at all: only for
+    // the figures something was given to (a figure with nothing to do may stay dark).
+    std::set<std::string> meant;
+    if (in.performers != nullptr) {
+        for (const PerformerAssignment& a : in.performers->assignments) {
+            meant.insert(a.figures.begin(), a.figures.end());
+        }
+    }
     for (const FigureTrace& t : traces.figures) {
+        if (in.performers != nullptr && !meant.contains(t.figure)) {
+            continue;
+        }
         for (const RegionTrace& region : t.regions) {
-            const float peak = region.level.empty() ? 0 : *std::max_element(region.level.begin(), region.level.end());
-            if (peak < o.litLevel) {
+            // Never lit: not one light in a hundred ever on.
+            const float peak = region.on.empty() ? 0 : *std::max_element(region.on.begin(), region.on.end());
+            if (peak < 0.01F) {
                 add({ "", region.region.empty() ? "figure-silent" : "region-never-lit", t.figure, region.region, "", 0, r.durationMS, "check", peak, "" });
             }
         }
@@ -388,7 +419,7 @@ RenderUnderstanding CompareRender(const RenderTraces& traces, const RenderIntent
             const int ms = s * step;
             bool dark = s < traces.steps && in.audio->Has("music", ms, ms + step);
             for (const FigureTrace& t : traces.figures) {
-                dark = dark && (t.regions.empty() || t.regions.front().level[s] < o.litLevel);
+                dark = dark && (t.regions.empty() || t.regions.front().on[s] < 0.01F);
             }
             if (dark && runStart < 0) {
                 runStart = s;
@@ -462,6 +493,47 @@ std::string ToJson(const RenderUnderstanding& r) {
     return json({ { "kind", "composer-render-understanding" }, { "schemaVersion", r.schemaVersion }, { "sequence", r.sequence }, { "stepMS", r.stepMS }, { "durationMS", r.durationMS },
                   { "review", r.review }, { "checks", checks }, { "findings", findings }, { "captures", captures }, { "limits", r.limits } })
         .dump(1);
+}
+
+bool FromJson(const std::string& text, RenderUnderstanding& out, std::string& error) {
+    try {
+        const json root = json::parse(text);
+        if (root.value("schemaVersion", 0) < 1 || root.value("schemaVersion", 0) > RENDER_UNDERSTANDING_SCHEMA_VERSION) {
+            error = "render understanding: schema not read";
+            return false;
+        }
+        RenderUnderstanding r;
+        r.sequence = root.value("sequence", std::string());
+        r.stepMS = root.value("stepMS", 100);
+        r.durationMS = root.value("durationMS", 0);
+        r.review = root.value("review", std::string("pending"));
+        r.limits = root.value("limits", std::vector<std::string>());
+        for (const json& c : root.value("checks", json::array())) {
+            r.checks.push_back({ c.value("source", std::string()), c.value("figure", std::string()), c.value("region", std::string()), c.value("windows", 0), c.value("honoured", 0) });
+        }
+        for (const json& f : root.value("findings", json::array())) {
+            RenderFinding k;
+            k.id = f.value("id", std::string());
+            k.kind = f.value("kind", std::string());
+            k.figure = f.value("figure", std::string());
+            k.region = f.value("region", std::string());
+            k.source = f.value("source", std::string());
+            k.startMS = f.value("startMS", 0);
+            k.endMS = f.value("endMS", 0);
+            k.severity = f.value("severity", std::string());
+            k.measured = f.value("measured", 0.0);
+            k.detail = f.value("detail", std::string());
+            r.findings.push_back(std::move(k));
+        }
+        for (const json& c : root.value("captures", json::array())) {
+            r.captures.push_back({ c.value("timeMS", 0), c.value("reason", std::string()), c.value("figures", std::vector<std::string>()) });
+        }
+        out = std::move(r);
+    } catch (const json::exception& e) {
+        error = std::string("render understanding: ") + e.what();
+        return false;
+    }
+    return true;
 }
 
 std::string FindingPhrase(const std::string& kind) {

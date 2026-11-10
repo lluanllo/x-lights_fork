@@ -1015,6 +1015,7 @@ void UnderstandRecording(GenerationRun& run, GenerationStage S) {
             Note(run, S, "understanding-voice-note", n);
         }
     }
+    SyncPerformersWithCast(run.performers, run.understanding.voices, run.cast, run.hasLyrics ? &run.alignment : nullptr);
 }
 
 bool PlanShow(GenerationRun& run) {

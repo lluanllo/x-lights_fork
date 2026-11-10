@@ -62,6 +62,9 @@ struct UnderstandOutcome {
 // Hears the song (or reuses its current reading), applies the person's corrections, and
 // derives the voices. Blocking: call it from a worker.
 [[nodiscard]] UnderstandOutcome UnderstandSong(const UnderstandRequest& request);
+// A song understood before, read from its folder with the person's corrections and
+// assignments, without the audio: quick enough for a window. False when there is none.
+[[nodiscard]] bool LoadSongUnderstanding(const std::string& folder, const UnderstandRequest& request, SongUnderstanding& song, std::string& error);
 // The voices again, after a correction, without hearing the audio again.
 void RefreshVoices(SongUnderstanding& song, const UnderstandRequest& request);
 

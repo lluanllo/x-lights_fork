@@ -172,6 +172,85 @@ std::string NodeRangesText(const std::vector<int>& nodes) {
     return out;
 }
 
+// A person's decisions over what was found, then what it means: the mouth, the notes and
+// what the figure can play. Same result whether the profile was found just now or read
+// back from a file.
+static FigureProfile FinishProfile(FigureProfile p, const FigureGeometry& g, const FigureChoice* choice) {
+    p.notes.clear();
+    if (choice != nullptr) {
+        std::erase_if(p.regions, [&](const FigureRegion& r) { return std::find(choice->dropped.begin(), choice->dropped.end(), r.id) != choice->dropped.end(); });
+        for (FigureRegion r : choice->regions) {
+            std::erase_if(p.regions, [&](const FigureRegion& o) { return o.id == r.id; });
+            std::erase_if(r.nodes, [&](int n) { return n < 0 || n >= g.nodes; });
+            r.real = !r.nodes.empty() || r.source.rfind("face-images", 0) == 0;
+            r.confirmed = true;
+            r.confidence = 1;
+            if (r.color.empty()) {
+                r.color = DefaultRegionColor(r.id, g.family);
+                r.colorSource = r.color.empty() ? "" : "default";
+            }
+            p.regions.push_back(r);
+        }
+        for (FigureRegion& r : p.regions) {
+            const auto c = choice->colors.find(r.id);
+            if (c != choice->colors.end()) {
+                r.color = c->second;
+                r.colorSource = "manual";
+            }
+        }
+        p.reviewed = choice->reviewed;
+    }
+    if (const FigureRegion* m = p.Region("mouth")) {
+        p.mouth = m->real && (m->confirmed || m->source.rfind("face-definition", 0) == 0) ? "nodes" : "suggested";
+    } else if (const FigureRegion* f = p.Region("face"); f != nullptr && f->source.rfind("face-images", 0) == 0) {
+        p.mouth = "images";
+    } else {
+        p.mouth = "none";
+    }
+    for (const FigureRegion& r : p.regions) {
+        if (!r.real) {
+            p.notes.push_back("region-without-lights:" + r.id);
+        } else if (!r.confirmed && r.source.rfind("name-hint", 0) == 0) {
+            p.notes.push_back("region-to-confirm:" + r.id);
+        }
+    }
+    if (p.mouth == "none") {
+        p.notes.push_back("no-mouth: it cannot speak or sing until a mouth is defined");
+    }
+    if (g.noController) {
+        p.notes.push_back("no-controller: only seen in the preview");
+    }
+
+    // What it can play.
+    std::vector<std::string> roles;
+    if (p.CanSpeak()) {
+        roles = { "narrator", "character", "lead-singer", "secondary-singer", "chorus-member" };
+    }
+    if (g.family == "mega-tree" || g.family == "matrix") {
+        roles.push_back("instrumental");
+        roles.push_back("background");
+    }
+    if (g.family == "arches" || g.family == "outline" || g.family == "windows") {
+        roles.push_back("percussion");
+        roles.push_back("accent");
+    }
+    roles.push_back("decoration");
+    p.roles = choice != nullptr && !choice->roles.empty() ? choice->roles : roles;
+    return p;
+}
+
+FigureSemantics ApplyFigureChoices(const FigureSemantics& found, const FigureCatalog& geometry, const FigureChoices* choices) {
+    FigureSemantics out;
+    for (const FigureProfile& p : found.profiles) {
+        const FigureGeometry* g = geometry.Find(p.figure);
+        if (g == nullptr) {
+            continue;
+        }
+        out.profiles.push_back(FinishProfile(p, *g, choices != nullptr ? choices->Find(p.figure) : nullptr));
+    }
+    return out;
+}
+
 FigureSemantics DescribeSemantics(const xLightsShowContext& ctx, const FigureCatalog& geometry, const ModelCapabilities& caps, const FigureChoices* choices) {
     FigureSemantics out;
     for (const FigureGeometry& g : geometry.figures) {
@@ -270,62 +349,7 @@ FigureSemantics DescribeSemantics(const xLightsShowContext& ctx, const FigureCat
             p.regions.push_back(Make("body", "geometry", all, 0.6, true, g.family));
         }
 
-        // What a person decided.
-        const FigureChoice* choice = choices != nullptr ? choices->Find(g.name) : nullptr;
-        if (choice != nullptr) {
-            std::erase_if(p.regions, [&](const FigureRegion& r) { return std::find(choice->dropped.begin(), choice->dropped.end(), r.id) != choice->dropped.end(); });
-            for (FigureRegion r : choice->regions) {
-                std::erase_if(p.regions, [&](const FigureRegion& o) { return o.id == r.id; });
-                std::erase_if(r.nodes, [&](int n) { return n < 0 || n >= g.nodes; });
-                r.real = !r.nodes.empty() || r.source.rfind("face-images", 0) == 0;
-                r.confirmed = true;
-                r.confidence = 1;
-                p.regions.push_back(r);
-            }
-            for (FigureRegion& r : p.regions) {
-                const auto c = choice->colors.find(r.id);
-                if (c != choice->colors.end()) {
-                    r.color = c->second;
-                    r.colorSource = "manual";
-                }
-            }
-            p.reviewed = choice->reviewed;
-        }
-        if (const FigureRegion* m = p.Region("mouth")) {
-            p.mouth = m->real && (m->confirmed || m->source.rfind("face-definition", 0) == 0) ? "nodes" : "suggested";
-        } else if (p.mouth != "images") {
-            p.mouth = "none";
-        }
-        for (const FigureRegion& r : p.regions) {
-            if (!r.real) {
-                p.notes.push_back("region-without-lights:" + r.id);
-            } else if (!r.confirmed && r.source.rfind("name-hint", 0) == 0) {
-                p.notes.push_back("region-to-confirm:" + r.id);
-            }
-        }
-        if (p.mouth == "none") {
-            p.notes.push_back("no-mouth: it cannot speak or sing until a mouth is defined");
-        }
-        if (g.noController) {
-            p.notes.push_back("no-controller: only seen in the preview");
-        }
-
-        // What it can play.
-        std::vector<std::string> roles;
-        if (p.CanSpeak()) {
-            roles = { "narrator", "character", "lead-singer", "secondary-singer", "chorus-member" };
-        }
-        if (g.family == "mega-tree" || g.family == "matrix") {
-            roles.push_back("instrumental");
-            roles.push_back("background");
-        }
-        if (g.family == "arches" || g.family == "outline" || g.family == "windows") {
-            roles.push_back("percussion");
-            roles.push_back("accent");
-        }
-        roles.push_back("decoration");
-        p.roles = choice != nullptr && !choice->roles.empty() ? choice->roles : roles;
-        out.profiles.push_back(std::move(p));
+        out.profiles.push_back(FinishProfile(std::move(p), g, choices != nullptr ? choices->Find(g.name) : nullptr));
     }
     return out;
 }
@@ -389,11 +413,40 @@ std::string ToJson(const FigureSemantics& s) {
     return json({ { "kind", "composer-figure-semantics" }, { "schemaVersion", FIGURE_SEMANTICS_SCHEMA_VERSION }, { "profiles", profiles } }).dump(1);
 }
 
+bool FromJson(const std::string& text, FigureSemantics& out, std::string& error) {
+    try {
+        const json root = json::parse(text);
+        if (root.value("schemaVersion", 0) < 1 || root.value("schemaVersion", 0) > FIGURE_SEMANTICS_SCHEMA_VERSION) {
+            error = "figure semantics: schema not read";
+            return false;
+        }
+        FigureSemantics s;
+        for (const json& j : root.value("profiles", json::array())) {
+            FigureProfile p;
+            p.figure = j.value("figure", std::string());
+            p.family = j.value("family", std::string());
+            p.roles = j.value("roles", std::vector<std::string>());
+            p.mouth = j.value("mouth", std::string("none"));
+            for (const json& r : j.value("regions", json::array())) {
+                p.regions.push_back(RegionFrom(r));
+            }
+            p.notes = j.value("notes", std::vector<std::string>());
+            p.reviewed = j.value("reviewed", false);
+            s.profiles.push_back(std::move(p));
+        }
+        out = std::move(s);
+    } catch (const json::exception& e) {
+        error = std::string("figure semantics: ") + e.what();
+        return false;
+    }
+    return true;
+}
+
 std::string RegionPhrase(const std::string& r) {
     static const std::map<std::string, const char*> P = {
         { "mouth", COMPOSER_TEXT("Mouth") }, { "eyes", COMPOSER_TEXT("Eyes") }, { "face", COMPOSER_TEXT("Face") }, { "head", COMPOSER_TEXT("Head") },
-        { "body", COMPOSER_TEXT("Body") }, { "outline", COMPOSER_TEXT("Outline") }, { "trunk", COMPOSER_TEXT("Trunk") }, { "foliage", COMPOSER_TEXT("Foliage") },
-        { "branches", COMPOSER_TEXT("Branches") }, { "top", COMPOSER_TEXT("Top") }, { "background", COMPOSER_TEXT("Background") }, { "text", COMPOSER_TEXT("Text") },
+        { "body", COMPOSER_TEXT("Body") }, { "outline", COMPOSER_TEXT("Outline of the figure") }, { "trunk", COMPOSER_TEXT("Trunk") }, { "foliage", COMPOSER_TEXT("Foliage") },
+        { "branches", COMPOSER_TEXT("Branches") }, { "top", COMPOSER_TEXT("Top of the figure") }, { "background", COMPOSER_TEXT("Background") }, { "text", COMPOSER_TEXT("Text") },
         { "image", COMPOSER_TEXT("Pictures") }
     };
     const auto it = P.find(r);
@@ -402,7 +455,7 @@ std::string RegionPhrase(const std::string& r) {
 
 std::string RolePhrase(const std::string& r) {
     static const std::map<std::string, const char*> P = {
-        { "narrator", COMPOSER_TEXT("Narrator") }, { "character", COMPOSER_TEXT("Character") }, { "lead-singer", COMPOSER_TEXT("Lead singer") },
+        { "narrator", COMPOSER_TEXT("Narrator") }, { "character", COMPOSER_TEXT("A character") }, { "lead-singer", COMPOSER_TEXT("Lead singer") },
         { "secondary-singer", COMPOSER_TEXT("Second singer") }, { "chorus-member", COMPOSER_TEXT("Choir member") }, { "instrumental", COMPOSER_TEXT("Instruments") },
         { "percussion", COMPOSER_TEXT("Percussion") }, { "decoration", COMPOSER_TEXT("Decoration") }, { "background", COMPOSER_TEXT("Background") },
         { "accent", COMPOSER_TEXT("Accents") }

@@ -31,6 +31,9 @@
 #include "composer/MediaDirection.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/TemplateLibrary.h"
+#include "composer/FigureSemantics.h"
+#include "composer/RenderUnderstanding.h"
+#include "composer/UnderstandingStore.h"
 
 #include "ComposerJob.h"
 
@@ -189,6 +192,32 @@ public:
     void ApplyReview(const composer::VisualReview& review);
     [[nodiscard]] composer::ArtisticPreferences ShowPreferences() const;
     bool SetShowPreferences(const composer::ArtisticPreferences& prefs);
+    // What the recording says, the figures and who performs what: the controls of steps
+    // 1, 2, 3 and 5 for them, and the same calls for the UI test.
+    void StartUnderstanding(bool again);
+    [[nodiscard]] bool UnderstandingRunning() const { return _understandJob.Running(); }
+    void CancelUnderstanding();
+    void SetStems(const std::vector<composer::StemInput>& stems);
+    [[nodiscard]] const std::vector<composer::StemInput>& Stems() const { return _stems; }
+    [[nodiscard]] bool Understood() const { return _understoodOk; }
+    [[nodiscard]] const composer::SongUnderstanding& Understanding() const { return _understood; }
+    void SetUnderstanding(const composer::SongUnderstanding& song); // what the recording window changed
+    void SetUseUnderstanding(bool on);
+    [[nodiscard]] bool UseUnderstanding() const { return _useUnderstanding; }
+    void StartFigures();
+    [[nodiscard]] bool FiguresKnown() const { return _figuresOk; }
+    [[nodiscard]] const composer::FigureCatalog& KnownFigures() const { return _knownFigures; }
+    [[nodiscard]] const composer::FigureSemantics& FiguresFound() const { return _figuresFound; }
+    // The parts of each figure with the person's choices, as the composer will use them.
+    [[nodiscard]] composer::FigureSemantics FigureParts() const;
+    [[nodiscard]] composer::FigureChoices FigureChoicesNow() const;
+    [[nodiscard]] composer::UnderstandRequest UnderstandingRequest() const;
+    [[nodiscard]] bool ResultRenderCheck(composer::RenderUnderstanding& check) const;
+    [[nodiscard]] const std::string& UnderstandingMessage() const { return _understandMessage; }
+    void OpenRecording();
+    void OpenFigures();
+    void OpenPerformers();
+    void OpenRenderCheck();
     // Lets a UI test drive the window once it exists; called at the end of the constructor.
     static std::function<void(ShowComposerDialog*)>& OpenedHook();
 
@@ -267,6 +296,32 @@ private:
     [[nodiscard]] std::string VisualModelDir() const;
 
     xLightsFrame* _frame = nullptr;
+    // Understanding of the recording, and the figures
+    ComposerJob _understandJob;
+    std::string _understandPurpose; // "understand", "figures", "pictures"
+    std::string _understandDir;
+    std::string _understandMessage;
+    bool _openFiguresWhenKnown = false;
+    std::vector<composer::StemInput> _stems;
+    bool _useUnderstanding = true;
+    composer::SongUnderstanding _understood;
+    bool _understoodOk = false;
+    int _understandStamp = 0; // a correction, an assignment or a figure changed
+    composer::FigureCatalog _knownFigures;
+    composer::FigureSemantics _figuresFound;
+    bool _figuresOk = false;
+    wxStaticText* _understandInfo = nullptr;
+    wxButton* _understandButton = nullptr;
+    wxCheckBox* _useUnderstandingBox = nullptr;
+    wxStaticText* _stemsInfo = nullptr;
+    wxStaticText* _recordingInfo = nullptr;
+    wxStaticText* _performersInfo = nullptr;
+    void OnUnderstandJob(const ComposerJob::Update& u);
+    void UnderstandFinished(int exitCode);
+    void LoadUnderstanding();
+    void RefreshUnderstanding();
+    void ChooseStems();
+    void TakePictures(const std::vector<int>& times, const std::vector<std::string>& figures);
     std::vector<std::string> _mediaFolders;
     std::vector<MediaRow> _mediaRows;
     wxStaticText* _mediaInfo = nullptr;

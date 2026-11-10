@@ -36,6 +36,7 @@
 #include "ComposerRecipeDialogs.h"
 #include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
+#include "ComposerUnderstandingDialogs.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
 #include "composer/LyricAligner.h"
@@ -482,6 +483,161 @@ private:
                               return true;
                           },
                            10 });
+        _steps.push_back({ "understand the audio", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->GoTo(ShowComposerDialog::Step::Create);
+                                  _dialog->StartUnderstanding(false);
+                                  Check(_dialog->UnderstandingRunning(), "\"Understand the Audio\" listens to the recording in a process of its own");
+                                  return false;
+                              }
+                              if (_dialog->UnderstandingRunning()) {
+                                  return false;
+                              }
+                              _started = false;
+                              const SongUnderstanding& u = _dialog->Understanding();
+                              Check(_dialog->Understood() && !u.audio.activities.empty() && !u.folder.empty(),
+                                    fmt::format("understood: {} stretches, {} moments, {} voices, kept in {}", u.audio.activities.size(), u.audio.events.size(), u.voices.tracks.size(),
+                                                fs::path(u.folder).filename().string()));
+                              Check(std::any_of(u.voices.limits.begin(), u.voices.limits.end(), [](const std::string& l) { return l.rfind("no-source-separation", 0) == 0; }),
+                                    "it says that no voice was separated");
+                              Capture(_dialog, "entender-el-audio");
+                              return true;
+                          },
+                           600 });
+        _steps.push_back({ "understanding cancelled", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->StartUnderstanding(true);
+                                  _dialog->CancelUnderstanding();
+                                  return false;
+                              }
+                              if (_dialog->UnderstandingRunning()) {
+                                  return false;
+                              }
+                              _started = false;
+                              Check(_dialog->Understood() && _dialog->UnderstandingMessage() == std::string(wxGetTranslation("Stopped. Nothing was changed.").ToUTF8()),
+                                    "cancelled: it stops, says so, and what was understood before stays");
+                              return true;
+                          },
+                           300 });
+        _steps.push_back({ "what happens in the recording", [this]() {
+                              _dialog->GoTo(ShowComposerDialog::Step::Analysis);
+                              auto* d = new RecordingDialog(_dialog, _dialog->Understanding(), _dialog->UnderstandingRequest(), &_dialog->ShownAnalysis(), nullptr, nullptr);
+                              d->Show();
+                              d->Update();
+                              const MultimodalTimeline& t = d->Timeline();
+                              Check(t.lanes.size() == 12 && !t.Lane("structure")->items.empty() && !t.Lane("beats")->items.empty(), "twelve lanes, the song's parts and beats among them");
+                              std::string voice;
+                              for (const char* lane : { "lead", "narration", "secondary", "chorus" }) {
+                                  for (const TimelineItem& i : t.Lane(lane)->items) {
+                                      voice = voice.empty() && i.editable ? i.id : voice;
+                                  }
+                              }
+                              const bool chosen = !voice.empty() && d->Select(voice);
+                              Check(chosen && !d->Detail().StartsWith(wxGetTranslation("Red line at")), "a voice chosen, said in plain words: " + std::string(d->Detail().ToUTF8()));
+                              Capture(d, "que-pasa-en-la-grabacion");
+                              TimelineEdit e;
+                              e.action = TimelineEdit::Action::Reclassify;
+                              e.itemId = voice;
+                              e.kind = "speech";
+                              const size_t before = _dialog->Understanding().audio.corrections.size();
+                              Check(d->Edit(e).empty() && d->Changed() && d->Song().audio.corrections.size() == before + 1, "corrected: it is spoken, not sung");
+                              const std::string structure = t.Lane("structure")->items.front().id;
+                              TimelineEdit wrong;
+                              wrong.action = TimelineEdit::Action::Remove;
+                              wrong.itemId = structure;
+                              Check(d->Edit(wrong) == "edit-in-music-analysis", "a part of the song is corrected in the music analysis, and it says so");
+                              Check(d->Revert(false).empty() && d->Song().audio.corrections.empty(), "back to the automatic reading");
+                              Check(d->Revert(true).empty() && d->Song().audio.corrections.size() == before + 1, "and the correction back");
+                              _dialog->SetUnderstanding(d->Song());
+                              d->Destroy();
+                              SongUnderstanding again;
+                              std::string error;
+                              Check(LoadSongUnderstanding(_dialog->Understanding().folder, _dialog->UnderstandingRequest(), again, error) && again.audio.corrections.size() == before + 1,
+                                    "kept with the show, in its own file");
+                              return true;
+                          },
+                           60 });
+        _steps.push_back({ "know my figures", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->GoTo(ShowComposerDialog::Step::Composition);
+                                  _dialog->StartFigures();
+                                  return false;
+                              }
+                              if (_dialog->UnderstandingRunning()) {
+                                  return false;
+                              }
+                              _started = false;
+                              Check(_dialog->FiguresKnown() && !_dialog->KnownFigures().figures.empty(), fmt::format("{} figures read from xLights' own models", _dialog->KnownFigures().figures.size()));
+                              auto* d = new FiguresDialog(_dialog, _dialog->KnownFigures(), _dialog->FiguresFound(), _dialog->FigureChoicesNow(), _dialog->ShowFolder());
+                              d->Show();
+                              std::string speaker, plain;
+                              for (const FigureProfile& p : d->Semantics().profiles) {
+                                  const FigureGeometry* g = _dialog->KnownFigures().Find(p.figure);
+                                  speaker = speaker.empty() && p.mouth == "nodes" ? p.figure : speaker;
+                                  plain = plain.empty() && p.mouth == "none" && g != nullptr && g->nodes >= 8 ? p.figure : plain;
+                              }
+                              Check(!speaker.empty() && d->SelectFigure(speaker) && d->SelectRegion("mouth"), "a figure whose mouth is tied to its lights: " + speaker);
+                              Capture(d, "conocer-mis-figuras");
+                              Check(d->SetRegionColor("#FF8800") && d->Semantics().Find(speaker)->Region("mouth")->color == "#FF8800", "its mouth's colour changed");
+                              std::string error;
+                              if (!plain.empty()) {
+                                  Check(d->SelectFigure(plain) && d->AddRegion("mouth", "1-4", error) && d->Semantics().Find(plain)->CanSpeak(), "a mouth chosen by hand on a figure that had none: " + plain);
+                              }
+                              Check(d->MarkReviewed(true) && d->Save(error), "saved");
+                              d->Destroy();
+                              const FigureSemantics parts = _dialog->FigureParts();
+                              const std::string looked = plain.empty() ? speaker : plain;
+                              Check(parts.Find(speaker) != nullptr && parts.Find(speaker)->Region("mouth")->color == "#FF8800" && parts.Find(looked) != nullptr && parts.Find(looked)->reviewed,
+                                    "the composer sees the choices");
+                              return true;
+                          },
+                           300 });
+        _steps.push_back({ "assign voices and characters", [this]() {
+                              auto* d = new PerformersDialog(_dialog, _dialog->Understanding(), _dialog->KnownFigures(), _dialog->FigureParts());
+                              d->Show();
+                              Capture(d, "asignar-voces");
+                              std::string source;
+                              for (const PerformerAssignment& a : d->Map().assignments) {
+                                  source = source.empty() && a.source.rfind("track:", 0) == 0 ? a.source : source;
+                              }
+                              std::string figure;
+                              for (const FigureProfile& p : _dialog->FigureParts().profiles) {
+                                  figure = figure.empty() && p.CanSpeak() ? p.figure : figure;
+                              }
+                              std::string error;
+                              if (source.empty()) {
+                                  Check(!d->ProblemsText().IsEmpty(), "no voice heard to assign: said plainly");
+                              } else {
+                                  Check(d->Assign(source, { figure }) && d->Map().For(source)->state == "manual", "a voice given to a figure by hand: " + source + " -> " + figure);
+                                  Check(d->Save(error), "saved");
+                                  SongUnderstanding song = _dialog->Understanding();
+                                  song.manual = d->Manual();
+                                  _dialog->SetUnderstanding(song);
+                                  Check(d->Automatic(source) && d->Map().For(source)->state == "automatic", "and given back to the composer");
+                              }
+                              d->Destroy();
+                              return true;
+                          },
+                           60 });
+        _steps.push_back({ "the generator is told", [this]() {
+                              const auto has = [](const std::vector<std::string>& a, const std::string& option, const std::string& value) {
+                                  for (size_t i = 0; i + 1 < a.size(); ++i) {
+                                      if (a[i] == option && a[i + 1] == value) {
+                                          return true;
+                                      }
+                                  }
+                                  return false;
+                              };
+                              Check(has(_dialog->GenerateArguments(), "--understanding", "on"), "the show is made with what was heard");
+                              _dialog->SetUseUnderstanding(false);
+                              Check(has(_dialog->GenerateArguments(), "--understanding", "off"), "and without it, to compare, when it is turned off");
+                              _dialog->SetUseUnderstanding(true);
+                              return true;
+                          },
+                           10 });
         _steps.push_back({ "the three levels", [this]() {
                               if (!_started) {
                                   _started = true;
@@ -765,6 +921,21 @@ private:
                               return true;
                           },
                            1800 });
+        _steps.push_back({ "what the figures did", [this]() {
+                              RenderUnderstanding check;
+                              const bool there = _dialog->ResultRenderCheck(check);
+                              Check(there && check.review == "pending", fmt::format("the render checked against what was meant: {} things to look at, {} moments; nothing approved", check.findings.size(),
+                                                                                    check.captures.size()));
+                              if (there) {
+                                  auto* d = new RenderCheckDialog(_dialog, check, nullptr);
+                                  d->Show();
+                                  Check(d->Rows() == static_cast<int>(check.findings.size()), "each one listed in plain words");
+                                  Capture(d, "que-hicieron-las-figuras");
+                                  d->Destroy();
+                              }
+                              return true;
+                          },
+                           30 });
         _steps.push_back({ "the window never froze", [this]() {
                               Check(_maxGapMS < 1500, fmt::format("while the generator worked, the window answered every {} ms at worst (timer every 200 ms)", _maxGapMS));
                               return true;

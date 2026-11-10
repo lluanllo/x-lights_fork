@@ -24,12 +24,13 @@ struct TimelineItem {
     int startMS = 0;
     int endMS = 0;
     std::string kind;   // the activity, event, emission or section kind
-    std::string label;  // plain words for a person
+    std::string label;  // plain words for a person (to translate)
     double confidence = 0;
     std::string provenance; // "detected", "stem:voice", "lyrics", "corrected", "manual"...
     std::string track;      // for voice items
     std::vector<std::string> figures; // for the figures lane
     bool editable = false;
+    std::string who;    // the voice's name or the figures' names, as they are (not translated)
 };
 
 struct TimelineLane {

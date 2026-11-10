@@ -68,6 +68,9 @@ struct FigureSemantics {
 };
 
 [[nodiscard]] FigureSemantics DescribeSemantics(const xLightsShowContext& ctx, const FigureCatalog& geometry, const ModelCapabilities& caps, const FigureChoices* choices);
+// The person's choices over profiles found without them (read back from a file): what the
+// window shows while a person edits, with no show loaded.
+[[nodiscard]] FigureSemantics ApplyFigureChoices(const FigureSemantics& found, const FigureCatalog& geometry, const FigureChoices* choices);
 
 // The colour a region keeps by default: foliage green, trunk brown, mouth red, eyes warm white.
 [[nodiscard]] std::string DefaultRegionColor(const std::string& region, const std::string& family);
@@ -80,6 +83,7 @@ struct FigureSemantics {
 [[nodiscard]] std::string ToJson(const FigureChoices& choices);
 [[nodiscard]] bool FromJson(const std::string& text, FigureChoices& choices, std::string& error);
 [[nodiscard]] std::string ToJson(const FigureSemantics& semantics);
+[[nodiscard]] bool FromJson(const std::string& text, FigureSemantics& semantics, std::string& error);
 
 [[nodiscard]] std::string RegionPhrase(const std::string& region);
 [[nodiscard]] std::string RolePhrase(const std::string& role);

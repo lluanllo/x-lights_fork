@@ -163,7 +163,7 @@ MultimodalTimeline BuildTimeline(const TimelineInput& in) {
             TimelineItem item{ "", i.id, i.startMS, i.endMS, i.emission, EmissionPhrase(i.emission), i.confidence, i.provenance };
             item.track = i.track;
             if (track != nullptr) {
-                item.label = track->label + ": " + item.label;
+                item.who = track->label;
             }
             // Only what came from the sound can be corrected here; a phrase from the
             // lyrics alone is corrected in the lyrics.
@@ -188,11 +188,15 @@ MultimodalTimeline BuildTimeline(const TimelineInput& in) {
             }
             int n = 0;
             for (const auto& [from, to] : ActiveWindows(a, *in.audio, *in.voices)) {
+                if (from < 0 || to <= from) {
+                    continue; // performs nowhere in the show
+                }
                 std::string names;
                 for (const std::string& f : a.figures) {
                     names += (names.empty() ? "" : ", ") + f;
                 }
-                TimelineItem item{ "", a.source + "@" + std::to_string(n++), from, to, a.function, names + ": " + FunctionPhrase(a.function), a.confidence, a.state };
+                TimelineItem item{ "", a.source + "@" + std::to_string(n++), from, to, a.function, FunctionPhrase(a.function), a.confidence, a.state };
+                item.who = names;
                 item.figures = a.figures;
                 item.editable = true;
                 add("figures", std::move(item));
@@ -360,7 +364,7 @@ void ApplyChange(const TimelineChange& change, AudioUnderstanding& audio, std::v
 
 std::string LaneTitle(const std::string& lane) {
     static const std::map<std::string, const char*> P = {
-        { "structure", COMPOSER_TEXT("Parts of the song") }, { "beats", COMPOSER_TEXT("Beats") }, { "bars", COMPOSER_TEXT("Bars") },
+        { "structure", COMPOSER_TEXT("Parts of the song") }, { "beats", COMPOSER_TEXT("Beats") }, { "bars", COMPOSER_TEXT("Bars of the music") },
         { "energy", COMPOSER_TEXT("How strong the music is") }, { "events", COMPOSER_TEXT("Hits, drops and silences") }, { "narration", COMPOSER_TEXT("Narration") },
         { "lead", COMPOSER_TEXT("Main voice") }, { "chorus", COMPOSER_TEXT("Choir") }, { "secondary", COMPOSER_TEXT("Other voices") },
         { "instrumental", COMPOSER_TEXT("Instruments alone") }, { "words", COMPOSER_TEXT("Words") }, { "figures", COMPOSER_TEXT("Figures") }

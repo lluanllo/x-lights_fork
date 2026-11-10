@@ -20,6 +20,12 @@ namespace composer {
 
 namespace {
 
+// A face xLights itself can draw: its face definition, or its pictures.
+bool Drawable(const FigureProfile& p) {
+    const FigureRegion* mouth = p.Region("mouth");
+    return p.mouth == "images" || (mouth != nullptr && mouth->source.rfind("face-definition", 0) == 0);
+}
+
 bool Speaks(const std::string& function) {
     return function == "speak" || function == "sing" || function == "choral-response";
 }
@@ -68,6 +74,9 @@ std::vector<const PerformerAssignment*> PerformanceMap::OfFigure(const std::stri
 }
 
 std::vector<std::pair<int, int>> ActiveWindows(const PerformerAssignment& a, const AudioUnderstanding& audio, const VocalUnderstanding& voices) {
+    if (!a.windows.empty()) {
+        return a.windows;
+    }
     std::vector<std::pair<int, int>> out;
     if (a.source.rfind("track:", 0) == 0) {
         for (const Intervention* i : voices.Of(a.source.substr(6))) {
@@ -110,21 +119,24 @@ PerformanceMap MapPerformance(const MappingInput& in) {
     }
     const auto familyRank = [](const std::string& f) { return f == "faces" ? 0 : f == "trees" ? 1 : f == "figures" ? 2 : 3; };
     std::stable_sort(speakers.begin(), speakers.end(), [&](const FigureProfile* a, const FigureProfile* b) {
-        const auto key = [&](const FigureProfile* p) { return std::make_tuple(installed(p->figure) ? 0 : 1, p->mouth == "nodes" ? 0 : 1, familyRank(p->family), p->figure); };
+        const auto key = [&](const FigureProfile* p) { return std::make_tuple(installed(p->figure) ? 0 : 1, Drawable(*p) ? 0 : 1, p->mouth == "nodes" ? 0 : 1, familyRank(p->family), p->figure); };
         return key(a) < key(b);
     });
     std::set<std::string> used;
+    // A face xLights can draw first, then the family that suits the voice, then any.
     const auto take = [&](const std::function<bool(const FigureProfile&)>& prefer) -> const FigureProfile* {
-        for (const FigureProfile* p : speakers) {
-            if (!used.contains(p->figure) && prefer(*p)) {
-                used.insert(p->figure);
-                return p;
-            }
-        }
-        for (const FigureProfile* p : speakers) {
-            if (!used.contains(p->figure)) {
-                used.insert(p->figure);
-                return p;
+        const std::vector<std::function<bool(const FigureProfile&)>> passes = {
+            [&](const FigureProfile& p) { return Drawable(p) && prefer(p); },
+            [&](const FigureProfile& p) { return Drawable(p); },
+            [&](const FigureProfile& p) { return prefer(p); },
+            [&](const FigureProfile&) { return true; },
+        };
+        for (const auto& pass : passes) {
+            for (const FigureProfile* p : speakers) {
+                if (!used.contains(p->figure) && pass(*p)) {
+                    used.insert(p->figure);
+                    return p;
+                }
             }
         }
         return nullptr;
@@ -215,8 +227,9 @@ PerformanceMap MapPerformance(const MappingInput& in) {
         std::vector<std::string> families;
         const char* region;
     };
-    const std::vector<Moment> moments = { { "activity:instrumental", "Instrumental", "instrumental-lead", { "mega-tree", "matrix" }, "" },
-                                          { "activity:percussion", "Percussion", "accent", { "arches", "outline", "windows" }, "outline" } };
+    // Labels are the activities' own phrases, which the window translates.
+    const std::vector<Moment> moments = { { "activity:instrumental", COMPOSER_TEXT("An instrument plays"), "instrumental-lead", { "mega-tree", "matrix" }, "" },
+                                          { "activity:percussion", COMPOSER_TEXT("Drums and percussion"), "accent", { "arches", "outline", "windows" }, "outline" } };
     for (const Moment& m : moments) {
         const std::string kind = std::string(m.source).substr(9);
         if (in.audio == nullptr || in.audio->Of(kind).empty()) {
@@ -349,11 +362,13 @@ CastFromUnderstanding ApplyPerformersToCast(const VocalUnderstanding& voices, co
     const auto faces = [&](const PerformerAssignment& a) {
         std::vector<std::string> f;
         for (const std::string& figure : a.figures) {
+            // Only a face xLights itself can draw sings with the Faces effect: a mouth
+            // chosen by hand describes the figure, it is drawn in a later phase.
             const FigureProfile* p = semantics.Find(figure);
-            if (p != nullptr && p->CanSpeak()) {
+            if (p != nullptr && Drawable(*p)) {
                 f.push_back(figure);
             } else {
-                out.notes.push_back("not-a-face:" + figure);
+                out.notes.push_back((p != nullptr && p->CanSpeak() ? "mouth-not-drawable:" : "not-a-face:") + figure);
             }
         }
         return f;
@@ -371,6 +386,29 @@ CastFromUnderstanding ApplyPerformersToCast(const VocalUnderstanding& voices, co
         }
         return nullptr;
     };
+    // A voice the lyrics name and nobody gave a face to (a narrator, a choir) takes the
+    // figures proposed for the voice heard as it.
+    for (VoiceDef& d : cast.voices) {
+        if (!d.faces.empty() || d.facesOff) {
+            continue;
+        }
+        for (const VoiceTrack& t : voices.tracks) {
+            const PerformerAssignment* a = map.For("track:" + t.id);
+            if (a == nullptr || a->state == "manual" || lyricVoiceOf(t) != &d) {
+                continue;
+            }
+            for (const std::string& figure : a->figures) {
+                const FigureProfile* p = semantics.Find(figure);
+                if (p != nullptr && Drawable(*p)) {
+                    d.faces.push_back(figure);
+                }
+            }
+            if (!d.faces.empty()) {
+                ++out.facesChanged;
+                out.notes.push_back("faces-from-understanding:" + d.id);
+            }
+        }
+    }
     // A person's figures for a voice the lyrics name.
     for (VoiceDef& d : cast.voices) {
         const PerformerAssignment* a = map.For("track:lyric:" + d.id);
@@ -439,6 +477,99 @@ CastFromUnderstanding ApplyPerformersToCast(const VocalUnderstanding& voices, co
     return out;
 }
 
+void SyncPerformersWithCast(PerformanceMap& map, const VocalUnderstanding& voices, const VoiceCast& cast, const LyricAlignment* alignment) {
+    const auto castVoiceOf = [&](const std::string& trackId) -> const VoiceDef* {
+        if (trackId.rfind("lyric:", 0) == 0) {
+            return cast.Find(trackId.substr(6));
+        }
+        if (const VoiceDef* d = cast.Find("u:" + trackId)) {
+            return d;
+        }
+        const VoiceTrack* t = voices.Track(trackId);
+        for (const VoiceDef& d : cast.voices) {
+            if (t != nullptr && std::find(t->evidence.begin(), t->evidence.end(), "named in the lyrics: " + d.name) != t->evidence.end()) {
+                return &d;
+            }
+        }
+        return nullptr;
+    };
+    for (PerformerAssignment& a : map.assignments) {
+        if (a.source.rfind("track:", 0) != 0) {
+            continue;
+        }
+        const VoiceDef* d = castVoiceOf(a.source.substr(6));
+        a.windows.clear();
+        if (d != nullptr && alignment != nullptr) {
+            for (const AlignedPhrase& p : alignment->phrases) {
+                if (p.startMS >= 0 && p.endMS > p.startMS && !p.instrumental && std::find(p.voices.begin(), p.voices.end(), d->id) != p.voices.end()) {
+                    a.windows.push_back({ p.startMS, p.endMS });
+                }
+            }
+        }
+        if (d == nullptr || a.windows.empty()) {
+            a.figures.clear();
+            a.conflicts.push_back("no-lyrics-for-voice");
+            a.reasons.push_back("no synchronized phrase of the lyrics is this voice's: no face sings it in the show");
+            a.windows = { { -1, -1 } }; // performs nowhere, rather than whenever it is heard
+            continue;
+        }
+        if (d->faces.empty()) {
+            a.figures.clear();
+            a.conflicts.push_back("voice-without-face");
+            a.windows = { { -1, -1 } };
+            continue;
+        }
+        if (a.figures != d->faces) {
+            a.figures = d->faces;
+            a.reasons.push_back("the faces this voice sings with in the show");
+            // A problem about a figure that no longer performs it is gone with it.
+            std::erase_if(a.conflicts, [&](const std::string& c) {
+                const size_t colon = c.find(':');
+                if (colon == std::string::npos) {
+                    return false;
+                }
+                const std::string subject = c.substr(colon + 1, c.find(':', colon + 1) - colon - 1);
+                return std::find(a.figures.begin(), a.figures.end(), subject) == a.figures.end();
+            });
+        }
+    }
+    // The voices of the lyrics that no heard voice stands for still sing in the show.
+    for (const VoiceDef& d : cast.voices) {
+        if (d.faces.empty() || alignment == nullptr) {
+            continue;
+        }
+        bool represented = false;
+        for (const PerformerAssignment& a : map.assignments) {
+            represented = represented || (a.source.rfind("track:", 0) == 0 && castVoiceOf(a.source.substr(6)) == &d);
+        }
+        if (represented) {
+            continue;
+        }
+        PerformerAssignment a;
+        a.source = "track:lyric:" + d.id;
+        a.sourceLabel = d.name;
+        a.figures = d.faces;
+        a.function = d.delivery == Delivery::Spoken ? "speak" : d.role == VoiceRole::Chorus ? "choral-response" : "sing";
+        a.region = "mouth";
+        a.confidence = 0.5;
+        a.reasons = { "a voice of the lyrics: its faces sing its phrases" };
+        for (const AlignedPhrase& p : alignment->phrases) {
+            if (p.startMS >= 0 && p.endMS > p.startMS && !p.instrumental && std::find(p.voices.begin(), p.voices.end(), d.id) != p.voices.end()) {
+                a.windows.push_back({ p.startMS, p.endMS });
+            }
+        }
+        if (!a.windows.empty()) {
+            map.assignments.push_back(std::move(a));
+        }
+    }
+    map.conflicts.clear();
+    for (const PerformerAssignment& a : map.assignments) {
+        for (const std::string& c : a.conflicts) {
+            map.conflicts.push_back(a.source + "|" + c);
+        }
+    }
+}
+
 std::string FunctionPhrase(const std::string& f) {
     static const std::map<std::string, const char*> P = {
         { "speak", COMPOSER_TEXT("Speaks") }, { "sing", COMPOSER_TEXT("Sings") }, { "choral-response", COMPOSER_TEXT("Answers as the choir") },
@@ -459,6 +590,8 @@ std::string ConflictPhrase(const std::string& code) {
         { "simultaneous-voices", COMPOSER_TEXT("Two voices sound at the same time on this figure.") },
         { "figure-not-in-layout", COMPOSER_TEXT("This figure is not in the layout.") },
         { "no-figure-for-it", COMPOSER_TEXT("No figure of a suitable kind was found.") },
+        { "no-lyrics-for-voice", COMPOSER_TEXT("No synchronized line of the lyrics is this voice's: no face sings it in the show.") },
+        { "voice-without-face", COMPOSER_TEXT("This voice has no face in the show.") },
     };
     const auto it = P.find(head);
     return it != P.end() ? it->second : code;

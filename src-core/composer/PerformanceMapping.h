@@ -33,6 +33,9 @@ struct PerformerAssignment {
     double confidence = 0;
     std::vector<std::string> reasons;
     std::vector<std::string> conflicts;
+    // When the show means the figures to perform: the phrases of the voice in the lyrics.
+    // Empty: whenever the voice or the moment is heard.
+    std::vector<std::pair<int, int>> windows;
 };
 
 struct PerformanceMap {
@@ -77,6 +80,11 @@ struct CastFromUnderstanding {
 };
 [[nodiscard]] CastFromUnderstanding ApplyPerformersToCast(const VocalUnderstanding& voices, const PerformanceMap& map, const FigureSemantics& semantics, LyricAlignment& alignment,
                                                           VoiceCast& cast);
+
+// The assignments as the show was made: each voice's figures are the faces its voice
+// sings with in the sequence, active during its phrases of the lyrics; a voice with no
+// synchronized phrase, or no face, performs nowhere, and says why.
+void SyncPerformersWithCast(PerformanceMap& map, const VocalUnderstanding& voices, const VoiceCast& cast, const LyricAlignment* alignment);
 
 [[nodiscard]] std::string FunctionPhrase(const std::string& function);
 [[nodiscard]] std::string ConflictPhrase(const std::string& code);
