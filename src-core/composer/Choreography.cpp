@@ -415,6 +415,15 @@ private:
     void Segment(const PlanSegment& s) {
         const Band band = BandOf(s);
         if (band == Band::Rest) {
+            // The music rests; a face whose voice speaks there still speaks.
+            const std::string key = Key(s);
+            int rank = 0;
+            for (const PlanAssignment& a : s.assignments) {
+                const TargetInfo* target = a.intent == "face-sing" ? _caps.Find(a.target) : nullptr;
+                if (target != nullptr && !_caps.LightsExcluded(a.target)) {
+                    Face(s, a, *target, band, key, rank++);
+                }
+            }
             return;
         }
         std::vector<const PlanAssignment*> active;

@@ -2021,6 +2021,10 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     }
     r.learning = !o.noLearning;
     r.recipesPath = o.recipesPath;
+    if (o.understanding == "on" || o.understanding == "off") {
+        r.understanding = o.understanding == "on";
+    }
+    r.stems = ParseStemList(o.stems);
     if (o.noRecipes) {
         r.useRecipes = false;
     }

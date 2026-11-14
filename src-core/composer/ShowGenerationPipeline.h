@@ -17,6 +17,9 @@
 #include "composer/ModelCapabilities.h"
 #include "composer/SongAnalysis.h"
 #include "composer/TemplateLibrary.h"
+#include "composer/FigureSemantics.h"
+#include "composer/RenderUnderstanding.h"
+#include "composer/UnderstandingStore.h"
 
 #include <array>
 #include <functional>
@@ -121,6 +124,12 @@ struct GenerationRequest {
     // are, without a model); with `visionModelDir` the image-text model is used too.
     bool analyzeMedia = false;
     std::string visionModelDir;
+    // What the recording says (who speaks or sings when, the choir, the instruments'
+    // turns) and which figures show it. Default: on when the song was already understood
+    // (ShowComposer/understanding/<audio id> exists) or the previous show used it; false
+    // generates as before, to compare.
+    std::optional<bool> understanding;
+    std::vector<StemInput> stems; // the song's separate recordings, when there are
     CancelCheck cancel;
     std::function<void(GenerationStage stage, const std::string& what)> progress;
 };
@@ -208,6 +217,16 @@ struct GenerationRun {
     Choreography choreography;
     ValidationReport planValidation;
     ValidationReport choreographyValidation;
+
+    // Understanding of the recording (when on)
+    bool understood = false;
+    SongUnderstanding understanding;
+    FigureCatalog figures;
+    FigureSemantics semantics;
+    PerformanceMap performers;
+    CastFromUnderstanding castFromUnderstanding;
+    RenderUnderstanding renderUnderstanding;
+    bool renderUnderstood = false;
 
     // Sequence
     SequenceSpec spec;

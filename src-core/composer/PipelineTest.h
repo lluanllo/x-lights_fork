@@ -49,6 +49,8 @@ struct GenerateCommandOptions {
     std::string christmas;     // 0-100: how far the colours go towards the Christmas ones
     std::string variety;       // 0-100
     std::string briefPath;     // a song visual brief
+    std::string understanding; // "on", "off"; empty: on when the song was already understood
+    std::string stems;         // "role=path;role=path" (voice, chorus, narration, music)
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

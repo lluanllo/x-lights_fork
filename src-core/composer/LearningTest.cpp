@@ -189,16 +189,16 @@ private:
         GenerationSidecar read;
         std::string error;
         Check(ReadSidecar(S(file), read, error) == SidecarStatus::Ok && read.review.Find("Matriz/intro#1.1/1") != nullptr &&
-                  read.review.Find("Matriz/intro#1.1/1")->state == ClipState::Approved && read.schemaVersion == 2,
-              "written, closed and read again: the review is there (schema 2)");
+                  read.review.Find("Matriz/intro#1.1/1")->state == ClipState::Approved && read.schemaVersion == SIDECAR_SCHEMA_VERSION,
+              "written, closed and read again: the review is there (current schema)");
         json v1 = json::parse(text);
         v1["schemaVersion"] = 1;
         v1.erase("review");
         GenerationSidecar old;
-        Check(FromJson(v1.dump(), old, error) == SidecarStatus::Ok && old.review.Empty() && old.visualReview == "not-reviewed" && old.schemaVersion == 2,
+        Check(FromJson(v1.dump(), old, error) == SidecarStatus::Ok && old.review.Empty() && old.visualReview == "not-reviewed" && old.schemaVersion == SIDECAR_SCHEMA_VERSION,
               "a schema 1 sidecar reads, as a show nobody reviewed");
         json v3 = json::parse(text);
-        v3["schemaVersion"] = 3;
+        v3["schemaVersion"] = SIDECAR_SCHEMA_VERSION + 1;
         Check(FromJson(v3.dump(), old, error) == SidecarStatus::Newer, "a newer one is refused, not rewritten");
         CorrectionSet c;
         c.review = read.review;

@@ -12146,3 +12146,759 @@ msgstr "nostálgica"
 
 msgid "festive"
 msgstr "festiva"
+
+msgid "the face drawn in xLights"
+msgstr "la cara dibujada en xLights"
+
+msgid "the face's pictures in xLights"
+msgstr "las imágenes de la cara en xLights"
+
+msgid "a submodel"
+msgstr "un submodelo"
+
+msgid "suggested by a submodel's name: to confirm"
+msgstr "sugerida por el nombre de un submodelo: por confirmar"
+
+msgid "chosen by you"
+msgstr "elegida por ti"
+
+msgid "the figure's shape"
+msgstr "la forma de la figura"
+
+msgid "It has no mouth: it cannot speak or sing until one is defined."
+msgstr "No tiene boca: no puede hablar ni cantar hasta que se defina una."
+
+msgid "It has no controller: it is only seen in the preview."
+msgstr "No tiene controlador: solo se ve en la vista previa."
+
+msgid "The part \"%s\" is only suggested by a name: confirm it if it is right."
+msgstr "La parte «%s» solo la sugiere un nombre: confírmala si es correcta."
+
+msgid "The part \"%s\" is not tied to any light."
+msgstr "La parte «%s» no está unida a ninguna luz."
+
+msgid "Heard: speech %d times, singing %d, the choir %d, the instruments alone %d."
+msgstr "Se oye: habla %d veces, canta %d, el coro %d, instrumentos solos %d."
+
+msgid "%d voices told apart by how they sound (not separated)."
+msgstr "%d voces distinguidas por cómo suenan (no separadas)."
+
+msgid "%d corrections of yours applied."
+msgstr "%d correcciones tuyas aplicadas."
+
+msgid "What happens in the recording"
+msgstr "Qué está pasando en la grabación"
+
+msgid "Click a piece to choose it, or a moment to place the red line. Your corrections are kept apart and applied again after every new analysis. Voices are told apart by how they sound: nobody is identified and no voice is separated from the music."
+msgstr "Pulsa un trozo para elegirlo, o un momento para poner la línea roja. Tus correcciones se guardan aparte y se vuelven a aplicar tras cada análisis nuevo. Las voces se distinguen por cómo suenan: no se identifica a nadie ni se separa ninguna voz de la música."
+
+msgid "Change Its Times..."
+msgstr "Cambiar sus tiempos..."
+
+msgid "Split at the Red Line"
+msgstr "Partir en la línea roja"
+
+msgid "Join with the Next One"
+msgstr "Unir con el siguiente"
+
+msgid "It Is..."
+msgstr "Es..."
+
+msgid "It Is the Voice of..."
+msgstr "Es la voz de..."
+
+msgid "Who Shows It..."
+msgstr "Quién lo muestra..."
+
+msgid "It Is Right"
+msgstr "Está bien así"
+
+msgid "Back to the Automatic Reading"
+msgstr "Volver a lo automático"
+
+msgid "Bring My Changes Back"
+msgstr "Recuperar mis cambios"
+
+msgid "Red line at %s. Choose a piece to correct it."
+msgstr "Línea roja en %s. Elige un trozo para corregirlo."
+
+msgid "%s, from %s to %s (%d%% sure)"
+msgstr "%s, de %s a %s (seguro al %d%%)"
+
+msgid "corrected by you"
+msgstr "corregido por ti"
+
+msgid "heard on its own recording"
+msgstr "oído en su propia grabación"
+
+msgid "placed by the lyrics"
+msgstr "colocado por la letra"
+
+msgid "The correction could not be saved: %s"
+msgstr "No se ha podido guardar la corrección: %s"
+
+msgid "The choice could not be saved: %s"
+msgstr "No se ha podido guardar la elección: %s"
+
+msgid "Saved. It will be used every time the show is made."
+msgstr "Guardado. Se usará cada vez que se haga el show."
+
+msgid "Your corrections are back."
+msgstr "Tus correcciones han vuelto."
+
+msgid "Back to the automatic reading. Your corrections are kept aside and can be brought back."
+msgstr "De vuelta a lo automático. Tus correcciones se guardan aparte y se pueden recuperar."
+
+msgid "Choose a piece first."
+msgstr "Elige primero un trozo."
+
+msgid "New start and end, in seconds, separated by a space (for example: 12.5 18)"
+msgstr "Nuevo inicio y final, en segundos, separados por un espacio (por ejemplo: 12.5 18)"
+
+msgid "Change Its Times"
+msgstr "Cambiar sus tiempos"
+
+msgid "What is it?"
+msgstr "¿Qué es?"
+
+msgid "A new voice (Voz %c)"
+msgstr "Una voz nueva (Voz %c)"
+
+msgid "Whose voice is it?"
+msgstr "¿De quién es la voz?"
+
+msgid "Choose a piece of the Figures lane: the figures that show a voice or a moment."
+msgstr "Elige un trozo del carril Figuras: las figuras que muestran una voz o un momento."
+
+msgid "Which figures show it?"
+msgstr "¿Qué figuras lo muestran?"
+
+msgid "No light positions known"
+msgstr "No se conoce la posición de las luces"
+
+msgid "Know My Figures"
+msgstr "Conocer mis figuras"
+
+msgid "Each figure as xLights draws it. A part (a mouth, a trunk...) is only known when it is tied to real lights; a name alone only suggests it. Each part keeps its own colour, whatever the song's colours."
+msgstr "Cada figura tal como la dibuja xLights. Una parte (una boca, un tronco...) solo se conoce cuando está unida a luces reales; un nombre solo la sugiere. Cada parte conserva su propio color, sean cuales sean los colores de la canción."
+
+msgid "Mouth"
+msgstr "Boca"
+
+msgid "Part"
+msgstr "Parte"
+
+msgid "Where it comes from"
+msgstr "De dónde sale"
+
+msgid "Remove This Part"
+msgstr "Quitar esta parte"
+
+msgid "Add a Part..."
+msgstr "Añadir una parte..."
+
+msgid "Its Colour..."
+msgstr "Su color..."
+
+msgid "It can be:"
+msgstr "Puede hacer de:"
+
+msgid "I Have Looked at This Figure"
+msgstr "Ya he revisado esta figura"
+
+msgid "Which part?"
+msgstr "¿Qué parte?"
+
+msgid "Add a Part"
+msgstr "Añadir una parte"
+
+msgid "Its lights, as xLights numbers them (for example: 1-20,25,30-34)"
+msgstr "Sus luces, con los números de xLights (por ejemplo: 1-20,25,30-34)"
+
+msgid "Choose a part first."
+msgstr "Elige primero una parte."
+
+msgid "Your choices could not be saved: %s"
+msgstr "No se han podido guardar tus elecciones: %s"
+
+msgid "Yes, with its lights"
+msgstr "Sí, con sus luces"
+
+msgid "Yes, with pictures"
+msgstr "Sí, con imágenes"
+
+msgid "To confirm"
+msgstr "Por confirmar"
+
+msgid "No"
+msgstr "No"
+
+msgid "%s: %s, %d lights (%d channels), %d x %d in xLights."
+msgstr "%s: %s, %d luces (%d canales), %d x %d en xLights."
+
+msgid "Without a controller: only in the preview."
+msgstr "Sin controlador: solo en la vista previa."
+
+msgid "Controller: %s."
+msgstr "Controlador: %s."
+
+msgid "An irregular figure: its lights' places are known, not rows or branches."
+msgstr "Una figura irregular: se conoce dónde está cada luz, no filas ni ramas."
+
+msgid "A shape the composer does not know: it is used as a set of points."
+msgstr "Una forma que el compositor no conoce: se usa como un conjunto de puntos."
+
+msgid "You have looked at this figure."
+msgstr "Ya has revisado esta figura."
+
+msgid "Choose a part tied to lights first."
+msgstr "Elige primero una parte unida a luces."
+
+msgid "Confirmed."
+msgstr "Confirmada."
+
+msgid "Removed. It will stay removed after a new analysis."
+msgstr "Quitada. Seguirá quitada tras un análisis nuevo."
+
+msgid "Choose a figure first."
+msgstr "Elige primero una figura."
+
+msgid "No light of this figure in \"%s\": it has lights 1 to %d."
+msgstr "Ninguna luz de esta figura en «%s»: tiene las luces 1 a %d."
+
+msgid "%s: %d lights."
+msgstr "%s: %d luces."
+
+msgid "Assign Voices and Characters"
+msgstr "Asignar voces y personajes"
+
+msgid "Who performs each voice and each moment of the music. A figure only performs while its voice is heard: when the narration ends the tree stops speaking, and no mouth moves while the instruments play alone. What you choose always wins."
+msgstr "Quién interpreta cada voz y cada momento de la música. Una figura solo actúa mientras se oye su voz: cuando acaba la narración el árbol deja de hablar, y ninguna boca se mueve mientras suenan solo los instrumentos. Lo que tú elijas siempre manda."
+
+msgid "Who"
+msgstr "Quién"
+
+msgid "Does"
+msgstr "Qué hace"
+
+msgid "Chosen"
+msgstr "Elegido"
+
+msgid "Choose the Figures..."
+msgstr "Elegir las figuras..."
+
+msgid "Let the Composer Choose"
+msgstr "Que lo decida el compositor"
+
+msgid "To look at:"
+msgstr "Para revisar:"
+
+msgid "(nobody)"
+msgstr "(nadie)"
+
+msgid "by you"
+msgstr "por ti"
+
+msgid "by the composer"
+msgstr "por el compositor"
+
+msgid "Nothing to look at."
+msgstr "Nada que revisar."
+
+msgid "no mouth"
+msgstr "sin boca"
+
+msgid "Which figures perform \"%s\"?"
+msgstr "¿Qué figuras interpretan «%s»?"
+
+msgid "Choose the Figures"
+msgstr "Elegir las figuras"
+
+msgid "What the Figures Did"
+msgstr "Qué hicieron las figuras"
+
+msgid "The figures did what was meant %d times out of %d. Below, the moments to look at in xLights."
+msgstr "Las figuras hicieron lo previsto %d veces de %d. Debajo, los momentos para mirar en xLights."
+
+msgid "This reads how much and which lights shine, not whether a picture or a word is the right one. Nothing is approved here: you decide, in xLights."
+msgstr "Esto mira cuánto y qué luces brillan, no si una imagen o una palabra es la correcta. Aquí no se aprueba nada: decides tú, en xLights."
+
+msgid "When"
+msgstr "Cuándo"
+
+msgid "What to look at"
+msgstr "Qué mirar"
+
+msgid "Pictures of These %d Moments"
+msgstr "Fotos de estos %d momentos"
+
+msgid "Understand the audio"
+msgstr "Entender el audio"
+
+msgid "Separate Recordings..."
+msgstr "Grabaciones separadas..."
+
+msgid "Understand the Audio"
+msgstr "Entender el audio"
+
+msgid "Use what is heard (who speaks or sings, the choir, the instruments) when making the show"
+msgstr "Usar lo que se oye (quién habla o canta, el coro, los instrumentos) al hacer el show"
+
+msgid "Worked out on this computer: nothing is sent. Voices are told apart by how they sound, never separated from the music or identified. If you have the voice or the choir on their own recordings, add them: they are heard much better. To time the words, use \"Time the Words with AI (Groq)\" above, which asks you first."
+msgstr "Se calcula en este ordenador: no se envía nada. Las voces se distinguen por cómo suenan; nunca se separan de la música ni se identifica a nadie. Si tienes la voz o el coro en grabaciones aparte, añádelas: se oyen mucho mejor. Para sincronizar las palabras, usa «Sincronizar las palabras con IA (Groq)» más arriba, que antes te pregunta."
+
+msgid "What Happens in the Recording..."
+msgstr "Qué está pasando en la grabación..."
+
+msgid "Voices, characters and figures"
+msgstr "Voces, personajes y figuras"
+
+msgid "Know My Figures..."
+msgstr "Conocer mis figuras..."
+
+msgid "Assign Voices and Characters..."
+msgstr "Asignar voces y personajes..."
+
+msgid "What the Figures Did..."
+msgstr "Qué hicieron las figuras..."
+
+msgid "Add another recording"
+msgstr "Añadir otra grabación"
+
+msgid "Use none of them"
+msgstr "No usar ninguna"
+
+msgid "The song has separate recordings."
+msgstr "La canción tiene grabaciones separadas."
+
+msgid "Separate Recordings"
+msgstr "Grabaciones separadas"
+
+msgid "Choose the separate recordings of this song (the voice, the choir...)"
+msgstr "Elige las grabaciones separadas de esta canción (la voz, el coro...)"
+
+msgid "A singing voice"
+msgstr "Una voz que canta"
+
+msgid "The choir"
+msgstr "El coro"
+
+msgid "A spoken narration"
+msgstr "Una narración hablada"
+
+msgid "The instruments"
+msgstr "Los instrumentos"
+
+msgid "What is in %s?"
+msgstr "¿Qué hay en %s?"
+
+msgid "Choose a song that can be played and the show first."
+msgstr "Elige primero una canción que se pueda reproducir y el show."
+
+msgid "The audio could not be understood."
+msgstr "No se ha podido entender el audio."
+
+msgid "Listening to the recording..."
+msgstr "Escuchando la grabación..."
+
+msgid "The figures could not be read."
+msgstr "No se han podido leer las figuras."
+
+msgid "Reading the figures of the show..."
+msgstr "Leyendo las figuras del show..."
+
+msgid "Listening to the recording... %d%%"
+msgstr "Escuchando la grabación... %d%%"
+
+msgid "Stopped. Nothing was changed."
+msgstr "Detenido. No se ha cambiado nada."
+
+msgid "The audio could not be understood. The show can still be made without it."
+msgstr "No se ha podido entender el audio. El show se puede hacer igualmente sin ello."
+
+msgid "The figures are only read from a show whose controllers are all inactive."
+msgstr "Las figuras solo se leen de un show con todos los controladores inactivos."
+
+msgid "The pictures are in %s"
+msgstr "Las fotos están en %s"
+
+msgid "The pictures could not be made."
+msgstr "No se han podido hacer las fotos."
+
+msgid "The recording has not been understood yet."
+msgstr "La grabación todavía no se ha entendido."
+
+msgid "Use \"Understand the Audio\" in the first step."
+msgstr "Usa «Entender el audio» en el primer paso."
+
+msgid "The figures are being read."
+msgstr "Se están leyendo las figuras."
+
+msgid "Try again in a moment."
+msgstr "Vuelve a intentarlo dentro de un momento."
+
+msgid "There is no check of what the figures did."
+msgstr "No hay revisión de lo que hicieron las figuras."
+
+msgid "It is made when the show is generated with the recording understood and the render on."
+msgstr "Se hace al generar el show con la grabación entendida y el render activado."
+
+msgid "The render of this show is not there any more."
+msgstr "El render de este show ya no está."
+
+msgid "Making pictures of the render..."
+msgstr "Haciendo fotos del render..."
+
+msgid "Not understood yet: the composer can still make the show from the music and the lyrics."
+msgstr "Todavía sin entender: el compositor puede hacer el show igualmente con la música y la letra."
+
+msgid "Understand the Audio Again"
+msgstr "Volver a entender el audio"
+
+msgid "voice"
+msgstr "voz"
+
+msgid "choir"
+msgstr "coro"
+
+msgid "narration"
+msgstr "narración"
+
+msgid "instruments"
+msgstr "instrumentos"
+
+msgid "Only the song: no separate recordings."
+msgstr "Solo la canción: sin grabaciones separadas."
+
+msgid "Understand the audio in the first step to see who speaks, sings or plays when."
+msgstr "Entiende el audio en el primer paso para ver quién habla, canta o toca y cuándo."
+
+msgid "The figures have not been read yet."
+msgstr "Todavía no se han leído las figuras."
+
+msgid "%d figures, %d of them with a mouth tied to lights."
+msgstr "%d figuras, %d de ellas con una boca unida a luces."
+
+msgid "%d choices of yours."
+msgstr "%d elecciones tuyas."
+
+msgid "Someone speaks"
+msgstr "Habla"
+
+msgid "Someone sings"
+msgstr "Canta"
+
+msgid "The choir comes in"
+msgstr "Entra el coro"
+
+msgid "A voice with no music"
+msgstr "Una voz sin música"
+
+msgid "The music plays"
+msgstr "Suena la música"
+
+msgid "An instrument plays"
+msgstr "Suena un instrumento"
+
+msgid "Drums and percussion"
+msgstr "Batería y percusión"
+
+msgid "The bass"
+msgstr "El bajo"
+
+msgid "Silence"
+msgstr "Silencio"
+
+msgid "The voice pauses"
+msgstr "La voz se calla"
+
+msgid "Noise or ambience"
+msgstr "Ruido o ambiente"
+
+msgid "A sound starts"
+msgstr "Empieza un sonido"
+
+msgid "A strong hit"
+msgstr "Un golpe fuerte"
+
+msgid "The sound holds"
+msgstr "El sonido se mantiene"
+
+msgid "The sound dies down"
+msgstr "El sonido se apaga"
+
+msgid "The sound fades into silence"
+msgstr "El sonido se apaga hasta el silencio"
+
+msgid "The music fades in"
+msgstr "La música aparece poco a poco"
+
+msgid "The music fades out"
+msgstr "La música se desvanece"
+
+msgid "The music grows"
+msgstr "La música crece"
+
+msgid "The music goes down"
+msgstr "La música baja"
+
+msgid "The music drops suddenly"
+msgstr "La música cae de golpe"
+
+msgid "The music comes back"
+msgstr "La música vuelve"
+
+msgid "The music resolves"
+msgstr "La música termina y reposa"
+
+msgid "a matrix (rows and columns of lights)"
+msgstr "una matriz (filas y columnas de luces)"
+
+msgid "a tree (strings from the top down)"
+msgstr "un árbol (tiras de arriba abajo)"
+
+msgid "a round tree (strings all the way round)"
+msgstr "un árbol redondo (tiras por todo alrededor)"
+
+msgid "a line of lights"
+msgstr "una línea de luces"
+
+msgid "a circle"
+msgstr "un círculo"
+
+msgid "a sphere"
+msgstr "una esfera"
+
+msgid "a star"
+msgstr "una estrella"
+
+msgid "a window frame"
+msgstr "un marco de ventana"
+
+msgid "icicles"
+msgstr "carámbanos"
+
+msgid "candy canes"
+msgstr "bastones de caramelo"
+
+msgid "a wreath"
+msgstr "una corona"
+
+msgid "a spinner"
+msgstr "un molinillo"
+
+msgid "a cube"
+msgstr "un cubo"
+
+msgid "a figure of its own shape"
+msgstr "una figura con su propia forma"
+
+msgid "a group of figures"
+msgstr "un grupo de figuras"
+
+msgid "a part of a figure"
+msgstr "una parte de una figura"
+
+msgid "a shape the program does not know"
+msgstr "una forma que el programa no conoce"
+
+msgid "Face"
+msgstr "Cara"
+
+msgid "Head"
+msgstr "Cabeza"
+
+msgid "Body"
+msgstr "Cuerpo"
+
+msgid "Trunk"
+msgstr "Tronco"
+
+msgid "Foliage"
+msgstr "Follaje"
+
+msgid "Branches"
+msgstr "Ramas"
+
+msgid "Pictures"
+msgstr "Imágenes"
+
+msgid "Lead singer"
+msgstr "Solista"
+
+msgid "Second singer"
+msgstr "Segunda voz"
+
+msgid "Choir member"
+msgstr "Miembro del coro"
+
+msgid "Instruments"
+msgstr "Instrumentos"
+
+msgid "Percussion"
+msgstr "Percusión"
+
+msgid "Decoration"
+msgstr "Decoración"
+
+msgid "Speaks"
+msgstr "Habla"
+
+msgid "Answers as the choir"
+msgstr "Responde como coro"
+
+msgid "Leads when the instruments play"
+msgstr "Manda cuando suenan los instrumentos"
+
+msgid "Marks the beats"
+msgstr "Marca los golpes"
+
+msgid "No figure with a mouth is left for this voice."
+msgstr "No queda ninguna figura con boca para esta voz."
+
+msgid "There are not enough figures with a mouth to show the choir."
+msgstr "No hay bastantes figuras con boca para mostrar el coro."
+
+msgid "This figure has no mouth defined: it cannot speak or sing yet."
+msgstr "Esta figura no tiene boca definida: todavía no puede hablar ni cantar."
+
+msgid "The part of the figure it needs is not tied to real lights."
+msgstr "La parte de la figura que necesita no está unida a luces reales."
+
+msgid "This figure has no controller: it is only seen in the preview."
+msgstr "Esta figura no tiene controlador: solo se ve en la vista previa."
+
+msgid "Two voices sound at the same time on this figure."
+msgstr "Dos voces suenan a la vez en esta figura."
+
+msgid "This figure is not in the layout."
+msgstr "Esta figura no está en el layout."
+
+msgid "No figure of a suitable kind was found."
+msgstr "No se ha encontrado ninguna figura adecuada."
+
+msgid "Ending"
+msgstr "Final"
+
+msgid "Before the chorus"
+msgstr "Antes del estribillo"
+
+msgid "Part of the song"
+msgstr "Parte de la canción"
+
+msgid "The choir sings"
+msgstr "Canta el coro"
+
+msgid "A voice (not sure how)"
+msgstr "Una voz (no se sabe cómo)"
+
+msgid "Beat"
+msgstr "Pulso"
+
+msgid "Bar"
+msgstr "Compás"
+
+msgid "Parts of the song"
+msgstr "Partes de la canción"
+
+msgid "Beats"
+msgstr "Pulsos"
+
+msgid "How strong the music is"
+msgstr "Fuerza de la música"
+
+msgid "Hits, drops and silences"
+msgstr "Golpes, caídas y silencios"
+
+msgid "Main voice"
+msgstr "Voz principal"
+
+msgid "Other voices"
+msgstr "Otras voces"
+
+msgid "Instruments alone"
+msgstr "Instrumentos solos"
+
+msgid "That piece is no longer in the reading. Analyse again and retry."
+msgstr "Ese trozo ya no está en la lectura. Analiza de nuevo y vuelve a intentarlo."
+
+msgid "Beats, bars and parts of the song are corrected in the music analysis."
+msgstr "Los pulsos, compases y partes de la canción se corrigen en el análisis musical."
+
+msgid "This comes from the lyrics: correct it in the lyrics editor."
+msgstr "Esto viene de la letra: corrígelo en el editor de la letra."
+
+msgid "A figure follows its voice: move the voice, or choose other figures."
+msgstr "Una figura sigue a su voz: mueve la voz o elige otras figuras."
+
+msgid "The times are not valid."
+msgstr "Los tiempos no son válidos."
+
+msgid "A single moment cannot be split."
+msgstr "Un momento puntual no se puede partir."
+
+msgid "A single moment cannot be joined to another."
+msgstr "Un momento puntual no se puede unir a otro."
+
+msgid "A moment of the music belongs to no voice."
+msgstr "Un momento de la música no es de ninguna voz."
+
+msgid "Choose what it is."
+msgstr "Elige qué es."
+
+msgid "It was meant to perform here and stays dark."
+msgstr "Debía actuar aquí y se queda apagada."
+
+msgid "It was meant to speak or sing here and its mouth does not move."
+msgstr "Debía hablar o cantar aquí y su boca no se mueve."
+
+msgid "Its mouth moves while nobody speaks through it."
+msgstr "Su boca se mueve sin que nadie hable por ella."
+
+msgid "This voice seems to be shown on another figure."
+msgstr "Esta voz parece verse en otra figura."
+
+msgid "This part of the figure never lights."
+msgstr "Esta parte de la figura nunca se enciende."
+
+msgid "This figure never lights."
+msgstr "Esta figura nunca se enciende."
+
+msgid "Everything is dark while the music plays."
+msgstr "Todo está apagado mientras suena la música."
+
+msgid "Outline of the figure"
+msgstr "Contorno"
+
+msgid "Top of the figure"
+msgstr "Punta"
+
+msgid "A character"
+msgstr "Personaje"
+
+msgid "No synchronized line of the lyrics is this voice's: no face sings it in the show."
+msgstr "Ninguna línea sincronizada de la letra es de esta voz: ninguna cara la canta en el show."
+
+msgid "This voice has no face in the show."
+msgstr "Esta voz no tiene cara en el show."
+
+msgid "Bars of the music"
+msgstr "Compases"
+
+msgid "Heard - speech: %d, singing: %d, the choir: %d, the instruments alone: %d."
+msgstr "Se oye: habla %d, canta %d, coro %d, instrumentos solos %d."
+
+msgid "Voices told apart by how they sound (not separated): %d."
+msgstr "Voces distinguidas por cómo suenan (no separadas): %d."
+
+msgid "Corrections of yours applied: %d."
+msgstr "Correcciones tuyas aplicadas: %d."
+
+msgid "The figures did what was meant in %d of %d moments. Below, the moments to look at in xLights."
+msgstr "Las figuras hicieron lo previsto en %d de %d momentos. Debajo, los momentos para mirar en xLights."
+
+msgid "Pictures of the Moments (%d)"
+msgstr "Fotos de los momentos (%d)"
+
+msgid "Choices of yours: %d."
+msgstr "Elecciones tuyas: %d."

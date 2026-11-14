@@ -38,7 +38,7 @@ struct AlignedPhrase {
     std::string voice;
     std::vector<std::string> voices; // voice ids; empty: nobody said who sings it
     std::string delivery = "sung";   // "sung" or "spoken"
-    std::string voiceSource;         // "lyrics", "manual" or "" when unknown
+    std::string voiceSource;         // "lyrics", "manual", "understanding" (the voice heard) or "" when unknown
     int startMS = -1; // -1: not synchronized
     int endMS = -1;
     bool instrumental = false;

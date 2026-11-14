@@ -130,6 +130,10 @@ std::string ToJson(const GenerationSidecar& s) {
     if (!s.review.Empty()) {
         root["review"] = VisualReviewJson(s.review);
     }
+    if (s.understanding.enabled) {
+        root["understanding"] = { { "enabled", true }, { "audioId", s.understanding.audioId }, { "readerVersion", s.understanding.readerVersion },
+                                  { "corrections", s.understanding.corrections }, { "manualAssignments", s.understanding.manualAssignments } };
+    }
     return root.dump(1);
 }
 
@@ -215,6 +219,14 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
         }
         if (root.contains("review") && !VisualReviewFrom(root["review"], s.review, error)) {
             return SidecarStatus::Damaged;
+        }
+        if (root.contains("understanding") && root["understanding"].is_object()) {
+            const json& u = root["understanding"];
+            s.understanding.enabled = u.value("enabled", false);
+            s.understanding.audioId = u.value("audioId", std::string());
+            s.understanding.readerVersion = u.value("readerVersion", std::string());
+            s.understanding.corrections = u.value("corrections", 0);
+            s.understanding.manualAssignments = u.value("manualAssignments", 0);
         }
         s.visualReview = s.review.state == "approved" ? "approved" : s.visualReview == "approved" ? "not-reviewed" : s.visualReview;
         // Read as the current schema from now on: a version 1 file has no review.
