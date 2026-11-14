@@ -3,6 +3,7 @@
 #include "composer/VisualDirection.h"
 #include "models/DisplayAsType.h"
 #include "models/Model.h"
+#include "models/ModelScreenLocation.h"
 #include "models/ModelGroup.h"
 #include "models/Node.h"
 #include "models/SubModel.h"
@@ -71,6 +72,8 @@ std::string TopologyOf(const Model& m, const TargetInfo* t) {
 
 void NodesOf(Model& m, FigureGeometry& g, const std::map<int, int>* parentIndex) {
     std::vector<std::tuple<float, float, float>> pts;
+    // The 2D layout placement: two- and three-point models build their matrix here.
+    m.GetModelScreenLocation().PrepareToDraw(false, false);
     float minX = 1e30F, maxX = -1e30F, minY = 1e30F, maxY = -1e30F;
     const uint32_t count = m.GetNodeCount();
     g.nodeMap.reserve(count);
@@ -90,6 +93,15 @@ void NodesOf(Model& m, FigureGeometry& g, const std::map<int, int>* parentIndex)
         if (!pts.empty()) {
             f.x = std::get<0>(pts.front());
             f.y = std::get<1>(pts.front());
+            f.sx = std::get<0>(pts.front());
+            f.sy = std::get<1>(pts.front());
+            f.sz = std::get<2>(pts.front());
+            float wx = f.sx, wy = f.sy, wz = f.sz;
+            m.GetModelScreenLocation().TranslatePoint(wx, wy, wz);
+            f.wx = wx;
+            f.wy = wy;
+            f.wz = wz;
+            f.placed = true;
         } else {
             f.x = static_cast<float>(f.bufX);
             f.y = static_cast<float>(f.bufY);
@@ -268,9 +280,9 @@ std::string ToJson(const FigureCatalog& c, bool withNodes) {
         if (withNodes) {
             json nodes = json::array();
             for (const FigureNode& n : g.nodeMap) {
-                nodes.push_back(json::array({ n.index, n.bufX, n.bufY, n.x, n.y, n.strand, n.channel }));
+                nodes.push_back(json::array({ n.index, n.bufX, n.bufY, n.x, n.y, n.strand, n.channel, n.sx, n.sy, n.sz, n.wx, n.wy, n.wz, n.placed ? 1 : 0 }));
             }
-            j["nodeFields"] = { "index", "bufX", "bufY", "x", "y", "strand", "channel" };
+            j["nodeFields"] = { "index", "bufX", "bufY", "x", "y", "strand", "channel", "sx", "sy", "sz", "wx", "wy", "wz", "placed" };
             j["nodeMap"] = nodes;
         }
         figures.push_back(std::move(j));
@@ -325,7 +337,17 @@ bool FromJson(const std::string& text, FigureCatalog& out, std::string& error) {
             g.limits = j.value("limits", std::vector<std::string>());
             for (const json& n : j.value("nodeMap", json::array())) {
                 if (n.is_array() && n.size() >= 6) {
-                    g.nodeMap.push_back({ n[0].get<int>(), n[1].get<int>(), n[2].get<int>(), n[3].get<float>(), n[4].get<float>(), n[5].get<int>(), n.size() >= 7 ? n[6].get<int>() : -1 });
+                    FigureNode f{ n[0].get<int>(), n[1].get<int>(), n[2].get<int>(), n[3].get<float>(), n[4].get<float>(), n[5].get<int>(), n.size() >= 7 ? n[6].get<int>() : -1 };
+                    if (n.size() >= 14) {
+                        f.sx = n[7].get<float>();
+                        f.sy = n[8].get<float>();
+                        f.sz = n[9].get<float>();
+                        f.wx = n[10].get<float>();
+                        f.wy = n[11].get<float>();
+                        f.wz = n[12].get<float>();
+                        f.placed = n[13].get<int>() != 0;
+                    }
+                    g.nodeMap.push_back(f);
                 }
             }
             c.figures.push_back(std::move(g));

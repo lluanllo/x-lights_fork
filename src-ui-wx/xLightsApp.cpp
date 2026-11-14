@@ -86,6 +86,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "composer/RecipeLibrary.h"
 #include "composer/RecipeTest.h"
 #include "composer/UnderstandingTest.h"
+#include "composer/StageTest.h"
 #include "composer/ReferenceStudy.h"
 #include "composer/VisualDirection.h"
 #include "composer/PipelineTest.h"
@@ -1159,7 +1160,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test") {
             headlessArg = true;
             break;
         }
@@ -1340,6 +1341,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "composer-recipe-extract", "internal tool: read the recipes of a finished --sequence on its show (-s, a copy with all controllers inactive) into --out <recipes.json>, with --package and --authorship, and exit" },
         { wxCMD_LINE_OPTION, "", "package", "with --composer-recipe-extract: the show's name, for provenance" },
         { wxCMD_LINE_OPTION, "", "authorship", "with --composer-recipe-extract: who made the source" },
+        { wxCMD_LINE_SWITCH, "", "composer-stage-test", "internal test: light fields, the stage space, the Stage Field effect rendered across figures, layers and the global director, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-understanding-test", "internal test: what the recording says, the voices, the figures and who performs what, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-understand", "internal tool: what the recording --audio says (with --stems role=path;...) into the folder --out, and exit" },
         { wxCMD_LINE_OPTION, "", "stems", "with --composer-understand: the song's separate recordings, role=path separated by ';' (voice, chorus, narration, music)" },
@@ -2349,6 +2351,18 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunRecipeExtraction(options));
+    }
+
+    if (parser.Found("composer-stage-test")) {
+        wxString out;
+        if (!parser.Found("out", &out)) {
+            spdlog::error("--composer-stage-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunStageTest(out.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-understanding-test")) {

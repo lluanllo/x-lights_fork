@@ -21,6 +21,7 @@
 #include "utils/FileUtils.h"
 #include "OffEffect.h"
 #include "OnEffect.h"
+#include "StageFieldEffect.h"
 #include "AdjustEffect.h"
 #include "BarsEffect.h"
 #include "ButterflyEffect.h"
@@ -156,6 +157,7 @@ EffectManager::EffectManager(std::string metadataDir)
 	add(createEffect(eff_VUMETER));
     add(createEffect(eff_WARP));
     add(createEffect(eff_WAVE));
+    add(createEffect(eff_STAGEFIELD));
 
     //Map an old name
     effectsByName["CoroFaces"] = GetEffect("Faces");
@@ -237,6 +239,7 @@ RenderableEffect *EffectManager::createEffect(RGB_EFFECTS_e eff) {
         case eff_VUMETER: return new VUMeterEffect(eff_VUMETER);
         case eff_WARP: return new WarpEffect(eff_WARP);
         case eff_WAVE: return new WaveEffect(eff_WAVE);
+        case eff_STAGEFIELD: return new StageFieldEffect(eff_STAGEFIELD);
         default: return nullptr;
     }
 }

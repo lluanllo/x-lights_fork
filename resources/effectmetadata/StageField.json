@@ -1,0 +1,24 @@
+{
+    "effectName": "Stage Field",
+    "properties": [
+        {
+            "id": "StageField_Spec",
+            "label": "Field",
+            "type": "string",
+            "controlType": "text",
+            "default": "fn=wave;ox=0.5;oy=0.5;v=0.8;w=0.12;dur=2",
+            "description": "The gesture this light field draws, as the Show Composer writes it: the function (pulse, wave, ripple, expansion, sweep, chase, spiral, flow, fade, gradient, decay, echo), its origin on the stage (ox, oy, 0-1), speed (stage units a second), front width, duration and envelope, the figure's place on the stage (m) and the lights it may or may not light (only, skip; xLights' light numbers). Every model that shares the same field and start shows one movement across them."
+        },
+        {
+            "id": "StageField_Intensity",
+            "label": "Intensity",
+            "type": "int",
+            "controlType": "slider",
+            "default": 100,
+            "min": 0,
+            "max": 100,
+            "lockable": true,
+            "description": "How bright the field is on this model, as a percentage of what the field gives."
+        }
+    ]
+}

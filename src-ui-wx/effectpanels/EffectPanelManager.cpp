@@ -159,6 +159,7 @@ void EffectPanelManager::RegisterPanels() {
     RegisterJsonSubclass<VUMeterPanel>(E::eff_VUMETER, "VU Meter");
     RegisterJsonSubclass<WarpPanel>(E::eff_WARP, "Warp");
     RegisterJsonSubclass<WavePanel>(E::eff_WAVE, "Wave");
+    RegisterJson(E::eff_STAGEFIELD, "Stage Field");
 }
 
 xlEffectPanel* EffectPanelManager::GetPanel(int effectId, wxWindow* parent) {
