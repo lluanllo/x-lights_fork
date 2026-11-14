@@ -22,6 +22,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -1131,7 +1132,11 @@ private:
             const long long gap = std::chrono::duration_cast<std::chrono::milliseconds>(now - _last).count();
             _maxGapMS = std::max<long long>(_maxGapMS, gap);
             if (gap > 1000 && _index < _steps.size()) {
-                Log(fmt::format("  (the window did not answer for {} ms during \"{}\")", gap, _steps[_index].name));
+                // The wall-clock time, to find what else happened then in the xLights log.
+                const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                char clock[16];
+                std::strftime(clock, sizeof(clock), "%H:%M:%S", std::localtime(&now));
+                Log(fmt::format("  (the window did not answer for {} ms during \"{}\", until {})", gap, _steps[_index].name, clock));
             }
         }
         _last = now;
