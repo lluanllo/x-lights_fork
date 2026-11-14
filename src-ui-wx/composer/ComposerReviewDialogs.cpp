@@ -154,6 +154,30 @@ wxString PreferenceName(const std::string& key, const MediaLibrary* library) {
     if (key == "director.christmas") {
         return _("Christmas colours rather than the song's");
     }
+    if (key == "color.variety") {
+        return _("More variety of colour in a scene");
+    }
+    if (key == "color.contrast") {
+        return _("More contrast between figures");
+    }
+    if (key == "color.accents") {
+        return _("Stronger accents");
+    }
+    if (key == "color.evolution") {
+        return _("Colours changing more from scene to scene");
+    }
+    if (key == "color.gradual") {
+        return _("Softer colour changes");
+    }
+    if (key == "color.saturation") {
+        return _("Fuller colours");
+    }
+    if (key == "color.warmth") {
+        return _("Warmer colours");
+    }
+    if (key == "color.identity") {
+        return _("Figures keep their own colours");
+    }
     if (key == "light.dark") {
         return _("Dark pictures and videos");
     }
@@ -870,7 +894,13 @@ wxString CriterionName(const std::string& c) {
 
 wxString EvaluationTagName(const std::string& t) {
     static const std::map<std::string, wxString> NAMES = { { "liked", _("I liked it") }, { "monotonous", _("Monotonous") }, { "too-busy", _("Too busy") }, { "too-calm", _("Too calm") },
-                                                           { "too-christmas", _("Too Christmas-coloured") }, { "not-christmas", _("Not Christmas enough") } };
+                                                           { "too-christmas", _("Too Christmas-coloured") }, { "not-christmas", _("Not Christmas enough") },
+                                                           { "too-monochrome", _("Too much in one colour") }, { "too-saturated", _("Colours too strong") },
+                                                           { "low-contrast", _("Not enough contrast") }, { "unrelated-colours", _("Too many colours that do not go together") },
+                                                           { "few-accents", _("Missing accents") }, { "too-much-contrast", _("Too much contrast") },
+                                                           { "abrupt-colour-changes", _("Colours change too suddenly") }, { "colours-unlike-song", _("Colours do not fit the music") },
+                                                           { "figures-alike", _("Figures too alike") }, { "identity-altered", _("Figures lost their own colours") },
+                                                           { "no-colour-evolution", _("The colours do not evolve") } };
     const auto it = NAMES.find(t);
     return it != NAMES.end() ? it->second : U(t);
 }
@@ -878,7 +908,13 @@ wxString EvaluationTagName(const std::string& t) {
 wxString EvaluationRuleName(const std::string& r) {
     static const std::map<std::string, wxString> NAMES = { { "more-variety", _("Change the looks more from scene to scene") }, { "less-variety", _("Keep an idea longer") },
                                                            { "more-christmas", _("Use more Christmas colours") }, { "more-song-colours", _("Use more of the song's own colours") },
-                                                           { "keep-recipes", _("Mark this show's recipes as favourites") } };
+                                                           { "keep-recipes", _("Mark this show's recipes as favourites") },
+                                                           { "more-colour-variety", _("More variety of colour") }, { "keep-colour-families", _("Keep families of colour") },
+                                                           { "more-accents", _("More accents") }, { "more-figure-contrast", _("More contrast between figures") },
+                                                           { "less-contrast", _("Less contrast") }, { "smoother-colour-transitions", _("Softer colour changes") },
+                                                           { "fewer-warm-colours", _("Fewer warm colours") }, { "softer-colours", _("Softer colours") },
+                                                           { "more-scene-variation", _("More change of colour from scene to scene") },
+                                                           { "respect-own-colours", _("Respect the figures' own colours") } };
     const auto it = NAMES.find(r);
     return it != NAMES.end() ? it->second : U(r);
 }

@@ -8,6 +8,8 @@
 #include "composer/GenerationValidator.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/MusicAssist.h"
+#include "composer/ArtisticPreferences.h"
+#include "composer/VisualReview.h"
 #include "ai/IServiceSettingsStore.h"
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
@@ -182,6 +184,7 @@ public:
         TestSpace();
         TestPalettes();
         TestGroq();
+        TestLearning();
         if (Setup()) {
             TestDirector();
             TestEdits();
@@ -390,6 +393,48 @@ private:
 
         // The interpretation reaches the colours, and says where it came from.
         _groqBrief = again.brief;
+    }
+
+    // ------------------------------------------------------------ learning
+
+    void TestLearning() {
+        Title("A person's colour observations become rules only when chosen, and only after two shows");
+        ShowEvaluation e;
+        e.reviewer = "test";
+        e.tags = { "too-monochrome", "figures-alike", "abrupt-colour-changes", "too-saturated", "identity-altered", "few-accents" };
+        const std::vector<std::string> suggested = SuggestRules(e);
+        const auto has = [&](const char* r) { return std::find(suggested.begin(), suggested.end(), r) != suggested.end(); };
+        Check(has("more-colour-variety") && has("more-figure-contrast") && has("smoother-colour-transitions") && has("softer-colours") && has("respect-own-colours") && has("more-accents"),
+              "what a person says of the colours suggests rules; nothing is decided yet");
+        VisualReview one;
+        one.sequence = "uno.xsq";
+        std::string why;
+        ShowEvaluation contradicting = e;
+        contradicting.rules = { "more-colour-variety", "keep-colour-families" };
+        Check(!EvaluateShow(one, contradicting, why) && why == "rules-contradict", "two rules that contradict each other are refused");
+        e.rules = { "more-colour-variety", "smoother-colour-transitions", "respect-own-colours" };
+        ArtisticPreferences prefs;
+        Check(EvaluateShow(one, e, why) && LearnFromReview(prefs, one, nullptr, "p") > 0, "the rules a person ticked are kept");
+        const auto find = [&](const std::string& key) {
+            for (const Preference& p : ComputePreferences(prefs)) {
+                if (p.key == key) {
+                    return p;
+                }
+            }
+            return Preference();
+        };
+        Check(find("color.variety").learned > 0 && !find("color.variety").active && !EffectivePreferences(prefs).contains("color.variety"),
+              "one show is not a taste: learned, not used yet");
+        VisualReview two;
+        two.sequence = "dos.xsq";
+        Check(EvaluateShow(two, e, why) && LearnFromReview(prefs, two, nullptr, "p") > 0 && find("color.variety").active && find("color.gradual").active && find("color.identity").active,
+              "a second show saying the same: now it is used");
+        Check(ForgetReview(prefs, "dos.xsq") > 0 && !find("color.variety").active, "and forgetting one show takes it back");
+        ArtisticPreferences mine;
+        SetPreference(mine, "color.warmth", -0.8);
+        Check(EffectivePreferences(mine).at("color.warmth") < 0, "a person can set a preference by hand (fewer warm colours)");
+        EnablePreference(mine, "color.warmth", false);
+        Check(!EffectivePreferences(mine).contains("color.warmth"), "and turn it off");
     }
 
     // ------------------------------------------------------------ fixture
@@ -644,6 +689,30 @@ private:
         const ChromaticScore christmas = DirectColors(Input(nullptr, xmas));
         Check(HueDistance(christmas.song.anchorHue, 27) < 20 || HueDistance(christmas.song.anchorHue, 145) < 20 || HueDistance(christmas.song.anchorHue, 82) < 20,
               fmt::format("with nothing else, a full Christmas influence starts from a Christmas colour ({:.0f}°)", christmas.song.anchorHue));
+        ChromaticOptions cool, soft, quick;
+        cool.warmth = -1;
+        soft.saturation = 0;
+        soft.gradual = 1;
+        quick.gradual = 0;
+        const ChromaticScore cooler = DirectColors(Input(nullptr, cool));
+        double warmthCool = 0, warmthBase = 0;
+        for (size_t i = 0; i < cooler.scenes.size(); ++i) {
+            for (const char* role : { "secondary", "accent", "contrast" }) {
+                warmthCool += Warmth(cooler.scenes[i].palette.Get(role)->h);
+                warmthBase += Warmth(score.scenes[i].palette.Get(role)->h);
+            }
+        }
+        Check(warmthCool < warmthBase, "asked for fewer warm colours, the related colours turn cooler");
+        const ChromaticScore softer = DirectColors(Input(nullptr, soft));
+        Check(softer.scenes[3].palette.Get("anchor")->C < score.scenes[3].palette.Get("anchor")->C, "asked for softer colours, less chroma");
+        const ChromaticScore slow = DirectColors(Input(nullptr, soft));
+        const ChromaticScore fast = DirectColors(Input(nullptr, quick));
+        int slowLength = 0, fastLength = 0;
+        for (size_t i = 0; i < slow.scenes.size(); ++i) {
+            slowLength += slow.scenes[i].toNext.endMS - slow.scenes[i].toNext.startMS;
+            fastLength += fast.scenes[i].toNext.endMS - fast.scenes[i].toNext.startMS;
+        }
+        Check(slowLength > fastLength, fmt::format("asked for softer changes, the transitions last longer ({} ms against {} ms)", slowLength, fastLength));
         ChromaticOptions off;
         off.enabled = false;
         Choreography untouched = _choreo;

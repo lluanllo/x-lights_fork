@@ -135,6 +135,22 @@ int LearnFromReview(ArtisticPreferences& prefs, const VisualReview& review, cons
             add(origin, "director.variety", rule == "more-variety" ? 1.0 : -1.0, 1.0, rule);
         } else if (rule == "more-christmas" || rule == "more-song-colours") {
             add(origin, "director.christmas", rule == "more-christmas" ? 1.0 : -1.0, 1.0, rule);
+        } else if (rule == "more-colour-variety" || rule == "keep-colour-families") {
+            add(origin, "color.variety", rule == "more-colour-variety" ? 1.0 : -1.0, 1.0, rule);
+        } else if (rule == "more-figure-contrast" || rule == "less-contrast") {
+            add(origin, "color.contrast", rule == "more-figure-contrast" ? 1.0 : -1.0, 1.0, rule);
+        } else if (rule == "more-accents") {
+            add(origin, "color.accents", 1.0, 1.0, rule);
+        } else if (rule == "more-scene-variation") {
+            add(origin, "color.evolution", 1.0, 1.0, rule);
+        } else if (rule == "smoother-colour-transitions") {
+            add(origin, "color.gradual", 1.0, 1.0, rule);
+        } else if (rule == "softer-colours") {
+            add(origin, "color.saturation", -1.0, 1.0, rule);
+        } else if (rule == "fewer-warm-colours") {
+            add(origin, "color.warmth", -1.0, 1.0, rule);
+        } else if (rule == "respect-own-colours") {
+            add(origin, "color.identity", 1.0, 1.0, rule);
         }
     }
     for (const ClipReview& c : review.clips) {

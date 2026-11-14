@@ -399,8 +399,9 @@ private:
                     }
                 }
                 const bool character = std::find(p.roles.begin(), p.roles.end(), "character") != p.roles.end() || std::find(p.roles.begin(), p.roles.end(), "narrator") != p.roles.end();
-                // A character keeps its colours; any figure whose colours a person chose too.
-                f.character = !f.identity.empty() && (character || manual);
+                // A character keeps its colours; any figure whose colours a person chose too,
+                // and every figure with parts of its own colour when the maker asked for it.
+                f.character = !f.identity.empty() && (character || manual || _o.respectIdentity);
             }
         }
         if (_in.edits != nullptr) {
@@ -453,6 +454,10 @@ private:
                 }
             }
         }
+        // What the maker taught about warmth: a pull towards that side of the circle.
+        if (std::fabs(_o.warmth) >= 0.1) {
+            _suggested.push_back({ _o.warmth > 0 ? 55.0 : ICE_BLUE, 0.4 * std::fabs(_o.warmth) });
+        }
         // How warm the interpretation feels the song: a pull towards that side of the circle.
         if (b != nullptr && b->warmth >= -1 && std::fabs(b->warmth) >= 0.3) {
             _suggested.push_back({ b->warmth > 0 ? 55.0 : ICE_BLUE, 0.35 * std::fabs(b->warmth) });
@@ -460,6 +465,7 @@ private:
         if (b != nullptr && b->colorIntensity >= 0) {
             _intensity = 0.75 + 0.35 * b->colorIntensity;
         }
+        _intensity *= 0.8 + 0.4 * std::clamp(_o.saturation, 0.0, 1.0);
         const double xmas = std::clamp(_o.christmasInfluence, 0.0, 1.0);
         if (xmas > 0.05) {
             _suggested.push_back({ CHRISTMAS_RED, 0.9 * xmas });
@@ -1280,7 +1286,8 @@ private:
         const double beat = BeatMS(sp.endMS);
         const double hueMove = HueDistance(sp.palette.anchorHue, next.palette.anchorHue);
         double beats = 2;
-        if (EventNear("drop", next.startMS, 300) || EventNear("reentry", next.startMS, 300) || EventNear("accent", next.startMS, 120) || next.evolution == "climax") {
+        const bool soft = _o.gradual >= 0.75; // the maker asked for softer changes: only a real break cuts
+        if (EventNear("drop", next.startMS, 300) || EventNear("reentry", next.startMS, 300) || (!soft && (EventNear("accent", next.startMS, 120) || next.evolution == "climax"))) {
             sp.toNext.kind = "cut";
             sp.toNext.why = COMPOSER_TEXT("the music changes at once: so do the colours");
             beats = 0;
@@ -1319,6 +1326,7 @@ private:
         if (_o.evolution < 0.15 && sp.toNext.kind != "cut") {
             beats = std::min(beats, 2.0);
         }
+        beats *= 0.5 + std::clamp(_o.gradual, 0.0, 1.0); // 0.5 the middle: as chosen
         const int length = static_cast<int>(std::min({ beats * beat, 0.4 * (sp.endMS - sp.startMS), 4000.0 }));
         sp.toNext.startMS = sp.endMS - std::max(0, length);
         // Figure by figure: from one side of the house to the other, alternating sides.
@@ -1655,7 +1663,8 @@ std::string ToJson(const ChromaticScore& s) {
     const ChromaticOptions& o = s.options;
     return json({ { "kind", "composer-color-score" }, { "schemaVersion", s.schemaVersion }, { "version", s.version }, { "enabled", s.enabled },
                   { "options", { { "enabled", o.enabled }, { "variety", o.variety }, { "contrast", o.contrast }, { "accents", o.accents }, { "evolution", o.evolution },
-                                 { "christmasInfluence", o.christmasInfluence }, { "songColors", o.songColors }, { "seed", o.seed } } },
+                                 { "christmasInfluence", o.christmasInfluence }, { "saturation", o.saturation }, { "warmth", o.warmth }, { "gradual", o.gradual },
+                                 { "respectIdentity", o.respectIdentity }, { "songColors", o.songColors }, { "seed", o.seed } } },
                   { "song", PaletteJson(s.song) }, { "identityReason", s.identityReason }, { "briefSource", s.briefSource }, { "mood", s.mood }, { "scenes", scenes },
                   { "motifs", s.motifs }, { "edits", s.edits }, { "warnings", s.warnings }, { "limits", s.limits }, { "review", "not-reviewed" } })
         .dump(1);
@@ -1682,6 +1691,10 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
         s.options.accents = o.value("accents", 0.5);
         s.options.evolution = o.value("evolution", 0.5);
         s.options.christmasInfluence = o.value("christmasInfluence", 0.5);
+        s.options.saturation = o.value("saturation", 0.5);
+        s.options.warmth = o.value("warmth", 0.0);
+        s.options.gradual = o.value("gradual", 0.5);
+        s.options.respectIdentity = o.value("respectIdentity", false);
         s.options.songColors = o.value("songColors", std::vector<std::string>());
         s.options.seed = o.value("seed", static_cast<uint64_t>(2026));
         s.song = PaletteFrom(root.value("song", json::object()));

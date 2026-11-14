@@ -1408,6 +1408,17 @@ void DirectTheColors(GenerationRun& run, GenerationStage S) {
         }
     }
     o.songColors = r.songColors.value_or(keep ? before.songColors : std::vector<std::string>());
+    // What only the maker's evaluations set: the middle until two shows say otherwise.
+    const auto taughtValue = [&](const char* key) { return taught.contains(key) ? taught.at(key) : 0.0; };
+    o.saturation = std::clamp(0.5 + 0.3 * taughtValue("color.saturation"), 0.0, 1.0);
+    o.warmth = std::clamp(0.6 * taughtValue("color.warmth"), -1.0, 1.0);
+    o.gradual = std::clamp(0.5 + 0.3 * taughtValue("color.gradual"), 0.0, 1.0);
+    o.respectIdentity = taughtValue("color.identity") > 0.2;
+    for (const char* key : { "color.saturation", "color.warmth", "color.gradual", "color.identity" }) {
+        if (taught.contains(key)) {
+            Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
+        }
+    }
     o.christmasInfluence = run.visualPlan.enabled ? run.visualPlan.options.christmasInfluence : 0.5;
     o.seed = run.plan.seed;
     run.colorWanted = on;

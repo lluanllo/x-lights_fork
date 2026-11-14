@@ -145,6 +145,11 @@ struct ChromaticOptions {
     double accents = 0.5;    // "Intensidad de acentos"
     double evolution = 0.5;  // "Evolución entre escenas": how far the palette moves from scene to scene
     double christmasInfluence = 0.5;
+    // From what the maker taught (ArtisticPreferences), the middle when nothing was:
+    double saturation = 0.5; // fuller (1) or softer (0) colours
+    double warmth = 0;       // -1 cooler, 1 warmer
+    double gradual = 0.5;    // slower, softer transitions (1) or quicker (0)
+    bool respectIdentity = false; // every figure with parts of its own colour keeps them
     std::vector<std::string> songColors; // the person's colours for the song; first the anchor
     uint64_t seed = 2026;
 };
