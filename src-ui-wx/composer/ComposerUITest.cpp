@@ -37,6 +37,7 @@
 #include "ComposerRecipeDialogs.h"
 #include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
+#include "ComposerStageDialogs.h"
 #include "ComposerUnderstandingDialogs.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
@@ -633,6 +634,10 @@ private:
                                   return false;
                               };
                               Check(has(_dialog->GenerateArguments(), "--understanding", "on"), "the show is made with what was heard");
+                              Check(has(_dialog->GenerateArguments(), "--stage-director", "on"), "and with the whole installation directed as one stage");
+                              _dialog->StagePanel()->SetDirectorOn(false);
+                              Check(has(_dialog->GenerateArguments(), "--stage-director", "off"), "or not, when that is turned off");
+                              _dialog->StagePanel()->SetDirectorOn(true);
                               _dialog->SetUseUnderstanding(false);
                               Check(has(_dialog->GenerateArguments(), "--understanding", "off"), "and without it, to compare, when it is turned off");
                               _dialog->SetUseUnderstanding(true);
@@ -671,6 +676,62 @@ private:
                               return true;
                           },
                            1800 });
+        _steps.push_back({ "the stage director", [this]() {
+                              _dialog->GoTo(ShowComposerDialog::Step::Generate);
+                              StageDirectorPanel* panel = _dialog->StagePanel();
+                              const ReportFolder& balanced = _dialog->LevelReport(AutomationLevel::Balanced);
+                              Check(panel != nullptr && panel->Scenes() > 0 && !balanced.stageScore.empty() && !balanced.stageLights.empty(),
+                                    fmt::format("step 4 shows the director's score: {} scenes", panel != nullptr ? panel->Scenes() : 0));
+                              if (panel == nullptr || panel->Scenes() == 0) {
+                                  return true;
+                              }
+                              GlobalStageScore score;
+                              std::string error;
+                              (void)FromJson(balanced.stageScore, score, error);
+                              int pick = 0;
+                              for (size_t i = 0; i < score.scenes.size(); ++i) {
+                                  if (!score.scenes[i].gestures.empty()) {
+                                      pick = static_cast<int>(i);
+                                      break;
+                                  }
+                              }
+                              Check(panel->SelectScene(pick) && !panel->Detail().IsEmpty(), "a scene says, in plain words, how the house is used, who takes part and why");
+                              Capture(_dialog, "director-de-escena");
+                              const int before = panel->PendingEdits();
+                              const std::string edited = panel->Edit({ "mode", score.scenes[static_cast<size_t>(pick)].startMS, -1, "rest", "" });
+                              Check(edited.empty() && panel->PendingEdits() == before + 1, "a person's change of mode is saved apart, to be applied when composed again");
+                              Check(panel->Undo().empty() && panel->PendingEdits() == before, "and undone");
+                              const GlobalGesture* g = score.gestures.empty() ? nullptr : &score.gestures.front();
+                              auto* map = new StageMapDialog(_dialog, balanced, "", g != nullptr ? g->startMS + 300 : 0);
+                              map->Show();
+                              map->Map()->Refresh();
+                              map->Map()->Update();
+                              Check(g == nullptr || map->Map()->LitLights() > 0, fmt::format("the installation's map lights the gesture as its fields say ({} lights)", map->Map()->LitLights()));
+                              Check(!map->Describe().IsEmpty(), "and says what is happening then");
+                              Capture(map, "coreografia-instalacion");
+                              map->Destroy();
+                              std::string figure;
+                              for (const ChoreographyEvent& e : balanced.choreography.events) {
+                                  if (e.intent == "stage-gesture") {
+                                      figure = e.target;
+                                      break;
+                                  }
+                              }
+                              auto* layers = new FigureLayersDialog(_dialog, balanced, "", figure);
+                              layers->ShowFigure(figure, g != nullptr ? g->startMS : 0);
+                              layers->Show();
+                              Check(figure.empty() || layers->Rows() > 0, fmt::format("a figure's layers are listed, top to bottom ({}: {} rows)", figure, layers->Rows()));
+                              Capture(layers, "capas-de-esta-figura");
+                              layers->Destroy();
+                              auto* library = new StageLibraryDialog(_dialog, _dialog->ShowFolder());
+                              library->Show();
+                              Check(library->Toggle("cascade", false, true) && library->Library().Find("cascade")->excluded, "a gesture can be left out of what the director chooses");
+                              Check(library->AddOwn("Mi brillo", "pulse") && library->Library().Find("own:Mi brillo") != nullptr, "and a composition of one's own added");
+                              Capture(library, "composiciones-y-gestos");
+                              library->Destroy();
+                              return true;
+                          },
+                           60 });
         _steps.push_back({ "the visual montage", [this]() {
                               if (!_started) {
                                   const VisualMediaStoryboard& b = _dialog->ShownStoryboard();
@@ -813,6 +874,18 @@ private:
                                   onExcluded += e.target == _excluded || r.capabilities.Overlap(e.target, _excluded) ? 1 : 0;
                               }
                               Check(!_lockedEvents.empty() && kept == _lockedEvents, fmt::format("on another level, the {} locked effects of {} are exactly as they were", _lockedEvents.size(), _locked));
+                              if (kept != _lockedEvents) {
+                                  for (const std::string& e : _lockedEvents) {
+                                      if (!kept.contains(e)) {
+                                          Log("    locked but missing: " + e);
+                                      }
+                                  }
+                                  for (const std::string& e : kept) {
+                                      if (!_lockedEvents.contains(e)) {
+                                          Log("    locked but not asked: " + e);
+                                      }
+                                  }
+                              }
                               Check(onExcluded == 0, fmt::format("{} is dark, and no group lights it", _excluded));
                               _dialog->SetLevel(AutomationLevel::Balanced);
                               Capture(_dialog, "correcciones");
@@ -934,6 +1007,35 @@ private:
                                   Capture(d, "que-hicieron-las-figuras");
                                   d->Destroy();
                               }
+                              return true;
+                          },
+                           30 });
+        _steps.push_back({ "the whole installation", [this]() {
+                              const ReportFolder& r = _dialog->ResultReport();
+                              std::string fseq;
+                              std::error_code ec;
+                              for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::path(_dialog->ResultReportDir()), ec)) {
+                                  if (entry.path().extension() == ".fseq" && entry.path().string().find(".failed.") == std::string::npos) {
+                                      fseq = entry.path().string();
+                                  }
+                              }
+                              Check(!r.stageCheck.empty() && r.stageCheck.find("\"review\": \"not-reviewed\"") != std::string::npos, "the render of the installation is measured, and nothing is approved");
+                              auto* map = new StageMapDialog(_dialog, r, fseq, 0);
+                              map->Show();
+                              Check(map->Map()->HasRender() && map->Map()->UsingRender(), "the whole installation is shown as xLights drew it");
+                              GlobalStageScore score;
+                              std::string error;
+                              (void)FromJson(r.stageScore, score, error);
+                              int lit = 0;
+                              for (size_t i = 0; i < score.gestures.size() && i < 3; ++i) {
+                                  map->SetTime(score.gestures[i].startMS + 400);
+                                  map->Map()->Refresh();
+                                  map->Map()->Update();
+                                  lit = std::max(lit, map->Map()->LitLights());
+                              }
+                              Check(score.gestures.empty() || lit > 0, fmt::format("at its gestures, the render shows lit lights ({})", lit));
+                              Capture(map, "instalacion-entera");
+                              map->Destroy();
                               return true;
                           },
                            30 });

@@ -86,6 +86,9 @@ public:
         Moments();
         Singing();
         Sharing(score);
+        for (const std::string& f : _locked) {
+            score.limits.push_back("locked:" + f); // a person locked or edited its effects: the director leaves it as it is
+        }
         for (const PlanSegment& s : _in.plan->segments) {
             score.scenes.push_back(Scene(s, score));
         }
@@ -159,6 +162,10 @@ private:
                     }
                 }
                 _facesUsed[figure].insert(face);
+            }
+            if (e.state == DecisionState::Locked || e.state == DecisionState::ManualEdit) {
+                const size_t slash = e.target.find('/');
+                _locked.insert(slash == std::string::npos ? e.target : e.target.substr(0, slash));
             }
         }
     }
@@ -592,7 +599,7 @@ private:
         std::vector<std::string> out;
         for (const SceneRole& r : sc.roles) {
             const Figure* f = Find(r.figure);
-            if (r.role != "rest" && (withProtagonists || r.role != "protagonist") && f != nullptr && !f->allFace) {
+            if (r.role != "rest" && (withProtagonists || r.role != "protagonist") && f != nullptr && !f->allFace && !_locked.contains(r.figure)) {
                 out.push_back(r.figure);
             }
         }
@@ -822,7 +829,7 @@ private:
             // Under a voice that leads: a slow field joining the figures that accompany it.
             std::vector<std::string> background;
             for (const SceneRole& r : sc.roles) {
-                if ((r.role == "background" || r.role == "complement") && Find(r.figure) != nullptr && !Find(r.figure)->allFace) {
+                if ((r.role == "background" || r.role == "complement") && Find(r.figure) != nullptr && !Find(r.figure)->allFace && !_locked.contains(r.figure)) {
                     background.push_back(r.figure);
                 }
             }
@@ -845,7 +852,7 @@ private:
         // would get an effect that never lights.
         std::erase_if(g.participants, [&](const GestureParticipant& p) { return g.startMS + p.delayMS + 300 > g.endMS; });
         // Nor one whose face is singing then: while a face sings, its light is its singing.
-        std::erase_if(g.participants, [&](const GestureParticipant& p) { return Sings(p.figure, g.startMS + p.delayMS - 100, g.endMS + 400); });
+        std::erase_if(g.participants, [&](const GestureParticipant& p) { return Sings(p.figure, g.startMS + p.delayMS - 100, g.endMS + 400) || _locked.contains(p.figure); });
         if (g.participants.empty() || g.endMS <= g.startMS) {
             return false;
         }
@@ -884,7 +891,7 @@ private:
         for (size_t k = 0; k < n; ++k) {
             g.participants.push_back({ chosen[k], k == 0 ? "source" : "receiver", run[k].ms - g.startMS, 1.0, "pulse", fmt::format("hit {} of {}", k + 1, run.size()) });
         }
-        g.reasons.push_back(fmt::format("{} hits close together: one figure for each, in turn across the house", run.size()));
+        g.reasons.push_back("a few hits close together: one figure for each, in turn across the house");
         g.id = fmt::format("{}@{}", GestureKindId(GestureKind::Cascade), g.startMS);
         sc.gestures.push_back(g.id);
         score.gestures.push_back(std::move(g));
@@ -1017,7 +1024,7 @@ private:
                     continue;
                 }
                 const Figure* f = Find(r.figure);
-                if (f == nullptr || f->profile == nullptr) {
+                if (f == nullptr || f->profile == nullptr || _locked.contains(r.figure)) {
                     continue;
                 }
                 if (f->face && Sings(r.figure, sc.startMS, sc.endMS)) {
@@ -1080,6 +1087,7 @@ private:
     std::map<std::string, std::vector<std::pair<int, int>>> _singing;
     std::map<std::string, std::vector<std::string>> _sharing;
     std::map<std::string, std::set<std::string>> _facesUsed; // the face definitions each figure sings with
+    std::set<std::string> _locked; // figures with effects a person locked or edited
     int _sceneIndex = 0;
     bool _manual = false; // the gesture being made was placed by a person
 };
@@ -1221,7 +1229,16 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     const int lastMS = (std::max(score.durationMS, c.durationMS) / frame) * frame;
     const auto down = [&](int ms) { return std::clamp((ms / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
     const auto near = [&](int ms) { return std::clamp(((ms + frame / 2) / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
-    int gestureEvents = 0, identityEvents = 0, rested = 0, late = 0;
+    int gestureEvents = 0, identityEvents = 0, rested = 0, late = 0, lockedOut = 0;
+    // A figure whose effects a person locked or edited keeps them as they are: no layer of the
+    // score goes on it, so none of its effects has to move.
+    std::set<std::string> locked;
+    for (const ChoreographyEvent& e : c.events) {
+        if (e.state == DecisionState::Locked || e.state == DecisionState::ManualEdit) {
+            const size_t slash = e.target.find('/');
+            locked.insert(slash == std::string::npos ? e.target : e.target.substr(0, slash));
+        }
+    }
     // Resting figures: in a scene that gives the attention to a few, the others' own
     // effects stop (their faces, words and pictures stay).
     for (const StageScene& sc : score.scenes) {
@@ -1234,7 +1251,8 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         for (ChoreographyEvent& e : c.events) {
             const bool inScene = e.startMS < to && e.endMS > from;
             const bool keepAlways = e.intent == "face-sing" || e.intent == "lyric-text" || e.intent == "media" || e.prominence == Prominence::Lead || e.effect == "Faces" ||
-                                    e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.provenance.rfind("stage:", 0) == 0;
+                                    e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.provenance.rfind("stage:", 0) == 0 ||
+                                    e.state == DecisionState::Locked || e.state == DecisionState::ManualEdit;
             if (!inScene || keepAlways || sc.RoleOf(e.target) != "rest" || in.space->Find(e.target) == nullptr) {
                 kept.push_back(std::move(e));
                 continue;
@@ -1259,6 +1277,10 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     // The gestures, one Stage Field per figure, each joining at its own moment.
     for (const GlobalGesture& g : score.gestures) {
         for (const GestureParticipant& p : g.participants) {
+            if (locked.contains(p.figure)) {
+                ++lockedOut;
+                continue;
+            }
             // A little before it arrives: the front enters, it does not pop.
             const int effectStart = down(std::max(g.startMS, g.startMS + p.delayMS - 100));
             const int endMS = near(std::max(effectStart + 2 * frame, g.endMS + 400));
@@ -1292,6 +1314,10 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     }
     // Identity layers, under everything the figure has.
     for (const StageLayer& l : score.layers) {
+        if (locked.contains(l.figure)) {
+            ++lockedOut;
+            continue;
+        }
         const int from = near(l.startMS);
         const int to = near(l.endMS);
         if (to <= from) {
@@ -1348,6 +1374,9 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         touched.insert(t);
     }
     for (const std::string& t : touched) {
+        if (locked.contains(t)) {
+            continue; // its layers are a person's: none moves
+        }
         const int top = gestures.contains(t) ? Stack(gestures[t], 0) : 0;
         int deepest = top - 1;
         if (own.contains(t)) {
@@ -1364,7 +1393,8 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         return a.startMS != b.startMS ? a.startMS < b.startMS : a.target != b.target ? a.target < b.target : a.layer < b.layer;
     });
     c.metrics = MeasureChoreography(c);
-    notes.push_back(fmt::format("{} gesture effects, {} identity layers, {} background effects rested, {} reached too late left out", gestureEvents, identityEvents, rested, late));
+    notes.push_back(fmt::format("{} gesture effects, {} identity layers, {} background effects rested, {} reached too late left out, {} left off figures a person locked", gestureEvents,
+                                identityEvents, rested, late, lockedOut));
     return notes;
 }
 

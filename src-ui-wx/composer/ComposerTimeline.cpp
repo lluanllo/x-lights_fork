@@ -39,7 +39,9 @@ constexpr int WORDS_Y = PHRASES_Y + PHRASES_H + 2;
 constexpr int WORDS_H = 18;
 constexpr int SHAPES_Y = WORDS_Y + WORDS_H + 2;
 constexpr int SHAPES_H = 16;
-constexpr int TOTAL_H = SHAPES_Y + SHAPES_H + 4;
+constexpr int GESTURES_Y = SHAPES_Y + SHAPES_H + 6;
+constexpr int GESTURES_H = 18;
+constexpr int TOTAL_H = GESTURES_Y + GESTURES_H + 4;
 
 wxColour SectionColour(composer::SectionKind kind) {
     switch (kind) {
@@ -117,6 +119,11 @@ void ComposerTimeline::SetSong(const composer::SongAnalysis* analysis, AudioMana
 
 void ComposerTimeline::SetLyrics(const composer::LyricAlignment* alignment) {
     _alignment = alignment;
+    Refresh();
+}
+
+void ComposerTimeline::SetGestures(std::vector<TimelineGesture> gestures) {
+    _gestures = std::move(gestures);
     Refresh();
 }
 
@@ -346,6 +353,23 @@ void ComposerTimeline::OnPaint(wxPaintEvent&) {
                 box(p.startMS, p.endMS, SHAPES_Y, SHAPES_H, wxString::FromUTF8(p.shape), wxColour(205, 220, 245));
             }
         }
+    }
+
+    // The installation's gestures: where the light travels across the figures.
+    for (const TimelineGesture& g : _gestures) {
+        if (g.endMS <= g.startMS || !visible(g.startMS, g.endMS)) {
+            continue;
+        }
+        const int x = ToX(g.startMS);
+        const int w = std::max(3, ToX(g.endMS) - x);
+        const wxColour fill = g.manual ? wxColour(150, 220, 160) : wxColour(240, 190, 120);
+        dc.SetPen(wxPen(fill.ChangeLightness(60)));
+        dc.SetBrush(wxBrush(fill));
+        dc.DrawRectangle(x, GESTURES_Y, w, GESTURES_H);
+        dc.SetClippingRegion(x, GESTURES_Y, w, GESTURES_H);
+        dc.SetTextForeground(*wxBLACK);
+        dc.DrawText(g.label, x + 3, GESTURES_Y + 2);
+        dc.DestroyClippingRegion();
     }
 
     if (HasSelection()) {

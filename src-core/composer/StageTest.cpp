@@ -928,27 +928,44 @@ private:
         // The figures that rest in the narration, each with a background effect over it.
         const StageScene* narration = SceneOf(score, "s3.0");
         std::string resting;
+        // A resting figure that none of the measured gestures uses, so locking it changes nothing measured.
+        const auto measured = [&](const std::string& f) {
+            for (const char* id : { "propagated-wave@4000", "cascade@8000" }) {
+                if (const GlobalGesture* g = score.Gesture(id)) {
+                    for (const GestureParticipant& p : g->participants) {
+                        if (p.figure == f) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
         for (const SceneRole& r : narration->roles) {
-            if (r.role == "rest" && _space.Find(r.figure) != nullptr) {
+            if (r.role == "rest" && _space.Find(r.figure) != nullptr && !measured(r.figure)) {
                 resting = r.figure;
                 break;
             }
         }
         event("bed", resting.c_str(), Prominence::Support, "accompany", 10000, 16000);
+        event("kept", resting.c_str(), Prominence::Support, "accompany", 12000, 14000);
+        c.events.back().state = DecisionState::Locked;
+        c.events.back().layer = 3;
         event("face", "Arbol Cara", Prominence::Lead, "face-sing", 11000, 15000);
         in.choreography = &c;
         const std::vector<std::string> notes = RealizeStage(score, in, c);
         for (const std::string& n : notes) {
             printf("    %s\n", n.c_str());
         }
-        bool cut = !resting.empty(), faceKept = false, specsValid = true, mouthSafe = true;
+        bool cut = !resting.empty(), faceKept = false, specsValid = true, mouthSafe = true, lockKept = false;
         int stageEvents = 0;
         const FigureProfile* face = _semantics.Find("Arbol Cara");
         const FigureRegion* mouth = face != nullptr ? face->Region("mouth") : nullptr;
         for (const ChoreographyEvent& e : c.events) {
-            if (e.target == resting && e.provenance.empty()) {
+            if (e.target == resting && e.provenance.empty() && e.state != DecisionState::Locked) {
                 cut = cut && (e.endMS <= 11000 || e.startMS >= 15000);
             }
+            lockKept = lockKept || (e.id == "kept" && e.startMS == 12000 && e.endMS == 14000 && e.layer == 3);
             faceKept = faceKept || (e.id == "face" && e.startMS == 11000 && e.endMS == 15000 && e.layer > 0);
             if (e.provenance.rfind("stage:", 0) == 0) {
                 ++stageEvents;
@@ -979,6 +996,7 @@ private:
         Check(stageEvents > 0 && specsValid, fmt::format("{} Stage Field effects, every one a valid field", stageEvents));
         Check(cut, fmt::format("a resting figure's background stops for the narration ({})", resting));
         Check(faceKept, "the narrator's face stays, one layer down to make room");
+        Check(lockKept, "an effect a person locked is left exactly as it was, even on a figure that rests");
         Check(mouthSafe, "no gesture lights the mouth of a figure with a face");
         Check(!overlap, "no two effects share a layer of a figure at the same time");
         SequenceSpec spec;

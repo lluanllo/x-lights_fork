@@ -1,4 +1,5 @@
 #include "composer/GenerationValidator.h"
+#include "composer/ProceduralField.h"
 
 #include "composer/Choreography.h"
 #include "composer/CompositionPlan.h"
@@ -1541,6 +1542,21 @@ ValidationReport ValidateChoreography(const Choreography& c, const CompositionPl
         }
         if (caps.LightsExcluded(e.target)) {
             raise(issue::ChoreoTargetExcluded, IssueSeverity::Error, IssueCategory::Configuration, &e, id);
+        }
+        if (e.effect == "Stage Field" && e.templateId.empty()) {
+            // The stage director's effects, and a person's locks of them, come from no template:
+            // what is checked is that their field is a valid one.
+            FieldSpec spec;
+            std::string error, text;
+            for (const auto& [key, value] : e.settings) {
+                if (key == "E_TEXTCTRL_StageField_Spec") {
+                    text = value;
+                }
+            }
+            if ((metadata && metadata(e.effect) == nullptr) || !FromText(text, spec, error) || !ValidateField(spec, error)) {
+                raise(issue::ChoreoTemplateUnknown, IssueSeverity::Error, IssueCategory::Configuration, &e, { { "event", e.id }, { "template", "stage-field: " + error } });
+            }
+            continue;
         }
         const EffectTemplate* t = library.Find(e.templateId);
         const nlohmann::json* md = metadata ? metadata(e.effect) : nullptr;

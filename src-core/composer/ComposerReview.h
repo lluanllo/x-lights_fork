@@ -39,6 +39,9 @@ struct ReportFolder {
     std::string storyboard;           // storyboard.json as written: the visual montage
     std::string screens;              // screens.json as written: the display's screens and their roles
     std::string review;               // review.json as written: a person's review of the pictures and videos
+    std::string stageScore;           // stage-score.json as written: the stage director's score
+    std::string stageLights;          // stage-lights.json as written: every light on the stage
+    std::string stageCheck;           // stage-check.json as written: what the render did with the installation
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

@@ -39,6 +39,7 @@
 
 class AudioManager;
 class ComposerTimeline;
+class StageDirectorPanel;
 class MediaAnalysisRunner;
 class ModelDownloadRunner;
 class StoryboardView;
@@ -130,6 +131,7 @@ public:
     [[nodiscard]] const composer::ReportFolder& ResultReport() const { return _result; }
     [[nodiscard]] const composer::CorrectionSet& Corrections() const { return _corrections; }
     [[nodiscard]] const std::string& ResultSequence() const { return _resultSequence; }
+    [[nodiscard]] const std::string& ResultReportDir() const { return _resultReportDir; }
     [[nodiscard]] const std::string& ErrorShown() const { return _lastError; }
     [[nodiscard]] wxWindow* Page(Step step) const;
     void SetTestMode(bool on) { _testMode = on; }
@@ -282,6 +284,8 @@ private:
 public:
     // The artistic director's settings, for the UI test.
     void SetDirector(int christmas, int variety, bool recipes);
+    [[nodiscard]] StageDirectorPanel* StagePanel() const { return _stagePanel; }
+    void OpenInstallation(); // step 5: the whole installation as the render drew it
     // The person's evaluation of the result, kept with its review; false when refused.
     bool SaveEvaluation(const composer::ShowEvaluation& evaluation);
     [[nodiscard]] std::map<std::string, double> ResultMeasures() const;
@@ -505,6 +509,7 @@ private:
     wxStaticText* _correctionInfo = nullptr;
     // Generate
     wxListCtrl* _stageList = nullptr;
+    StageDirectorPanel* _stagePanel = nullptr;
     wxGauge* _gauge = nullptr;
     wxStaticText* _stageInfo = nullptr;
     wxStaticText* _generateSummary = nullptr;

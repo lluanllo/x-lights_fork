@@ -482,6 +482,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerRecipeDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.h" />
 		<Unit filename="../dependencies/midifile/src/Binasc.cpp" />
