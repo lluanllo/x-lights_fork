@@ -89,6 +89,7 @@
     <ClCompile Include="..\src-ui-wx\composer\ComposerRecipeDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerStageDialogs.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerColorDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
@@ -1734,6 +1735,7 @@
     <ClInclude Include="..\src-ui-wx\composer\ComposerRecipeDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerStageDialogs.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerColorDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />

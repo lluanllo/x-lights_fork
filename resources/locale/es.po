@@ -13406,3 +13406,756 @@ msgstr "dos voces: la izquierda de la casa fluye mientras la derecha persigue"
 
 msgid "two voices: two figures work together"
 msgstr "dos voces: dos figuras trabajan juntas"
+
+msgid "\t\n"
+msgstr "\t\n"
+
+msgid "\n"
+msgstr "\n"
+
+msgid "%d changes of yours are saved; press \"Apply the Changes\" to see them."
+msgstr "Tienes %d cambios guardados; pulsa «Aplicar los cambios» para verlos."
+
+msgid "%d scenes with their own palette, from one family for the whole song."
+msgstr "%d escenas con su propia paleta, de una misma familia para toda la canción."
+
+msgid "(empty: the song and the analysis choose)"
+msgstr "(vacío: deciden la canción y el análisis)"
+
+msgid "(on purpose)"
+msgstr "(a propósito)"
+
+msgid ": only white stood out enough"
+msgstr ": solo el blanco destacaba lo suficiente"
+
+msgid "< Previous Scene"
+msgstr "< Escena anterior"
+
+msgid "A Groq key is set (in %s). It is never shown."
+msgstr "Hay una clave de Groq guardada (en %s). Nunca se muestra."
+
+msgid "A colour and the neighbours of its opposite"
+msgstr "Un color y los vecinos de su opuesto"
+
+msgid "A part that comes back to its colours"
+msgstr "Una parte que vuelve a sus colores"
+
+msgid "About %.1f families of colour share the light; the most used is %s (%.0f%%)."
+msgstr "Unas %.1f familias de color se reparten la luz; la más usada es %s (%.0f%%)."
+
+msgid "Accent"
+msgstr "Acento"
+
+msgid "Accents:"
+msgstr "Acentos:"
+
+msgid "According to %s, this part feels %s."
+msgstr "Según %s, esta parte se siente %s."
+
+msgid "Add a Colour..."
+msgstr "Añadir un color..."
+
+msgid "An answer Groq gave before is used: nothing was sent now."
+msgstr "Se usa una respuesta que Groq dio antes: ahora no se ha enviado nada."
+
+msgid "An answer kept from before was used."
+msgstr "Se ha usado una respuesta guardada de antes."
+
+msgid "Another temperature or family"
+msgstr "Otra temperatura u otra familia"
+
+msgid "Answer in contrast"
+msgstr "Respuesta en contraste"
+
+msgid "Artistic Analysis with Groq"
+msgstr "Análisis artístico con Groq"
+
+msgid "Ask Groq Again..."
+msgstr "Volver a preguntar a Groq..."
+
+msgid "Back to colours heard before"
+msgstr "Vuelve a colores ya vistos"
+
+msgid "Back to the Original Plan"
+msgstr "Volver al plan original"
+
+msgid "Back to the main colour, resolved"
+msgstr "Vuelve al color principal, resuelto"
+
+msgid "Change a Colour..."
+msgstr "Cambiar un color..."
+
+msgid "Change between scenes:"
+msgstr "Cambio entre escenas:"
+
+msgid "Changes at once"
+msgstr "Cambia de golpe"
+
+msgid "Chat models the key offers now: %d"
+msgstr "Modelos de chat que ofrece ahora la clave: %d"
+
+msgid "Check the Artistic Analysis with Groq..."
+msgstr "Comprobar análisis artístico con Groq..."
+
+msgid "Choose Its Colours..."
+msgstr "Elegir sus colores..."
+
+msgid "Choose a scene to see its colours, which figure carries each one and why."
+msgstr "Elige una escena para ver sus colores, qué figura lleva cada uno y por qué."
+
+msgid "Chosen by hand"
+msgstr "Elegido a mano"
+
+msgid "Colour Director"
+msgstr "Director cromático"
+
+msgid "Colour direction"
+msgstr "Dirección cromática"
+
+msgid "Colour director: the colours of the house"
+msgstr "Director cromático: los colores de la casa"
+
+msgid "Colour variety:"
+msgstr "Variedad cromática:"
+
+msgid "Colours"
+msgstr "Colores"
+
+msgid "Colours change too suddenly"
+msgstr "Los colores cambian demasiado de golpe"
+
+msgid "Colours changing more from scene to scene"
+msgstr "Colores que cambian más de una escena a otra"
+
+msgid "Colours do not fit the music"
+msgstr "Los colores no encajan con la música"
+
+msgid "Colours of the Figures"
+msgstr "Colores de las figuras"
+
+msgid "Colours of the Figures..."
+msgstr "Colores de las figuras..."
+
+msgid "Colours of the Show"
+msgstr "Colores del espectáculo"
+
+msgid "Colours of the Show..."
+msgstr "Colores del espectáculo..."
+
+msgid "Colours of the song:"
+msgstr "Colores de la canción:"
+
+msgid "Colours too strong"
+msgstr "Colores demasiado fuertes"
+
+msgid "Contrast:"
+msgstr "Contraste:"
+
+msgid "Deep"
+msgstr "Profundo"
+
+msgid "Direct the colours scene by scene and figure by figure"
+msgstr "Dirigir los colores escena a escena y figura a figura"
+
+msgid "Drop every change you made to the colours of this song?"
+msgstr "¿Quitar todos los cambios que has hecho a los colores de esta canción?"
+
+msgid "Every scene leads with the same colour."
+msgstr "Todas las escenas tienen el mismo color principal."
+
+msgid "Fades into the next colours"
+msgstr "Se funde con los colores siguientes"
+
+msgid "Few accents: a minority colour rarely appears."
+msgstr "Pocos acentos: rara vez aparece un color minoritario."
+
+msgid "Fewer warm colours"
+msgstr "Menos colores cálidos"
+
+msgid "Figures differ"
+msgstr "Diferencia entre figuras"
+
+msgid "Figures keep their own colours"
+msgstr "Las figuras conservan sus propios colores"
+
+msgid "Figures lost their own colours"
+msgstr "Las figuras han perdido sus propios colores"
+
+msgid "Figures too alike"
+msgstr "Figuras demasiado parecidas"
+
+msgid "Fix This Palette"
+msgstr "Fijar esta paleta"
+
+msgid "For much of the show, one colour holds most of the house."
+msgstr "Durante gran parte del espectáculo, un solo color ocupa casi toda la casa."
+
+msgid "Four colours at most: remove them with \"None\" to choose again."
+msgstr "Cuatro colores como máximo: quítalos con «Ninguno» para volver a elegir."
+
+msgid "From %s to %s: %s."
+msgstr "De %s a %s: %s."
+
+msgid "Fuller colours"
+msgstr "Colores más intensos"
+
+msgid "Generate the show first: its colours are measured on xLights' own render."
+msgstr "Genera primero el espectáculo: sus colores se miden sobre el render de xLights."
+
+msgid "Gesture at %s: %s over %d colours lit (%.0f points of difference)"
+msgstr "Gesto en %s: %s sobre %d colores encendidos (%.0f puntos de diferencia)"
+
+msgid "Give the song's lyrics first: only their text is interpreted."
+msgstr "Da primero la letra de la canción: solo se interpreta su texto."
+
+msgid "Groq"
+msgstr "Groq"
+
+msgid "Groq (an answer kept from before)"
+msgstr "Groq (una respuesta guardada de antes)"
+
+msgid "Groq (an answer saved in a file)"
+msgstr "Groq (una respuesta guardada en un archivo)"
+
+msgid "Groq (asked now)"
+msgstr "Groq (consultado ahora)"
+
+msgid "Groq only interprets the song; the colours are chosen on this computer. The Christmas slider above pulls them too."
+msgstr "Groq solo interpreta la canción; los colores se eligen en este ordenador. El control navideño de arriba también influye en ellos."
+
+msgid "Groq was asked but did not give a usable answer: the colours read the lyrics on this computer."
+msgstr "Se ha preguntado a Groq, pero no ha dado una respuesta utilizable: los colores leen la letra en este ordenador."
+
+msgid "Groq was asked now and answered."
+msgstr "Se ha preguntado ahora a Groq y ha respondido."
+
+msgid "Groq was not asked: the colours read the lyrics on this computer."
+msgstr "No se ha preguntado a Groq: los colores leen la letra en este ordenador."
+
+msgid "How the colour moves through the song (above: the plan; below: what the render showed)"
+msgstr "Cómo se mueve el color a lo largo de la canción (arriba: el plan; abajo: lo que mostró el render)"
+
+msgid "How the colours go"
+msgstr "Cómo van los colores"
+
+msgid "In one colour"
+msgstr "En un solo color"
+
+msgid "Into the next scene: %s."
+msgstr "Hacia la escena siguiente: %s."
+
+msgid "Its colour role"
+msgstr "Su papel de color"
+
+msgid "Its colours"
+msgstr "Sus colores"
+
+msgid "Keep families of colour"
+msgstr "Mantener familias de color"
+
+msgid "Last analysis: %s"
+msgstr "Último análisis: %s"
+
+msgid "Less Contrast"
+msgstr "Menos contraste"
+
+msgid "Less contrast"
+msgstr "Menos contraste"
+
+msgid "Let It Take the Palette"
+msgstr "Que tome la paleta"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "Lighter or deeper"
+msgstr "Más claro o más profundo"
+
+msgid "Main colour"
+msgstr "Color principal"
+
+msgid "Many gestures are lit in colours close to what was already there."
+msgstr "Muchos gestos se encienden en colores parecidos a lo que ya había."
+
+msgid "Missing accents"
+msgstr "Faltan acentos"
+
+msgid "Model: %s"
+msgstr "Modelo: %s"
+
+msgid "More Contrast"
+msgstr "Más contraste"
+
+msgid "More accents"
+msgstr "Más acentos"
+
+msgid "More change of colour from scene to scene"
+msgstr "Más cambio de color de una escena a otra"
+
+msgid "More contrast and saturation"
+msgstr "Más contraste y saturación"
+
+msgid "More contrast between figures"
+msgstr "Más contraste entre figuras"
+
+msgid "More or less saturated"
+msgstr "Más o menos saturado"
+
+msgid "More variety of colour"
+msgstr "Más variedad de color"
+
+msgid "More variety of colour in a scene"
+msgstr "Más variedad de color en una escena"
+
+msgid "Neighbouring colours"
+msgstr "Colores vecinos"
+
+msgid "Neutral"
+msgstr "Neutro"
+
+msgid "Next Scene >"
+msgstr "Escena siguiente >"
+
+msgid "No Groq key is set."
+msgstr "No hay ninguna clave de Groq guardada."
+
+msgid "No sign of monotony was found. That is not an approval: look at it in xLights."
+msgstr "No se ha encontrado ninguna señal de monotonía. Eso no es una aprobación: míralo en xLights."
+
+msgid "Not enough contrast"
+msgstr "Falta contraste"
+
+msgid "Nothing was sent to Groq in this check."
+msgstr "En esta comprobación no se ha enviado nada a Groq."
+
+msgid "One Family Only"
+msgstr "Una sola familia"
+
+msgid "One colour holds most of the house %.0f%% of the time; the longest stretch is %.0f s."
+msgstr "Un solo color ocupa casi toda la casa el %.0f%% del tiempo; el tramo más largo dura %.0f s."
+
+msgid "One colour in several lights"
+msgstr "Un color en varias luces"
+
+msgid "Opposite colours"
+msgstr "Colores opuestos"
+
+msgid "Plan / render"
+msgstr "Plan / render"
+
+msgid "Reading of the song: %s"
+msgstr "Lectura de la canción: %s"
+
+msgid "Remove My Choice"
+msgstr "Quitar mi elección"
+
+msgid "Respect the figures' own colours"
+msgstr "Respetar los colores propios de las figuras"
+
+msgid "Result: %s"
+msgstr "Resultado: %s"
+
+msgid "Scene %d of %d: %s, from %s"
+msgstr "Escena %d de %d: %s, desde %s"
+
+msgid "Second colour"
+msgstr "Segundo color"
+
+msgid "Secondary"
+msgstr "Secundario"
+
+msgid "Softer colour changes"
+msgstr "Cambios de color más suaves"
+
+msgid "Softer colours"
+msgstr "Colores más suaves"
+
+msgid "Something was sent to Groq in this check."
+msgstr "En esta comprobación se ha enviado algo a Groq."
+
+msgid "Stronger accents"
+msgstr "Acentos más intensos"
+
+msgid "The answer did not pass the checks."
+msgstr "La respuesta no ha superado las comprobaciones."
+
+msgid "The answer passed the checks."
+msgstr "La respuesta ha superado las comprobaciones."
+
+msgid "The artistic analysis check could not be read."
+msgstr "No se ha podido leer la comprobación del análisis artístico."
+
+msgid "The colour slides"
+msgstr "El color se desliza"
+
+msgid "The colours are not directed: each scene uses its palette on every figure, as before."
+msgstr "Los colores no se dirigen: cada escena usa su paleta en todas las figuras, como antes."
+
+msgid "The colours are presented, contained"
+msgstr "Se presentan los colores, contenidos"
+
+msgid "The colours do not evolve"
+msgstr "Los colores no evolucionan"
+
+msgid "The colours hold"
+msgstr "Los colores se mantienen"
+
+msgid "The colours of this show were not measured: generate it with the render check on."
+msgstr "Los colores de este espectáculo no se han medido: genéralo con la comprobación del render activada."
+
+msgid "The family develops"
+msgstr "La familia se desarrolla"
+
+msgid "The figures are almost the same colour."
+msgstr "Las figuras son casi del mismo color."
+
+msgid "The figures wear %.1f families at once and differ by %.0f points; a minority accent appears %.0f%% of the time."
+msgstr "Las figuras llevan %.1f familias a la vez y se diferencian en %.0f puntos; un acento minoritario aparece el %.0f%% del tiempo."
+
+msgid "The gestures differ from what was lit before them by %.0f points (half of them more); %d of %d barely stand out."
+msgstr "Los gestos se diferencian de lo que había encendido antes en %.0f puntos (la mitad, más); %d de %d apenas destacan."
+
+msgid "The local reading of the lyrics is used instead."
+msgstr "En su lugar se usa la lectura local de la letra."
+
+msgid "The main colour changes, figure by figure"
+msgstr "Cambia el color principal, figura a figura"
+
+msgid "The next colour comes in early"
+msgstr "El color siguiente entra antes"
+
+msgid "The palette holds"
+msgstr "La paleta se mantiene"
+
+msgid "The scenes repeat their colours from one to the next."
+msgstr "Las escenas repiten sus colores de una a otra."
+
+msgid "The song's colours:"
+msgstr "Los colores de la canción:"
+
+msgid "The widest palette of the song"
+msgstr "La paleta más amplia de la canción"
+
+msgid "There is a long stretch with the house in the same colour."
+msgstr "Hay un tramo largo con la casa del mismo color."
+
+msgid "There is no Groq key: the colours read the lyrics on this computer."
+msgstr "No hay clave de Groq: los colores leen la letra en este ordenador."
+
+msgid "Three colours far apart"
+msgstr "Tres colores lejanos"
+
+msgid "Too many colours that do not go together"
+msgstr "Demasiados colores que no combinan"
+
+msgid "Too much contrast"
+msgstr "Demasiado contraste"
+
+msgid "Too much in one colour"
+msgstr "Demasiado de un solo color"
+
+msgid "Transition"
+msgstr "Transición"
+
+msgid "Two pairs of opposites"
+msgstr "Dos pares de opuestos"
+
+msgid "Warm against cool"
+msgstr "Cálido contra frío"
+
+msgid "Warmer colours"
+msgstr "Colores más cálidos"
+
+msgid "What Groq received: %s. Never the audio."
+msgstr "Lo que recibió Groq: %s. Nunca el audio."
+
+msgid "What went wrong: %s"
+msgstr "Qué ha fallado: %s"
+
+msgid "What xLights' own render put on the house, against what the colour plan meant. These are measurements, not a judgement: whether it looks good is for you to say, watching it in xLights."
+msgstr "Lo que el render de xLights puso en la casa, frente a lo que pretendía el plan de color. Son medidas, no un juicio: si queda bien lo decides tú, viéndolo en xLights."
+
+msgid "Which colour each figure carries in a scene, and why. A figure can keep its own colours (a trunk brown, foliage green), take the scene's palette, or have colours you choose. Your choices are applied when the show is composed again."
+msgstr "Qué color lleva cada figura en una escena y por qué. Una figura puede conservar sus propios colores (un tronco marrón, el follaje verde), tomar la paleta de la escena o llevar los colores que elijas. Tus elecciones se aplican cuando se vuelve a componer el espectáculo."
+
+msgid "Which colour of this scene do you want to change?"
+msgstr "¿Qué color de esta escena quieres cambiar?"
+
+msgid "Work out the composition first."
+msgstr "Prepara primero la composición."
+
+msgid "Work out the composition on step 3 to see the colours of each scene."
+msgstr "Prepara la composición en el paso 3 para ver los colores de cada escena."
+
+msgid "a character keeps its own colours"
+msgstr "un personaje conserva sus propios colores"
+
+msgid "a cool colour against the warm anchor"
+msgstr "un color frío frente al principal cálido"
+
+msgid "a cool white to rest"
+msgstr "un blanco frío para descansar"
+
+msgid "a group of one family: its family's colour"
+msgstr "un grupo de una sola familia: el color de su familia"
+
+msgid "a group of the whole house: the deep anchor under the figures"
+msgstr "un grupo de toda la casa: el principal profundo bajo las figuras"
+
+msgid "a group of the whole house: the scene's colour"
+msgstr "un grupo de toda la casa: el color de la escena"
+
+msgid "a neighbour of the anchor, bright"
+msgstr "un vecino del principal, luminoso"
+
+msgid "a part that comes back"
+msgstr "una parte que vuelve"
+
+msgid "a summary measured on this computer (tempo, key, parts)"
+msgstr "un resumen medido en este ordenador (tempo, tonalidad, partes)"
+
+msgid "a warm colour against the cool anchor"
+msgstr "un color cálido frente al principal frío"
+
+msgid "a warm white to rest"
+msgstr "un blanco cálido para descansar"
+
+msgid "amber"
+msgstr "ámbar"
+
+msgid "an accent of the scene"
+msgstr "un acento de la escena"
+
+msgid "another temperature or family"
+msgstr "otra temperatura u otra familia"
+
+msgid "back to a motif heard before"
+msgstr "vuelve a un motivo ya visto"
+
+msgid "back to the anchor, resolved"
+msgstr "vuelve al principal, resuelto"
+
+msgid "blue"
+msgstr "azul"
+
+msgid "bright, for what matters"
+msgstr "luminoso, para lo importante"
+
+msgid "changes a lot"
+msgstr "cambia mucho"
+
+msgid "colours a person chose for this figure"
+msgstr "colores que una persona eligió para esta figura"
+
+msgid "comes back to the colours of its first time"
+msgstr "vuelve a los colores de su primera vez"
+
+msgid "cyan"
+msgstr "cian"
+
+msgid "discreet"
+msgstr "discretos"
+
+msgid "emerald"
+msgstr "esmeralda"
+
+msgid "every other one of its family, for movement inside it"
+msgstr "una de cada dos de su familia, para dar movimiento dentro de ella"
+
+msgid "green"
+msgstr "verde"
+
+msgid "grey"
+msgstr "gris"
+
+msgid "halfway from the anchor to the secondary"
+msgstr "a medio camino entre el principal y el secundario"
+
+msgid "holds"
+msgstr "se mantiene"
+
+msgid "into or out of a quiet part: a soft fade"
+msgstr "al entrar o salir de una parte tranquila: un fundido suave"
+
+msgid "it accompanies the protagonist in the secondary"
+msgstr "acompaña al protagonista con el secundario"
+
+msgid "it answers in the contrast colour"
+msgstr "responde con el color de contraste"
+
+msgid "its colour turns as it travels across the house"
+msgstr "su color cambia mientras recorre la casa"
+
+msgid "its front in one colour, its trail in a deeper one"
+msgstr "su frente en un color y su estela en otro más profundo"
+
+msgid "its own colours: a person fixed them"
+msgstr "sus propios colores: una persona los fijó"
+
+msgid "kept as a person fixed it"
+msgstr "se mantiene como lo fijó una persona"
+
+msgid "light blue"
+msgstr "azul claro"
+
+msgid "magenta"
+msgstr "magenta"
+
+msgid "many roles"
+msgstr "muchos papeles"
+
+msgid "more contrast and saturation"
+msgstr "más contraste y saturación"
+
+msgid "nothing suggests a colour: a warm one"
+msgstr "nada sugiere un color: uno cálido"
+
+msgid "nothing: the song's key and your choices"
+msgstr "nada: la tonalidad de la canción y tus elecciones"
+
+msgid "one family"
+msgstr "una familia"
+
+msgid "one family on every figure"
+msgstr "una misma familia en todas las figuras"
+
+msgid "one family on purpose: the light changes, the colour holds"
+msgstr "una sola familia a propósito: la luz cambia, el color se mantiene"
+
+msgid "orange"
+msgstr "naranja"
+
+msgid "pink"
+msgstr "rosa"
+
+msgid "quiet"
+msgstr "tranquilo"
+
+msgid "reading of the song: %s"
+msgstr "lectura de la canción: %s"
+
+msgid "red"
+msgstr "rojo"
+
+msgid "separates one thing from another"
+msgstr "separa una cosa de otra"
+
+msgid "sets the identity"
+msgstr "marca la identidad"
+
+msgid "soft"
+msgstr "suave"
+
+msgid "stage-gesture"
+msgstr "stage-gesture"
+
+msgid "stage-identity"
+msgstr "stage-identity"
+
+msgid "strong"
+msgstr "marcado"
+
+msgid "the GROQ_API_KEY variable"
+msgstr "la variable GROQ_API_KEY"
+
+msgid "the anchor deep, for a background"
+msgstr "el principal profundo, para un fondo"
+
+msgid "the anchor pale, for sparkles"
+msgstr "el principal pálido, para destellos"
+
+msgid "the colour role of its family in this scene"
+msgstr "el papel de color de su familia en esta escena"
+
+msgid "the colours a person chose for the song"
+msgstr "los colores que una persona eligió para la canción"
+
+msgid "the colours are presented, contained"
+msgstr "se presentan los colores, contenidos"
+
+msgid "the colours hold"
+msgstr "los colores se mantienen"
+
+msgid "the family develops"
+msgstr "la familia se desarrolla"
+
+msgid "the last scene"
+msgstr "la última escena"
+
+msgid "the lyrics, read on this computer"
+msgstr "la letra, leída en este ordenador"
+
+msgid "the music changes at once: so do the colours"
+msgstr "la música cambia de golpe: los colores también"
+
+msgid "the music grows: the next colours come in before it arrives"
+msgstr "la música crece: los colores siguientes entran antes de que llegue"
+
+msgid "the other temperature, lighter"
+msgstr "la otra temperatura, más clara"
+
+msgid "the palette holds"
+msgstr "la paleta se mantiene"
+
+msgid "the protagonist carries the scene's colour"
+msgstr "el protagonista lleva el color de la escena"
+
+msgid "the protagonist stands out in the scene's accent"
+msgstr "el protagonista destaca con el acento de la escena"
+
+msgid "the same anchor as its first time, its related colours from the other side of the circle"
+msgstr "el mismo principal que su primera vez, con los colores relacionados del otro lado del círculo"
+
+msgid "the same anchor in another family"
+msgstr "el mismo principal en otra familia"
+
+msgid "the same family as its first time, its accent turned light"
+msgstr "la misma familia que su primera vez, con el acento aclarado"
+
+msgid "the same hue almost white: it shines without changing colour"
+msgstr "el mismo tono casi blanco: brilla sin cambiar de color"
+
+msgid "the same hue, deep: contrast of light, not of colour"
+msgstr "el mismo tono, profundo: contraste de luz, no de color"
+
+msgid "the same hue, lighter and softer"
+msgstr "el mismo tono, más claro y más suave"
+
+msgid "the same hue, more or less saturated"
+msgstr "el mismo tono, más o menos saturado"
+
+msgid "the same part goes on in its colours"
+msgstr "la misma parte sigue con sus colores"
+
+msgid "the scene's colour"
+msgstr "el color de la escena"
+
+msgid "the text of the lyrics"
+msgstr "el texto de la letra"
+
+msgid "the title"
+msgstr "el título"
+
+msgid "the widest palette of the song"
+msgstr "la paleta más amplia de la canción"
+
+msgid "to read the text of the lyrics and a summary measured here (tempo, key, parts) and say how the song feels; never the song itself"
+msgstr "para leer el texto de la letra y un resumen medido aquí (tempo, tonalidad, partes) y decir cómo se siente la canción; nunca la canción en sí"
+
+msgid "varies the anchor"
+msgstr "varía el principal"
+
+msgid "varies the anchor (turned: it was too close to it)"
+msgstr "varía el principal (girado: estaba demasiado cerca)"
+
+msgid "violet"
+msgstr "violeta"
+
+msgid "white"
+msgstr "blanco"
+
+msgid "xLights' secure store"
+msgstr "el almacén seguro de xLights"
+
+msgid "yellow"
+msgstr "amarillo"

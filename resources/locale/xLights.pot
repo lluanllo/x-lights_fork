@@ -13404,3 +13404,756 @@ msgstr ""
 
 msgid "two voices: two figures work together"
 msgstr ""
+
+msgid "\t\n"
+msgstr ""
+
+msgid "\n"
+msgstr ""
+
+msgid "%d changes of yours are saved; press \"Apply the Changes\" to see them."
+msgstr ""
+
+msgid "%d scenes with their own palette, from one family for the whole song."
+msgstr ""
+
+msgid "(empty: the song and the analysis choose)"
+msgstr ""
+
+msgid "(on purpose)"
+msgstr ""
+
+msgid ": only white stood out enough"
+msgstr ""
+
+msgid "< Previous Scene"
+msgstr ""
+
+msgid "A Groq key is set (in %s). It is never shown."
+msgstr ""
+
+msgid "A colour and the neighbours of its opposite"
+msgstr ""
+
+msgid "A part that comes back to its colours"
+msgstr ""
+
+msgid "About %.1f families of colour share the light; the most used is %s (%.0f%%)."
+msgstr ""
+
+msgid "Accent"
+msgstr ""
+
+msgid "Accents:"
+msgstr ""
+
+msgid "According to %s, this part feels %s."
+msgstr ""
+
+msgid "Add a Colour..."
+msgstr ""
+
+msgid "An answer Groq gave before is used: nothing was sent now."
+msgstr ""
+
+msgid "An answer kept from before was used."
+msgstr ""
+
+msgid "Another temperature or family"
+msgstr ""
+
+msgid "Answer in contrast"
+msgstr ""
+
+msgid "Artistic Analysis with Groq"
+msgstr ""
+
+msgid "Ask Groq Again..."
+msgstr ""
+
+msgid "Back to colours heard before"
+msgstr ""
+
+msgid "Back to the Original Plan"
+msgstr ""
+
+msgid "Back to the main colour, resolved"
+msgstr ""
+
+msgid "Change a Colour..."
+msgstr ""
+
+msgid "Change between scenes:"
+msgstr ""
+
+msgid "Changes at once"
+msgstr ""
+
+msgid "Chat models the key offers now: %d"
+msgstr ""
+
+msgid "Check the Artistic Analysis with Groq..."
+msgstr ""
+
+msgid "Choose Its Colours..."
+msgstr ""
+
+msgid "Choose a scene to see its colours, which figure carries each one and why."
+msgstr ""
+
+msgid "Chosen by hand"
+msgstr ""
+
+msgid "Colour Director"
+msgstr ""
+
+msgid "Colour direction"
+msgstr ""
+
+msgid "Colour director: the colours of the house"
+msgstr ""
+
+msgid "Colour variety:"
+msgstr ""
+
+msgid "Colours"
+msgstr ""
+
+msgid "Colours change too suddenly"
+msgstr ""
+
+msgid "Colours changing more from scene to scene"
+msgstr ""
+
+msgid "Colours do not fit the music"
+msgstr ""
+
+msgid "Colours of the Figures"
+msgstr ""
+
+msgid "Colours of the Figures..."
+msgstr ""
+
+msgid "Colours of the Show"
+msgstr ""
+
+msgid "Colours of the Show..."
+msgstr ""
+
+msgid "Colours of the song:"
+msgstr ""
+
+msgid "Colours too strong"
+msgstr ""
+
+msgid "Contrast:"
+msgstr ""
+
+msgid "Deep"
+msgstr ""
+
+msgid "Direct the colours scene by scene and figure by figure"
+msgstr ""
+
+msgid "Drop every change you made to the colours of this song?"
+msgstr ""
+
+msgid "Every scene leads with the same colour."
+msgstr ""
+
+msgid "Fades into the next colours"
+msgstr ""
+
+msgid "Few accents: a minority colour rarely appears."
+msgstr ""
+
+msgid "Fewer warm colours"
+msgstr ""
+
+msgid "Figures differ"
+msgstr ""
+
+msgid "Figures keep their own colours"
+msgstr ""
+
+msgid "Figures lost their own colours"
+msgstr ""
+
+msgid "Figures too alike"
+msgstr ""
+
+msgid "Fix This Palette"
+msgstr ""
+
+msgid "For much of the show, one colour holds most of the house."
+msgstr ""
+
+msgid "Four colours at most: remove them with \"None\" to choose again."
+msgstr ""
+
+msgid "From %s to %s: %s."
+msgstr ""
+
+msgid "Fuller colours"
+msgstr ""
+
+msgid "Generate the show first: its colours are measured on xLights' own render."
+msgstr ""
+
+msgid "Gesture at %s: %s over %d colours lit (%.0f points of difference)"
+msgstr ""
+
+msgid "Give the song's lyrics first: only their text is interpreted."
+msgstr ""
+
+msgid "Groq"
+msgstr ""
+
+msgid "Groq (an answer kept from before)"
+msgstr ""
+
+msgid "Groq (an answer saved in a file)"
+msgstr ""
+
+msgid "Groq (asked now)"
+msgstr ""
+
+msgid "Groq only interprets the song; the colours are chosen on this computer. The Christmas slider above pulls them too."
+msgstr ""
+
+msgid "Groq was asked but did not give a usable answer: the colours read the lyrics on this computer."
+msgstr ""
+
+msgid "Groq was asked now and answered."
+msgstr ""
+
+msgid "Groq was not asked: the colours read the lyrics on this computer."
+msgstr ""
+
+msgid "How the colour moves through the song (above: the plan; below: what the render showed)"
+msgstr ""
+
+msgid "How the colours go"
+msgstr ""
+
+msgid "In one colour"
+msgstr ""
+
+msgid "Into the next scene: %s."
+msgstr ""
+
+msgid "Its colour role"
+msgstr ""
+
+msgid "Its colours"
+msgstr ""
+
+msgid "Keep families of colour"
+msgstr ""
+
+msgid "Last analysis: %s"
+msgstr ""
+
+msgid "Less Contrast"
+msgstr ""
+
+msgid "Less contrast"
+msgstr ""
+
+msgid "Let It Take the Palette"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Lighter or deeper"
+msgstr ""
+
+msgid "Main colour"
+msgstr ""
+
+msgid "Many gestures are lit in colours close to what was already there."
+msgstr ""
+
+msgid "Missing accents"
+msgstr ""
+
+msgid "Model: %s"
+msgstr ""
+
+msgid "More Contrast"
+msgstr ""
+
+msgid "More accents"
+msgstr ""
+
+msgid "More change of colour from scene to scene"
+msgstr ""
+
+msgid "More contrast and saturation"
+msgstr ""
+
+msgid "More contrast between figures"
+msgstr ""
+
+msgid "More or less saturated"
+msgstr ""
+
+msgid "More variety of colour"
+msgstr ""
+
+msgid "More variety of colour in a scene"
+msgstr ""
+
+msgid "Neighbouring colours"
+msgstr ""
+
+msgid "Neutral"
+msgstr ""
+
+msgid "Next Scene >"
+msgstr ""
+
+msgid "No Groq key is set."
+msgstr ""
+
+msgid "No sign of monotony was found. That is not an approval: look at it in xLights."
+msgstr ""
+
+msgid "Not enough contrast"
+msgstr ""
+
+msgid "Nothing was sent to Groq in this check."
+msgstr ""
+
+msgid "One Family Only"
+msgstr ""
+
+msgid "One colour holds most of the house %.0f%% of the time; the longest stretch is %.0f s."
+msgstr ""
+
+msgid "One colour in several lights"
+msgstr ""
+
+msgid "Opposite colours"
+msgstr ""
+
+msgid "Plan / render"
+msgstr ""
+
+msgid "Reading of the song: %s"
+msgstr ""
+
+msgid "Remove My Choice"
+msgstr ""
+
+msgid "Respect the figures' own colours"
+msgstr ""
+
+msgid "Result: %s"
+msgstr ""
+
+msgid "Scene %d of %d: %s, from %s"
+msgstr ""
+
+msgid "Second colour"
+msgstr ""
+
+msgid "Secondary"
+msgstr ""
+
+msgid "Softer colour changes"
+msgstr ""
+
+msgid "Softer colours"
+msgstr ""
+
+msgid "Something was sent to Groq in this check."
+msgstr ""
+
+msgid "Stronger accents"
+msgstr ""
+
+msgid "The answer did not pass the checks."
+msgstr ""
+
+msgid "The answer passed the checks."
+msgstr ""
+
+msgid "The artistic analysis check could not be read."
+msgstr ""
+
+msgid "The colour slides"
+msgstr ""
+
+msgid "The colours are not directed: each scene uses its palette on every figure, as before."
+msgstr ""
+
+msgid "The colours are presented, contained"
+msgstr ""
+
+msgid "The colours do not evolve"
+msgstr ""
+
+msgid "The colours hold"
+msgstr ""
+
+msgid "The colours of this show were not measured: generate it with the render check on."
+msgstr ""
+
+msgid "The family develops"
+msgstr ""
+
+msgid "The figures are almost the same colour."
+msgstr ""
+
+msgid "The figures wear %.1f families at once and differ by %.0f points; a minority accent appears %.0f%% of the time."
+msgstr ""
+
+msgid "The gestures differ from what was lit before them by %.0f points (half of them more); %d of %d barely stand out."
+msgstr ""
+
+msgid "The local reading of the lyrics is used instead."
+msgstr ""
+
+msgid "The main colour changes, figure by figure"
+msgstr ""
+
+msgid "The next colour comes in early"
+msgstr ""
+
+msgid "The palette holds"
+msgstr ""
+
+msgid "The scenes repeat their colours from one to the next."
+msgstr ""
+
+msgid "The song's colours:"
+msgstr ""
+
+msgid "The widest palette of the song"
+msgstr ""
+
+msgid "There is a long stretch with the house in the same colour."
+msgstr ""
+
+msgid "There is no Groq key: the colours read the lyrics on this computer."
+msgstr ""
+
+msgid "Three colours far apart"
+msgstr ""
+
+msgid "Too many colours that do not go together"
+msgstr ""
+
+msgid "Too much contrast"
+msgstr ""
+
+msgid "Too much in one colour"
+msgstr ""
+
+msgid "Transition"
+msgstr ""
+
+msgid "Two pairs of opposites"
+msgstr ""
+
+msgid "Warm against cool"
+msgstr ""
+
+msgid "Warmer colours"
+msgstr ""
+
+msgid "What Groq received: %s. Never the audio."
+msgstr ""
+
+msgid "What went wrong: %s"
+msgstr ""
+
+msgid "What xLights' own render put on the house, against what the colour plan meant. These are measurements, not a judgement: whether it looks good is for you to say, watching it in xLights."
+msgstr ""
+
+msgid "Which colour each figure carries in a scene, and why. A figure can keep its own colours (a trunk brown, foliage green), take the scene's palette, or have colours you choose. Your choices are applied when the show is composed again."
+msgstr ""
+
+msgid "Which colour of this scene do you want to change?"
+msgstr ""
+
+msgid "Work out the composition first."
+msgstr ""
+
+msgid "Work out the composition on step 3 to see the colours of each scene."
+msgstr ""
+
+msgid "a character keeps its own colours"
+msgstr ""
+
+msgid "a cool colour against the warm anchor"
+msgstr ""
+
+msgid "a cool white to rest"
+msgstr ""
+
+msgid "a group of one family: its family's colour"
+msgstr ""
+
+msgid "a group of the whole house: the deep anchor under the figures"
+msgstr ""
+
+msgid "a group of the whole house: the scene's colour"
+msgstr ""
+
+msgid "a neighbour of the anchor, bright"
+msgstr ""
+
+msgid "a part that comes back"
+msgstr ""
+
+msgid "a summary measured on this computer (tempo, key, parts)"
+msgstr ""
+
+msgid "a warm colour against the cool anchor"
+msgstr ""
+
+msgid "a warm white to rest"
+msgstr ""
+
+msgid "amber"
+msgstr ""
+
+msgid "an accent of the scene"
+msgstr ""
+
+msgid "another temperature or family"
+msgstr ""
+
+msgid "back to a motif heard before"
+msgstr ""
+
+msgid "back to the anchor, resolved"
+msgstr ""
+
+msgid "blue"
+msgstr ""
+
+msgid "bright, for what matters"
+msgstr ""
+
+msgid "changes a lot"
+msgstr ""
+
+msgid "colours a person chose for this figure"
+msgstr ""
+
+msgid "comes back to the colours of its first time"
+msgstr ""
+
+msgid "cyan"
+msgstr ""
+
+msgid "discreet"
+msgstr ""
+
+msgid "emerald"
+msgstr ""
+
+msgid "every other one of its family, for movement inside it"
+msgstr ""
+
+msgid "green"
+msgstr ""
+
+msgid "grey"
+msgstr ""
+
+msgid "halfway from the anchor to the secondary"
+msgstr ""
+
+msgid "holds"
+msgstr ""
+
+msgid "into or out of a quiet part: a soft fade"
+msgstr ""
+
+msgid "it accompanies the protagonist in the secondary"
+msgstr ""
+
+msgid "it answers in the contrast colour"
+msgstr ""
+
+msgid "its colour turns as it travels across the house"
+msgstr ""
+
+msgid "its front in one colour, its trail in a deeper one"
+msgstr ""
+
+msgid "its own colours: a person fixed them"
+msgstr ""
+
+msgid "kept as a person fixed it"
+msgstr ""
+
+msgid "light blue"
+msgstr ""
+
+msgid "magenta"
+msgstr ""
+
+msgid "many roles"
+msgstr ""
+
+msgid "more contrast and saturation"
+msgstr ""
+
+msgid "nothing suggests a colour: a warm one"
+msgstr ""
+
+msgid "nothing: the song's key and your choices"
+msgstr ""
+
+msgid "one family"
+msgstr ""
+
+msgid "one family on every figure"
+msgstr ""
+
+msgid "one family on purpose: the light changes, the colour holds"
+msgstr ""
+
+msgid "orange"
+msgstr ""
+
+msgid "pink"
+msgstr ""
+
+msgid "quiet"
+msgstr ""
+
+msgid "reading of the song: %s"
+msgstr ""
+
+msgid "red"
+msgstr ""
+
+msgid "separates one thing from another"
+msgstr ""
+
+msgid "sets the identity"
+msgstr ""
+
+msgid "soft"
+msgstr ""
+
+msgid "stage-gesture"
+msgstr ""
+
+msgid "stage-identity"
+msgstr ""
+
+msgid "strong"
+msgstr ""
+
+msgid "the GROQ_API_KEY variable"
+msgstr ""
+
+msgid "the anchor deep, for a background"
+msgstr ""
+
+msgid "the anchor pale, for sparkles"
+msgstr ""
+
+msgid "the colour role of its family in this scene"
+msgstr ""
+
+msgid "the colours a person chose for the song"
+msgstr ""
+
+msgid "the colours are presented, contained"
+msgstr ""
+
+msgid "the colours hold"
+msgstr ""
+
+msgid "the family develops"
+msgstr ""
+
+msgid "the last scene"
+msgstr ""
+
+msgid "the lyrics, read on this computer"
+msgstr ""
+
+msgid "the music changes at once: so do the colours"
+msgstr ""
+
+msgid "the music grows: the next colours come in before it arrives"
+msgstr ""
+
+msgid "the other temperature, lighter"
+msgstr ""
+
+msgid "the palette holds"
+msgstr ""
+
+msgid "the protagonist carries the scene's colour"
+msgstr ""
+
+msgid "the protagonist stands out in the scene's accent"
+msgstr ""
+
+msgid "the same anchor as its first time, its related colours from the other side of the circle"
+msgstr ""
+
+msgid "the same anchor in another family"
+msgstr ""
+
+msgid "the same family as its first time, its accent turned light"
+msgstr ""
+
+msgid "the same hue almost white: it shines without changing colour"
+msgstr ""
+
+msgid "the same hue, deep: contrast of light, not of colour"
+msgstr ""
+
+msgid "the same hue, lighter and softer"
+msgstr ""
+
+msgid "the same hue, more or less saturated"
+msgstr ""
+
+msgid "the same part goes on in its colours"
+msgstr ""
+
+msgid "the scene's colour"
+msgstr ""
+
+msgid "the text of the lyrics"
+msgstr ""
+
+msgid "the title"
+msgstr ""
+
+msgid "the widest palette of the song"
+msgstr ""
+
+msgid "to read the text of the lyrics and a summary measured here (tempo, key, parts) and say how the song feels; never the song itself"
+msgstr ""
+
+msgid "varies the anchor"
+msgstr ""
+
+msgid "varies the anchor (turned: it was too close to it)"
+msgstr ""
+
+msgid "violet"
+msgstr ""
+
+msgid "white"
+msgstr ""
+
+msgid "xLights' secure store"
+msgstr ""
+
+msgid "yellow"
+msgstr ""

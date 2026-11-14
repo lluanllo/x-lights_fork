@@ -128,6 +128,9 @@ struct ChromaticScenePlan {
     bool monochrome = false; // in one family on purpose
     std::string evolution;   // "establish", "develop", "expand", "shift", "climax", "resolve", "return", "hold", "rest"
     std::string motif;       // "motif:<repeat group>": a returning part comes back to its colours
+    std::string feeling;     // what the interpretation felt in this kind of part ("" none)
+    std::string feelingColor; // the colour it suggested for it
+    std::string feelingSource; // where the interpretation came from
     std::vector<FigureColorRole> figures;
     std::vector<GestureChromaticProfile> gestures;
     ChromaticTransition toNext;

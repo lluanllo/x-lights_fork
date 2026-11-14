@@ -42,6 +42,8 @@ struct ReportFolder {
     std::string stageScore;           // stage-score.json as written: the stage director's score
     std::string stageLights;          // stage-lights.json as written: every light on the stage
     std::string stageCheck;           // stage-check.json as written: what the render did with the installation
+    std::string colorScore;           // color-score.json as written: the colour director's plan
+    std::string colorCheck;           // color-check.json as written: the colours the render showed
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

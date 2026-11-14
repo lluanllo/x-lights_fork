@@ -791,6 +791,9 @@ private:
             std::vector<std::pair<double, double>> partHues;
             if (const BriefPart* part = BriefPartFor(s.sectionKind); part != nullptr) {
                 feeling = part->feeling;
+                sp.feeling = part->feeling;
+                sp.feelingColor = part->color;
+                sp.feelingSource = _in.brief->source + (_in.brief->origin.empty() ? std::string() : ":" + _in.brief->origin);
                 if (part->intensity >= 0) {
                     wanted = std::clamp(wanted + (part->intensity - 0.5) * 0.4, 0.0, 1.0);
                 }
@@ -1102,10 +1105,10 @@ private:
                 const std::string family = f != nullptr ? f->family : std::string();
                 if (alternate.contains(p)) {
                     r.role = alternate[p];
-                    r.why = fmt::format("{}: every other one of its family, for movement inside it", family);
+                    r.why = COMPOSER_TEXT("every other one of its family, for movement inside it");
                 } else if (familyRole.contains(family)) {
                     r.role = familyRole[family];
-                    r.why = fmt::format("{}: the family's colour role in this scene", family);
+                    r.why = COMPOSER_TEXT("the colour role of its family in this scene");
                 } else {
                     r.role = "main";
                     r.why = COMPOSER_TEXT("the scene's colour");
@@ -1655,7 +1658,7 @@ std::string ToJson(const ChromaticScore& s) {
         }
         scenes.push_back({ { "id", sp.id }, { "startMS", sp.startMS }, { "endMS", sp.endMS }, { "sectionKind", sp.sectionKind }, { "mode", sp.mode }, { "energy", sp.energy },
                            { "palette", PaletteJson(sp.palette) }, { "dominant", sp.dominant }, { "secondary", sp.secondary }, { "accents", sp.accents }, { "contrasts", sp.contrasts },
-                           { "saturation", sp.saturation }, { "intensity", sp.intensity }, { "monochrome", sp.monochrome }, { "evolution", sp.evolution }, { "motif", sp.motif },
+                           { "saturation", sp.saturation }, { "intensity", sp.intensity }, { "monochrome", sp.monochrome }, { "evolution", sp.evolution }, { "motif", sp.motif }, { "feeling", sp.feeling }, { "feelingColor", sp.feelingColor }, { "feelingSource", sp.feelingSource },
                            { "figures", figures }, { "gestures", gestures },
                            { "toNext", { { "kind", sp.toNext.kind }, { "startMS", sp.toNext.startMS }, { "endMS", sp.toNext.endMS }, { "order", sp.toNext.order }, { "why", sp.toNext.why } } },
                            { "reasons", sp.reasons }, { "manual", sp.manual }, { "locked", sp.locked } });
@@ -1723,6 +1726,9 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
             sp.monochrome = j.value("monochrome", false);
             sp.evolution = j.value("evolution", std::string());
             sp.motif = j.value("motif", std::string());
+            sp.feeling = j.value("feeling", std::string());
+            sp.feelingColor = j.value("feelingColor", std::string());
+            sp.feelingSource = j.value("feelingSource", std::string());
             for (const json& f : j.value("figures", json::array())) {
                 sp.figures.push_back({ f.value("figure", std::string()), f.value("role", std::string()), f.value("colors", std::vector<std::string>()), f.value("why", std::string()) });
             }

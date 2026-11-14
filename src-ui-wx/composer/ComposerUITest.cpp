@@ -38,6 +38,8 @@
 #include "ComposerReviewDialogs.h"
 #include "ComposerScreens.h"
 #include "ComposerStageDialogs.h"
+#include "ComposerColorDialogs.h"
+#include "composer/ColorCheck.h"
 #include "ComposerUnderstandingDialogs.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
@@ -641,6 +643,19 @@ private:
                               _dialog->SetUseUnderstanding(false);
                               Check(has(_dialog->GenerateArguments(), "--understanding", "off"), "and without it, to compare, when it is turned off");
                               _dialog->SetUseUnderstanding(true);
+                              Check(has(_dialog->GenerateArguments(), "--color-director", "on") && has(_dialog->GenerateArguments(), "--song-colors", "none"),
+                                    "the colours are directed by scene and figure, with no colours of the song given yet");
+                              _dialog->SetColorSliders(80, 30, 70, 20);
+                              _dialog->SetSongColors({ "#c41e3a", "#ffd700" });
+                              Check(has(_dialog->GenerateArguments(), "--color-variety", "0.80") && has(_dialog->GenerateArguments(), "--color-contrast", "0.30") &&
+                                        has(_dialog->GenerateArguments(), "--color-accents", "0.70") && has(_dialog->GenerateArguments(), "--color-evolution", "0.20") &&
+                                        has(_dialog->GenerateArguments(), "--song-colors", "#c41e3a,#ffd700"),
+                                    "the colour sliders and the song's colours reach the generator");
+                              _dialog->SetColorSliders(50, 50, 50, 50);
+                              _dialog->SetSongColors({});
+                              _dialog->ColorPanel()->SetDirectorOn(false);
+                              Check(has(_dialog->GenerateArguments(), "--color-director", "off"), "or the colours as before, to compare");
+                              _dialog->ColorPanel()->SetDirectorOn(true);
                               return true;
                           },
                            10 });
@@ -676,6 +691,64 @@ private:
                               return true;
                           },
                            1800 });
+        _steps.push_back({ "the artistic analysis, checked", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  // Never a yes in a test: the check only says where the reading comes from.
+                                  _dialog->CheckArtistic(false, false, false);
+                                  Check(_dialog->AssistRunning(), "the check runs apart from the window, with nothing to send");
+                                  return false;
+                              }
+                              if (_dialog->AssistRunning() || !Waited(0.5)) {
+                                  return false;
+                              }
+                              _started = false;
+                              const ArtisticCheck& c = _dialog->LastArtisticCheck();
+                              Check(!c.realRequest && (c.status == "LOCAL_FALLBACK" || c.status == "NOT_CONFIGURED" || c.status == "CACHE_HIT"),
+                                    fmt::format("without a yes nothing is sent: {} (key {}, fallback {})", c.status, c.credentialSource, c.fallback ? "yes" : "no"));
+                              auto* dialog = new ArtisticCheckDialog(_dialog, c);
+                              dialog->Show();
+                              Check(!dialog->Text().IsEmpty() && dialog->Text().Find("gsk_") == wxNOT_FOUND, "the check is said in plain words, and never shows a key");
+                              Capture(dialog, "analisis-artistico-groq");
+                              dialog->Destroy();
+                              return true;
+                          },
+                           90 });
+        _steps.push_back({ "the colour director", [this]() {
+                              _dialog->GoTo(ShowComposerDialog::Step::Generate);
+                              ColorDirectorPanel* panel = _dialog->ColorPanel();
+                              const ReportFolder& balanced = _dialog->LevelReport(AutomationLevel::Balanced);
+                              Check(panel != nullptr && panel->Scenes() > 0 && !balanced.colorScore.empty(),
+                                    fmt::format("step 4 shows the colour plan: {} scenes, each with its palette", panel != nullptr ? panel->Scenes() : 0));
+                              if (panel == nullptr || panel->Scenes() == 0) {
+                                  return true;
+                              }
+                              Check(_dialog->TimelineColorScenes() == panel->Scenes(), "the timeline of step 2 shows the colours scene by scene");
+                              const int pick = std::min(panel->Scenes() - 1, 2);
+                              Check(panel->SelectScene(pick) && !panel->Detail().IsEmpty(), "a scene says, in plain words, its colours, which figure carries each one and why");
+                              Capture(_dialog, "director-cromatico");
+                              const ChromaticScenePlan& sp = panel->Score().scenes[static_cast<size_t>(pick)];
+                              const int before = panel->PendingEdits();
+                              Check(panel->Edit({ "color", sp.startMS, "", "anchor", "#2050ff", "" }).empty() && panel->PendingEdits() == before + 1, "a person's colour is saved apart, to be applied when composed again");
+                              Check(panel->Edit({ "more-contrast", sp.startMS, "", "", "", "" }).empty() && panel->Edit({ "less-contrast", sp.startMS, "", "", "", "" }).empty() &&
+                                        panel->PendingEdits() == before + 2,
+                                    "asking for less contrast replaces asking for more");
+                              Check(panel->Undo().empty() && panel->PendingEdits() == before + 2 - 1 + 1, "the last change can be undone");
+                              Check(panel->Reset().empty() && panel->PendingEdits() == 0, "and every change dropped: the original plan is back");
+                              auto* figures = new FigureColorsDialog(_dialog, panel);
+                              figures->ShowScene(pick);
+                              figures->Show();
+                              Check(figures->Rows() > 0, fmt::format("each figure's colour role is listed ({} figures)", figures->Rows()));
+                              const std::string figure = sp.figures.empty() ? std::string() : sp.figures.front().figure;
+                              Check(!figure.empty() && figures->KeepOwn(figure, true).empty() && panel->PendingEdits() == 1, "a figure can keep its own colours");
+                              Check(figures->Choose(figure, { "#00ff80" }).empty() && panel->PendingEdits() == 1 && panel->Edits().edits.front().action == "figure-color",
+                                    "or have colours chosen by hand, replacing that choice");
+                              Check(figures->Clear(figure).empty() && panel->PendingEdits() == 0, "and the choice removed");
+                              Capture(figures, "colores-de-las-figuras");
+                              figures->Destroy();
+                              return true;
+                          },
+                           60 });
         _steps.push_back({ "the stage director", [this]() {
                               _dialog->GoTo(ShowComposerDialog::Step::Generate);
                               StageDirectorPanel* panel = _dialog->StagePanel();
@@ -1036,6 +1109,18 @@ private:
                               Check(score.gestures.empty() || lit > 0, fmt::format("at its gestures, the render shows lit lights ({})", lit));
                               Capture(map, "instalacion-entera");
                               map->Destroy();
+                              return true;
+                          },
+                           30 });
+        _steps.push_back({ "the colours of the show", [this]() {
+                              const ReportFolder& r = _dialog->ResultReport();
+                              Check(!r.colorCheck.empty() && r.colorCheck.find("\"review\": \"not-reviewed\"") != std::string::npos, "the colours of the render are measured, and nothing is approved");
+                              auto* review = new ColorReviewDialog(_dialog, r);
+                              review->Show();
+                              Check(review->HasMeasure() && review->SceneRows() > 0 && review->FigureRows() > 0 && !review->Summary().IsEmpty(),
+                                    fmt::format("plan against render, scene by scene ({}) and figure by figure ({}), in plain words", review->SceneRows(), review->FigureRows()));
+                              Capture(review, "colores-del-espectaculo");
+                              review->Destroy();
                               return true;
                           },
                            30 });

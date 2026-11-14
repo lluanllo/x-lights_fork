@@ -41,7 +41,9 @@ constexpr int SHAPES_Y = WORDS_Y + WORDS_H + 2;
 constexpr int SHAPES_H = 16;
 constexpr int GESTURES_Y = SHAPES_Y + SHAPES_H + 6;
 constexpr int GESTURES_H = 18;
-constexpr int TOTAL_H = GESTURES_Y + GESTURES_H + 4;
+constexpr int COLORS_Y = GESTURES_Y + GESTURES_H + 3;
+constexpr int COLORS_H = 16;
+constexpr int TOTAL_H = COLORS_Y + COLORS_H + 4;
 
 wxColour SectionColour(composer::SectionKind kind) {
     switch (kind) {
@@ -124,6 +126,11 @@ void ComposerTimeline::SetLyrics(const composer::LyricAlignment* alignment) {
 
 void ComposerTimeline::SetGestures(std::vector<TimelineGesture> gestures) {
     _gestures = std::move(gestures);
+    Refresh();
+}
+
+void ComposerTimeline::SetColors(std::vector<TimelineColors> colors) {
+    _colors = std::move(colors);
     Refresh();
 }
 
@@ -370,6 +377,30 @@ void ComposerTimeline::OnPaint(wxPaintEvent&) {
         dc.SetTextForeground(*wxBLACK);
         dc.DrawText(g.label, x + 3, GESTURES_Y + 2);
         dc.DestroyClippingRegion();
+    }
+
+    // The colours of each scene: its palette in bands, and the change into the next one
+    // drawn as a gradient where it runs.
+    for (const TimelineColors& c : _colors) {
+        if (c.endMS <= c.startMS || c.colors.empty() || !visible(c.startMS, c.endMS)) {
+            continue;
+        }
+        const int x = ToX(c.startMS);
+        const int end = ToX(c.transitionMS > c.startMS && c.transitionMS < c.endMS ? c.transitionMS : c.endMS);
+        const int band = COLORS_H / static_cast<int>(c.colors.size());
+        for (size_t k = 0; k < c.colors.size(); ++k) {
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.SetBrush(wxBrush(c.colors[k]));
+            const int y = COLORS_Y + static_cast<int>(k) * band;
+            dc.DrawRectangle(x, y, std::max(1, end - x), k + 1 == c.colors.size() ? COLORS_H - static_cast<int>(k) * band : band);
+            if (end < ToX(c.endMS) && !c.next.empty()) {
+                dc.GradientFillLinear(wxRect(end, y, ToX(c.endMS) - end, k + 1 == c.colors.size() ? COLORS_H - static_cast<int>(k) * band : band), c.colors[k],
+                                      c.next[k % c.next.size()], wxEAST);
+            }
+        }
+        dc.SetPen(wxPen(c.manual ? wxColour(40, 150, 60) : wxColour(90, 90, 90)));
+        dc.SetBrush(*wxTRANSPARENT_BRUSH);
+        dc.DrawRectangle(x, COLORS_Y, std::max(2, ToX(c.endMS) - x), COLORS_H);
     }
 
     if (HasSelection()) {

@@ -29,6 +29,17 @@ struct TimelineGesture {
     bool manual = false;
 };
 
+// The colours of one scene on the timeline: its palette, and where it starts changing
+// into the next scene's colours.
+struct TimelineColors {
+    int startMS = 0;
+    int endMS = 0;
+    std::vector<wxColour> colors; // main, secondary, accent, contrast
+    int transitionMS = -1;        // from here to endMS it moves towards the next colours; -1 none
+    std::vector<wxColour> next;
+    bool manual = false;
+};
+
 // The song on one time scale: its waveform, sections, beats, bars, onsets, silences and
 // climax, and under them the lyrics' phrases, words and mouth shapes, so a phrase can be
 // read against the moment it is sung. Click sets the cursor, drag selects a stretch.
@@ -39,6 +50,8 @@ public:
     void SetSong(const composer::SongAnalysis* analysis, AudioManager* audio);
     void SetLyrics(const composer::LyricAlignment* alignment);
     void SetGestures(std::vector<TimelineGesture> gestures);
+    void SetColors(std::vector<TimelineColors> colors);
+    [[nodiscard]] int ColorScenes() const { return static_cast<int>(_colors.size()); }
     void SetPixelsPerSecond(double pixels);
     [[nodiscard]] double PixelsPerSecond() const { return _pixelsPerSecond; }
     void SetPlayhead(int ms);
@@ -61,6 +74,7 @@ private:
     AudioManager* _audio = nullptr;
     std::vector<std::pair<float, float>> _peaks; // min and max per 10 ms
     std::vector<TimelineGesture> _gestures;
+    std::vector<TimelineColors> _colors;
     double _pixelsPerSecond = 40;
     int _cursorMS = 0;
     int _selectFromMS = 0;
