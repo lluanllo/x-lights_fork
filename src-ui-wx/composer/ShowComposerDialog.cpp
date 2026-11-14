@@ -1791,6 +1791,7 @@ void ShowComposerDialog::SetShowFolder(const std::string& path) {
     _figuresOk = false;
     _knownFigures = FigureCatalog();
     _figuresFound = FigureSemantics();
+    ++_understandStamp;
     _profilePath.clear();
     // The show's media folders are the ones its library was last searched in.
     _mediaFolders.clear();
@@ -2560,6 +2561,9 @@ void ShowComposerDialog::OnTimer(wxTimerEvent&) {
     const SlowLog slow("OnTimer");
     if (!_loads.empty()) {
         CollectLoads();
+    }
+    if (_figuresLoading.valid()) {
+        CollectFigures();
     }
     if (_peaksPending && _audio != nullptr && _audio->IsDataLoaded()) {
         _peaksPending = false;
@@ -4105,7 +4109,7 @@ void ShowComposerDialog::CancelUnderstanding() {
 }
 
 void ShowComposerDialog::StartFigures() {
-    if (_showDir.empty() || _understandJob.Running()) {
+    if (_showDir.empty() || _understandJob.Running() || _figuresLoading.valid()) {
         return;
     }
     _understandDir = NewWorkFolder("figures");
@@ -4149,13 +4153,18 @@ void ShowComposerDialog::UnderstandFinished(int exitCode) {
             ++_understandStamp;
         }
     } else if (purpose == "figures") {
-        std::string error;
-        const fs::path dir(_understandDir);
-        _figuresOk = exitCode == 0 && FromJson(ReadFile(dir / "figures.json"), _knownFigures, error) && FromJson(ReadFile(dir / "figure-semantics-found.json"), _figuresFound, error);
-        _understandMessage = _figuresOk ? std::string() : S(exitCode == 2 ? _("The figures are only read from a show whose controllers are all inactive.") : _("The figures could not be read."));
-        if (_figuresOk && _openFiguresWhenKnown && !_testMode) {
-            _openFiguresWhenKnown = false;
-            CallAfter([this]() { OpenFigures(); });
+        if (exitCode != 0) {
+            _figuresOk = false;
+            _understandMessage = S(exitCode == 2 ? _("The figures are only read from a show whose controllers are all inactive.") : _("The figures could not be read."));
+        } else {
+            // Read on a thread of its own: a large layout's files take seconds to parse.
+            auto load = std::make_shared<FiguresLoad>();
+            _figuresLoaded = load;
+            const fs::path dir(_understandDir);
+            _figuresLoading = std::async(std::launch::async, [load, dir]() {
+                std::string error;
+                return FromJson(ReadFile(dir / "figures.json"), load->geometry, error) && FromJson(ReadFile(dir / "figure-semantics-found.json"), load->found, error);
+            });
         }
     } else if (purpose == "pictures") {
         if (exitCode == 0) {
@@ -4166,6 +4175,26 @@ void ShowComposerDialog::UnderstandFinished(int exitCode) {
         } else {
             _understandMessage = S(_("The pictures could not be made."));
         }
+    }
+    RefreshAll();
+}
+
+void ShowComposerDialog::CollectFigures() {
+    if (!_figuresLoading.valid() || _figuresLoading.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        return;
+    }
+    const bool ok = _figuresLoading.get();
+    _figuresOk = ok;
+    if (ok) {
+        _knownFigures = std::move(_figuresLoaded->geometry);
+        _figuresFound = std::move(_figuresLoaded->found);
+    }
+    _figuresLoaded.reset();
+    ++_understandStamp;
+    _understandMessage = ok ? std::string() : S(_("The figures could not be read."));
+    if (ok && _openFiguresWhenKnown && !_testMode) {
+        _openFiguresWhenKnown = false;
+        CallAfter([this]() { OpenFigures(); });
     }
     RefreshAll();
 }
@@ -4195,8 +4224,21 @@ FigureChoices ShowComposerDialog::FigureChoicesNow() const {
 }
 
 FigureSemantics ShowComposerDialog::FigureParts() const {
-    const FigureChoices choices = FigureChoicesNow();
-    return ApplyFigureChoices(_figuresFound, _knownFigures, &choices);
+    // The choices file is small; the figures are not: they are worked out again only when
+    // the figures or the choices changed.
+    std::string text;
+    (void)ReadTextFile(FigureChoicesPath(_showDir), text);
+    if (_partsStamp != _understandStamp || text != _partsChoicesText) {
+        FigureChoices choices;
+        std::string error;
+        if (!text.empty()) {
+            (void)FromJson(text, choices, error);
+        }
+        _partsCache = ApplyFigureChoices(_figuresFound, _knownFigures, &choices);
+        _partsStamp = _understandStamp;
+        _partsChoicesText = text;
+    }
+    return _partsCache;
 }
 
 void ShowComposerDialog::OpenRecording() {

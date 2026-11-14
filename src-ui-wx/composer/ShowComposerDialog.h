@@ -195,7 +195,8 @@ public:
     // What the recording says, the figures and who performs what: the controls of steps
     // 1, 2, 3 and 5 for them, and the same calls for the UI test.
     void StartUnderstanding(bool again);
-    [[nodiscard]] bool UnderstandingRunning() const { return _understandJob.Running(); }
+    // Listening, reading the figures, or still parsing what was read.
+    [[nodiscard]] bool UnderstandingRunning() const { return _understandJob.Running() || _figuresLoading.valid(); }
     void CancelUnderstanding();
     void SetStems(const std::vector<composer::StemInput>& stems);
     [[nodiscard]] const std::vector<composer::StemInput>& Stems() const { return _stems; }
@@ -310,6 +311,18 @@ private:
     composer::FigureCatalog _knownFigures;
     composer::FigureSemantics _figuresFound;
     bool _figuresOk = false;
+    // A large layout's figures (every light of every model) are parsed off the UI thread.
+    struct FiguresLoad {
+        composer::FigureCatalog geometry;
+        composer::FigureSemantics found;
+    };
+    std::shared_ptr<FiguresLoad> _figuresLoaded;
+    std::future<bool> _figuresLoading;
+    void CollectFigures();
+    // The parts with the person's choices, worked out again only when something changed.
+    mutable composer::FigureSemantics _partsCache;
+    mutable int _partsStamp = -1;
+    mutable std::string _partsChoicesText;
     wxStaticText* _understandInfo = nullptr;
     wxButton* _understandButton = nullptr;
     wxCheckBox* _useUnderstandingBox = nullptr;
