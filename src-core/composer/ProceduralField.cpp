@@ -316,8 +316,8 @@ bool ValidateField(const FieldSpec& s, std::string& error) {
     if (s.ex <= 0 || s.ey <= 0 || s.turns <= 0 || s.scale <= 0) {
         return bad("ellipse, turns and scale must be over 0");
     }
-    if (s.at < 0) {
-        return bad("a light cannot join a gesture before it starts");
+    if (s.at < -60 || s.at > 600) {
+        return bad("a light joins a gesture from 60 s before it to 600 s after");
     }
     if (!s.transform.empty() && s.transform.size() != 8) {
         return bad("the figure's place needs 8 numbers");

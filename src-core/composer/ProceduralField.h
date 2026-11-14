@@ -56,7 +56,8 @@ struct FieldSpec {
     uint32_t seed = 0;      // only the flow's phases; the same seed, the same flow
     double level = 1;       // the brightest it gets, 0-1
     // When this light starts, from the gesture's start: an effect placed later than the
-    // gesture (a far figure) is the same field, joined at its own moment.
+    // gesture (a far figure) is the same field, joined at its own moment. Below 0 the
+    // effect starts early and stays dark until the gesture's moment comes.
     double at = 0;
     // The figure's place on the stage: stage = A x (model space) + b, one row per axis.
     // Identity when not given (a test, or a figure placed by hand).

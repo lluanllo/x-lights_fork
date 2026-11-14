@@ -586,6 +586,8 @@
 		<Unit filename="../src-core/composer/ProceduralField.h" />
 		<Unit filename="../src-core/composer/StageSpace.cpp" />
 		<Unit filename="../src-core/composer/StageSpace.h" />
+		<Unit filename="../src-core/composer/StageDirector.cpp" />
+		<Unit filename="../src-core/composer/StageDirector.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />
 		<Unit filename="../src-core/composer/StageTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />

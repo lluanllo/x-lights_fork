@@ -11,7 +11,9 @@
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
 #include "composer/SequenceWriter.h"
+#include "composer/StageDirector.h"
 #include "composer/StageSpace.h"
+#include "composer/VocalUnderstanding.h"
 #include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
 
@@ -88,6 +90,7 @@ public:
             TestSpace();
             TestWave();
             TestLayers();
+            TestDirector();
         }
         if (_ctx != nullptr) {
             (void)_ctx->CloseSequence();
@@ -207,8 +210,8 @@ private:
         std::string error;
         Check(FromText(ToText(full), back, error) && ToText(back) == ToText(full), "written as text and read back: the same field");
         Check(!FromText("fn=wobble", back, error) && !FromText("fn=wave;v=0", back, error) && !FromText("fn=wave;speeed=1", back, error) &&
-                  !FromText("fn=wave;m=1,2,3", back, error) && !FromText("fn=wave;at=-1", back, error),
-              "an unknown function, a zero speed, a misspelt setting, a bad place or a negative start are refused");
+                  !FromText("fn=wave;m=1,2,3", back, error) && !FromText("fn=wave;at=-61", back, error) && FromText("fn=wave;at=-0.1", back, error),
+              "an unknown function, a zero speed, a misspelt setting, a bad place or a start a minute early are refused; a light waiting a moment is not");
         const std::vector<char> set = LightSet("1-3,5", 6, true);
         Check(set == std::vector<char>({ 1, 1, 1, 0, 1, 0 }) && LightSet("", 3, true) == std::vector<char>({ 1, 1, 1 }) && LightSet("", 3, false) == std::vector<char>({ 0, 0, 0 }),
               "light numbers as xLights writes them");
@@ -534,6 +537,432 @@ private:
             }
         }
         Check(greenAfter == bodyTotal, "after the wave, the green is whole again: nothing below was destroyed");
+    }
+
+    // ------------------------------------------------------------- the director
+
+    // A song made by hand: rest, strong instruments, three close hits, a narration, a
+    // choir answering, a climax. Each part should get its own way of using the house.
+    struct Song {
+        CompositionPlan plan;
+        SongAnalysis analysis;
+        VocalUnderstanding voices;
+    };
+
+    static PlanSegment Segment(const char* id, int a, int b, int priority, std::vector<std::string> flags) {
+        PlanSegment s;
+        s.id = id;
+        s.startMS = a;
+        s.endMS = b;
+        s.priority = priority;
+        s.flags = std::move(flags);
+        s.sectionKind = "verse";
+        return s;
+    }
+
+    static PlanAssignment Sing(const char* figure, const char* voice) {
+        PlanAssignment a;
+        a.target = figure;
+        a.intent = "face-sing";
+        a.voice = voice;
+        a.prominence = Prominence::Lead;
+        return a;
+    }
+
+    static void Hit(SongAnalysis& a, int ms, double strength) {
+        MusicalEvent e;
+        e.timeMS = ms;
+        e.type = MusicalEventType::Onset;
+        e.intensity = strength;
+        e.confidence = 0.9;
+        a.events.push_back(e);
+    }
+
+    static Intervention Voice(const char* id, int a, int b, const char* emission, std::vector<std::string> relations) {
+        Intervention i;
+        i.id = id;
+        i.track = id;
+        i.startMS = a;
+        i.endMS = b;
+        i.emission = emission;
+        i.confidence = 0.9;
+        i.relations = std::move(relations);
+        return i;
+    }
+
+    Song MakeSong() {
+        Song s;
+        s.plan.durationMS = 24000;
+        s.plan.segments.push_back(Segment("s0.0", 0, 3000, 0, { "silence" }));
+        s.plan.segments.push_back(Segment("s1.0", 3000, 7000, 2, {}));
+        s.plan.segments.push_back(Segment("s2.0", 7000, 11000, 1, {}));
+        PlanSegment narration = Segment("s3.0", 11000, 15000, 1, { "lyrics" });
+        narration.assignments.push_back(Sing("Arbol Cara", "narrador"));
+        narration.vocalCoverage = 1;
+        s.plan.segments.push_back(narration);
+        PlanSegment choir = Segment("s4.0", 15000, 19000, 1, { "lyrics" });
+        choir.assignments.push_back(Sing("Arbol Cara", "solista"));
+        choir.assignments.push_back(Sing("Carita", "coro"));
+        choir.vocalCoverage = 1;
+        s.plan.segments.push_back(choir);
+        s.plan.segments.push_back(Segment("s5.0", 19000, 24000, 3, { "climax" }));
+        s.analysis.durationMS = 24000;
+        s.analysis.tempo.push_back({ 0, 120, 0.9 });
+        Hit(s.analysis, 4000, 0.9);  // the strong instruments' hit
+        Hit(s.analysis, 8000, 0.8);  // three close hits
+        Hit(s.analysis, 8400, 0.8);
+        Hit(s.analysis, 8800, 0.8);
+        Hit(s.analysis, 16000, 0.8); // in the choir
+        Hit(s.analysis, 20000, 0.95); // the climax
+        s.voices.interventions.push_back(Voice("narrador#1", 11000, 15000, "spoken", {}));
+        s.voices.interventions.push_back(Voice("solista#1", 15000, 16500, "sung", {}));
+        s.voices.interventions.push_back(Voice("coro#1", 16600, 18000, "sung", { "answers:solista#1" }));
+        return s;
+    }
+
+    StageDirectorInput Input(const Song& s) {
+        StageDirectorInput in;
+        in.plan = &s.plan;
+        in.analysis = &s.analysis;
+        in.voices = &s.voices;
+        in.geometry = &_geometry;
+        in.semantics = &_semantics;
+        in.space = &_space;
+        in.capabilities = &_caps;
+        return in;
+    }
+
+    static const StageScene* SceneOf(const GlobalStageScore& score, const char* id) {
+        for (const StageScene& s : score.scenes) {
+            if (s.id == id) {
+                return &s;
+            }
+        }
+        return nullptr;
+    }
+
+    static std::vector<const GlobalGesture*> GesturesOf(const GlobalStageScore& score, const StageScene* sc) {
+        std::vector<const GlobalGesture*> out;
+        if (sc != nullptr) {
+            for (const std::string& id : sc->gestures) {
+                if (const GlobalGesture* g = score.Gesture(id)) {
+                    out.push_back(g);
+                }
+            }
+        }
+        return out;
+    }
+
+    void TestDirector() {
+        Title("The director: each part of the song uses the house in its own way");
+        const Song song = MakeSong();
+        const StageDirectorInput in = Input(song);
+        const GlobalStageScore score = DirectStage(in);
+        for (const StageScene& sc : score.scenes) {
+            std::string roles;
+            for (const SceneRole& r : sc.roles) {
+                if (r.role != "rest") {
+                    roles += fmt::format("{}{}={}", roles.empty() ? "" : ", ", r.figure, r.role);
+                }
+            }
+            printf("    %s %s [%s] gestures: %zu; %s\n", sc.id.c_str(), StageModeId(sc.mode), sc.context.c_str(), sc.gestures.size(), roles.c_str());
+        }
+        Check(score.scenes.size() == 6, "one scene for each part of the plan");
+        const StageScene* rest = SceneOf(score, "s0.0");
+        const StageScene* strong = SceneOf(score, "s1.0");
+        const StageScene* hits = SceneOf(score, "s2.0");
+        const StageScene* narration = SceneOf(score, "s3.0");
+        const StageScene* choir = SceneOf(score, "s4.0");
+        const StageScene* climax = SceneOf(score, "s5.0");
+        if (rest == nullptr || strong == nullptr || hits == nullptr || narration == nullptr || choir == nullptr || climax == nullptr) {
+            Check(false, "every scene found");
+            return;
+        }
+        Check(rest->mode == StageMode::Rest && rest->gestures.empty(), "where the music rests, the house rests: no gesture");
+        Check(narration->mode == StageMode::Protagonist && narration->RoleOf("Arbol Cara") == "protagonist", "a narration: the speaking figure alone has the attention");
+        Check(choir->mode == StageMode::CallResponse, "a voice and a choir answering it: call and answer");
+        Check(climax->mode == StageMode::FullEnsemble, "the peak of the song: the whole house");
+        Check(strong->mode == StageMode::Propagation, "strong instruments with no voice: a gesture that travels");
+        int climaxResting = 0, climaxFigures = 0;
+        for (const SceneRole& r : climax->roles) {
+            ++climaxFigures;
+            climaxResting += r.role == "rest" ? 1 : 0;
+        }
+        Check(climaxFigures > 4 && climaxResting == 0, fmt::format("at the peak every figure takes part ({} figures)", climaxFigures));
+        bool withinBudget = true;
+        for (const StageScene& sc : score.scenes) {
+            if (sc.budget < 1e8) {
+                withinBudget = withinBudget && sc.spent <= sc.budget + 1e-9;
+            }
+        }
+        int narrationResting = 0;
+        for (const SceneRole& r : narration->roles) {
+            narrationResting += r.role == "rest" ? 1 : 0;
+        }
+        Check(withinBudget && narrationResting > 0, fmt::format("no scene spends more attention than it has; in the narration {} figures rest", narrationResting));
+
+        // The strong hit: a wave from a bulb, reaching each figure when its distance says.
+        const auto strongGestures = GesturesOf(score, strong);
+        const GlobalGesture* wave = nullptr;
+        for (const GlobalGesture* g : strongGestures) {
+            if (g->kind == GestureKind::PropagatedWave && g->startMS == 4000) {
+                wave = g;
+            }
+        }
+        Check(wave != nullptr && wave->origin.rfind("node:", 0) == 0 && ResolveAnchor(wave->origin, _space, _geometry, &_semantics).ok,
+              fmt::format("the strong hit at 4 s starts a wave in one real bulb ({})", wave != nullptr ? wave->origin : "none"));
+        if (wave != nullptr) {
+            bool delays = true;
+            for (const GestureParticipant& p : wave->participants) {
+                const FigureGeometry* g = _geometry.Find(p.figure);
+                const StageFigure* f = _space.Find(p.figure);
+                double first = 1e9;
+                for (const auto& [x, y] : LightsOnStage(*g, *f)) {
+                    first = std::min(first, std::hypot(x - wave->ox, y - wave->oy) / wave->speed);
+                }
+                delays = delays && std::abs(p.delayMS - static_cast<int>(first * 1000)) <= 1;
+            }
+            Check(delays && wave->participants.size() >= 3, fmt::format("each of its {} figures joins at distance over speed", wave->participants.size()));
+            Check(wave->speed >= 0.15 && wave->speed <= 4 && !wave->reasons.empty() && !wave->trigger.empty(), fmt::format("its speed comes from the beat ({:.2f} a second) and it says why", wave->speed));
+        }
+        // Three close hits: one figure for each, at each hit.
+        const GlobalGesture* cascade = nullptr;
+        for (const GlobalGesture* g : GesturesOf(score, hits)) {
+            if (g->kind == GestureKind::Cascade) {
+                cascade = g;
+            }
+        }
+        Check(cascade != nullptr && cascade->participants.size() == 3 && cascade->participants[0].delayMS == 0 && cascade->participants[1].delayMS == 400 &&
+                  cascade->participants[2].delayMS == 800 && cascade->participants[0].figure != cascade->participants[1].figure,
+              "three close hits make a cascade: three different figures at 0, 0.4 and 0.8 s");
+        const GlobalGesture* answer = nullptr;
+        for (const GlobalGesture* g : GesturesOf(score, choir)) {
+            if (g->kind == GestureKind::CallResponse) {
+                answer = g;
+            }
+        }
+        Check(answer != nullptr && answer->participants.size() >= 2 && answer->participants[0].figure == "Arbol Cara" && answer->participants[1].delayMS == 500,
+              "in the choir, the soloist calls and the others answer a beat (0.5 s) apart");
+        bool spaced = true;
+        for (const StageScene& sc : score.scenes) {
+            const auto gs = GesturesOf(score, &sc);
+            for (size_t i = 1; i < gs.size(); ++i) {
+                spaced = spaced && std::abs(gs[i]->startMS - gs[i - 1]->startMS) >= 1500;
+            }
+            spaced = spaced && gs.size() <= 4;
+        }
+        Check(spaced, "not every hit gets a gesture: at most a few a scene, 1.5 s apart");
+        bool identity = false, identityKeepsMouth = true;
+        const FigureProfile* face = _semantics.Find("Arbol Cara");
+        const FigureRegion* mouth = face != nullptr ? face->Region("mouth") : nullptr;
+        for (const StageLayer& l : score.layers) {
+            if (l.figure == "Arbol Cara" && l.startMS == narration->startMS) {
+                identity = true;
+                const std::vector<char> skip = LightSet(l.skip, 600, false);
+                for (int n : mouth != nullptr ? mouth->nodes : std::vector<int>()) {
+                    identityKeepsMouth = identityKeepsMouth && skip[static_cast<size_t>(n)];
+                }
+            }
+        }
+        Check(identity && identityKeepsMouth, "the narrator keeps its own colours under everything, its mouth left to the face");
+
+        // Same input, same score; written and read back, the same score.
+        Check(ToJson(DirectStage(in)) == ToJson(score), "the same song and layout always give the same score");
+        GlobalStageScore back;
+        std::string error;
+        Check(FromJson(ToJson(score), back, error) && ToJson(back) == ToJson(score), "the score is written and read back unchanged");
+
+        // A person's changes win and are kept apart.
+        StageEdits edits;
+        edits.edits.push_back({ "mode", 3000, -1, "local-waves", "" });
+        edits.edits.push_back({ "exclude", 19000, -1, "Matriz Prueba", "" });
+        edits.edits.push_back({ "no-gestures", 7000, -1, "", "" });
+        edits.edits.push_back({ "speed", 3000, 4000, "1.5", "" });
+        edits.edits.push_back({ "mode", 60000, -1, "rest", "" });
+        StageEdits editsBack;
+        Check(FromJson(ToJson(edits), editsBack, error) && editsBack.edits.size() == edits.edits.size(), "a person's changes are written and read again");
+        StageDirectorInput edited = in;
+        edited.edits = &editsBack;
+        const GlobalStageScore changed = DirectStage(edited);
+        const StageScene* c1 = SceneOf(changed, "s1.0");
+        const StageScene* c2 = SceneOf(changed, "s2.0");
+        const StageScene* c5 = SceneOf(changed, "s5.0");
+        bool matrixOut = c5 != nullptr && c5->RoleOf("Matriz Prueba") == "rest";
+        for (const GlobalGesture* g : GesturesOf(changed, c5)) {
+            for (const GestureParticipant& p : g->participants) {
+                matrixOut = matrixOut && p.figure != "Matriz Prueba";
+            }
+        }
+        const auto changedWave = GesturesOf(changed, c1);
+        bool faster = false;
+        for (const GlobalGesture* g : changedWave) {
+            faster = faster || (g->startMS == 4000 && std::fabs(g->speed - 1.5) < 1e-9 && g->manual);
+        }
+        Check(c1 != nullptr && c1->mode == StageMode::LocalWaves && c1->manual, "a mode a person chose is kept");
+        Check(matrixOut, "a figure a person took out of a scene takes no part in it");
+        Check(c2 != nullptr && c2->gestures.empty(), "a scene a person wanted without gestures has none");
+        Check(faster, "a speed a person chose replaces the automatic one");
+        Check(std::find(changed.warnings.begin(), changed.warnings.end(), "edit-scene-gone:60000") != changed.warnings.end(), "a change for a scene that no longer exists is said, not applied elsewhere");
+        // An excluded gesture is never chosen.
+        StageLibrary personal;
+        personal.entries.push_back({ "cascade", "gesture", "", "", {}, {}, false, true, false, "person" });
+        StageLibraryEntry mine{ "local:mine", "local", "Mi brillo", "", { "pulse" }, {}, true, false, true, "person" };
+        personal.entries.push_back(mine);
+        StageLibrary libBack;
+        Check(FromJson(ToJson(personal), libBack, error) && libBack.entries.size() == 2, "a person's library is written and read again");
+        const StageLibrary library = MergeStageLibrary(libBack);
+        Check(library.Find("cascade") != nullptr && library.Find("cascade")->excluded && library.Find("local:mine") != nullptr && library.Find("propagated-wave") != nullptr,
+              "the person's choices sit over the built-in gestures");
+        StageDirectorInput noCascade = in;
+        noCascade.library = &library;
+        bool none = true;
+        for (const GlobalGesture& g : DirectStage(noCascade).gestures) {
+            none = none && g.kind != GestureKind::Cascade;
+        }
+        Check(none, "a gesture a person excluded is never chosen");
+
+        TestRealize(song, score);
+    }
+
+    // The score into effects, rendered by xLights: each figure lights when the score says.
+    void TestRealize(const Song& song, const GlobalStageScore& score) {
+        Title("The score as native effects: rendered, every figure on time");
+        StageDirectorInput in = Input(song);
+        Choreography c;
+        c.durationMS = 24000;
+        const auto event = [&](const char* id, const char* target, Prominence p, const char* intent, int a, int b) {
+            ChoreographyEvent e;
+            e.id = id;
+            e.target = target;
+            e.prominence = p;
+            e.intent = intent;
+            e.startMS = a;
+            e.endMS = b;
+            e.effect = "On";
+            e.colors = { "#2040FF" };
+            e.segmentId = "x";
+            c.events.push_back(e);
+        };
+        // The figures that rest in the narration, each with a background effect over it.
+        const StageScene* narration = SceneOf(score, "s3.0");
+        std::string resting;
+        for (const SceneRole& r : narration->roles) {
+            if (r.role == "rest" && _space.Find(r.figure) != nullptr) {
+                resting = r.figure;
+                break;
+            }
+        }
+        event("bed", resting.c_str(), Prominence::Support, "accompany", 10000, 16000);
+        event("face", "Arbol Cara", Prominence::Lead, "face-sing", 11000, 15000);
+        in.choreography = &c;
+        const std::vector<std::string> notes = RealizeStage(score, in, c);
+        for (const std::string& n : notes) {
+            printf("    %s\n", n.c_str());
+        }
+        bool cut = !resting.empty(), faceKept = false, specsValid = true, mouthSafe = true;
+        int stageEvents = 0;
+        const FigureProfile* face = _semantics.Find("Arbol Cara");
+        const FigureRegion* mouth = face != nullptr ? face->Region("mouth") : nullptr;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.target == resting && e.provenance.empty()) {
+                cut = cut && (e.endMS <= 11000 || e.startMS >= 15000);
+            }
+            faceKept = faceKept || (e.id == "face" && e.startMS == 11000 && e.endMS == 15000 && e.layer > 0);
+            if (e.provenance.rfind("stage:", 0) == 0) {
+                ++stageEvents;
+                FieldSpec s;
+                std::string error;
+                const std::string text = e.settings.empty() ? "" : e.settings[0].second;
+                const bool valid = FromText(text, s, error) && ValidateField(s, error);
+                if (!valid) {
+                    printf("    %s: %s\n      %s\n", e.id.c_str(), error.c_str(), text.c_str());
+                }
+                specsValid = specsValid && valid;
+                if (e.target == "Arbol Cara" && e.intent == "stage-gesture" && mouth != nullptr) {
+                    const std::vector<char> skip = LightSet(s.skip, 600, false);
+                    for (int n : mouth->nodes) {
+                        mouthSafe = mouthSafe && skip[static_cast<size_t>(n)];
+                    }
+                }
+            }
+        }
+        bool overlap = false;
+        for (size_t i = 0; i < c.events.size(); ++i) {
+            for (size_t j = i + 1; j < c.events.size(); ++j) {
+                const ChoreographyEvent& a = c.events[i];
+                const ChoreographyEvent& b = c.events[j];
+                overlap = overlap || (a.target == b.target && a.layer == b.layer && a.startMS < b.endMS && b.startMS < a.endMS);
+            }
+        }
+        Check(stageEvents > 0 && specsValid, fmt::format("{} Stage Field effects, every one a valid field", stageEvents));
+        Check(cut, fmt::format("a resting figure's background stops for the narration ({})", resting));
+        Check(faceKept, "the narrator's face stays, one layer down to make room");
+        Check(mouthSafe, "no gesture lights the mouth of a figure with a face");
+        Check(!overlap, "no two effects share a layer of a figure at the same time");
+        SequenceSpec spec;
+        spec.frameMS = FRAME;
+        spec.durationMS = 24000;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.provenance.rfind("stage:", 0) != 0) {
+                continue; // only the score's own effects: what is measured is the director's
+            }
+            EffectSpec x;
+            x.target = e.target;
+            x.layer = e.layer;
+            x.effect = e.effect;
+            x.settings = e.settings;
+            x.palette = e.PaletteString();
+            x.startMS = e.startMS;
+            x.endMS = e.endMS;
+            x.kind = TargetKind::Model;
+            spec.effects.push_back(x);
+        }
+        std::string fseq;
+        Check(Render(spec, "partitura", fseq), "the score written as a native sequence and rendered");
+        Frames frames(fseq);
+        if (!frames.Valid()) {
+            return;
+        }
+        // When does each figure first light inside a window?
+        const auto firstLit = [&](const std::string& figure, int fromMS, int toMS) {
+            const FigureGeometry* g = _geometry.Find(figure);
+            for (int f = fromMS / FRAME; f < toMS / FRAME && f < frames.Count(); ++f) {
+                for (const FigureNode& n : g->nodeMap) {
+                    const auto c3 = frames.Light(f, n.channel);
+                    if (std::max({ c3[0], c3[1], c3[2] }) > 40) {
+                        return f * FRAME;
+                    }
+                }
+            }
+            return -1;
+        };
+        int worst = 0, on = 0, total = 0;
+        std::string detail;
+        for (const char* id : { "propagated-wave@4000", "cascade@8000" }) {
+            const GlobalGesture* g = score.Gesture(id);
+            if (g == nullptr) {
+                continue;
+            }
+            for (const GestureParticipant& p : g->participants) {
+                const int expected = g->startMS + p.delayMS;
+                const int lit = firstLit(p.figure, g->startMS - 500, g->endMS + 400);
+                ++total;
+                const int error = lit < 0 ? 100000 : std::abs(lit - expected);
+                worst = std::max(worst, error);
+                on += error <= 75 ? 1 : 0;
+                detail += fmt::format("{}{} {}ms", detail.empty() ? "" : ", ", p.figure, lit < 0 ? -1 : lit - expected);
+            }
+        }
+        printf("    lit minus expected: %s\n", detail.c_str());
+        Check(total > 0 && on == total, fmt::format("each figure of the wave and the cascade lit at its moment, within 3 frames: {} of {} (worst {} ms)", on, total, worst));
+        // Before the strong hit and in the rest, the score lights nothing.
+        int early = 0;
+        for (const StageFigure& f : _space.figures) {
+            if (_geometry.Find(f.name) != nullptr && f.placed) {
+                early += firstLit(f.name, 0, 3000) >= 0 ? 1 : 0;
+            }
+        }
+        Check(early == 0, "in the rest at the start, nothing of the score lights");
     }
 
     fs::path _root;
