@@ -7,6 +7,8 @@
 #include "composer/FigureSemantics.h"
 #include "composer/GenerationValidator.h"
 #include "composer/ModelCapabilities.h"
+#include "composer/MusicAssist.h"
+#include "ai/IServiceSettingsStore.h"
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
 #include "composer/SequenceWriter.h"
@@ -27,6 +29,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <deque>
 #include <filesystem>
 #include <memory>
 #include <set>
@@ -106,6 +109,53 @@ private:
     std::vector<std::vector<uint8_t>> _frames;
 };
 
+// Answers in the order given, and keeps every request it was sent: no network.
+class StandIn final : public IHttpClient {
+public:
+    void Answer(int status, const std::string& body) {
+        HttpResponse r;
+        r.status = status;
+        r.body = body;
+        _answers.push_back(std::move(r));
+    }
+    void NoNetwork() {
+        HttpResponse r;
+        r.transportError = "Could not resolve host";
+        _answers.push_back(std::move(r));
+    }
+    HttpResponse Send(const HttpRequest& request) override {
+        requests.push_back(request);
+        if (_answers.empty()) {
+            HttpResponse r;
+            r.transportError = "no answer prepared";
+            return r;
+        }
+        HttpResponse r = _answers.front();
+        _answers.pop_front();
+        return r;
+    }
+    std::vector<HttpRequest> requests;
+
+private:
+    std::deque<HttpResponse> _answers;
+};
+
+class MemoryStore final : public IServiceSettingsStore {
+public:
+    std::string getString(std::string_view, const std::string& d) const override { return d; }
+    int getInt(std::string_view, int d) const override { return d; }
+    bool getBool(std::string_view, bool d) const override { return d; }
+    void setString(std::string_view, const std::string&) override {}
+    void setInt(std::string_view, int) override {}
+    void setBool(std::string_view, bool) override {}
+    std::string getSecret(std::string_view name) const override {
+        const auto it = secrets.find(std::string(name));
+        return it != secrets.end() ? it->second : std::string();
+    }
+    void setSecret(std::string_view name, const std::string& token) override { secrets[std::string(name)] = token; }
+    std::map<std::string, std::string> secrets;
+};
+
 std::string Palette(const std::vector<std::string>& colors) {
     std::string out;
     for (size_t i = 0; i < colors.size(); ++i) {
@@ -131,6 +181,7 @@ public:
         fs::create_directories(_root, ec);
         TestSpace();
         TestPalettes();
+        TestGroq();
         if (Setup()) {
             TestDirector();
             TestEdits();
@@ -253,6 +304,92 @@ private:
         again.harmony = Harmony::SplitComplementary;
         Check(BuildPalette(again).colors.size() == 8 && BuildPalette(again).Hex("accent") == BuildPalette(again).Hex("accent"), "the same request, the same palette");
         Check(HarmonyFromId("split-complementary", pulled.harmony) && pulled.harmony == Harmony::SplitComplementary && !HarmonyFromId("rainbow", pulled.harmony), "harmony ids read back; unknown ones refused");
+    }
+
+    // ------------------------------------------------------------ Groq, simulated
+
+    void TestGroq() {
+        Title("The artistic analysis with Groq, simulated: what is sent, what comes back, the cache and the fallback");
+        RetryPolicy fast;
+        fast.maxAttempts = 1;
+        fast.sleep = [](int) {};
+        const std::string fakeKey = "gsk_" + std::string(48, 'x'); // invented, not a key
+        const std::string answer = R"({"mood":"festive","character":["festive","playful","galactic"],"colors":["#D0001A","#00A33D","#FFB627"],"colorIntensity":0.9,"warmth":0.6,)"
+                                   R"("contrast":"the verses tell, the chorus explodes","arc":[{"part":"verse","feeling":"joyful","intensity":0.5,"color":"#FFB627"},)"
+                                   R"({"part":"chorus","feeling":"festive","intensity":1.4,"color":"#00C0FF"},{"part":"coda","feeling":"calm"}],"imagery":["camino"],"christmas":0.95,"energy":0.8})";
+        const auto chat = [](const std::string& content) {
+            return nlohmann::json({ { "choices", nlohmann::json::array({ { { "message", { { "content", content } } } } }) } }).dump();
+        };
+        const std::string models = R"({"data":[{"id":"whisper-large-v3"},{"id":"llama-3.3-70b-versatile"},{"id":"openai/gpt-oss-120b"},{"id":"meta-llama/llama-guard-4-12b"}]})";
+        const fs::path show = _root / "groq-show";
+        std::error_code ec;
+        fs::create_directories(show, ec);
+        ArtisticCheckOptions o;
+        o.lyricsText = "Una noche de Navidad\nlas estrellas brillan\n";
+        o.title = "cancion de prueba";
+        o.acoustic = "tempo 105 BPM, 4/4; key D major; parts: verse 0-20 s (energy 0.45), chorus 20-40 s (energy 0.85)";
+        o.showDir = show.string();
+
+        MemoryStore none;
+        StandIn s0;
+        if (std::getenv("GROQ_API_KEY") == nullptr) {
+            const ArtisticCheck c = CheckArtisticAnalysis(s0, o, &none, fast);
+            Check(c.status == "NOT_CONFIGURED" && !c.configured && c.credentialSource == "none" && c.fallback && c.brief.source == "local" && s0.requests.empty(),
+                  "no key: NOT_CONFIGURED, nothing sent, the local reading of the lyrics is used");
+        } else {
+            Check(true, "no key: not checked here, GROQ_API_KEY is set on this computer");
+        }
+        MemoryStore store;
+        store.setSecret(SecretStoreName("Groq"), fakeKey);
+        StandIn s1;
+        const ArtisticCheck noConsent = CheckArtisticAnalysis(s1, o, &store, fast);
+        Check(noConsent.status == "LOCAL_FALLBACK" && noConsent.configured && noConsent.credentialSource == "secure-store" && noConsent.fallback && s1.requests.empty(),
+              "a key but no consent: LOCAL_FALLBACK, nothing sent");
+        o.consent = true;
+        StandIn s2;
+        s2.Answer(200, models);
+        s2.Answer(200, chat(answer));
+        const ArtisticCheck real = CheckArtisticAnalysis(s2, o, &store, fast);
+        Check(real.status == "REAL_REQUEST" && real.realRequest && !real.cacheHit && real.valid && !real.fallback && real.model == "openai/gpt-oss-120b",
+              "with a key and consent: REAL_REQUEST, answered by " + real.model + ", chosen from what the key offers");
+        Check(real.modelsOffered.size() == 2 && std::find(real.modelsOffered.begin(), real.modelsOffered.end(), "whisper-large-v3") == real.modelsOffered.end(),
+              "the models offered are listed, only the chat ones");
+        const std::string sent = s2.requests.size() == 2 ? s2.requests[1].body : std::string();
+        Check(sent.find("Acoustic summary (measured on this computer, not the audio)") != std::string::npos && sent.find("tempo 105 BPM") != std::string::npos &&
+                  s2.requests[1].multipart.empty() && sent.find(fakeKey) == std::string::npos,
+              "it sends the title, the lyrics' text and the local acoustic summary; never the audio, never the key in the body");
+        Check(real.received == std::vector<std::string>({ "title", "lyrics", "acoustic-summary" }) && !real.analyzedAt.empty() && real.brief.origin == "request",
+              "the reading says what the service received and when it answered: " + real.analyzedAt);
+        Check(real.brief.character == std::vector<std::string>({ "festive", "playful" }) && real.brief.arc.size() == 2 && real.brief.Part("chorus") != nullptr &&
+                  real.brief.Part("chorus")->intensity == 1.0 && std::fabs(real.brief.colorIntensity - 0.9) < 1e-9 && std::fabs(real.brief.warmth - 0.6) < 1e-9,
+              "the answer is checked: an unknown character and an unknown part dropped, an intensity over 1 clamped");
+        Check(std::any_of(real.validation.begin(), real.validation.end(), [](const std::string& w) { return w.rfind("character-unknown", 0) == 0; }), "and what was dropped is said");
+        StandIn s3;
+        const ArtisticCheck again = CheckArtisticAnalysis(s3, o, &store, fast);
+        Check(again.status == "CACHE_HIT" && again.cacheHit && !again.realRequest && s3.requests.empty() && again.analyzedAt == real.analyzedAt && again.brief.origin == "cache",
+              "the same text again: CACHE_HIT, nothing sent, the date of the first answer kept");
+        o.refresh = true;
+        StandIn s4;
+        s4.Answer(200, models);
+        s4.Answer(200, chat("I think it is a happy song!"));
+        const ArtisticCheck broken = CheckArtisticAnalysis(s4, o, &store, fast);
+        Check(broken.status == "ERROR" && broken.realRequest && broken.fallback && broken.brief.source == "local" && broken.error.find(fakeKey) == std::string::npos,
+              "an answer that is not the schema: ERROR, the local reading used, the key never in the message");
+        StandIn s5;
+        s5.NoNetwork();
+        const ArtisticCheck offline = CheckArtisticAnalysis(s5, o, &store, fast);
+        Check(offline.status == "ERROR" && offline.fallback && offline.error.find("network") != std::string::npos, "no network: ERROR (" + offline.error + "), the local reading used");
+        StandIn s6;
+        s6.Answer(200, R"({"data":[{"id":"whisper-large-v3"}]})");
+        const ArtisticCheck noModel = CheckArtisticAnalysis(s6, o, &store, fast);
+        Check(noModel.status == "ERROR" && s6.requests.size() == 1, "no chat model offered: ERROR, nothing else sent");
+        ArtisticCheck back;
+        std::string error;
+        Check(FromJson(ToJson(real), back, error) && back.status == "REAL_REQUEST" && back.model == real.model && back.brief.arc.size() == 2 && ToJson(real).find(fakeKey) == std::string::npos,
+              "the check is written and read again, without the key");
+
+        // The interpretation reaches the colours, and says where it came from.
+        _groqBrief = again.brief;
     }
 
     // ------------------------------------------------------------ fixture
@@ -402,6 +539,23 @@ private:
 
         const ChromaticScore score = DirectColors(Input());
         _score = score;
+        if (!_groqBrief.Empty()) {
+            ChromaticInput in = Input();
+            in.brief = &_groqBrief;
+            const ChromaticScore read = DirectColors(in);
+            const ChromaticScenePlan* chorus = read.Scene("s3.0");
+            bool cited = false;
+            for (const std::string& r : chorus != nullptr ? chorus->reasons : std::vector<std::string>()) {
+                cited |= r.find("the interpretation (groq:openai/gpt-oss-120b): this part feels festive") != std::string::npos;
+            }
+            Check(cited, "the chorus follows what the interpretation said of choruses, and says so");
+            Check(read.briefSource.find("groq:openai/gpt-oss-120b (kept answer, answered ") == 0, "the score says the interpretation came from a kept answer, not from a request now: " + read.briefSource);
+            bool near = false;
+            for (const PaletteColor& c : chorus != nullptr ? chorus->palette.colors : std::vector<PaletteColor>()) {
+                near |= c.C >= NEUTRAL_CHROMA && HueDistance(c.h, Hue("#00C0FF")) < 25;
+            }
+            Check(near, "the colour it suggested for the chorus is in the chorus's palette");
+        }
         Check(score.enabled && score.scenes.size() == _plan.segments.size(), fmt::format("enabled, one colour plan per scene ({})", score.scenes.size()));
         Check(score.song.colors.size() == 8 && !score.identityReason.empty(), "the song's family has its hierarchy and says where its anchor comes from: " + score.identityReason);
         const auto scene = [&](size_t i) -> const ChromaticScenePlan& { return score.scenes[i]; };
@@ -809,6 +963,7 @@ private:
     Choreography _choreo;
     GlobalStageScore _stage;
     ChromaticScore _score;
+    SongVisualBrief _groqBrief;
     int _passed = 0;
     int _failed = 0;
 };

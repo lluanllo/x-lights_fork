@@ -2,6 +2,7 @@
 
 #include "composer/LyricAligner.h"
 #include "composer/LyricDocument.h"
+#include "composer/SongVisualPlan.h"
 
 #include <functional>
 #include <map>
@@ -272,9 +273,55 @@ struct SongVisualBrief;
 // The first of the preferred chat models the service offers; "" when none is.
 [[nodiscard]] std::string ChooseGroqChatModel(const std::vector<std::string>& offered, const std::string& wanted = "");
 [[nodiscard]] std::string VisualBriefPrompt();
-// Only the lyrics' text goes, never the audio. `model` comes back with the one used.
+// Only text goes, never the audio: the title, the lyrics and, when given, a short acoustic
+// summary measured on this computer (AcousticSummary). `model` comes back with the one
+// used; `offered`, when given, with the chat models the key offers. The brief says what
+// the service received and when it answered.
 [[nodiscard]] bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std::string& title, const ApiKey& key, bool consent, const RetryPolicy& policy,
-                                 std::string& model, SongVisualBrief& brief, AssistFailure& failure);
+                                 std::string& model, SongVisualBrief& brief, AssistFailure& failure, const std::string& acoustic = std::string(),
+                                 std::vector<std::string>* offered = nullptr);
+// What the artistic reading asks the service for (version 2).
+[[nodiscard]] std::string VisualBriefPrompt();
+// Where a brief for these words, summary and model is kept in the show's cache.
+[[nodiscard]] std::string BriefCachePath(const std::string& showDir, const std::string& lyricsText, const std::string& acoustic, const std::string& model);
+
+// ------------------------------------------- the artistic analysis: is Groq really used?
+
+// Whether the colours' artistic reading comes from Groq now, from an answer it gave
+// before, or from this computer alone, and why. Nothing here prints or keeps a key.
+struct ArtisticCheck {
+    std::string status;           // "REAL_REQUEST", "CACHE_HIT", "LOCAL_FALLBACK", "NOT_CONFIGURED", "ERROR"
+    bool configured = false;      // a Groq key exists
+    std::string credentialSource; // "secure-store", "environment" or "none"
+    std::string model;            // the model that answered, now or before
+    std::vector<std::string> modelsOffered; // the chat models the key offers (asked only with a real request)
+    bool realRequest = false;     // something was sent in this check
+    bool cacheHit = false;
+    std::string cachePath;
+    std::string analyzedAt;       // when the service answered
+    std::string checkedAt;
+    bool valid = false;           // the answer passed the schema
+    std::vector<std::string> validation; // what was dropped or clamped
+    bool fallback = false;        // the local reading of the lyrics is used instead
+    std::string fallbackReason;
+    std::string error;            // already redacted
+    std::vector<std::string> received; // what the service was given
+    SongVisualBrief brief;        // the reading the colours will use
+};
+
+struct ArtisticCheckOptions {
+    std::string lyricsText; // the words only
+    std::string title;
+    std::string acoustic;   // AcousticSummary; "" none
+    std::string showDir;    // for the cache; "" none
+    std::string model;      // a chat model to prefer
+    bool consent = false;   // the person agreed, in the window, to send the text
+    bool refresh = false;   // ask the service even when an answer is kept
+};
+
+[[nodiscard]] ArtisticCheck CheckArtisticAnalysis(IHttpClient& client, const ArtisticCheckOptions& options, const IServiceSettingsStore* keys, const RetryPolicy& policy = {});
+[[nodiscard]] std::string ToJson(const ArtisticCheck& check);
+[[nodiscard]] bool FromJson(const std::string& text, ArtisticCheck& check, std::string& error);
 
 [[nodiscard]] std::string ToJson(const SongCharacter& character);
 [[nodiscard]] bool FromJson(const std::string& text, SongCharacter& character, std::string& error);
@@ -329,7 +376,9 @@ struct TimedLine {
 // freezes it. The answer goes to `outPath` as JSON; a transcription or description is
 // also kept in the show's cache, where a later generation finds it offline.
 struct AssistCommandOptions {
-    std::string action;   // "lrclib", "transcribe", "describe", "brief" or "transcript-lrc"
+    std::string action;   // "lrclib", "transcribe", "describe", "brief", "artistic-check" or "transcript-lrc"
+    std::string acousticPath;   // brief, artistic-check: a text file with the local acoustic summary
+    bool refresh = false;       // artistic-check: ask the service even with an answer kept
     std::string transcriptPath; // transcript-lrc: the transcription to make lyrics from
     std::string lyricsPath;     // brief: the lyrics whose text is described
     std::string briefModel;     // brief: a chat model to prefer, if Groq offers it

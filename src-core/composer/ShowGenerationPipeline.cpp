@@ -1635,6 +1635,15 @@ bool ChoreographShow(GenerationRun& run) {
                 if (!ReadText(r.briefPath, text) || !ParseVisualBrief(text, "file", run.brief, error)) {
                     Note(run, S, "brief-unusable", r.briefPath + (error.empty() ? std::string() : ": " + error));
                     run.brief = SongVisualBrief();
+                } else {
+                    // A stored answer keeps the name of the service that gave it, and says it
+                    // was read from a file: nothing was asked in this generation.
+                    const nlohmann::json root = nlohmann::json::parse(text, nullptr, false);
+                    const std::string from = root.is_object() ? root.value("source", std::string()) : std::string();
+                    if (from.rfind("groq:", 0) == 0) {
+                        run.brief.source = from;
+                    }
+                    run.brief.origin = "file";
                 }
             }
             if (run.brief.Empty() && run.hasLyrics) {

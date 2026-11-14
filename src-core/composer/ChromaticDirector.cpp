@@ -418,6 +418,10 @@ private:
     void Identity(ChromaticScore& score) {
         const SongVisualBrief* b = _in.brief;
         score.briefSource = b != nullptr ? b->source : std::string();
+        if (b != nullptr && !b->origin.empty() && b->origin != "local") {
+            score.briefSource += fmt::format(" ({}{})", b->origin == "request" ? "asked now" : b->origin == "cache" ? "kept answer" : "read from a file",
+                                             b->analyzedAt.empty() ? std::string() : ", answered " + b->analyzedAt.substr(0, 10));
+        }
         double energy = 0;
         int counted = 0;
         for (const PlanSegment& seg : _in.plan->segments) {
@@ -427,7 +431,7 @@ private:
             }
         }
         energy = counted > 0 ? energy / counted : 0.5;
-        score.mood = b != nullptr && !b->mood.empty() ? b->mood : energy >= 0.6 ? "festive" : "calm";
+        score.mood = b != nullptr && !b->mood.empty() ? b->mood : b != nullptr && !b->character.empty() ? MoodOfCharacter(b->character.front()) : energy >= 0.6 ? "festive" : "calm";
         _mood = score.mood;
         // The hues the song speaks of, with their weight.
         std::vector<double> songHues;
@@ -448,6 +452,13 @@ private:
                     }
                 }
             }
+        }
+        // How warm the interpretation feels the song: a pull towards that side of the circle.
+        if (b != nullptr && b->warmth >= -1 && std::fabs(b->warmth) >= 0.3) {
+            _suggested.push_back({ b->warmth > 0 ? 55.0 : ICE_BLUE, 0.35 * std::fabs(b->warmth) });
+        }
+        if (b != nullptr && b->colorIntensity >= 0) {
+            _intensity = 0.75 + 0.35 * b->colorIntensity;
         }
         const double xmas = std::clamp(_o.christmasInfluence, 0.0, 1.0);
         if (xmas > 0.05) {
@@ -769,7 +780,25 @@ private:
                 wanted = std::max(0.0, wanted - 0.3);
                 sp.manual = true;
             }
-            Harmony h = ChooseHarmony(sp, wanted, index);
+            // What the interpretation says of this kind of part.
+            std::string feeling;
+            std::vector<std::pair<double, double>> partHues;
+            if (const BriefPart* part = BriefPartFor(s.sectionKind); part != nullptr) {
+                feeling = part->feeling;
+                if (part->intensity >= 0) {
+                    wanted = std::clamp(wanted + (part->intensity - 0.5) * 0.4, 0.0, 1.0);
+                }
+                if (!part->color.empty()) {
+                    const Oklch k = OklchOfHex(part->color);
+                    if (k.C >= NEUTRAL_CHROMA) {
+                        partHues.push_back({ k.h, 0.7 });
+                    }
+                }
+                sp.reasons.push_back(fmt::format("the interpretation ({}): this part feels {}{}{}", _in.brief->source, feeling.empty() ? std::string("-") : feeling,
+                                                 part->intensity >= 0 ? fmt::format(", intensity {:.1f}", part->intensity) : std::string(),
+                                                 part->color.empty() ? std::string() : ", suggests " + part->color));
+            }
+            Harmony h = ChooseHarmony(sp, wanted, index, feeling);
             if (SceneEdit("monochrome", s.startMS) != nullptr) {
                 h = Harmony::Monochromatic;
                 sp.manual = true;
@@ -777,9 +806,10 @@ private:
                 h = _songHarmony == Harmony::Monochromatic ? Harmony::Analogous : _songHarmony;
                 sp.manual = true;
             }
-            const double sat = std::clamp(0.72 + 0.26 * sp.energy + (sp.evolution == "climax" ? 0.06 : 0.0) - (sp.evolution == "rest" ? 0.25 : 0.0), 0.3, 1.0);
+            const double sat = std::clamp((0.72 + 0.26 * sp.energy + (sp.evolution == "climax" ? 0.06 : 0.0) - (sp.evolution == "rest" ? 0.25 : 0.0)) * _intensity, 0.3, 1.0);
             const double light = std::clamp(0.62 + 0.08 * sp.energy, 0.5, 0.75);
             PaletteRequest r = RequestFor(hue, h, sat, light, wanted);
+            r.suggested.insert(r.suggested.end(), partHues.begin(), partHues.end());
             r.id = sp.id;
             sp.palette = BuildPalette(r);
             sp.reasons.push_back(_harmonyWhy);
@@ -811,6 +841,24 @@ private:
         return sp;
     }
 
+    const BriefPart* BriefPartFor(const std::string& sectionKind) const {
+        if (_in.brief == nullptr || _in.brief->arc.empty()) {
+            return nullptr;
+        }
+        std::string kind = sectionKind;
+        if (kind == "interlude" || kind == "solo" || kind == "instrumental") {
+            kind = "instrumental";
+        }
+        return _in.brief->Part(kind);
+    }
+
+    static std::string MoodOfCharacter(const std::string& c) {
+        if (c == "intimate") return "tender";
+        if (c == "dramatic" || c == "majestic") return "epic";
+        if (c == "mysterious") return "dark";
+        return c;
+    }
+
     PaletteRequest RequestFor(double hue, Harmony h, double sat, double light, double contrast) const {
         PaletteRequest r;
         r.anchorHue = hue;
@@ -823,12 +871,13 @@ private:
         return r;
     }
 
-    Harmony ChooseHarmony(const ChromaticScenePlan& sp, double wanted, size_t index) {
+    Harmony ChooseHarmony(const ChromaticScenePlan& sp, double wanted, size_t index, const std::string& feeling) {
         double best = -1e9;
         Harmony chosen = _songHarmony;
         for (Harmony h : AllHarmonies()) {
-            // What the moment asks for weighs most; the mood and the song's family after it.
-            double v = 0.5 * MoodFit(_mood, h) + 1.6 * (1.0 - std::fabs(HarmonyContrast(h) - wanted));
+            // What the moment asks for weighs most; the mood (this part's, when the
+            // interpretation gives one) and the song's family after it.
+            double v = 0.5 * MoodFit(feeling.empty() ? _mood : feeling, h) + 1.6 * (1.0 - std::fabs(HarmonyContrast(h) - wanted));
             if (h == _songHarmony) {
                 v += 0.15; // the song's own family
             }
@@ -1325,6 +1374,7 @@ private:
     std::map<int, ColorPaletteProfile> _motifs;
     std::vector<Harmony> _previous;
     std::string _harmonyWhy;
+    double _intensity = 1; // how strong the interpretation wants the colours
 };
 
 const std::set<std::string>& UntouchedEffects() {
