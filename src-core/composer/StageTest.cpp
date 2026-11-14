@@ -11,7 +11,10 @@
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
 #include "composer/SequenceWriter.h"
+#include "composer/StageCheck.h"
 #include "composer/StageDirector.h"
+#include "composer/UnderstandingStore.h"
+#include "composer/WriterTest.h"
 #include "composer/StageSpace.h"
 #include "composer/VocalUnderstanding.h"
 #include "render/FSEQFile.h"
@@ -29,6 +32,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <tuple>
 
 namespace fs = std::filesystem;
 
@@ -37,6 +41,20 @@ namespace composer {
 namespace {
 
 constexpr int FRAME = 25;
+
+bool WriteText(const fs::path& path, const std::string& text) {
+    FILE* f = nullptr;
+#ifdef _WIN32
+    f = _wfopen(path.wstring().c_str(), L"wb");
+#else
+    f = fopen(path.string().c_str(), "wb");
+#endif
+    if (f == nullptr) {
+        return false;
+    }
+    const bool ok = fwrite(text.data(), 1, text.size(), f) == text.size();
+    return fclose(f) == 0 && ok;
+}
 const char* WHITE = "C_BUTTON_Palette1=#FFFFFF,C_CHECKBOX_Palette1=1";
 const char* GREEN = "C_BUTTON_Palette1=#1E8C3A,C_CHECKBOX_Palette1=1";
 const char* RED = "C_BUTTON_Palette1=#D0201A,C_CHECKBOX_Palette1=1";
@@ -547,6 +565,7 @@ private:
         CompositionPlan plan;
         SongAnalysis analysis;
         VocalUnderstanding voices;
+        Choreography faces; // the faces singing, as the choreography gives them
     };
 
     static PlanSegment Segment(const char* id, int a, int b, int priority, std::vector<std::string> flags) {
@@ -617,6 +636,21 @@ private:
         s.voices.interventions.push_back(Voice("narrador#1", 11000, 15000, "spoken", {}));
         s.voices.interventions.push_back(Voice("solista#1", 15000, 16500, "sung", {}));
         s.voices.interventions.push_back(Voice("coro#1", 16600, 18000, "sung", { "answers:solista#1" }));
+        for (const auto& [figure, a, b] : std::vector<std::tuple<const char*, int, int>>{ { "Arbol Cara", 11000, 15000 }, { "Arbol Cara", 15000, 19000 }, { "Carita", 15000, 19000 } }) {
+            const FigureProfile* p = _semantics.Find(figure);
+            const FigureRegion* mouth = p != nullptr ? p->Region("mouth") : nullptr;
+            const std::string source = mouth != nullptr ? mouth->source : "";
+            ChoreographyEvent e;
+            e.id = fmt::format("face/{}/{}", figure, a);
+            e.target = figure;
+            e.effect = "Faces";
+            e.intent = "face-sing";
+            e.prominence = Prominence::Lead;
+            e.startMS = a;
+            e.endMS = b;
+            e.settings = { { "E_CHOICE_Faces_FaceDefinition", source.rfind("face-definition:", 0) == 0 ? source.substr(16) : "" } };
+            s.faces.events.push_back(e);
+        }
         return s;
     }
 
@@ -629,6 +663,7 @@ private:
         in.semantics = &_semantics;
         in.space = &_space;
         in.capabilities = &_caps;
+        in.choreography = &s.faces;
         return in;
     }
 
@@ -657,6 +692,27 @@ private:
         Title("The director: each part of the song uses the house in its own way");
         const Song song = MakeSong();
         const StageDirectorInput in = Input(song);
+        // The tree's parts as the fixture describes them are guesses from its shape: no
+        // colour of its own is laid under it until a person confirms them.
+        bool guessedIdentity = false;
+        for (const StageLayer& l : DirectStage(in).layers) {
+            guessedIdentity = guessedIdentity || l.figure == "Arbol Cara";
+        }
+        int confirmed = 0, guessed = 0;
+        for (FigureProfile& p : _semantics.profiles) {
+            if (p.figure != "Arbol Cara") {
+                continue;
+            }
+            for (FigureRegion& r : p.regions) {
+                if (!r.color.empty() && r.real && r.id != "mouth" && r.id != "eyes" && r.id != "face") {
+                    guessed += r.source == "geometry" || r.source == "nodes" ? 1 : 0;
+                    r.confirmed = true;
+                    ++confirmed;
+                }
+            }
+        }
+        Check(guessed == confirmed && confirmed > 0 && !guessedIdentity,
+              fmt::format("{} parts guessed from a figure's shape give it no colour of its own until a person confirms them", guessed));
         const GlobalStageScore score = DirectStage(in);
         for (const StageScene& sc : score.scenes) {
             std::string roles;
@@ -741,8 +797,12 @@ private:
                 answer = g;
             }
         }
-        Check(answer != nullptr && answer->participants.size() >= 2 && answer->participants[0].figure == "Arbol Cara" && answer->participants[1].delayMS == 500,
-              "in the choir, the soloist calls and the others answer a beat (0.5 s) apart");
+        bool overSinger = false;
+        for (const GestureParticipant& p : answer != nullptr ? answer->participants : std::vector<GestureParticipant>()) {
+            overSinger = overSinger || p.figure == "Arbol Cara" || p.figure == "Carita";
+        }
+        Check(answer != nullptr && !answer->participants.empty() && answer->participants[0].delayMS == 500 && !overSinger,
+              "in the choir, the soloist calls by singing and other figures answer with light, a beat (0.5 s) apart, never over a singing face");
         bool spaced = true;
         for (const StageScene& sc : score.scenes) {
             const auto gs = GesturesOf(score, &sc);
@@ -779,6 +839,8 @@ private:
         edits.edits.push_back({ "no-gestures", 7000, -1, "", "" });
         edits.edits.push_back({ "speed", 3000, 4000, "1.5", "" });
         edits.edits.push_back({ "mode", 60000, -1, "rest", "" });
+        edits.edits.push_back({ "gesture", 11000, 13000, "propagated-wave", "" });
+        edits.edits.push_back({ "identity", 7000, -1, "Arbol Cara", "" });
         StageEdits editsBack;
         Check(FromJson(ToJson(edits), editsBack, error) && editsBack.edits.size() == edits.edits.size(), "a person's changes are written and read again");
         StageDirectorInput edited = in;
@@ -803,6 +865,26 @@ private:
         Check(c2 != nullptr && c2->gestures.empty(), "a scene a person wanted without gestures has none");
         Check(faster, "a speed a person chose replaces the automatic one");
         Check(std::find(changed.warnings.begin(), changed.warnings.end(), "edit-scene-gone:60000") != changed.warnings.end(), "a change for a scene that no longer exists is said, not applied elsewhere");
+        const GlobalGesture* placed = changed.Gesture("propagated-wave@13000");
+        bool placedOverSinger = false;
+        for (const GestureParticipant& p : placed != nullptr ? placed->participants : std::vector<GestureParticipant>()) {
+            placedOverSinger = placedOverSinger || p.figure == "Arbol Cara";
+        }
+        Check(placed != nullptr && placed->manual && !placed->participants.empty() && !placedOverSinger,
+              "a wave a person placed in the narration is there, marked as theirs, and still keeps off the singing face");
+        bool keptHere = false;
+        for (const StageLayer& l : changed.layers) {
+            keptHere = keptHere || (l.figure == "Arbol Cara" && l.startMS == 7000);
+        }
+        StageEdits never;
+        never.edits.push_back({ "no-identity", -1, -1, "Arbol Cara", "" });
+        StageDirectorInput withoutColours = in;
+        withoutColours.edits = &never;
+        bool none2 = true;
+        for (const StageLayer& l : DirectStage(withoutColours).layers) {
+            none2 = none2 && l.figure != "Arbol Cara";
+        }
+        Check(keptHere && none2, "a person can ask a figure to keep its colours in a scene where it only accents, or never");
         // An excluded gesture is never chosen.
         StageLibrary personal;
         personal.entries.push_back({ "cascade", "gesture", "", "", {}, {}, false, true, false, "person" });
@@ -1004,6 +1086,38 @@ private:
 };
 
 } // namespace
+
+int RunStageMeasure(const std::string& showDir, const std::string& fseqPath, const std::string& scorePath, const std::string& outDir) {
+    std::string refused;
+    if (!ControllersAreInactive(showDir, refused)) {
+        printf("composer-stage-measure: REFUSED: %s\n", refused.c_str());
+        return 2;
+    }
+    HeadlessRenderContext ctx;
+    if (!ctx.LoadShowFolder(showDir)) {
+        printf("composer-stage-measure: the show could not be loaded\n");
+        return 1;
+    }
+    const ModelCapabilities caps = ExtractCapabilities(ctx, nullptr);
+    const FigureCatalog figures = DescribeFigures(ctx, caps, true);
+    const StageSpace space = BuildStageSpace(figures, nullptr);
+    GlobalStageScore score;
+    bool hasScore = false;
+    if (!scorePath.empty()) {
+        std::string text, error;
+        hasScore = ReadTextFile(scorePath, text) && FromJson(text, score, error);
+        if (!hasScore) {
+            printf("composer-stage-measure: score not read: %s\n", error.c_str());
+            return 1;
+        }
+    }
+    const StageCheck check = CheckStage(fseqPath, figures, space, hasScore ? &score : nullptr);
+    std::error_code ec;
+    fs::create_directories(fs::path(outDir), ec);
+    const bool ok = WriteText(fs::path(outDir) / "stage-check.json", ToJson(check)) && WriteText(fs::path(outDir) / "stage-check.txt", StageCheckReport(check));
+    printf("%s", StageCheckReport(check).c_str());
+    return check.ran && ok ? 0 : 1;
+}
 
 int RunStageTest(const std::string& workDir) {
     Suite suite(fs::path(workDir) / fmt::format("stage-{}", std::chrono::system_clock::now().time_since_epoch().count()));

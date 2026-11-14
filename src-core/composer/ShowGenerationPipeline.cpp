@@ -1722,6 +1722,16 @@ bool WriteAndPublish(GenerationRun& run) {
                     Progress(run, S, "check what the figures did");
                     CheckRenderAgainstUnderstanding(run);
                 }
+                if (run.staged) {
+                    Progress(run, S, "measure the installation");
+                    run.stageCheck = CheckStage(run.fseqPath, run.figures, run.stageSpace, &run.stageScore);
+                    if (run.stageCheck.ran) {
+                        // Measurements to look at, never a reason to stop a show.
+                        run.findings.push_back(fmt::format("info stage-check: {:.1f}% of the lights lit on average, {:.1f} figures at once, scenes differ by {:.1f} points; {} of {} gesture parts seen rising, {} within 100 ms",
+                                                           run.stageCheck.litShare * 100, run.stageCheck.figuresLit, run.stageCheck.sceneContrast * 100, run.stageCheck.arrivalsSeen,
+                                                           run.stageCheck.arrivals.size(), run.stageCheck.arrivalsOnTime));
+                    }
+                }
                 if (run.render.layoutChannels != 0 && run.render.channels != run.render.layoutChannels) {
                     // As on the desktop, the file only carries the controllers' channels.
                     run.findings.push_back(fmt::format("info fseq-channels: the file has {} channels and the layout {}; models without a controller are outside the file", run.render.channels, run.render.layoutChannels));
@@ -1884,6 +1894,11 @@ void WriteDiagnostics(GenerationRun& run) {
     if (run.staged) {
         ok &= WriteText(report / "stage-space.json", ToJson(run.stageSpace));
         ok &= WriteText(report / "stage-score.json", ToJson(run.stageScore));
+        ok &= WriteText(report / "stage-lights.json", StageLightsJson(run.figures, run.stageSpace));
+    }
+    if (run.stageCheck.ran) {
+        ok &= WriteText(report / "stage-check.json", ToJson(run.stageCheck));
+        ok &= WriteText(report / "stage-check.txt", StageCheckReport(run.stageCheck));
     }
     if (!run.plan.segments.empty()) {
         ok &= WriteText(report / "composition-plan.json", ToJson(run.plan));

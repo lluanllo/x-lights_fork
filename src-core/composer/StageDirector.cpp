@@ -84,6 +84,8 @@ public:
             }
         }
         Moments();
+        Singing();
+        Sharing(score);
         for (const PlanSegment& s : _in.plan->segments) {
             score.scenes.push_back(Scene(s, score));
         }
@@ -138,6 +140,83 @@ private:
             }
         }
         return nullptr;
+    }
+
+    // When each figure's face sings, from the choreography's face effects.
+    void Singing() {
+        if (_in.choreography == nullptr) {
+            return;
+        }
+        for (const ChoreographyEvent& e : _in.choreography->events) {
+            if (e.effect == "Faces" || e.intent == "face-sing") {
+                const size_t slash = e.target.find('/');
+                const std::string figure = slash == std::string::npos ? e.target : e.target.substr(0, slash);
+                _singing[figure].push_back({ e.startMS, e.endMS });
+                std::string face = "?";
+                for (const auto& [k, v] : e.settings) {
+                    if (k == "E_CHOICE_Faces_FaceDefinition") {
+                        face = v;
+                    }
+                }
+                _facesUsed[figure].insert(face);
+            }
+        }
+    }
+
+    // Whether a figure's lights belong to a face singing then: its own face, or another
+    // model wired to the same channels (a layout may describe one prop twice).
+    bool Sings(const std::string& figure, int a, int b) const {
+        const auto singsItself = [&](const std::string& name) {
+            const auto it = _singing.find(name);
+            if (it == _singing.end()) {
+                return false;
+            }
+            for (const auto& [x, y] : it->second) {
+                if (x < b && a < y) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (singsItself(figure)) {
+            return true;
+        }
+        const auto shared = _sharing.find(figure);
+        if (shared != _sharing.end()) {
+            for (const std::string& other : shared->second) {
+                if (singsItself(other)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Models wired to the same channels as a figure on the stage.
+    void Sharing(GlobalStageScore& score) {
+        if (_in.capabilities == nullptr) {
+            return;
+        }
+        std::vector<const TargetInfo*> models;
+        for (const TargetInfo& t : _in.capabilities->targets) {
+            if (t.type == TargetType::Model && t.lastChannel >= t.firstChannel && t.lastChannel > 0) {
+                models.push_back(&t);
+            }
+        }
+        for (const Figure& f : _figures) {
+            const TargetInfo* t = _in.capabilities->Find(f.stage->name);
+            if (t == nullptr || t->lastChannel == 0) {
+                continue;
+            }
+            for (const TargetInfo* o : models) {
+                if (o->name != t->name && o->firstChannel <= t->lastChannel && t->firstChannel <= o->lastChannel) {
+                    _sharing[t->name].push_back(o->name);
+                    if (t->name < o->name) {
+                        score.limits.push_back("shares-lights:" + t->name + "|" + o->name);
+                    }
+                }
+            }
+        }
     }
 
     void Moments() {
@@ -370,6 +449,23 @@ private:
 
     // ------------------------------------------------------------- gestures
     void Gestures(StageScene& sc, const PlanSegment& seg, const std::vector<std::string>& faces, GlobalStageScore& score) {
+        // The gestures a person placed come first, whatever the mode; the automatic ones fit
+        // around them.
+        std::vector<std::pair<int, int>> placed;
+        for (const StageEdit* e : EditsFor(seg)) {
+            GestureKind kind;
+            if (e->action != "gesture" || !GestureKindFromId(e->value, kind) || e->atMS < sc.startMS || e->atMS >= sc.endMS) {
+                continue;
+            }
+            _manual = true;
+            const bool made = Make(sc, seg, kind, { e->atMS, "manual", 0.9 }, faces, score);
+            _manual = false;
+            if (made) {
+                placed.push_back({ e->atMS, e->atMS });
+            } else {
+                score.warnings.push_back(fmt::format("edit-gesture-not-made:{}@{}", e->value, e->atMS));
+            }
+        }
         if (sc.mode == StageMode::Rest) {
             return;
         }
@@ -383,7 +479,7 @@ private:
         }
         const int maxGestures = sc.mode == StageMode::Protagonist ? 1 : seg.priority >= 3 ? 4 : seg.priority >= 2 ? 3 : 2;
         int made = 0;
-        std::vector<std::pair<int, int>> busy; // the scene's gestures so far, by their hits
+        std::vector<std::pair<int, int>> busy = placed; // the scene's gestures so far, by their hits
         const auto roomFor = [&](int a, int b) {
             if (made >= maxGestures || b >= sc.endMS - 300) {
                 return false;
@@ -464,7 +560,15 @@ private:
             case StageMode::CallResponse: kind = GestureKind::CallResponse; break;
             case StageMode::Duo: kind = GestureKind::Counterpoint; break;
             case StageMode::Protagonist: kind = GestureKind::AmbientField; break;
-            default: kind = GestureKind::JointPulse; break;
+            default: {
+                // A group answers its hits in turn with a flash, small waves of their own and a
+                // wave from the singer. The same music (its repeat group) starts the same way,
+                // so a chorus keeps its idea; another part starts elsewhere in the turn.
+                static constexpr GestureKind turn[] = { GestureKind::JointPulse, GestureKind::LocalWaves, GestureKind::PropagatedWave };
+                const int base = seg.repeatGroup >= 0 ? seg.repeatGroup : _sceneIndex;
+                kind = turn[(base + made) % 3];
+                break;
+            }
             }
             if (Make(sc, seg, kind, m, faces, score)) {
                 ++made;
@@ -579,11 +683,12 @@ private:
     }
 
     bool Make(StageScene& sc, const PlanSegment& seg, GestureKind kind, const Moment& m, const std::vector<std::string>& faces, GlobalStageScore& score) {
-        if (!Allowed(kind)) {
+        if (!_manual && !Allowed(kind)) {
             return false;
         }
         GlobalGesture g;
         g.kind = kind;
+        g.manual = _manual;
         g.startMS = m.ms;
         g.trigger = fmt::format("{}@{}", m.kind, m.ms);
         g.colors = Colors(sc);
@@ -664,23 +769,41 @@ private:
             break;
         }
         case GestureKind::CallResponse: {
-            // The voice that calls first, the others answering a beat later, in order.
+            // The voice that calls, the others answering a beat apart, in order. A face that
+            // is singing then calls with its own singing: the answers start a beat later.
+            const int step = static_cast<int>(beat * 1000);
             std::vector<std::string> order;
+            bool calledBySinging = false;
             for (const std::string& f : faces) {
-                if (const Figure* fig = Find(f); fig != nullptr && !fig->allFace) {
+                const Figure* fig = Find(f);
+                if (fig == nullptr) {
+                    continue;
+                }
+                if (fig->allFace || Sings(f, g.startMS, g.startMS + step)) {
+                    calledBySinging = true;
+                } else {
                     order.push_back(f);
                 }
             }
             for (const std::string& f : active) {
-                if (std::find(order.begin(), order.end(), f) == order.end()) {
+                if (std::find(order.begin(), order.end(), f) == order.end() && std::find(faces.begin(), faces.end(), f) == faces.end() && !Sings(f, g.startMS, g.startMS + 6 * step)) {
                     order.push_back(f);
                 }
             }
-            const int step = static_cast<int>(beat * 1000);
-            g.endMS = std::min(sc.endMS, g.startMS + step * static_cast<int>(std::min<size_t>(order.size(), 5)) + 600);
-            g.reasons.push_back("one calls and the others answer, a beat apart");
+            const int first = calledBySinging ? 1 : 0;
+            g.endMS = std::min(sc.endMS, g.startMS + step * static_cast<int>(std::min<size_t>(order.size(), 5) + first) + 600);
+            g.reasons.push_back(calledBySinging ? "the voice calls by singing and the other figures answer it, a beat apart" : "one calls and the others answer, a beat apart");
+            // Only the answers that fit before the scene ends: a late one would never be seen.
             for (size_t k = 0; k < order.size() && k < 5; ++k) {
-                g.participants.push_back({ order[k], k == 0 ? "source" : "responder", static_cast<int>(k) * step, k == 0 ? 1.0 : 0.85, "pulse", k == 0 ? "it calls" : "it answers" });
+                const int delay = static_cast<int>(k + first) * step;
+                if (g.startMS + delay + 400 > g.endMS) {
+                    break;
+                }
+                const bool caller = k == 0 && !calledBySinging;
+                g.participants.push_back({ order[k], caller ? "source" : "responder", delay, caller ? 1.0 : 0.85, "pulse", caller ? "it calls" : "it answers" });
+            }
+            if (g.participants.size() < (calledBySinging ? 1u : 2u)) {
+                return false; // a call with no answer is not this gesture
             }
             break;
         }
@@ -718,10 +841,18 @@ private:
         case GestureKind::Cascade:
             return false;
         }
+        // A figure the gesture would reach only after the scene has ended takes no part: it
+        // would get an effect that never lights.
+        std::erase_if(g.participants, [&](const GestureParticipant& p) { return g.startMS + p.delayMS + 300 > g.endMS; });
+        // Nor one whose face is singing then: while a face sings, its light is its singing.
+        std::erase_if(g.participants, [&](const GestureParticipant& p) { return Sings(p.figure, g.startMS + p.delayMS - 100, g.endMS + 400); });
         if (g.participants.empty() || g.endMS <= g.startMS) {
             return false;
         }
         g.id = fmt::format("{}@{}", GestureKindId(kind), g.startMS);
+        if (_manual) {
+            g.reasons.insert(g.reasons.begin(), "placed by a person");
+        }
         sc.gestures.push_back(g.id);
         score.gestures.push_back(std::move(g));
         return true;
@@ -766,6 +897,9 @@ private:
             return;
         }
         for (const StageEdit& e : _in.edits->edits) {
+            if (e.action == "identity" || e.action == "no-identity" || e.action == "gesture") {
+                continue; // decided with the scenes' layers and gestures
+            }
             StageScene* sc = nullptr;
             for (StageScene& s : score.scenes) {
                 if (e.sceneStartMS >= 0 && std::abs(s.startMS - e.sceneStartMS) <= 1500 && (sc == nullptr || std::abs(s.startMS - e.sceneStartMS) < std::abs(sc->startMS - e.sceneStartMS))) {
@@ -842,24 +976,72 @@ private:
     }
 
     // ------------------------------------------------------------- figures composed whole
-    // A protagonist face keeps its own colours (foliage, trunk, outline...) under
-    // everything while it performs; its mouth and eyes are the face's.
+    // A figure that leads or accompanies a scene keeps its own colours (branches, trunk,
+    // outline...) under everything it does there; its mouth and eyes are its face's. Only
+    // parts known for sure give a colour: a submodel, a name, a face definition or a
+    // person's word, never a guess from the shape.
     void Identity(GlobalStageScore& score) {
+        const auto sure = [](const FigureRegion& r) {
+            return r.confirmed || r.source.rfind("submodel:", 0) == 0 || r.source.rfind("name-hint:", 0) == 0 || r.source.rfind("face-definition:", 0) == 0 ||
+                   r.source == "manual";
+        };
+        // A person's word first: keep a figure's colours wherever it takes part (or in one
+        // scene), or never.
+        std::set<std::string> always, never;
+        std::set<std::pair<std::string, std::string>> here, notHere; // scene id, figure
+        if (_in.edits != nullptr) {
+            for (const StageEdit& e : _in.edits->edits) {
+                if (e.action != "identity" && e.action != "no-identity") {
+                    continue;
+                }
+                const bool on = e.action == "identity";
+                if (e.sceneStartMS < 0) {
+                    (on ? always : never).insert(e.value);
+                    continue;
+                }
+                for (const PlanSegment& seg : _in.plan->segments) {
+                    const auto mine = EditsFor(seg);
+                    if (std::find(mine.begin(), mine.end(), &e) != mine.end()) {
+                        (on ? here : notHere).insert({ seg.id, e.value });
+                    }
+                }
+            }
+        }
         for (const StageScene& sc : score.scenes) {
             for (const SceneRole& r : sc.roles) {
-                if (r.role != "protagonist") {
+                const bool asked = r.role != "rest" && (always.contains(r.figure) || here.contains({ sc.id, r.figure }));
+                if (never.contains(r.figure) || notHere.contains({ sc.id, r.figure })) {
+                    continue;
+                }
+                if (r.role != "protagonist" && r.role != "complement" && !asked) {
                     continue;
                 }
                 const Figure* f = Find(r.figure);
-                if (f == nullptr || f->profile == nullptr || !f->face) {
+                if (f == nullptr || f->profile == nullptr) {
                     continue;
+                }
+                if (f->face && Sings(r.figure, sc.startMS, sc.endMS)) {
+                    // Only where the singing mouth is known light by light: the face sings with
+                    // the one definition its mouth was read from. Otherwise a colour under the
+                    // face could show through a mouth shape that should be dark.
+                    const FigureRegion* mouthRegion = f->profile->Region("mouth");
+                    const auto used = _facesUsed.find(r.figure);
+                    const bool known = mouthRegion != nullptr && mouthRegion->source.rfind("face-definition:", 0) == 0 && used != _facesUsed.end() && used->second.size() == 1 &&
+                                       "face-definition:" + *used->second.begin() == mouthRegion->source;
+                    if (!known) {
+                        const std::string limit = "no-identity-face-unknown:" + r.figure;
+                        if (std::find(score.limits.begin(), score.limits.end(), limit) == score.limits.end()) {
+                            score.limits.push_back(limit);
+                        }
+                        continue;
+                    }
                 }
                 std::vector<const FigureRegion*> regions;
                 std::vector<int> protectedNodes;
                 for (const FigureRegion& reg : f->profile->regions) {
                     if (reg.id == "mouth" || reg.id == "eyes") {
                         protectedNodes.insert(protectedNodes.end(), reg.nodes.begin(), reg.nodes.end());
-                    } else if (reg.real && !reg.color.empty() && !reg.nodes.empty() && reg.id != "face") {
+                    } else if (reg.real && sure(reg) && !reg.color.empty() && !reg.nodes.empty() && reg.id != "face" && reg.id != "text" && reg.id != "image") {
                         regions.push_back(&reg);
                     }
                 }
@@ -895,7 +1077,11 @@ private:
     std::vector<Moment> _moments;
     std::map<std::string, int> _lastUsed;
     std::set<std::string> _excludedHere;
+    std::map<std::string, std::vector<std::pair<int, int>>> _singing;
+    std::map<std::string, std::vector<std::string>> _sharing;
+    std::map<std::string, std::set<std::string>> _facesUsed; // the face definitions each figure sings with
     int _sceneIndex = 0;
+    bool _manual = false; // the gesture being made was placed by a person
 };
 
 std::vector<int> ProtectedNodes(const FigureSemantics* semantics, const std::string& figure) {
@@ -1035,7 +1221,7 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     const int lastMS = (std::max(score.durationMS, c.durationMS) / frame) * frame;
     const auto down = [&](int ms) { return std::clamp((ms / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
     const auto near = [&](int ms) { return std::clamp(((ms + frame / 2) / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
-    int gestureEvents = 0, identityEvents = 0, rested = 0;
+    int gestureEvents = 0, identityEvents = 0, rested = 0, late = 0;
     // Resting figures: in a scene that gives the attention to a few, the others' own
     // effects stop (their faces, words and pictures stay).
     for (const StageScene& sc : score.scenes) {
@@ -1076,7 +1262,8 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
             // A little before it arrives: the front enters, it does not pop.
             const int effectStart = down(std::max(g.startMS, g.startMS + p.delayMS - 100));
             const int endMS = near(std::max(effectStart + 2 * frame, g.endMS + 400));
-            if (endMS <= effectStart) {
+            if (g.startMS + p.delayMS + 2 * frame >= endMS) {
+                ++late; // its moment falls after its effect would end: it would never light
                 continue;
             }
             FieldSpec s = ParticipantField(g, p, *in.space, in.semantics, effectStart);
@@ -1177,7 +1364,7 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         return a.startMS != b.startMS ? a.startMS < b.startMS : a.target != b.target ? a.target < b.target : a.layer < b.layer;
     });
     c.metrics = MeasureChoreography(c);
-    notes.push_back(fmt::format("{} gesture effects, {} identity layers, {} background effects rested", gestureEvents, identityEvents, rested));
+    notes.push_back(fmt::format("{} gesture effects, {} identity layers, {} background effects rested, {} reached too late left out", gestureEvents, identityEvents, rested, late));
     return notes;
 }
 

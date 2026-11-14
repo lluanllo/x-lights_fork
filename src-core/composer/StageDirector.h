@@ -144,10 +144,10 @@ struct GlobalStageScore {
 
 // A person's changes to the score, kept per song and applied after every new score.
 struct StageEdit {
-    std::string action; // "mode", "include", "exclude", "no-gestures", "gesture", "origin", "speed"
+    std::string action; // "mode", "include", "exclude", "no-gestures", "gesture", "origin", "speed", "identity", "no-identity"
     int sceneStartMS = -1; // the scene, found again by its start (within 1.5 s)
     int atMS = -1;         // a gesture's start, for "gesture" (a new one), "origin", "speed"
-    std::string value;     // a mode id, a figure, a gesture kind id, an anchor id, a speed
+    std::string value;     // a mode id, a figure, a gesture kind id, an anchor id, a speed; identity: a figure (sceneStartMS -1: every scene)
     std::string note;
 };
 

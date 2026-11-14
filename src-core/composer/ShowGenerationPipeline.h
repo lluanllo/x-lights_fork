@@ -19,6 +19,7 @@
 #include "composer/TemplateLibrary.h"
 #include "composer/FigureSemantics.h"
 #include "composer/RenderUnderstanding.h"
+#include "composer/StageCheck.h"
 #include "composer/StageDirector.h"
 #include "composer/UnderstandingStore.h"
 
@@ -239,6 +240,7 @@ struct GenerationRun {
     StageSpace stageSpace;
     GlobalStageScore stageScore;
     int stageEdits = 0;
+    StageCheck stageCheck; // what the render did with the installation
 
     // Sequence
     SequenceSpec spec;

@@ -588,6 +588,8 @@
 		<Unit filename="../src-core/composer/StageSpace.h" />
 		<Unit filename="../src-core/composer/StageDirector.cpp" />
 		<Unit filename="../src-core/composer/StageDirector.h" />
+		<Unit filename="../src-core/composer/StageCheck.cpp" />
+		<Unit filename="../src-core/composer/StageCheck.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />
 		<Unit filename="../src-core/composer/StageTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />

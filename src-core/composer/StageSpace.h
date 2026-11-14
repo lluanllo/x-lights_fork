@@ -85,4 +85,18 @@ struct StageAnchor {
 [[nodiscard]] bool FromJson(const std::string& text, StageCalibrations& c, std::string& error);
 [[nodiscard]] std::string ToJson(const StageSpace& space);
 
+// Every wired light of the installation at its place on the stage, with its first channel
+// in a render: what a picture of the whole house is drawn from.
+struct StageLight {
+    float x = 0;
+    float y = 0;
+    int channel = -1;
+};
+struct StageFigureLights {
+    std::string figure;
+    std::vector<StageLight> lights; // in node order
+};
+[[nodiscard]] std::string StageLightsJson(const FigureCatalog& geometry, const StageSpace& space);
+[[nodiscard]] bool StageLightsFromJson(const std::string& text, std::vector<StageFigureLights>& figures, std::string& error);
+
 } // namespace composer

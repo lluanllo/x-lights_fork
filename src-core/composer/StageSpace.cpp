@@ -370,4 +370,47 @@ std::string ToJson(const StageSpace& s) {
         .dump(1);
 }
 
+std::string StageLightsJson(const FigureCatalog& geometry, const StageSpace& space) {
+    std::string out = fmt::format("{{\"kind\": \"composer-stage-lights\", \"schemaVersion\": {}, \"figures\": [", STAGE_SPACE_SCHEMA_VERSION);
+    bool firstFigure = true;
+    for (const StageFigure& f : space.figures) {
+        const FigureGeometry* g = geometry.Find(f.name);
+        if (!f.placed || g == nullptr || g->nodeMap.empty()) {
+            continue;
+        }
+        const auto lights = LightsOnStage(*g, f);
+        std::string xy, ch;
+        for (size_t k = 0; k < lights.size(); ++k) {
+            xy += fmt::format("{}{:.4f},{:.4f}", k == 0 ? "" : ",", lights[k].first, lights[k].second);
+            ch += fmt::format("{}{}", k == 0 ? "" : ",", f.noController ? -1 : g->nodeMap[k].channel);
+        }
+        out += fmt::format("{}\n {{\"name\": {}, \"xy\": [{}], \"ch\": [{}]}}", firstFigure ? "" : ",", nlohmann::json(f.name).dump(), xy, ch);
+        firstFigure = false;
+    }
+    out += "\n]}\n";
+    return out;
+}
+
+bool StageLightsFromJson(const std::string& text, std::vector<StageFigureLights>& figures, std::string& error) {
+    try {
+        const nlohmann::json root = nlohmann::json::parse(text);
+        std::vector<StageFigureLights> out;
+        for (const nlohmann::json& f : root.value("figures", nlohmann::json::array())) {
+            StageFigureLights fl;
+            fl.figure = f.value("name", std::string());
+            const std::vector<double> xy = f.value("xy", std::vector<double>());
+            const std::vector<int> ch = f.value("ch", std::vector<int>());
+            for (size_t k = 0; k + 1 < xy.size(); k += 2) {
+                fl.lights.push_back({ static_cast<float>(xy[k]), static_cast<float>(xy[k + 1]), k / 2 < ch.size() ? ch[k / 2] : -1 });
+            }
+            out.push_back(std::move(fl));
+        }
+        figures = std::move(out);
+    } catch (const nlohmann::json::exception& e) {
+        error = std::string("stage lights: ") + e.what();
+        return false;
+    }
+    return true;
+}
+
 } // namespace composer
