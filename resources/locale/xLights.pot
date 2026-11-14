@@ -12900,3 +12900,507 @@ msgstr ""
 
 msgid "Choices of yours: %d."
 msgstr ""
+
+msgid "%d changes of yours are saved; press \"Apply the Changes\" to see them in the score."
+msgstr ""
+
+msgid "%d figures rest."
+msgstr ""
+
+msgid "%d scenes, %d gestures across the installation."
+msgstr ""
+
+msgid "%s at %s (%d figures)"
+msgstr ""
+
+msgid "%s at %s, %d figures"
+msgstr ""
+
+msgid "%s, from %s to %s."
+msgstr ""
+
+msgid "A call and its answers"
+msgstr ""
+
+msgid "A cascade, figure after figure"
+msgstr ""
+
+msgid "A few hits close together: one figure for each, in turn."
+msgstr ""
+
+msgid "A figure's own colours"
+msgstr ""
+
+msgid "A flash all together"
+msgstr ""
+
+msgid "A flash of the whole part"
+msgstr ""
+
+msgid "A gentle fade in and out"
+msgstr ""
+
+msgid "A gesture of the installation"
+msgstr ""
+
+msgid "A group"
+msgstr ""
+
+msgid "A quiet glow joining figures"
+msgstr ""
+
+msgid "A slow breath"
+msgstr ""
+
+msgid "A slow, flowing pattern"
+msgstr ""
+
+msgid "A spiral round a tree"
+msgstr ""
+
+msgid "A still slope of light"
+msgstr ""
+
+msgid "A strong hit starts a wave in one bulb; it reaches each figure when its distance says."
+msgstr ""
+
+msgid "A sweep across"
+msgstr ""
+
+msgid "A sweep across the house"
+msgstr ""
+
+msgid "A turning spiral"
+msgstr ""
+
+msgid "A wave across the house"
+msgstr ""
+
+msgid "A wave and its echoes"
+msgstr ""
+
+msgid "A wave from one bulb across the house"
+msgstr ""
+
+msgid "A wave that travels from a point"
+msgstr ""
+
+msgid "Accompanies"
+msgstr ""
+
+msgid "Add a Gesture..."
+msgstr ""
+
+msgid "An echo, weaker each time"
+msgstr ""
+
+msgid "Answers"
+msgstr ""
+
+msgid "Apply the Changes"
+msgstr ""
+
+msgid "Arms turning round the figure's centre."
+msgstr ""
+
+msgid "As the Director Decides"
+msgstr ""
+
+msgid "As the sound dies away the wave comes again, weaker."
+msgstr ""
+
+msgid "Bands that chase each other"
+msgstr ""
+
+msgid "Besides these, %d figure recipes from the reference shows, kept only on this computer, are used for each figure's own effects."
+msgstr ""
+
+msgid "Bring a Figure In..."
+msgstr ""
+
+msgid "By you"
+msgstr ""
+
+msgid "Call and answer"
+msgstr ""
+
+msgid "Change How..."
+msgstr ""
+
+msgid "Changed"
+msgstr ""
+
+msgid "Choose a scene first."
+msgstr ""
+
+msgid "Choose a scene to see who takes part and why."
+msgstr ""
+
+msgid "Choreography of the Installation"
+msgstr ""
+
+msgid "Choreography of the Installation..."
+msgstr ""
+
+msgid "Compositions and Gestures"
+msgstr ""
+
+msgid "Compositions and Gestures..."
+msgstr ""
+
+msgid "Different things at once"
+msgstr ""
+
+msgid "Direct the whole installation as one stage"
+msgstr ""
+
+msgid "Each figure its own small wave"
+msgstr ""
+
+msgid "Each part in its own colour (foliage, trunk...) under everything; the mouth and eyes left to the face."
+msgstr ""
+
+msgid "Every figure already takes part in this scene."
+msgstr ""
+
+msgid "Every light of the installation where the layout puts it. The layout is a drawing, not a measurement: distances are those of the drawing."
+msgstr ""
+
+msgid "Exclude"
+msgstr ""
+
+msgid "Faster"
+msgstr ""
+
+msgid "Field"
+msgstr ""
+
+msgid "Figure:"
+msgstr ""
+
+msgid "Generate the show with the stage director on first: the picture of the whole installation comes from its render."
+msgstr ""
+
+msgid "Gestures"
+msgstr ""
+
+msgid "How bright the field is on this model, as a percentage of what the field gives."
+msgstr ""
+
+msgid "How its light moves:"
+msgstr ""
+
+msgid "How should the installation be used in this scene?"
+msgstr ""
+
+msgid "How the house is used"
+msgstr ""
+
+msgid "In the background"
+msgstr ""
+
+msgid "Include Again"
+msgstr ""
+
+msgid "It has no layer of its own colours in this score."
+msgstr ""
+
+msgid "It keeps its own colours in %d scenes and parts."
+msgstr ""
+
+msgid "Its face singing"
+msgstr ""
+
+msgid "Its own colours"
+msgstr ""
+
+msgid "Its own colours come only from parts known for sure (a submodel, a name, a face definition or your confirmation). The mouth and the eyes are always left to the face. The change is applied when the composition is worked out again."
+msgstr ""
+
+msgid "Its own effect"
+msgstr ""
+
+msgid "Keep Its Own Colours"
+msgstr ""
+
+msgid "Layers of This Figure"
+msgstr ""
+
+msgid "Layers of This Figure..."
+msgstr ""
+
+msgid "Light that gathers in"
+msgstr ""
+
+msgid "Light that spreads out"
+msgstr ""
+
+msgid "Light that spreads out (or gathers in)"
+msgstr ""
+
+msgid "Lit at once, then dying away"
+msgstr ""
+
+msgid "Mix"
+msgstr ""
+
+msgid "Name of your composition:"
+msgstr ""
+
+msgid "Never Its Own Colours"
+msgstr ""
+
+msgid "New Composition"
+msgstr ""
+
+msgid "New Composition..."
+msgstr ""
+
+msgid "Next Gesture"
+msgstr ""
+
+msgid "No Gestures Here"
+msgstr ""
+
+msgid "No figure recipes from reference shows in this installation."
+msgstr ""
+
+msgid "No figure takes part in this scene."
+msgstr ""
+
+msgid "No gesture of the installation at this moment."
+msgstr ""
+
+msgid "Now: %s."
+msgstr ""
+
+msgid "One after another"
+msgstr ""
+
+msgid "One figure"
+msgstr ""
+
+msgid "One figure alone"
+msgstr ""
+
+msgid "Protagonist"
+msgstr ""
+
+msgid "Rest"
+msgstr ""
+
+msgid "Rests"
+msgstr ""
+
+msgid "Ripples, one after another"
+msgstr ""
+
+msgid "Saved: it will keep its own colours wherever it takes part."
+msgstr ""
+
+msgid "Saved: it will never get its own colours."
+msgstr ""
+
+msgid "Saved: the director decides."
+msgstr ""
+
+msgid "Scene:"
+msgstr ""
+
+msgid "Several figures answer the same hit, each with a small wave of its own shape."
+msgstr ""
+
+msgid "Several figures flash together on one hit."
+msgstr ""
+
+msgid "Slower"
+msgstr ""
+
+msgid "Small waves of their own"
+msgstr ""
+
+msgid "Stage Director"
+msgstr ""
+
+msgid "Stage director: the whole installation"
+msgstr ""
+
+msgid "Succeeded"
+msgstr ""
+
+msgid "Take a Figure Out..."
+msgstr ""
+
+msgid "The Whole Installation"
+msgstr ""
+
+msgid "The Whole Installation..."
+msgstr ""
+
+msgid "The figure that calls, then the others answering a beat apart."
+msgstr ""
+
+msgid "The gesture this light field draws, as the Show Composer writes it: the function (pulse, wave, ripple, expansion, sweep, chase, spiral, flow, fade, gradient, decay, echo), its origin on the stage (ox, oy, 0-1), speed (stage units a second), front width, duration and envelope, the figure's place on the stage (m) and the lights it may or may not light (only, skip; xLights' light numbers). Every model that shares the same field and start shows one movement across them."
+msgstr ""
+
+msgid "The gestures the director can give the whole installation, and the compositions a figure can keep. A favourite is tried first; an excluded one is never chosen on its own (you can still place it)."
+msgstr ""
+
+msgid "The installation is not directed as one stage: each figure follows its own plan, as before."
+msgstr ""
+
+msgid "The whole figure fading slowly in and out."
+msgstr ""
+
+msgid "The whole house"
+msgstr ""
+
+msgid "This scene has no travelling gesture to change."
+msgstr ""
+
+msgid "Together on the same hit"
+msgstr ""
+
+msgid "Two figures together"
+msgstr ""
+
+msgid "Two halves doing different things"
+msgstr ""
+
+msgid "Under a voice, a dim slow glow joins the figures around it."
+msgstr ""
+
+msgid "Undo the Last Change"
+msgstr ""
+
+msgid "What it is"
+msgstr ""
+
+msgid "What the figure has, top to bottom, during a scene. The top layer is seen over the ones below where it is lit; where it is dark, the one below shows."
+msgstr ""
+
+msgid "What the score plans"
+msgstr ""
+
+msgid "What xLights drew"
+msgstr ""
+
+msgid "When the music comes back, the light spreads from one point."
+msgstr ""
+
+msgid "When the music drops, the light gathers back to one point."
+msgstr ""
+
+msgid "Which figure should rest in this scene?"
+msgstr ""
+
+msgid "Which figure should take part in this scene?"
+msgstr ""
+
+msgid "Which gesture, in the middle of this scene?"
+msgstr ""
+
+msgid "While the music grows, a sweep crosses the house."
+msgstr ""
+
+msgid "Whole installation"
+msgstr ""
+
+msgid "With two voices, two halves of the house do different things."
+msgstr ""
+
+msgid "Work out the composition on step 3 first."
+msgstr ""
+
+msgid "Work out the composition on step 3 to see how the director uses the installation."
+msgstr ""
+
+msgid "Work out the composition to see the installation here."
+msgstr ""
+
+msgid "Your choices could not be saved."
+msgstr ""
+
+msgid "Yours"
+msgstr ""
+
+msgid "a few hits close together: one figure for each, in turn across the house"
+msgstr ""
+
+msgid "a hit: several figures each make a small wave of their own, together"
+msgstr ""
+
+msgid "a hit: several figures flash together"
+msgstr ""
+
+msgid "a person asked for no gestures here"
+msgstr ""
+
+msgid "a strong hit: a wave leaves one bulb and crosses the figures taking part"
+msgstr ""
+
+msgid "a strong sung part: the singer leads and a group accents with it"
+msgstr ""
+
+msgid "a voice calls and the choir answers: the figures answer each other"
+msgstr ""
+
+msgid "a voice leads: a slow, dim field joins the figures around it, none of them a protagonist"
+msgstr ""
+
+msgid "a voice sings quietly: it has the attention, the others stay discreet"
+msgstr ""
+
+msgid "a voice tells the story: one figure speaks, the rest listen"
+msgstr ""
+
+msgid "changed by a person"
+msgstr ""
+
+msgid "chosen by a person"
+msgstr ""
+
+msgid "no moment strong enough for a gesture: the scene keeps its own effects"
+msgstr ""
+
+msgid "one calls and the others answer, a beat apart"
+msgstr ""
+
+msgid "placed by a person"
+msgstr ""
+
+msgid "quiet instruments: a few figures answer the music in small waves of their own"
+msgstr ""
+
+msgid "strong instruments with no voice: a gesture travels across the house"
+msgstr ""
+
+msgid "the instruments' peak: the whole house joins"
+msgstr ""
+
+msgid "the music comes back strongly: the light spreads from one point"
+msgstr ""
+
+msgid "the music drops: the light gathers back to one point"
+msgstr ""
+
+msgid "the music grows: a sweep crosses the house from left to right, the light growing behind it"
+msgstr ""
+
+msgid "the music rests: the installation rests too"
+msgstr ""
+
+msgid "the song's peak with its voice: the whole house joins"
+msgstr ""
+
+msgid "the sound dies away: the gesture echoes, weaker"
+msgstr ""
+
+msgid "the voice calls by singing and the other figures answer it, a beat apart"
+msgstr ""
+
+msgid "two voices: the left of the house flows while the right chases"
+msgstr ""
+
+msgid "two voices: two figures work together"
+msgstr ""

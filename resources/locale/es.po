@@ -12902,3 +12902,507 @@ msgstr "Fotos de los momentos (%d)"
 
 msgid "Choices of yours: %d."
 msgstr "Elecciones tuyas: %d."
+
+msgid "%d changes of yours are saved; press \"Apply the Changes\" to see them in the score."
+msgstr "Tienes %d cambios guardados; pulsa «Aplicar los cambios» para verlos en la partitura."
+
+msgid "%d figures rest."
+msgstr "%d figuras descansan."
+
+msgid "%d scenes, %d gestures across the installation."
+msgstr "%d escenas y %d gestos por toda la instalación."
+
+msgid "%s at %s (%d figures)"
+msgstr "%s en %s (%d figuras)"
+
+msgid "%s at %s, %d figures"
+msgstr "%s en %s, %d figuras"
+
+msgid "%s, from %s to %s."
+msgstr "%s, de %s a %s."
+
+msgid "A call and its answers"
+msgstr "Una llamada y sus respuestas"
+
+msgid "A cascade, figure after figure"
+msgstr "Una cascada, figura tras figura"
+
+msgid "A few hits close together: one figure for each, in turn."
+msgstr "Unos cuantos golpes seguidos: una figura para cada uno, por turnos."
+
+msgid "A figure's own colours"
+msgstr "Los colores propios de una figura"
+
+msgid "A flash all together"
+msgstr "Un destello todas a la vez"
+
+msgid "A flash of the whole part"
+msgstr "Un destello de toda la parte"
+
+msgid "A gentle fade in and out"
+msgstr "Un fundido suave de entrada y salida"
+
+msgid "A gesture of the installation"
+msgstr "Un gesto de la instalación"
+
+msgid "A group"
+msgstr "Un grupo"
+
+msgid "A quiet glow joining figures"
+msgstr "Un brillo tranquilo que une figuras"
+
+msgid "A slow breath"
+msgstr "Una respiración lenta"
+
+msgid "A slow, flowing pattern"
+msgstr "Un dibujo lento que fluye"
+
+msgid "A spiral round a tree"
+msgstr "Una espiral alrededor de un árbol"
+
+msgid "A still slope of light"
+msgstr "Una rampa de luz quieta"
+
+msgid "A strong hit starts a wave in one bulb; it reaches each figure when its distance says."
+msgstr "Un golpe fuerte hace salir una ola de una bombilla; llega a cada figura cuando le toca según su distancia."
+
+msgid "A sweep across"
+msgstr "Un barrido de lado a lado"
+
+msgid "A sweep across the house"
+msgstr "Un barrido por toda la casa"
+
+msgid "A turning spiral"
+msgstr "Una espiral que gira"
+
+msgid "A wave across the house"
+msgstr "Una ola por toda la casa"
+
+msgid "A wave and its echoes"
+msgstr "Una ola y sus ecos"
+
+msgid "A wave from one bulb across the house"
+msgstr "Una ola desde una bombilla por toda la casa"
+
+msgid "A wave that travels from a point"
+msgstr "Una ola que sale de un punto"
+
+msgid "Accompanies"
+msgstr "Acompaña"
+
+msgid "Add a Gesture..."
+msgstr "Añadir un gesto..."
+
+msgid "An echo, weaker each time"
+msgstr "Un eco, cada vez más suave"
+
+msgid "Answers"
+msgstr "Responde"
+
+msgid "Apply the Changes"
+msgstr "Aplicar los cambios"
+
+msgid "Arms turning round the figure's centre."
+msgstr "Brazos que giran alrededor del centro de la figura."
+
+msgid "As the Director Decides"
+msgstr "Como decida el director"
+
+msgid "As the sound dies away the wave comes again, weaker."
+msgstr "Cuando el sonido se apaga, la ola vuelve, más suave."
+
+msgid "Bands that chase each other"
+msgstr "Franjas que se persiguen"
+
+msgid "Besides these, %d figure recipes from the reference shows, kept only on this computer, are used for each figure's own effects."
+msgstr "Además, para los efectos propios de cada figura se usan %d recetas de los shows de referencia, guardadas solo en este equipo."
+
+msgid "Bring a Figure In..."
+msgstr "Meter una figura..."
+
+msgid "By you"
+msgstr "Tuyo"
+
+msgid "Call and answer"
+msgstr "Llamada y respuesta"
+
+msgid "Change How..."
+msgstr "Cambiar cómo..."
+
+msgid "Changed"
+msgstr "Cambiado"
+
+msgid "Choose a scene first."
+msgstr "Elige primero una escena."
+
+msgid "Choose a scene to see who takes part and why."
+msgstr "Elige una escena para ver quién participa y por qué."
+
+msgid "Choreography of the Installation"
+msgstr "Coreografía de la instalación"
+
+msgid "Choreography of the Installation..."
+msgstr "Coreografía de la instalación..."
+
+msgid "Compositions and Gestures"
+msgstr "Composiciones y gestos"
+
+msgid "Compositions and Gestures..."
+msgstr "Composiciones y gestos..."
+
+msgid "Different things at once"
+msgstr "Cosas distintas a la vez"
+
+msgid "Direct the whole installation as one stage"
+msgstr "Dirigir toda la instalación como un solo escenario"
+
+msgid "Each figure its own small wave"
+msgstr "Cada figura, su propia ola pequeña"
+
+msgid "Each part in its own colour (foliage, trunk...) under everything; the mouth and eyes left to the face."
+msgstr "Cada parte con su color (follaje, tronco...) debajo de todo; la boca y los ojos se dejan a la cara."
+
+msgid "Every figure already takes part in this scene."
+msgstr "Todas las figuras participan ya en esta escena."
+
+msgid "Every light of the installation where the layout puts it. The layout is a drawing, not a measurement: distances are those of the drawing."
+msgstr "Cada luz de la instalación donde la pone el layout. El layout es un dibujo, no una medida: las distancias son las del dibujo."
+
+msgid "Exclude"
+msgstr "Excluir"
+
+msgid "Faster"
+msgstr "Más rápido"
+
+msgid "Field"
+msgstr "Campo"
+
+msgid "Figure:"
+msgstr "Figura:"
+
+msgid "Generate the show with the stage director on first: the picture of the whole installation comes from its render."
+msgstr "Genera primero el show con el director de escena activado: la imagen de toda la instalación sale de su render."
+
+msgid "Gestures"
+msgstr "Gestos"
+
+msgid "How bright the field is on this model, as a percentage of what the field gives."
+msgstr "Cuánto brilla el campo en este modelo, en porcentaje de lo que da el campo."
+
+msgid "How its light moves:"
+msgstr "Cómo se mueve su luz:"
+
+msgid "How should the installation be used in this scene?"
+msgstr "¿Cómo se usa la instalación en esta escena?"
+
+msgid "How the house is used"
+msgstr "Cómo se usa la casa"
+
+msgid "In the background"
+msgstr "Al fondo"
+
+msgid "Include Again"
+msgstr "Volver a incluir"
+
+msgid "It has no layer of its own colours in this score."
+msgstr "En esta partitura no tiene capa con sus propios colores."
+
+msgid "It keeps its own colours in %d scenes and parts."
+msgstr "Mantiene sus propios colores en %d escenas y partes."
+
+msgid "Its face singing"
+msgstr "Su cara cantando"
+
+msgid "Its own colours"
+msgstr "Sus propios colores"
+
+msgid "Its own colours come only from parts known for sure (a submodel, a name, a face definition or your confirmation). The mouth and the eyes are always left to the face. The change is applied when the composition is worked out again."
+msgstr "Sus propios colores solo salen de partes que se conocen con seguridad (un submodelo, un nombre, una definición de cara o tu confirmación). La boca y los ojos siempre se dejan a la cara. El cambio se aplica cuando se vuelve a preparar la composición."
+
+msgid "Its own effect"
+msgstr "Su propio efecto"
+
+msgid "Keep Its Own Colours"
+msgstr "Mantener sus propios colores"
+
+msgid "Layers of This Figure"
+msgstr "Capas de esta figura"
+
+msgid "Layers of This Figure..."
+msgstr "Capas de esta figura..."
+
+msgid "Light that gathers in"
+msgstr "Luz que se recoge"
+
+msgid "Light that spreads out"
+msgstr "Luz que se expande"
+
+msgid "Light that spreads out (or gathers in)"
+msgstr "Luz que se expande (o se recoge)"
+
+msgid "Lit at once, then dying away"
+msgstr "Se enciende de golpe y se va apagando"
+
+msgid "Mix"
+msgstr "Mezcla"
+
+msgid "Name of your composition:"
+msgstr "Nombre de tu composición:"
+
+msgid "Never Its Own Colours"
+msgstr "Nunca sus propios colores"
+
+msgid "New Composition"
+msgstr "Nueva composición"
+
+msgid "New Composition..."
+msgstr "Nueva composición..."
+
+msgid "Next Gesture"
+msgstr "Gesto siguiente"
+
+msgid "No Gestures Here"
+msgstr "Sin gestos aquí"
+
+msgid "No figure recipes from reference shows in this installation."
+msgstr "No hay recetas de figura de shows de referencia en esta instalación."
+
+msgid "No figure takes part in this scene."
+msgstr "Ninguna figura participa en esta escena."
+
+msgid "No gesture of the installation at this moment."
+msgstr "En este momento no hay ningún gesto de la instalación."
+
+msgid "Now: %s."
+msgstr "Ahora: %s."
+
+msgid "One after another"
+msgstr "Una tras otra"
+
+msgid "One figure"
+msgstr "Una figura"
+
+msgid "One figure alone"
+msgstr "Una figura sola"
+
+msgid "Protagonist"
+msgstr "Protagonista"
+
+msgid "Rest"
+msgstr "Descanso"
+
+msgid "Rests"
+msgstr "Descansa"
+
+msgid "Ripples, one after another"
+msgstr "Ondas, una tras otra"
+
+msgid "Saved: it will keep its own colours wherever it takes part."
+msgstr "Guardado: mantendrá sus propios colores siempre que participe."
+
+msgid "Saved: it will never get its own colours."
+msgstr "Guardado: nunca tendrá sus propios colores."
+
+msgid "Saved: the director decides."
+msgstr "Guardado: decide el director."
+
+msgid "Scene:"
+msgstr "Escena:"
+
+msgid "Several figures answer the same hit, each with a small wave of its own shape."
+msgstr "Varias figuras responden al mismo golpe, cada una con una ola pequeña de su propia forma."
+
+msgid "Several figures flash together on one hit."
+msgstr "Varias figuras destellan juntas en un golpe."
+
+msgid "Slower"
+msgstr "Más lento"
+
+msgid "Small waves of their own"
+msgstr "Olas pequeñas propias"
+
+msgid "Stage Director"
+msgstr "Director de escena"
+
+msgid "Stage director: the whole installation"
+msgstr "Director de escena: toda la instalación"
+
+msgid "Succeeded"
+msgstr "Terminado"
+
+msgid "Take a Figure Out..."
+msgstr "Sacar una figura..."
+
+msgid "The Whole Installation"
+msgstr "La instalación entera"
+
+msgid "The Whole Installation..."
+msgstr "La instalación entera..."
+
+msgid "The figure that calls, then the others answering a beat apart."
+msgstr "La figura que llama y luego las demás respondiendo, separadas por un pulso."
+
+msgid "The gesture this light field draws, as the Show Composer writes it: the function (pulse, wave, ripple, expansion, sweep, chase, spiral, flow, fade, gradient, decay, echo), its origin on the stage (ox, oy, 0-1), speed (stage units a second), front width, duration and envelope, the figure's place on the stage (m) and the lights it may or may not light (only, skip; xLights' light numbers). Every model that shares the same field and start shows one movement across them."
+msgstr "El gesto que dibuja este campo de luz, tal como lo escribe Show Composer: la función (pulse, wave, ripple, expansion, sweep, chase, spiral, flow, fade, gradient, decay, echo), su origen en el escenario (ox, oy, 0-1), la velocidad (unidades de escenario por segundo), el ancho del frente, la duración y la envolvente, el lugar de la figura en el escenario (m) y las luces que puede o no encender (only, skip; números de luz de xLights). Todos los modelos que comparten el mismo campo y el mismo inicio muestran un único movimiento entre ellos."
+
+msgid "The gestures the director can give the whole installation, and the compositions a figure can keep. A favourite is tried first; an excluded one is never chosen on its own (you can still place it)."
+msgstr "Los gestos que el director puede dar a toda la instalación y las composiciones que puede tener una figura. Un favorito se prueba primero; uno excluido nunca se elige solo (tú sí puedes ponerlo)."
+
+msgid "The installation is not directed as one stage: each figure follows its own plan, as before."
+msgstr "La instalación no se dirige como un solo escenario: cada figura sigue su propio plan, como antes."
+
+msgid "The whole figure fading slowly in and out."
+msgstr "Toda la figura encendiéndose y apagándose despacio."
+
+msgid "The whole house"
+msgstr "Toda la casa"
+
+msgid "This scene has no travelling gesture to change."
+msgstr "Esta escena no tiene ningún gesto que viaje para cambiarlo."
+
+msgid "Together on the same hit"
+msgstr "Juntas en el mismo golpe"
+
+msgid "Two figures together"
+msgstr "Dos figuras juntas"
+
+msgid "Two halves doing different things"
+msgstr "Dos mitades haciendo cosas distintas"
+
+msgid "Under a voice, a dim slow glow joins the figures around it."
+msgstr "Bajo una voz, un brillo tenue y lento une las figuras de alrededor."
+
+msgid "Undo the Last Change"
+msgstr "Deshacer el último cambio"
+
+msgid "What it is"
+msgstr "Qué es"
+
+msgid "What the figure has, top to bottom, during a scene. The top layer is seen over the ones below where it is lit; where it is dark, the one below shows."
+msgstr "Lo que tiene la figura, de arriba abajo, durante una escena. La capa de arriba se ve sobre las de debajo donde está encendida; donde está apagada, se ve la de debajo."
+
+msgid "What the score plans"
+msgstr "Lo que prevé la partitura"
+
+msgid "What xLights drew"
+msgstr "Lo que dibujó xLights"
+
+msgid "When the music comes back, the light spreads from one point."
+msgstr "Cuando vuelve la música, la luz se expande desde un punto."
+
+msgid "When the music drops, the light gathers back to one point."
+msgstr "Cuando la música baja, la luz se recoge en un punto."
+
+msgid "Which figure should rest in this scene?"
+msgstr "¿Qué figura descansa en esta escena?"
+
+msgid "Which figure should take part in this scene?"
+msgstr "¿Qué figura participa en esta escena?"
+
+msgid "Which gesture, in the middle of this scene?"
+msgstr "¿Qué gesto, en el centro de esta escena?"
+
+msgid "While the music grows, a sweep crosses the house."
+msgstr "Mientras la música crece, un barrido cruza la casa."
+
+msgid "Whole installation"
+msgstr "Toda la instalación"
+
+msgid "With two voices, two halves of the house do different things."
+msgstr "Con dos voces, las dos mitades de la casa hacen cosas distintas."
+
+msgid "Work out the composition on step 3 first."
+msgstr "Prepara primero la composición en el paso 3."
+
+msgid "Work out the composition on step 3 to see how the director uses the installation."
+msgstr "Prepara la composición en el paso 3 para ver cómo usa el director la instalación."
+
+msgid "Work out the composition to see the installation here."
+msgstr "Prepara la composición para ver aquí la instalación."
+
+msgid "Your choices could not be saved."
+msgstr "No se han podido guardar tus elecciones."
+
+msgid "Yours"
+msgstr "Tuya"
+
+msgid "a few hits close together: one figure for each, in turn across the house"
+msgstr "unos cuantos golpes seguidos: una figura para cada uno, por turnos a lo largo de la casa"
+
+msgid "a hit: several figures each make a small wave of their own, together"
+msgstr "un golpe: varias figuras hacen a la vez cada una su propia ola pequeña"
+
+msgid "a hit: several figures flash together"
+msgstr "un golpe: varias figuras destellan a la vez"
+
+msgid "a person asked for no gestures here"
+msgstr "alguien ha pedido que aquí no haya gestos"
+
+msgid "a strong hit: a wave leaves one bulb and crosses the figures taking part"
+msgstr "un golpe fuerte: sale una ola de una bombilla y cruza las figuras que participan"
+
+msgid "a strong sung part: the singer leads and a group accents with it"
+msgstr "una parte cantada fuerte: manda quien canta y un grupo acentúa con él"
+
+msgid "a voice calls and the choir answers: the figures answer each other"
+msgstr "una voz llama y el coro responde: las figuras se responden entre sí"
+
+msgid "a voice leads: a slow, dim field joins the figures around it, none of them a protagonist"
+msgstr "manda una voz: un campo lento y tenue une las figuras de alrededor, sin que ninguna sea protagonista"
+
+msgid "a voice sings quietly: it has the attention, the others stay discreet"
+msgstr "una voz canta suave: ella tiene la atención y las demás se quedan discretas"
+
+msgid "a voice tells the story: one figure speaks, the rest listen"
+msgstr "una voz cuenta la historia: una figura habla y las demás escuchan"
+
+msgid "changed by a person"
+msgstr "cambiado por una persona"
+
+msgid "chosen by a person"
+msgstr "elegido por una persona"
+
+msgid "no moment strong enough for a gesture: the scene keeps its own effects"
+msgstr "no hay ningún momento lo bastante fuerte para un gesto: la escena mantiene sus propios efectos"
+
+msgid "one calls and the others answer, a beat apart"
+msgstr "una llama y las demás responden, separadas por un pulso"
+
+msgid "placed by a person"
+msgstr "puesto por una persona"
+
+msgid "quiet instruments: a few figures answer the music in small waves of their own"
+msgstr "instrumentos tranquilos: unas pocas figuras responden a la música con sus propias olas pequeñas"
+
+msgid "strong instruments with no voice: a gesture travels across the house"
+msgstr "instrumentos fuertes sin voz: un gesto recorre la casa"
+
+msgid "the instruments' peak: the whole house joins"
+msgstr "el punto más alto de los instrumentos: se une toda la casa"
+
+msgid "the music comes back strongly: the light spreads from one point"
+msgstr "la música vuelve con fuerza: la luz se expande desde un punto"
+
+msgid "the music drops: the light gathers back to one point"
+msgstr "la música baja: la luz se recoge en un punto"
+
+msgid "the music grows: a sweep crosses the house from left to right, the light growing behind it"
+msgstr "la música crece: un barrido cruza la casa de izquierda a derecha y la luz crece detrás"
+
+msgid "the music rests: the installation rests too"
+msgstr "la música descansa: la instalación también"
+
+msgid "the song's peak with its voice: the whole house joins"
+msgstr "el punto más alto de la canción, con su voz: se une toda la casa"
+
+msgid "the sound dies away: the gesture echoes, weaker"
+msgstr "el sonido se apaga: el gesto se repite como un eco, más suave"
+
+msgid "the voice calls by singing and the other figures answer it, a beat apart"
+msgstr "la voz llama cantando y las demás figuras le responden, separadas por un pulso"
+
+msgid "two voices: the left of the house flows while the right chases"
+msgstr "dos voces: la izquierda de la casa fluye mientras la derecha persigue"
+
+msgid "two voices: two figures work together"
+msgstr "dos voces: dos figuras trabajan juntas"

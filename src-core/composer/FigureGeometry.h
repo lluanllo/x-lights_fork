@@ -27,6 +27,11 @@ struct FigureNode {
     float y = 0;
     int strand = 0;
     int channel = -1; // its first channel, 0-based; -1 not known
+    // Where xLights places it: in the model's own space (what a render buffer's nodes
+    // carry), and in the layout, after the model's position, size and rotation.
+    float sx = 0, sy = 0, sz = 0;
+    float wx = 0, wy = 0, wz = 0;
+    bool placed = false; // the layout position is known
 };
 
 struct FigureGeometry {

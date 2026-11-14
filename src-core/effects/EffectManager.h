@@ -77,6 +77,7 @@ public:
 		eff_VUMETER,
         eff_WARP,
         eff_WAVE,
+        eff_STAGEFIELD,
         eff_LASTEFFECT //Always the last entry
     };
 

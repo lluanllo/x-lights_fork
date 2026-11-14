@@ -2025,6 +2025,9 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
         r.understanding = o.understanding == "on";
     }
     r.stems = ParseStemList(o.stems);
+    if (o.stageDirector == "on" || o.stageDirector == "off") {
+        r.stageDirector = o.stageDirector == "on";
+    }
     if (o.noRecipes) {
         r.useRecipes = false;
     }

@@ -12,6 +12,22 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: a stage director plans the whole installation scene by scene (one figure
+                                 alone, call and answer, a group, the whole house, a rest...) within an attention
+                                 budget, and gives the strong moments gestures that cross the figures: a wave from one
+                                 bulb reaching each figure when its distance says, a cascade, small waves of their own
+    -enh (lluanllo)              New "Stage Field" effect: one light field shared by every figure of a gesture, so a
+                                 movement travels across models of any shape as one; deterministic, with its lights
+                                 to skip (a face's mouth and eyes are never lit by a gesture)
+    -enh (lluanllo)              Show Composer: step 4 shows the director's score and lets you change how a scene uses
+                                 the house, take figures out or in, remove or add gestures and change their speed;
+                                 "Choreography of the installation" plays the whole house as the score plans it or as
+                                 xLights drew it; "Layers of this figure" and "Compositions and gestures"
+    -enh (lluanllo)              Show Composer: a figure keeps its own colours (from parts known for sure) under what it
+                                 does, and every directed show is measured: light per scene, figures at once, and when
+                                 each gesture reached each figure; measurements, never an approval
+    -enh (lluanllo)              iPad - The "Stage Field" effect renders in shows made on the desktop (shared core); the
+                                 stage director's screens are desktop only for now
     -enh (lluanllo)              Show Composer: understand the audio (on this computer) to see who speaks, sings or
                                  answers as a choir, when the instruments play alone, and the hits, drops, tails and
                                  silences of the music; separate recordings of the voice or the choir can be added;

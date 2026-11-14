@@ -482,6 +482,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerRecipeDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.h" />
 		<Unit filename="../dependencies/midifile/src/Binasc.cpp" />
@@ -582,6 +584,16 @@
 		<Unit filename="../src-core/composer/RenderUnderstanding.h" />
 		<Unit filename="../src-core/composer/UnderstandingStore.cpp" />
 		<Unit filename="../src-core/composer/UnderstandingStore.h" />
+		<Unit filename="../src-core/composer/ProceduralField.cpp" />
+		<Unit filename="../src-core/composer/ProceduralField.h" />
+		<Unit filename="../src-core/composer/StageSpace.cpp" />
+		<Unit filename="../src-core/composer/StageSpace.h" />
+		<Unit filename="../src-core/composer/StageDirector.cpp" />
+		<Unit filename="../src-core/composer/StageDirector.h" />
+		<Unit filename="../src-core/composer/StageCheck.cpp" />
+		<Unit filename="../src-core/composer/StageCheck.h" />
+		<Unit filename="../src-core/composer/StageTest.cpp" />
+		<Unit filename="../src-core/composer/StageTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />
 		<Unit filename="../src-core/composer/UnderstandingTest.h" />
 		<Unit filename="../src-core/composer/CompositionPlan.cpp" />
@@ -1084,6 +1096,8 @@
 		<Unit filename="../src-core/effects/ShimmerEffect.h" />
 		<Unit filename="../src-core/effects/ShockwaveEffect.cpp" />
 		<Unit filename="../src-core/effects/ShockwaveEffect.h" />
+		<Unit filename="../src-core/effects/StageFieldEffect.cpp" />
+		<Unit filename="../src-core/effects/StageFieldEffect.h" />
 		<Unit filename="../src-core/effects/SingleStrandEffect.cpp" />
 		<Unit filename="../src-core/effects/SingleStrandEffect.h" />
 		<Unit filename="../src-core/effects/SketchEffect.cpp" />

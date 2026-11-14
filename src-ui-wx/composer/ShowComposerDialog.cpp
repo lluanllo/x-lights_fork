@@ -60,6 +60,7 @@
 #include "ComposerScreens.h"
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
+#include "ComposerStageDialogs.h"
 #include "ComposerTimeline.h"
 #include "ComposerUnderstandingDialogs.h"
 #include "ai/WxServiceSettingsStore.h"
@@ -1304,11 +1305,18 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
 }
 
 wxWindow* ShowComposerDialog::BuildGeneratePage(wxWindow* parent) {
-    auto* page = new wxPanel(parent);
+    auto* page = new wxScrolledWindow(parent);
+    page->SetScrollRate(0, 10);
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(Bold(page, _("Generate the show")), 0, wxBOTTOM, 6);
     _generateSummary = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_generateSummary, 0, wxEXPAND | wxBOTTOM, 8);
+    auto* stage = new wxStaticBoxSizer(wxVERTICAL, page, _("Stage director: the whole installation"));
+    _stagePanel = new StageDirectorPanel(stage->GetStaticBox());
+    _stagePanel->onRecompose = [this]() { StartComposition(); };
+    _stagePanel->onDirectorChanged = [this]() { RefreshAll(); };
+    stage->Add(_stagePanel, 1, wxEXPAND | wxALL, 4);
+    sizer->Add(stage, 0, wxEXPAND | wxBOTTOM, 8);
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
     _generate = new wxButton(page, ID_GENERATE, _("Generate the Show"));
     wxFont font = _generate->GetFont();
@@ -1362,7 +1370,10 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     review->Add(new wxButton(page, ID_REVIEW_CLIPS, _("Review the Pictures and Videos...")), 0, wxRIGHT, 4);
     review->Add(new wxButton(page, ID_EVALUATE, _("Evaluate the Show...")), 0, wxRIGHT, 4);
     review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0, wxRIGHT, 4);
-    review->Add(new wxButton(page, ID_RENDER_CHECK, _("What the Figures Did...")), 0);
+    review->Add(new wxButton(page, ID_RENDER_CHECK, _("What the Figures Did...")), 0, wxRIGHT, 4);
+    auto* house = new wxButton(page, wxID_ANY, _("The Whole Installation..."));
+    review->Add(house, 0);
+    house->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenInstallation(); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenRenderCheck(); }, ID_RENDER_CHECK);
     sizer->Add(review, 0, wxBOTTOM, 8);
     const auto list = [&](const wxString& label, wxListCtrl*& ctrl, const std::vector<std::pair<wxString, int>>& columns, int height) {
@@ -2097,6 +2108,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
         add("--understanding", "on");
         add("--stems", StemListText(_stems));
     }
+    add("--stage-director", _stagePanel == nullptr || _stagePanel->DirectorOn() ? "on" : "off");
     if (!_corrections.Empty()) {
         const fs::path file = fs::path(reportDir).parent_path() / (fs::path(reportDir).filename().string() + ".corrections.json");
         std::ofstream(file, std::ios::binary) << ToJson(_corrections);
@@ -2135,7 +2147,8 @@ std::string ShowComposerDialog::InputsKey() const {
                        _mediaAuto != nullptr && _mediaAuto->GetValue() ? 1 : 0) +
            fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
            (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string()) +
-           fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp);
+           fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp) +
+           (_stagePanel != nullptr ? fmt::format("|st{}|{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText()) : std::string());
 }
 
 void ShowComposerDialog::RunNext() {
@@ -2641,6 +2654,11 @@ void ShowComposerDialog::RefreshAll() {
     timed("RefreshGenerate", [this] { RefreshGenerate(); });
     timed("RefreshResult", [this] { RefreshResult(); });
     timed("RefreshUnderstanding", [this] { RefreshUnderstanding(); });
+    timed("RefreshStage", [this] {
+        if (_stagePanel != nullptr && _stagePanel->SetReport(&_levels[static_cast<int>(Level())], _showDir, "")) {
+            _timeline->SetGestures(TimelineGestures(_stagePanel->Score()));
+        }
+    });
     // Texts change length with what they say; the pages follow them.
     for (size_t i = 0; i < _book->GetPageCount(); ++i) {
         wxWindow* page = _book->GetPage(i);
@@ -4292,6 +4310,24 @@ bool ShowComposerDialog::ResultRenderCheck(RenderUnderstanding& check) const {
     }
     std::string text, error;
     return ReadTextFile((fs::path(_resultReportDir) / "render-understanding.json").string(), text) && FromJson(text, check, error);
+}
+
+void ShowComposerDialog::OpenInstallation() {
+    std::string fseq;
+    std::error_code ec;
+    if (!_resultReportDir.empty()) {
+        for (const auto& entry : fs::directory_iterator(fs::path(_resultReportDir), ec)) {
+            if (entry.path().extension() == ".fseq" && entry.path().string().find(".failed.") == std::string::npos) {
+                fseq = entry.path().string();
+            }
+        }
+    }
+    if (fseq.empty() || _result.stageLights.empty()) {
+        wxMessageBox(_("Generate the show with the stage director on first: the picture of the whole installation comes from its render."), _("The Whole Installation"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    StageMapDialog dialog(this, _result, fseq, 0);
+    dialog.ShowModal();
 }
 
 void ShowComposerDialog::OpenRenderCheck() {

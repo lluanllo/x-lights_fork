@@ -51,6 +51,7 @@ struct GenerateCommandOptions {
     std::string briefPath;     // a song visual brief
     std::string understanding; // "on", "off"; empty: on when the song was already understood
     std::string stems;         // "role=path;role=path" (voice, chorus, narration, music)
+    std::string stageDirector; // "on", "off"; empty: on, or the previous show's
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

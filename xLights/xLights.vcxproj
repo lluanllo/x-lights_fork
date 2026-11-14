@@ -850,6 +850,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-core\effects\RippleEffect.cpp" />
     <ClCompile Include="..\src-core\effects\ShimmerEffect.cpp" />
     <ClCompile Include="..\src-core\effects\ShockwaveEffect.cpp" />
+    <ClCompile Include="..\src-core\effects\StageFieldEffect.cpp" />
     <ClCompile Include="..\src-core\effects\SingleStrandEffect.cpp" />
     <ClCompile Include="..\src-core\effects\SnowflakesEffect.cpp" />
     <ClCompile Include="..\src-core\effects\SnowstormEffect.cpp" />
@@ -907,6 +908,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-ui-wx\composer\ComposerReviewDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerRecipeDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerStageDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ManageMediaPanel.cpp" />
     <ClCompile Include="..\src-ui-wx\media\ShaderPreviewGenerator.cpp" />
@@ -1003,6 +1005,11 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-core\composer\MultimodalTimeline.cpp" />
     <ClCompile Include="..\src-core\composer\RenderUnderstanding.cpp" />
     <ClCompile Include="..\src-core\composer\UnderstandingStore.cpp" />
+    <ClCompile Include="..\src-core\composer\ProceduralField.cpp" />
+    <ClCompile Include="..\src-core\composer\StageSpace.cpp" />
+    <ClCompile Include="..\src-core\composer\StageDirector.cpp" />
+    <ClCompile Include="..\src-core\composer\StageCheck.cpp" />
+    <ClCompile Include="..\src-core\composer\StageTest.cpp" />
     <ClCompile Include="..\src-core\composer\UnderstandingTest.cpp" />
     <ClCompile Include="..\src-core\composer\CompositionPlan.cpp" />
     <ClCompile Include="..\src-core\composer\PlanTest.cpp" />
@@ -1593,6 +1600,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-core\effects\RippleEffect.h" />
     <ClInclude Include="..\src-core\effects\ShimmerEffect.h" />
     <ClInclude Include="..\src-core\effects\ShockwaveEffect.h" />
+    <ClInclude Include="..\src-core\effects\StageFieldEffect.h" />
     <ClInclude Include="..\src-core\effects\SingleStrandEffect.h" />
     <ClInclude Include="..\src-core\effects\SnowflakesEffect.h" />
     <ClInclude Include="..\src-core\effects\SnowstormEffect.h" />
@@ -1650,6 +1658,7 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-ui-wx\composer\ComposerReviewDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerRecipeDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerStageDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\media\ManageMediaPanel.h" />
     <ClInclude Include="..\src-ui-wx\media\ShaderPreviewGenerator.h" />
@@ -1747,6 +1756,11 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-core\composer\MultimodalTimeline.h" />
     <ClInclude Include="..\src-core\composer\RenderUnderstanding.h" />
     <ClInclude Include="..\src-core\composer\UnderstandingStore.h" />
+    <ClInclude Include="..\src-core\composer\ProceduralField.h" />
+    <ClInclude Include="..\src-core\composer\StageSpace.h" />
+    <ClInclude Include="..\src-core\composer\StageDirector.h" />
+    <ClInclude Include="..\src-core\composer\StageCheck.h" />
+    <ClInclude Include="..\src-core\composer\StageTest.h" />
     <ClInclude Include="..\src-core\composer\UnderstandingTest.h" />
     <ClInclude Include="..\src-core\composer\CompositionPlan.h" />
     <ClInclude Include="..\src-core\composer\PlanTest.h" />

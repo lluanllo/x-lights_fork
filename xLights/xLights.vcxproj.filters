@@ -88,6 +88,7 @@
     <ClCompile Include="..\src-ui-wx\composer\ComposerReviewDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerRecipeDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.cpp" />
+    <ClCompile Include="..\src-ui-wx\composer\ComposerStageDialogs.cpp" />
     <ClCompile Include="..\src-ui-wx\composer\ComposerUITest.cpp" />
     <ClCompile Include="..\src-ui-wx\layout\ModelPreview.cpp" />
     <ClCompile Include="..\src-core\models\Shapes.cpp" />
@@ -118,6 +119,11 @@
     <ClCompile Include="..\src-core\composer\MultimodalTimeline.cpp" />
     <ClCompile Include="..\src-core\composer\RenderUnderstanding.cpp" />
     <ClCompile Include="..\src-core\composer\UnderstandingStore.cpp" />
+    <ClCompile Include="..\src-core\composer\ProceduralField.cpp" />
+    <ClCompile Include="..\src-core\composer\StageSpace.cpp" />
+    <ClCompile Include="..\src-core\composer\StageDirector.cpp" />
+    <ClCompile Include="..\src-core\composer\StageCheck.cpp" />
+    <ClCompile Include="..\src-core\composer\StageTest.cpp" />
     <ClCompile Include="..\src-core\composer\UnderstandingTest.cpp" />
     <ClCompile Include="..\src-core\composer\CompositionPlan.cpp" />
     <ClCompile Include="..\src-core\composer\PlanTest.cpp" />
@@ -530,6 +536,9 @@
       <Filter>Effects</Filter>
     </ClCompile>
     <ClCompile Include="..\src-core\effects\ShockwaveEffect.cpp">
+      <Filter>Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src-core\effects\StageFieldEffect.cpp">
       <Filter>Effects</Filter>
     </ClCompile>
     <ClCompile Include="..\src-core\effects\SingleStrandEffect.cpp">
@@ -1720,6 +1729,7 @@
     <ClInclude Include="..\src-ui-wx\composer\ComposerReviewDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerRecipeDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUnderstandingDialogs.h" />
+    <ClInclude Include="..\src-ui-wx\composer\ComposerStageDialogs.h" />
     <ClInclude Include="..\src-ui-wx\composer\ComposerUITest.h" />
     <ClInclude Include="..\src-ui-wx\layout\ModelPreview.h" />
     <ClInclude Include="..\src-core\graphics\IModelPreview.h" />
@@ -1753,6 +1763,11 @@
     <ClInclude Include="..\src-core\composer\MultimodalTimeline.h" />
     <ClInclude Include="..\src-core\composer\RenderUnderstanding.h" />
     <ClInclude Include="..\src-core\composer\UnderstandingStore.h" />
+    <ClInclude Include="..\src-core\composer\ProceduralField.h" />
+    <ClInclude Include="..\src-core\composer\StageSpace.h" />
+    <ClInclude Include="..\src-core\composer\StageDirector.h" />
+    <ClInclude Include="..\src-core\composer\StageCheck.h" />
+    <ClInclude Include="..\src-core\composer\StageTest.h" />
     <ClInclude Include="..\src-core\composer\UnderstandingTest.h" />
     <ClInclude Include="..\src-core\composer\CompositionPlan.h" />
     <ClInclude Include="..\src-core\composer\PlanTest.h" />
@@ -2168,6 +2183,9 @@
       <Filter>Effects</Filter>
     </ClInclude>
     <ClInclude Include="..\src-core\effects\ShockwaveEffect.h">
+      <Filter>Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src-core\effects\StageFieldEffect.h">
       <Filter>Effects</Filter>
     </ClInclude>
     <ClInclude Include="..\src-core\effects\SingleStrandEffect.h">

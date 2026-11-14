@@ -1,4 +1,5 @@
 #include "composer/Choreography.h"
+#include "composer/ProceduralField.h"
 
 #include "composer/MediaDirection.h"
 #include "composer/RecipeLibrary.h"
@@ -1355,6 +1356,20 @@ private:
                     refusal = "target-missing";
                 } else if (_caps.LightsExcluded(want.target)) {
                     refusal = "target-excluded";
+                } else if (want.effect == "Stage Field" && want.templateId.empty()) {
+                    // The stage director's effects come from no template: their field must be a valid one.
+                    FieldSpec spec;
+                    std::string error, text;
+                    for (const auto& [k, v] : want.settings) {
+                        if (k == "E_TEXTCTRL_StageField_Spec") {
+                            text = v;
+                        }
+                    }
+                    if (!FromText(text, spec, error) || !ValidateField(spec, error)) {
+                        refusal = "field-invalid";
+                    } else if (want.startMS < 0 || want.endMS <= want.startMS || want.endMS > _plan.durationMS) {
+                        refusal = "timing-invalid";
+                    }
                 } else if (t == nullptr) {
                     refusal = "template-unknown:" + want.templateId;
                 } else if (EvaluateCompatibility(*t, *target).level == Compatibility::Incompatible) {

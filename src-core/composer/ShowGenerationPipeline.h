@@ -19,6 +19,8 @@
 #include "composer/TemplateLibrary.h"
 #include "composer/FigureSemantics.h"
 #include "composer/RenderUnderstanding.h"
+#include "composer/StageCheck.h"
+#include "composer/StageDirector.h"
 #include "composer/UnderstandingStore.h"
 
 #include <array>
@@ -130,6 +132,10 @@ struct GenerationRequest {
     // generates as before, to compare.
     std::optional<bool> understanding;
     std::vector<StemInput> stems; // the song's separate recordings, when there are
+    // The stage director: the whole installation planned as one stage (modes, gestures
+    // across figures, layers that keep each figure's colours). Default: on, or the
+    // previous show's; false generates as before, to compare.
+    std::optional<bool> stageDirector;
     CancelCheck cancel;
     std::function<void(GenerationStage stage, const std::string& what)> progress;
 };
@@ -227,6 +233,14 @@ struct GenerationRun {
     CastFromUnderstanding castFromUnderstanding;
     RenderUnderstanding renderUnderstanding;
     bool renderUnderstood = false;
+
+    // The stage director (when on)
+    bool stageWanted = false; // asked for, or kept from the previous show
+    bool staged = false;      // and done
+    StageSpace stageSpace;
+    GlobalStageScore stageScore;
+    int stageEdits = 0;
+    StageCheck stageCheck; // what the render did with the installation
 
     // Sequence
     SequenceSpec spec;
