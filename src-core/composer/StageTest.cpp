@@ -917,6 +917,16 @@ private:
             x.kind = TargetKind::Model;
             spec.effects.push_back(x);
         }
+        // A group's effect under the wave: where a figure's field is dark, the group shows.
+        EffectSpec group;
+        group.target = "Grupo Todo";
+        group.effect = "On";
+        group.palette = RED;
+        group.startMS = 3000;
+        group.endMS = 7000;
+        group.kind = TargetKind::Group;
+        spec.effects.push_back(group);
+        Check(PutGroupsUnderStage(spec, c, _caps) >= 1 && spec.effects.front().target == "Grupo Todo", "the group holding figures with gestures is drawn before them");
         std::string fseq;
         Check(Render(spec, "partitura", fseq), "the score written as a native sequence and rendered");
         Frames frames(fseq);
@@ -929,7 +939,7 @@ private:
             for (int f = fromMS / FRAME; f < toMS / FRAME && f < frames.Count(); ++f) {
                 for (const FigureNode& n : g->nodeMap) {
                     const auto c3 = frames.Light(f, n.channel);
-                    if (std::max({ c3[0], c3[1], c3[2] }) > 40) {
+                    if (std::max(c3[1], c3[2]) > 40) { // the gestures are white; the group under them red
                         return f * FRAME;
                     }
                 }
@@ -954,6 +964,22 @@ private:
             }
         }
         printf("    lit minus expected: %s\n", detail.c_str());
+        // The tree's own wave effect has started but the front is not there yet: the group's red.
+        if (const GlobalGesture* w = score.Gesture("propagated-wave@4000")) {
+            for (const GestureParticipant& p : w->participants) {
+                if (p.figure != "Arbol Grande" && p.figure != "Matriz Prueba") {
+                    continue;
+                }
+                const int effectStart = std::max(0, ((w->startMS + p.delayMS - 100) / FRAME) * FRAME);
+                int red = 0, n = 0;
+                for (const FigureNode& node : _geometry.Find(p.figure)->nodeMap) {
+                    const auto c3 = frames.Light(effectStart / FRAME + 1, node.channel);
+                    ++n;
+                    red += c3[0] > 180 && c3[1] < 60 && c3[2] < 60 ? 1 : 0;
+                }
+                Check(n > 0 && red * 10 >= n * 9, fmt::format("{}: where the wave has not arrived, the group's effect shows through ({} of {} lights red)", p.figure, red, n));
+            }
+        }
         Check(total > 0 && on == total, fmt::format("each figure of the wave and the cascade lit at its moment, within 3 frames: {} of {} (worst {} ms)", on, total, worst));
         // Before the strong hit and in the rest, the score lights nothing.
         int early = 0;

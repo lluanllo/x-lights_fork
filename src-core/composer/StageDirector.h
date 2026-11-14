@@ -199,6 +199,12 @@ struct StageDirectorInput {
 // taken out where the scene asks for attention elsewhere. Returns notes for the report.
 std::vector<std::string> RealizeStage(const GlobalStageScore& score, const StageDirectorInput& input, Choreography& choreography);
 
+// xLights draws rows in order, a later row over an earlier one (blended, with model
+// blending on). A group that holds a figure with a gesture is moved ahead of that figure, so
+// the gesture's light lies over the group's effect and, where it is dark, lets it show.
+// Returns how many groups were moved.
+int PutGroupsUnderStage(SequenceSpec& spec, const Choreography& choreography, const ModelCapabilities& capabilities);
+
 // The field one participant of a gesture draws, ready for the Stage Field effect.
 [[nodiscard]] FieldSpec ParticipantField(const GlobalGesture& g, const GestureParticipant& p, const StageSpace& space, const FigureSemantics* semantics, int effectStartMS);
 

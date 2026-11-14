@@ -410,6 +410,12 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     } else if (run.hasPrevious) {
         s.visualPlan = run.previous.visualPlan;
     }
+    s.stage.decided = true;
+    s.stage.enabled = run.stageWanted;
+    s.stage.directorVersion = run.staged ? run.stageScore.version : "";
+    s.stage.scenes = static_cast<int>(run.stageScore.scenes.size());
+    s.stage.gestures = static_cast<int>(run.stageScore.gestures.size());
+    s.stage.edits = run.stageEdits;
     if (run.understood) {
         s.understanding = { true, fs::path(run.understanding.folder).filename().string(), run.understanding.audio.version, static_cast<int>(run.understanding.audio.corrections.size()),
                             static_cast<int>(run.understanding.manual.size()) };
@@ -417,6 +423,9 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.media.corrections = run.corrections.media;
     s.generationId = HashText(fmt::format("{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}", s.audioHash, s.analysisOptionsKey, s.analyzerVersion, s.layoutFingerprint, s.profileHash, s.libraryHash, s.lyricsHash,
                                           LevelId(s.level), s.seed, s.frameMS, s.pipelineVersion, s.plannerVersion, s.choreographerVersion, ToJson(run.corrections)));
+    if (run.staged) {
+        s.generationId = HashText(s.generationId + "|stage|" + ToJson(run.stageScore));
+    }
     const ValidationReport& v = run.write.validation;
     s.validationErrors = v.ErrorCount() + run.renderValidation.ErrorCount();
     s.validationWarnings = v.WarningCount() + run.renderValidation.WarningCount();
@@ -1345,6 +1354,109 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
 
 } // namespace
 
+// The whole installation as one stage: how each scene uses the figures, the gestures
+// that cross them, the figures composed whole. It never stops a generation: when it
+// cannot run, the show is made as before and the notes say why.
+void DirectTheStage(GenerationRun& run, GenerationStage S) {
+    const GenerationRequest& r = run.request;
+    bool on = true;
+    if (r.stageDirector.has_value()) {
+        on = *r.stageDirector;
+    } else if (run.hasPrevious && run.previous.stage.decided) {
+        on = run.previous.stage.enabled;
+    }
+    if (!on) {
+        Note(run, S, "stage-off", "the installation is not directed as one stage");
+        return;
+    }
+    run.stageWanted = true;
+    std::string text, error;
+    if (run.figures.figures.empty()) {
+        run.figures = DescribeFigures(*run.context, run.capabilities, true);
+    }
+    if (run.semantics.profiles.empty()) {
+        FigureChoices choices;
+        if (ReadTextFile(FigureChoicesPath(r.showDir), text) && !FromJson(text, choices, error)) {
+            Note(run, S, "figure-choices-unreadable", error);
+        }
+        run.semantics = DescribeSemantics(*run.context, run.figures, run.capabilities, &choices);
+    }
+    StageCalibrations calibrations;
+    bool calibrated = false;
+    if (ReadTextFile(StageCalibrationsPath(r.showDir), text)) {
+        calibrated = FromJson(text, calibrations, error);
+        if (!calibrated) {
+            Note(run, S, "stage-calibration-unreadable", error);
+        }
+    }
+    run.stageSpace = BuildStageSpace(run.figures, calibrated ? &calibrations : nullptr);
+    StageEdits edits;
+    if (!run.analysis.audioHash.empty() && ReadTextFile(StageEditsPath(r.showDir, run.analysis.audioHash), text) && !FromJson(text, edits, error)) {
+        Note(run, S, "stage-edits-unreadable", error);
+        edits = StageEdits();
+    }
+    StageLibrary personal;
+    if (ReadTextFile(StageLibraryPath(r.showDir), text) && !FromJson(text, personal, error)) {
+        Note(run, S, "stage-library-unreadable", error);
+        personal = StageLibrary();
+    }
+    const StageLibrary library = MergeStageLibrary(personal);
+    StageDirectorInput in;
+    in.plan = &run.plan;
+    in.analysis = &run.analysis;
+    in.audio = run.understood ? &run.understanding.audio : nullptr;
+    in.voices = run.understood ? &run.understanding.voices : nullptr;
+    in.geometry = &run.figures;
+    in.semantics = &run.semantics;
+    in.space = &run.stageSpace;
+    in.capabilities = &run.capabilities;
+    in.choreography = &run.choreography;
+    in.edits = edits.edits.empty() ? nullptr : &edits;
+    in.library = &library;
+    run.stageScore = DirectStage(in);
+    if (run.stageScore.scenes.empty()) {
+        Note(run, S, "stage-not-directed", run.stageScore.warnings.empty() ? std::string("no scene") : run.stageScore.warnings.front());
+        return;
+    }
+    in.choreography = nullptr; // the colours are read; from here the choreography is changed
+    for (const std::string& n : RealizeStage(run.stageScore, in, run.choreography)) {
+        Note(run, S, "stage-realized", n);
+    }
+    run.staged = true;
+    run.stageEdits = static_cast<int>(edits.edits.size());
+    std::map<std::string, int> modes, kinds;
+    for (const StageScene& sc : run.stageScore.scenes) {
+        modes[StageModeId(sc.mode)]++;
+    }
+    for (const GlobalGesture& g : run.stageScore.gestures) {
+        kinds[GestureKindId(g.kind)]++;
+    }
+    std::string modeText, kindText;
+    for (const auto& [k, n] : modes) {
+        modeText += fmt::format("{}{} x{}", modeText.empty() ? "" : ", ", k, n);
+    }
+    for (const auto& [k, n] : kinds) {
+        kindText += fmt::format("{}{} x{}", kindText.empty() ? "" : ", ", k, n);
+    }
+    std::set<std::string> taking;
+    for (const StageScene& sc : run.stageScore.scenes) {
+        for (const SceneRole& role : sc.roles) {
+            if (role.role != "rest") {
+                taking.insert(role.figure);
+            }
+        }
+    }
+    Note(run, S, "stage-score", fmt::format("{} scenes ({}); {} gestures ({}); {} identity layers; {} figures on the stage, {} taking part somewhere; {} changes by a person",
+                                            run.stageScore.scenes.size(), modeText, run.stageScore.gestures.size(), kindText.empty() ? std::string("none") : kindText,
+                                            run.stageScore.layers.size(), run.stageSpace.figures.size(), taking.size(), run.stageEdits));
+    for (const std::string& w : run.stageScore.warnings) {
+        Note(run, S, "stage-warning", w);
+    }
+    for (const std::string& l : run.stageSpace.limits) {
+        Note(run, S, "stage-limit", l);
+    }
+}
+
 bool ChoreographShow(GenerationRun& run) {
     return RunStage(run, GenerationStage::Choreography, [&]() {
         const GenerationStage S = GenerationStage::Choreography;
@@ -1483,6 +1595,7 @@ bool ChoreographShow(GenerationRun& run) {
         if (run.choreographyValidation.ErrorCount() > 0) {
             return Fail(run, S, "choreography-invalid", fmt::format("{} errors", run.choreographyValidation.ErrorCount()));
         }
+        DirectTheStage(run, S);
         return true;
     });
 }
@@ -1517,6 +1630,11 @@ bool BuildSequence(GenerationRun& run) {
             }
         }
         run.spec = ToSequenceSpec(run.choreography, tracks);
+        if (run.staged) {
+            if (const int moved = PutGroupsUnderStage(run.spec, run.choreography, run.capabilities); moved > 0) {
+                Note(run, S, "stage-rows", fmt::format("{} groups drawn before the figures with gestures they hold", moved));
+            }
+        }
         run.spec.mediaFile = fs::absolute(fs::path(run.request.audioPath)).string();
         run.spec.layoutFingerprint = run.layoutFingerprint;
         // A media cue only suggests where a picture could go while the figure keeps its
@@ -1762,6 +1880,10 @@ void WriteDiagnostics(GenerationRun& run) {
     }
     if (run.renderUnderstood) {
         ok &= WriteText(report / "render-understanding.json", ToJson(run.renderUnderstanding));
+    }
+    if (run.staged) {
+        ok &= WriteText(report / "stage-space.json", ToJson(run.stageSpace));
+        ok &= WriteText(report / "stage-score.json", ToJson(run.stageScore));
     }
     if (!run.plan.segments.empty()) {
         ok &= WriteText(report / "composition-plan.json", ToJson(run.plan));

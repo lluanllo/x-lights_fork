@@ -23,7 +23,9 @@ namespace composer {
 // 3: the song's understanding (`understanding`): whether the voices and figures heard in
 // the recording were used, and which reading. A version 1 or 2 file reads as a show made
 // without it.
-inline constexpr int SIDECAR_SCHEMA_VERSION = 3;
+// 4: the stage director (`stage`): whether the whole installation was directed as one
+// stage, and how much. A version 1-3 file reads as a show that never decided.
+inline constexpr int SIDECAR_SCHEMA_VERSION = 4;
 
 // Whether a show used the understanding of its recording, and which one. The reading,
 // the corrections and the person's assignments live in their own files (UnderstandingStore.h).
@@ -33,6 +35,17 @@ struct UnderstandingSettings {
     std::string readerVersion;
     int corrections = 0;
     int manualAssignments = 0;
+};
+
+// Whether the stage director planned the show, and what it made. The score is in the
+// report; a person's changes to it are in ShowComposer/stage (StageDirector.h).
+struct StageSettings {
+    bool decided = false; // false: the show is older than the director
+    bool enabled = false;
+    std::string directorVersion;
+    int scenes = 0;
+    int gestures = 0;
+    int edits = 0;
 };
 
 // The artistic director's settings a show was made with, so a regeneration keeps them.
@@ -90,6 +103,7 @@ struct GenerationSidecar {
     MediaSession media;
     VisualPlanSettings visualPlan;
     UnderstandingSettings understanding;
+    StageSettings stage;
 };
 
 enum class SidecarStatus {

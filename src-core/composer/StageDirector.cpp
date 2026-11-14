@@ -57,6 +57,7 @@ struct Figure {
     const FigureGeometry* geometry = nullptr;
     const FigureProfile* profile = nullptr;
     bool face = false;   // a face xLights draws
+    bool allFace = false; // its mouth and eyes are nearly all of it: a gesture would light nothing else
     bool excluded = false;
 };
 
@@ -77,6 +78,11 @@ public:
             return score;
         }
         score.limits = _in.space->limits;
+        for (const Figure& f : _figures) {
+            if (f.allFace) {
+                score.limits.push_back("all-face:" + f.stage->name); // its light is its singing: no gestures over it
+            }
+        }
         Moments();
         for (const PlanSegment& s : _in.plan->segments) {
             score.scenes.push_back(Scene(s, score));
@@ -103,6 +109,13 @@ private:
             if (fig.profile != nullptr) {
                 const FigureRegion* mouth = fig.profile->Region("mouth");
                 fig.face = fig.profile->mouth == "images" || (mouth != nullptr && mouth->source.rfind("face-definition", 0) == 0);
+                std::set<int> kept;
+                for (const FigureRegion& r : fig.profile->regions) {
+                    if ((r.id == "mouth" || r.id == "eyes") && r.real) {
+                        kept.insert(r.nodes.begin(), r.nodes.end());
+                    }
+                }
+                fig.allFace = !kept.empty() && kept.size() * 5 >= static_cast<size_t>(f.lights) * 4;
             }
             if (_in.capabilities != nullptr) {
                 const TargetInfo* t = _in.capabilities->Find(f.name);
@@ -370,8 +383,19 @@ private:
         }
         const int maxGestures = sc.mode == StageMode::Protagonist ? 1 : seg.priority >= 3 ? 4 : seg.priority >= 2 ? 3 : 2;
         int made = 0;
-        int lastMS = -100000;
-        const auto room = [&](int ms) { return ms - lastMS >= 1500 && made < maxGestures && ms < sc.endMS - 300; };
+        std::vector<std::pair<int, int>> busy; // the scene's gestures so far, by their hits
+        const auto roomFor = [&](int a, int b) {
+            if (made >= maxGestures || b >= sc.endMS - 300) {
+                return false;
+            }
+            for (const auto& [x, y] : busy) {
+                if (b > x - 1500 && a < y + 1500) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto room = [&](int ms) { return roomFor(ms, ms); };
         // Special moments first: a drop gathers the light, a re-entry spreads it, a tail echoes.
         for (const Moment& m : moments) {
             if (!room(m.ms)) {
@@ -391,25 +415,36 @@ private:
             }
             if (Make(sc, seg, kind, m, faces, score)) {
                 ++made;
-                lastMS = m.ms;
+                busy.push_back({ m.ms, m.ms });
             }
         }
-        // Clusters of hits.
-        for (size_t i = 0; i < accents.size() && made < maxGestures;) {
+        // A short burst of hits standing alone (a few beeps): one figure for each, in turn.
+        // A steady pulse is not a burst: a run longer than five hits, or one with no quiet
+        // around it, is the beat going on, and gets no cascade.
+        bool cascaded = false;
+        for (size_t i = 0; i < accents.size() && made < maxGestures && !cascaded;) {
             size_t j = i + 1;
-            while (j < accents.size() && accents[j].ms - accents[j - 1].ms >= 120 && accents[j].ms - accents[j - 1].ms <= 900 && j - i < 5) {
+            int widest = 0;
+            while (j < accents.size() && accents[j].ms - accents[j - 1].ms >= 120 && accents[j].ms - accents[j - 1].ms <= 700) {
+                widest = std::max(widest, accents[j].ms - accents[j - 1].ms);
                 ++j;
             }
-            if (j - i >= 2 && room(accents[i].ms) && sc.mode != StageMode::Protagonist) {
+            const size_t count = j - i;
+            const int before = i == 0 ? accents[i].ms - sc.startMS : accents[i].ms - accents[i - 1].ms;
+            const int after = j == accents.size() ? sc.endMS - accents[j - 1].ms : accents[j].ms - accents[j - 1].ms;
+            bool strongEach = true;
+            for (size_t k = i; k < j; ++k) {
+                strongEach = strongEach && accents[k].weight >= 0.55;
+            }
+            if (count >= 3 && count <= 5 && strongEach && before >= widest * 3 / 2 && after >= widest * 3 / 2 && roomFor(accents[i].ms, accents[j - 1].ms) && sc.mode != StageMode::Protagonist) {
                 std::vector<Moment> run(accents.begin() + static_cast<long>(i), accents.begin() + static_cast<long>(j));
                 if (Cascade(sc, run, score)) {
                     ++made;
-                    lastMS = run.back().ms;
+                    busy.push_back({ run.front().ms, run.back().ms });
+                    cascaded = true;
                 }
-                i = j;
-                continue;
             }
-            ++i;
+            i = j;
         }
         // The strongest remaining hit: the scene's main gesture, chosen by the mode.
         std::vector<Moment> strong = accents;
@@ -418,7 +453,7 @@ private:
             if (made >= maxGestures) {
                 break;
             }
-            if (!room(m.ms) || std::abs(m.ms - lastMS) < 1500) {
+            if (!room(m.ms)) {
                 continue;
             }
             GestureKind kind = GestureKind::JointPulse;
@@ -433,7 +468,7 @@ private:
             }
             if (Make(sc, seg, kind, m, faces, score)) {
                 ++made;
-                lastMS = m.ms;
+                busy.push_back({ m.ms, m.ms });
             }
         }
         if (made == 0) {
@@ -452,7 +487,8 @@ private:
     std::vector<std::string> Active(const StageScene& sc, bool withProtagonists) const {
         std::vector<std::string> out;
         for (const SceneRole& r : sc.roles) {
-            if (r.role != "rest" && (withProtagonists || r.role != "protagonist")) {
+            const Figure* f = Find(r.figure);
+            if (r.role != "rest" && (withProtagonists || r.role != "protagonist") && f != nullptr && !f->allFace) {
                 out.push_back(r.figure);
             }
         }
@@ -629,7 +665,12 @@ private:
         }
         case GestureKind::CallResponse: {
             // The voice that calls first, the others answering a beat later, in order.
-            std::vector<std::string> order = faces;
+            std::vector<std::string> order;
+            for (const std::string& f : faces) {
+                if (const Figure* fig = Find(f); fig != nullptr && !fig->allFace) {
+                    order.push_back(f);
+                }
+            }
             for (const std::string& f : active) {
                 if (std::find(order.begin(), order.end(), f) == order.end()) {
                     order.push_back(f);
@@ -658,7 +699,7 @@ private:
             // Under a voice that leads: a slow field joining the figures that accompany it.
             std::vector<std::string> background;
             for (const SceneRole& r : sc.roles) {
-                if (r.role == "background" || r.role == "complement") {
+                if ((r.role == "background" || r.role == "complement") && Find(r.figure) != nullptr && !Find(r.figure)->allFace) {
                     background.push_back(r.figure);
                 }
             }
@@ -963,29 +1004,37 @@ FieldSpec ParticipantField(const GlobalGesture& g, const GestureParticipant& p, 
     return s;
 }
 
+namespace {
+// Greedy layers for one figure's effects: each takes the first layer from `base` where
+// nothing of its own kind is playing. Returns how many layers were used.
+int Stack(std::vector<ChoreographyEvent*>& events, int base) {
+    std::stable_sort(events.begin(), events.end(), [](const ChoreographyEvent* a, const ChoreographyEvent* b) { return a->startMS < b->startMS; });
+    std::vector<int> busyUntil;
+    for (ChoreographyEvent* e : events) {
+        size_t k = 0;
+        while (k < busyUntil.size() && busyUntil[k] > e->startMS) {
+            ++k;
+        }
+        if (k == busyUntil.size()) {
+            busyUntil.push_back(0);
+        }
+        busyUntil[k] = e->endMS;
+        e->layer = base + static_cast<int>(k);
+    }
+    return static_cast<int>(busyUntil.size());
+}
+} // namespace
+
 std::vector<std::string> RealizeStage(const GlobalStageScore& score, const StageDirectorInput& in, Choreography& c) {
     std::vector<std::string> notes;
     if (in.space == nullptr) {
         return notes;
     }
-    // Room on top: the figures that get a gesture or a layer have their effects moved one
-    // layer down; their identity goes under everything.
-    std::set<std::string> touched;
-    for (const GlobalGesture& g : score.gestures) {
-        for (const GestureParticipant& p : g.participants) {
-            touched.insert(p.figure);
-        }
-    }
-    for (const StageLayer& l : score.layers) {
-        touched.insert(l.figure);
-    }
-    std::map<std::string, int> deepest;
-    for (ChoreographyEvent& e : c.events) {
-        if (touched.contains(e.target)) {
-            e.layer += 1;
-            deepest[e.target] = std::max(deepest[e.target], e.layer);
-        }
-    }
+    // xLights keeps an effect's times on its frames: every time made here is on one.
+    const int frame = std::max(1, c.frameMS);
+    const int lastMS = (std::max(score.durationMS, c.durationMS) / frame) * frame;
+    const auto down = [&](int ms) { return std::clamp((ms / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
+    const auto near = [&](int ms) { return std::clamp(((ms + frame / 2) / frame) * frame, 0, lastMS > 0 ? lastMS : ms); };
     int gestureEvents = 0, identityEvents = 0, rested = 0;
     // Resting figures: in a scene that gives the attention to a few, the others' own
     // effects stop (their faces, words and pictures stay).
@@ -993,25 +1042,27 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         if (sc.mode != StageMode::Protagonist && sc.mode != StageMode::Duo && sc.mode != StageMode::Rest && sc.mode != StageMode::CallResponse) {
             continue;
         }
+        const int from = near(sc.startMS);
+        const int to = near(sc.endMS);
         std::vector<ChoreographyEvent> kept;
         for (ChoreographyEvent& e : c.events) {
-            const bool inScene = e.startMS < sc.endMS && e.endMS > sc.startMS;
+            const bool inScene = e.startMS < to && e.endMS > from;
             const bool keepAlways = e.intent == "face-sing" || e.intent == "lyric-text" || e.intent == "media" || e.prominence == Prominence::Lead || e.effect == "Faces" ||
-                                    e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video";
+                                    e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.provenance.rfind("stage:", 0) == 0;
             if (!inScene || keepAlways || sc.RoleOf(e.target) != "rest" || in.space->Find(e.target) == nullptr) {
                 kept.push_back(std::move(e));
                 continue;
             }
             // Cut out of the scene; what lies outside it stays.
-            if (e.startMS < sc.startMS) {
+            if (e.startMS < from) {
                 ChoreographyEvent before = e;
-                before.endMS = sc.startMS;
+                before.endMS = from;
                 before.id += "/before-" + sc.id;
                 kept.push_back(std::move(before));
             }
-            if (e.endMS > sc.endMS) {
+            if (e.endMS > to) {
                 ChoreographyEvent after = e;
-                after.startMS = sc.endMS;
+                after.startMS = to;
                 after.id += "/after-" + sc.id;
                 kept.push_back(std::move(after));
             }
@@ -1022,10 +1073,13 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     // The gestures, one Stage Field per figure, each joining at its own moment.
     for (const GlobalGesture& g : score.gestures) {
         for (const GestureParticipant& p : g.participants) {
-            const int startMS = std::max(g.startMS, g.startMS + p.delayMS - 100); // a little before it arrives: the front enters, not pops
-            const int effectStart = std::max(0, (startMS / 25) * 25);
+            // A little before it arrives: the front enters, it does not pop.
+            const int effectStart = down(std::max(g.startMS, g.startMS + p.delayMS - 100));
+            const int endMS = near(std::max(effectStart + 2 * frame, g.endMS + 400));
+            if (endMS <= effectStart) {
+                continue;
+            }
             FieldSpec s = ParticipantField(g, p, *in.space, in.semantics, effectStart);
-            const int endMS = std::min(std::max(effectStart + 50, g.endMS + 400), score.durationMS > 0 ? score.durationMS : g.endMS + 400);
             ChoreographyEvent e;
             e.id = fmt::format("stage/{}/{}", g.id, p.figure);
             e.target = p.figure;
@@ -1036,7 +1090,6 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
             e.segmentId = sc != nullptr ? sc->id : "";
             e.startMS = effectStart;
             e.endMS = endMS;
-            e.layer = 0;
             e.effect = "Stage Field";
             e.settings = { { "E_TEXTCTRL_StageField_Spec", ToText(s) }, { "E_SLIDER_StageField_Intensity", "100" }, { "T_CHOICE_LayerMethod", "Normal" } };
             e.colors = g.colors;
@@ -1052,9 +1105,14 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     }
     // Identity layers, under everything the figure has.
     for (const StageLayer& l : score.layers) {
+        const int from = near(l.startMS);
+        const int to = near(l.endMS);
+        if (to <= from) {
+            continue;
+        }
         FieldSpec s;
         s.function = FieldFunction::Pulse;
-        s.duration = std::max(0.2, (l.endMS - l.startMS) / 1000.0);
+        s.duration = (to - from) / 1000.0;
         s.attack = 0.05;
         s.release = 0.05;
         s.level = l.opacity;
@@ -1070,9 +1128,8 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         e.intent = "stage-identity";
         const StageScene* sc = score.SceneAt(l.startMS);
         e.segmentId = sc != nullptr ? sc->id : "";
-        e.startMS = l.startMS;
-        e.endMS = l.endMS;
-        e.layer = deepest[l.figure] + 1 + (static_cast<int>(score.layers.size()) - l.order) % 4;
+        e.startMS = from;
+        e.endMS = to;
         e.effect = "Stage Field";
         e.settings = { { "E_TEXTCTRL_StageField_Spec", ToText(s) }, { "E_SLIDER_StageField_Intensity", "100" }, { "T_CHOICE_LayerMethod", "Normal" } };
         e.colors = { l.color };
@@ -1084,47 +1141,88 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         c.events.push_back(std::move(e));
         ++identityEvents;
     }
-    // Keep layers free of overlaps on the same figure: an effect that would start under
-    // another on its layer goes one deeper.
-    std::stable_sort(c.events.begin(), c.events.end(), [](const ChoreographyEvent& a, const ChoreographyEvent& b) {
-        return a.target != b.target ? a.target < b.target : a.layer != b.layer ? a.layer < b.layer : a.startMS < b.startMS;
-    });
-    for (size_t i = 0; i < c.events.size(); ++i) {
-        ChoreographyEvent& e = c.events[i];
-        if (e.provenance.rfind("stage:", 0) != 0) {
-            continue;
-        }
-        bool clash = true;
-        while (clash) {
-            clash = false;
-            for (size_t j = 0; j < c.events.size(); ++j) {
-                const ChoreographyEvent& o = c.events[j];
-                if (j != i && o.target == e.target && o.layer == e.layer && o.startMS < e.endMS && o.endMS > e.startMS && o.provenance.rfind("stage:", 0) == 0 && j < i) {
-                    clash = true;
-                }
-            }
-            if (clash) {
-                ++e.layer;
-            }
-        }
-    }
-    // A deeper stage layer may now sit where an effect of the figure already was.
-    std::map<std::string, int> top;
-    for (const ChoreographyEvent& e : c.events) {
-        if (e.provenance.rfind("stage:", 0) == 0 && e.intent == "stage-gesture") {
-            top[e.target] = std::max(top[e.target], e.layer);
-        }
-    }
+    // The layers of each figure the score touches, top to bottom: its gestures, then its
+    // own effects as they were (in their order), then its identity. Nothing shares a layer.
+    std::map<std::string, std::vector<ChoreographyEvent*>> gestures, identity, own;
     for (ChoreographyEvent& e : c.events) {
-        if (e.provenance.rfind("stage:", 0) != 0 && top.contains(e.target) && e.layer <= top[e.target]) {
-            e.layer += top[e.target];
+        if (e.intent == "stage-gesture") {
+            gestures[e.target].push_back(&e);
+        } else if (e.intent == "stage-identity") {
+            identity[e.target].push_back(&e);
+        } else {
+            own[e.target].push_back(&e);
+        }
+    }
+    std::set<std::string> touched;
+    for (const auto& [t, list] : gestures) {
+        touched.insert(t);
+    }
+    for (const auto& [t, list] : identity) {
+        touched.insert(t);
+    }
+    for (const std::string& t : touched) {
+        const int top = gestures.contains(t) ? Stack(gestures[t], 0) : 0;
+        int deepest = top - 1;
+        if (own.contains(t)) {
+            for (ChoreographyEvent* e : own[t]) {
+                e->layer += top;
+                deepest = std::max(deepest, e->layer);
+            }
+        }
+        if (identity.contains(t)) {
+            (void)Stack(identity[t], deepest + 1);
         }
     }
     std::stable_sort(c.events.begin(), c.events.end(), [](const ChoreographyEvent& a, const ChoreographyEvent& b) {
         return a.startMS != b.startMS ? a.startMS < b.startMS : a.target != b.target ? a.target < b.target : a.layer < b.layer;
     });
+    c.metrics = MeasureChoreography(c);
     notes.push_back(fmt::format("{} gesture effects, {} identity layers, {} background effects rested", gestureEvents, identityEvents, rested));
     return notes;
+}
+
+int PutGroupsUnderStage(SequenceSpec& spec, const Choreography& choreography, const ModelCapabilities& capabilities) {
+    std::set<std::string> staged;
+    for (const ChoreographyEvent& e : choreography.events) {
+        if (e.provenance.rfind("stage:", 0) == 0) {
+            staged.insert(e.target);
+        }
+    }
+    if (staged.empty()) {
+        return 0;
+    }
+    // A row's place is where its target first appears.
+    std::map<std::string, size_t> first;
+    for (size_t i = 0; i < spec.effects.size(); ++i) {
+        first.emplace(spec.effects[i].target, i);
+    }
+    std::vector<std::string> ahead; // groups to draw before the figures they hold
+    for (const auto& [target, row] : first) {
+        const TargetInfo* t = capabilities.Find(target);
+        if (t == nullptr || t->type != TargetType::Group) {
+            continue;
+        }
+        for (const std::string& m : t->flatModels) {
+            if (staged.contains(m) && first.contains(m) && first.at(m) < row) {
+                ahead.push_back(target);
+                break;
+            }
+        }
+    }
+    if (ahead.empty()) {
+        return 0;
+    }
+    std::sort(ahead.begin(), ahead.end(), [&](const std::string& a, const std::string& b) { return first.at(a) < first.at(b); }); // among themselves, as they were
+    // Only their first effect moves: that alone sets the row; effects keep their times.
+    std::vector<EffectSpec> moved;
+    for (const std::string& g : ahead) {
+        const size_t row = first.at(g);
+        moved.push_back(spec.effects[row]);
+        spec.effects[row].target.clear(); // marked, removed below
+    }
+    std::erase_if(spec.effects, [](const EffectSpec& e) { return e.target.empty(); });
+    spec.effects.insert(spec.effects.begin(), moved.begin(), moved.end());
+    return static_cast<int>(ahead.size());
 }
 
 const char* StageModeId(StageMode m) {

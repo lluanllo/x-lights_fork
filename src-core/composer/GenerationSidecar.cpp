@@ -134,6 +134,9 @@ std::string ToJson(const GenerationSidecar& s) {
         root["understanding"] = { { "enabled", true }, { "audioId", s.understanding.audioId }, { "readerVersion", s.understanding.readerVersion },
                                   { "corrections", s.understanding.corrections }, { "manualAssignments", s.understanding.manualAssignments } };
     }
+    if (s.stage.decided) {
+        root["stage"] = { { "enabled", s.stage.enabled }, { "directorVersion", s.stage.directorVersion }, { "scenes", s.stage.scenes }, { "gestures", s.stage.gestures }, { "edits", s.stage.edits } };
+    }
     return root.dump(1);
 }
 
@@ -227,6 +230,15 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
             s.understanding.readerVersion = u.value("readerVersion", std::string());
             s.understanding.corrections = u.value("corrections", 0);
             s.understanding.manualAssignments = u.value("manualAssignments", 0);
+        }
+        if (root.contains("stage") && root["stage"].is_object()) {
+            const json& g = root["stage"];
+            s.stage.decided = true;
+            s.stage.enabled = g.value("enabled", false);
+            s.stage.directorVersion = g.value("directorVersion", std::string());
+            s.stage.scenes = g.value("scenes", 0);
+            s.stage.gestures = g.value("gestures", 0);
+            s.stage.edits = g.value("edits", 0);
         }
         s.visualReview = s.review.state == "approved" ? "approved" : s.visualReview == "approved" ? "not-reviewed" : s.visualReview;
         // Read as the current schema from now on: a version 1 file has no review.

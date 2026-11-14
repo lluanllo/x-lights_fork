@@ -1333,6 +1333,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "no-learning", "with --composer-generate: ignore the show maker's preferences (ShowComposer/preferences.json)" },
         { wxCMD_LINE_OPTION, "", "recipes", "with --composer-generate: a recipes.json instead of <show>/ShowComposer/recipes.json" },
         { wxCMD_LINE_SWITCH, "", "no-recipes", "with --composer-generate: no recipes, only the templates" },
+        { wxCMD_LINE_OPTION, "", "stage-director", "with --composer-generate: on or off, whether the whole installation is directed as one stage (default: on, or the previous show's)" },
         { wxCMD_LINE_OPTION, "", "understanding", "with --composer-generate: on or off, whether the voices and figures heard in the recording are used (default: on when the song was understood)" },
         { wxCMD_LINE_SWITCH, "", "no-color-engine", "with --composer-generate: the theme's colours, not the ones made from the song" },
         { wxCMD_LINE_OPTION, "", "christmas", "with --composer-generate: 0-100, how far the song's colours go towards the Christmas ones (50)" },
@@ -2284,6 +2285,9 @@ bool xLightsApp::OnInit()
         }
         if (parser.Found("stems", &value)) {
             command.stems = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("stage-director", &value)) {
+            command.stageDirector = value.ToStdString(wxConvUTF8);
         }
         command.noColorEngine = parser.Found("no-color-engine");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
