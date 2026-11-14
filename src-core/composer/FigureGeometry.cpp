@@ -193,6 +193,7 @@ FigureCatalog DescribeFigures(const xLightsShowContext& ctx, const ModelCapabili
         g.source = "model:" + g.displayAs;
         g.nodes = static_cast<int>(model->GetNodeCount());
         g.channelsPerNode = model->GetChanCountPerNode();
+        g.colorOrder = g.channelsPerNode >= 3 ? (model->GetRGBOrder().size() >= 3 ? model->GetRGBOrder().substr(0, 3) : std::string("RGB")) : std::string();
         g.channels = g.nodes * g.channelsPerNode;
         g.bufferWi = model->GetDefaultBufferWi();
         g.bufferHt = model->GetDefaultBufferHt();
@@ -272,7 +273,7 @@ std::string ToJson(const FigureCatalog& c, bool withNodes) {
     json figures = json::array();
     for (const FigureGeometry& g : c.figures) {
         json j = { { "name", g.name }, { "family", g.family }, { "displayAs", g.displayAs }, { "kind", g.kind }, { "topology", g.topology }, { "nodes", g.nodes },
-                   { "channels", g.channels }, { "channelsPerNode", g.channelsPerNode }, { "buffer", { g.bufferWi, g.bufferHt } }, { "strands", g.strands },
+                   { "channels", g.channels }, { "channelsPerNode", g.channelsPerNode }, { "colorOrder", g.colorOrder }, { "buffer", { g.bufferWi, g.bufferHt } }, { "strands", g.strands },
                    { "nodesPerStrand", g.nodesPerStrand }, { "rows", g.rows }, { "columns", g.columns }, { "branches", g.branches }, { "segments", g.segments },
                    { "size", { g.width, g.height } }, { "aspect", g.aspect }, { "orientation", g.orientation }, { "density", g.density }, { "resolution", g.resolution },
                    { "parent", g.parent }, { "subModels", g.subModels }, { "groups", g.groups }, { "members", g.members }, { "controller", g.controller },
@@ -309,6 +310,7 @@ bool FromJson(const std::string& text, FigureCatalog& out, std::string& error) {
             g.nodes = j.value("nodes", 0);
             g.channels = j.value("channels", 0);
             g.channelsPerNode = j.value("channelsPerNode", 0);
+            g.colorOrder = j.value("colorOrder", std::string(g.channelsPerNode >= 3 ? "RGB" : ""));
             const json buffer = j.value("buffer", json::array({ 0, 0 }));
             g.bufferWi = buffer[0].get<int>();
             g.bufferHt = buffer[1].get<int>();

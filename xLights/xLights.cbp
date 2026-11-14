@@ -594,6 +594,12 @@
 		<Unit filename="../src-core/composer/StageCheck.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />
 		<Unit filename="../src-core/composer/StageTest.h" />
+		<Unit filename="../src-core/composer/ColorSpace.cpp" />
+		<Unit filename="../src-core/composer/ColorSpace.h" />
+		<Unit filename="../src-core/composer/ColorCheck.cpp" />
+		<Unit filename="../src-core/composer/ColorCheck.h" />
+		<Unit filename="../src-core/composer/ColorTest.cpp" />
+		<Unit filename="../src-core/composer/ColorTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />
 		<Unit filename="../src-core/composer/UnderstandingTest.h" />
 		<Unit filename="../src-core/composer/CompositionPlan.cpp" />
