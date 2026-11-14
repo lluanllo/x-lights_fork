@@ -598,6 +598,8 @@
 		<Unit filename="../src-core/composer/ColorSpace.h" />
 		<Unit filename="../src-core/composer/ColorCheck.cpp" />
 		<Unit filename="../src-core/composer/ColorCheck.h" />
+		<Unit filename="../src-core/composer/ChromaticDirector.cpp" />
+		<Unit filename="../src-core/composer/ChromaticDirector.h" />
 		<Unit filename="../src-core/composer/ColorTest.cpp" />
 		<Unit filename="../src-core/composer/ColorTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />

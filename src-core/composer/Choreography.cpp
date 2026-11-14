@@ -1466,7 +1466,7 @@ json EventJson(const ChoreographyEvent& e) {
     }
     return { { "id", e.id }, { "target", e.target }, { "type", TargetTypeId(e.type) }, { "role", RoleId(e.role) }, { "prominence", PROMINENCE_IDS[static_cast<int>(e.prominence)] }, { "intent", e.intent },
              { "segment", e.segmentId }, { "startMS", e.startMS }, { "endMS", e.endMS }, { "layer", e.layer }, { "effect", e.effect }, { "template", e.templateId }, { "templateVersion", e.templateVersion },
-             { "settings", settings }, { "palette", e.paletteId }, { "colors", e.colors }, { "intensity", e.intensity }, { "transitionIn", e.transitionIn }, { "fadeInMS", e.fadeInMS },
+             { "settings", settings }, { "palette", e.paletteId }, { "colors", e.colors }, { "colorCurves", e.colorCurves }, { "intensity", e.intensity }, { "transitionIn", e.transitionIn }, { "fadeInMS", e.fadeInMS },
              { "transitionOut", e.transitionOut }, { "fadeOutMS", e.fadeOutMS }, { "continuation", e.continuation }, { "compatibility", COMPATIBILITY_IDS[static_cast<int>(e.compatibility)] },
              { "constraints", e.constraints }, { "reasons", ReasonsJson(e.reasons) }, { "confidence", e.confidence }, { "provenance", e.provenance }, { "state", DECISION_IDS[static_cast<int>(e.state)] },
              { "needsReview", e.needsReview } };
@@ -1503,6 +1503,7 @@ ChoreographyEvent EventFrom(const json& j) {
     }
     e.paletteId = j.value("palette", std::string());
     e.colors = j.value("colors", std::vector<std::string>());
+    e.colorCurves = j.value("colorCurves", std::vector<std::string>());
     e.intensity = j.value("intensity", 0.0);
     e.transitionIn = j.value("transitionIn", std::string());
     e.fadeInMS = j.value("fadeInMS", 0);
@@ -1526,7 +1527,8 @@ ChoreographyEvent EventFrom(const json& j) {
 std::string ChoreographyEvent::PaletteString() const {
     std::string out;
     for (size_t i = 0; i < colors.size() && i < 8; ++i) {
-        out += fmt::format("{}C_BUTTON_Palette{}={}", out.empty() ? "" : ",", i + 1, colors[i]);
+        const bool curve = i < colorCurves.size() && colorCurves[i].rfind("Active=TRUE|", 0) == 0;
+        out += fmt::format("{}C_BUTTON_Palette{}={}", out.empty() ? "" : ",", i + 1, curve ? colorCurves[i] : colors[i]);
     }
     for (size_t i = 0; i < colors.size() && i < 8; ++i) {
         out += fmt::format(",C_CHECKBOX_Palette{}=1", i + 1);

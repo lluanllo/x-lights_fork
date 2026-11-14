@@ -556,7 +556,20 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
             then.Add(top0 <= LIT ? Swatch() : s0, 1.0);
         }
         if (changed == 0) {
-            continue;
+            // Nothing changed on a lit figure: the gesture's light is the same as what was
+            // there, which is exactly what is worth saying.
+            for (size_t i = 0; i + 2 < pr.during.size(); i += 3) {
+                const int top1 = std::max({ pr.during[i], pr.during[i + 1], pr.during[i + 2] });
+                if (top1 > LIT) {
+                    ++changed;
+                    const Swatch& s1 = Look(pr.during[i], pr.during[i + 1], pr.during[i + 2]);
+                    now.Add(s1, top1 / 255.0);
+                    then.Add(Look(pr.before[i], pr.before[i + 1], pr.before[i + 2]), 1.0);
+                }
+            }
+            if (changed == 0) {
+                continue;
+            }
         }
         GestureColorCheck gc;
         gc.gesture = score->gestures[pr.gesture].id;

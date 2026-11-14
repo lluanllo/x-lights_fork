@@ -87,6 +87,26 @@ double MaxChroma(double L, double h) {
     return lo;
 }
 
+double CuspLightness(double h) {
+    static double cache[360] = {};
+    static bool filled[360] = {};
+    const int k = std::clamp(static_cast<int>(std::lround(WrapHue(h))) % 360, 0, 359);
+    if (!filled[k]) {
+        double bestL = 0.6, bestC = -1;
+        for (int i = 0; i <= 72; ++i) {
+            const double L = 0.25 + i * 0.01;
+            const double c = MaxChroma(L, k);
+            if (c > bestC) {
+                bestC = c;
+                bestL = L;
+            }
+        }
+        cache[k] = bestL;
+        filled[k] = true;
+    }
+    return cache[k];
+}
+
 Rgb ToRgbInGamut(const Oklch& c) {
     Oklch k { std::clamp(c.L, 0.0, 1.0), std::max(0.0, c.C), WrapHue(c.h) };
     Rgb out = ToRgb(ToOklab(k));

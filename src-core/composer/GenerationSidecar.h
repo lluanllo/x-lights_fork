@@ -25,7 +25,9 @@ namespace composer {
 // without it.
 // 4: the stage director (`stage`): whether the whole installation was directed as one
 // stage, and how much. A version 1-3 file reads as a show that never decided.
-inline constexpr int SIDECAR_SCHEMA_VERSION = 4;
+// 5: the colour direction (`color`): whether the colours were directed by scene and figure,
+// with which sliders and song colours. A version 1-4 file reads as a show that never decided.
+inline constexpr int SIDECAR_SCHEMA_VERSION = 5;
 
 // Whether a show used the understanding of its recording, and which one. The reading,
 // the corrections and the person's assignments live in their own files (UnderstandingStore.h).
@@ -45,6 +47,22 @@ struct StageSettings {
     std::string directorVersion;
     int scenes = 0;
     int gestures = 0;
+    int edits = 0;
+};
+
+// Whether the colour direction chose the show's colours, and with what. The colour score
+// is in the report; a person's changes to it are in ShowComposer/color (ChromaticDirector.h).
+struct ColorSettings {
+    bool decided = false; // false: the show is older than the colour direction
+    bool enabled = false;
+    std::string directorVersion;
+    double variety = 0.5;
+    double contrast = 0.5;
+    double accents = 0.5;
+    double evolution = 0.5;
+    std::vector<std::string> songColors;
+    std::string briefSource;
+    int scenes = 0;
     int edits = 0;
 };
 
@@ -104,6 +122,7 @@ struct GenerationSidecar {
     VisualPlanSettings visualPlan;
     UnderstandingSettings understanding;
     StageSettings stage;
+    ColorSettings color;
 };
 
 enum class SidecarStatus {

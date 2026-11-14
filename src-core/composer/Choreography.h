@@ -45,6 +45,9 @@ struct ChoreographyEvent {
     std::vector<std::pair<std::string, std::string>> settings; // E_ and T_ keys, by key
     std::string paletteId;
     std::vector<std::string> colors;
+    // Per palette slot, a native colour curve ("Active=TRUE|Id=ID_BUTTON_Palette<n>|Values=..."):
+    // the slot's colour changing over the effect's time. "" or missing: the plain colour.
+    std::vector<std::string> colorCurves;
     double intensity = 0;
     std::string transitionIn;
     int fadeInMS = 0;

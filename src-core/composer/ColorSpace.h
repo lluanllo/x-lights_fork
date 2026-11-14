@@ -36,6 +36,9 @@ struct Oklch {
 [[nodiscard]] Rgb ToRgbInGamut(const Oklch& c);
 // The largest chroma that fits at this lightness and hue.
 [[nodiscard]] double MaxChroma(double L, double h);
+// The lightness where a hue can be most saturated (the cusp of the gamut): a deep blue, a
+// light yellow. Where an LED shows a hue at its fullest.
+[[nodiscard]] double CuspLightness(double h);
 
 // "#RRGGBB" (case-insensitive, the "#" optional) and back.
 [[nodiscard]] bool ParseHex(const std::string& hex, Rgb& out);

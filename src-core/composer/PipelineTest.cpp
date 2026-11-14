@@ -2028,6 +2028,33 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     if (o.stageDirector == "on" || o.stageDirector == "off") {
         r.stageDirector = o.stageDirector == "on";
     }
+    if (o.colorDirector == "on" || o.colorDirector == "off") {
+        r.colorDirector = o.colorDirector == "on";
+    }
+    const auto slider = [](const std::string& v, std::optional<double>& out) {
+        if (!v.empty()) {
+            out = std::clamp(std::strtod(v.c_str(), nullptr), 0.0, 1.0);
+        }
+    };
+    slider(o.colorVariety, r.colorVariety);
+    slider(o.colorContrast, r.colorContrast);
+    slider(o.colorAccents, r.colorAccents);
+    slider(o.colorEvolution, r.colorEvolution);
+    if (o.songColors == "none") {
+        r.songColors = std::vector<std::string>();
+    } else if (!o.songColors.empty()) {
+        std::vector<std::string> colors;
+        size_t at = 0;
+        while (at < o.songColors.size()) {
+            const size_t end = std::min(o.songColors.find(',', at), o.songColors.size());
+            const std::string c = o.songColors.substr(at, end - at);
+            at = end + 1;
+            if (c.size() == 7 && c[0] == '#') {
+                colors.push_back(c);
+            }
+        }
+        r.songColors = colors;
+    }
     if (o.noRecipes) {
         r.useRecipes = false;
     }

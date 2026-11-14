@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -134,6 +135,11 @@ std::string ToJson(const GenerationSidecar& s) {
         root["understanding"] = { { "enabled", true }, { "audioId", s.understanding.audioId }, { "readerVersion", s.understanding.readerVersion },
                                   { "corrections", s.understanding.corrections }, { "manualAssignments", s.understanding.manualAssignments } };
     }
+    if (s.color.decided) {
+        root["color"] = { { "enabled", s.color.enabled }, { "directorVersion", s.color.directorVersion }, { "variety", s.color.variety }, { "contrast", s.color.contrast },
+                          { "accents", s.color.accents }, { "evolution", s.color.evolution }, { "songColors", s.color.songColors }, { "briefSource", s.color.briefSource },
+                          { "scenes", s.color.scenes }, { "edits", s.color.edits } };
+    }
     if (s.stage.decided) {
         root["stage"] = { { "enabled", s.stage.enabled }, { "directorVersion", s.stage.directorVersion }, { "scenes", s.stage.scenes }, { "gestures", s.stage.gestures }, { "edits", s.stage.edits } };
     }
@@ -230,6 +236,26 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
             s.understanding.readerVersion = u.value("readerVersion", std::string());
             s.understanding.corrections = u.value("corrections", 0);
             s.understanding.manualAssignments = u.value("manualAssignments", 0);
+        }
+        if (root.contains("color") && root["color"].is_object()) {
+            const json& g = root["color"];
+            s.color.decided = true;
+            s.color.enabled = g.value("enabled", false);
+            s.color.directorVersion = g.value("directorVersion", std::string());
+            s.color.variety = std::clamp(g.value("variety", 0.5), 0.0, 1.0);
+            s.color.contrast = std::clamp(g.value("contrast", 0.5), 0.0, 1.0);
+            s.color.accents = std::clamp(g.value("accents", 0.5), 0.0, 1.0);
+            s.color.evolution = std::clamp(g.value("evolution", 0.5), 0.0, 1.0);
+            if (g.contains("songColors") && g["songColors"].is_array()) {
+                for (const json& c : g["songColors"]) {
+                    if (c.is_string()) {
+                        s.color.songColors.push_back(c.get<std::string>());
+                    }
+                }
+            }
+            s.color.briefSource = g.value("briefSource", std::string());
+            s.color.scenes = g.value("scenes", 0);
+            s.color.edits = g.value("edits", 0);
         }
         if (root.contains("stage") && root["stage"].is_object()) {
             const json& g = root["stage"];

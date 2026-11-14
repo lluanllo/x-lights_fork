@@ -1334,6 +1334,12 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "no-learning", "with --composer-generate: ignore the show maker's preferences (ShowComposer/preferences.json)" },
         { wxCMD_LINE_OPTION, "", "recipes", "with --composer-generate: a recipes.json instead of <show>/ShowComposer/recipes.json" },
         { wxCMD_LINE_SWITCH, "", "no-recipes", "with --composer-generate: no recipes, only the templates" },
+        { wxCMD_LINE_OPTION, "", "color-director", "with --composer-generate: on or off, whether the colours are directed by scene and figure (default: on, or the previous show's)" },
+        { wxCMD_LINE_OPTION, "", "color-variety", "with --composer-generate: 0-1, how many colour roles share a scene" },
+        { wxCMD_LINE_OPTION, "", "color-contrast", "with --composer-generate: 0-1, how much contrast between colours" },
+        { wxCMD_LINE_OPTION, "", "color-accents", "with --composer-generate: 0-1, how strong the accents are" },
+        { wxCMD_LINE_OPTION, "", "color-evolution", "with --composer-generate: 0-1, how far the palette moves from scene to scene" },
+        { wxCMD_LINE_OPTION, "", "song-colors", "with --composer-generate: the song's colours, #RRGGBB separated by commas (none: clear them)" },
         { wxCMD_LINE_OPTION, "", "stage-director", "with --composer-generate: on or off, whether the whole installation is directed as one stage (default: on, or the previous show's)" },
         { wxCMD_LINE_OPTION, "", "understanding", "with --composer-generate: on or off, whether the voices and figures heard in the recording are used (default: on when the song was understood)" },
         { wxCMD_LINE_SWITCH, "", "no-color-engine", "with --composer-generate: the theme's colours, not the ones made from the song" },
@@ -2294,6 +2300,24 @@ bool xLightsApp::OnInit()
         }
         if (parser.Found("stage-director", &value)) {
             command.stageDirector = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-director", &value)) {
+            command.colorDirector = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-variety", &value)) {
+            command.colorVariety = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-contrast", &value)) {
+            command.colorContrast = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-accents", &value)) {
+            command.colorAccents = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-evolution", &value)) {
+            command.colorEvolution = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("song-colors", &value)) {
+            command.songColors = value.ToStdString(wxConvUTF8);
         }
         command.noColorEngine = parser.Found("no-color-engine");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {

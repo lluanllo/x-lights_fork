@@ -15,7 +15,7 @@
 // square 0-1, distances in that unit. Times are seconds from the gesture's start.
 namespace composer {
 
-inline constexpr int PROCEDURAL_FIELD_VERSION = 1;
+inline constexpr int PROCEDURAL_FIELD_VERSION = 2; // 2: the colour can follow distance, trail or time
 
 enum class FieldFunction {
     Pulse,     // the whole region at once: up, held, down
@@ -55,6 +55,13 @@ struct FieldSpec {
     bool contract = false;  // an expansion that closes on the origin instead
     uint32_t seed = 0;      // only the flow's phases; the same seed, the same flow
     double level = 1;       // the brightest it gets, 0-1
+    // Where in the palette each light takes its colour: "field" (the function's own
+    // choice), "distance" (from the origin out to `reach`: the colour changes as the
+    // gesture travels across the installation), "trail" (the front in the palette's first
+    // colour, what it leaves behind towards its last) or "time" (the whole gesture moving
+    // through the palette from its start to its end).
+    std::string colorBy = "field";
+    double reach = 1; // stage units: the distance the palette is spread over, for "distance"
     // When this light starts, from the gesture's start: an effect placed later than the
     // gesture (a far figure) is the same field, joined at its own moment. Below 0 the
     // effect starts early and stays dark until the gesture's moment comes.

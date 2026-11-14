@@ -19,6 +19,8 @@
 #include "composer/TemplateLibrary.h"
 #include "composer/FigureSemantics.h"
 #include "composer/RenderUnderstanding.h"
+#include "composer/ChromaticDirector.h"
+#include "composer/ColorCheck.h"
 #include "composer/StageCheck.h"
 #include "composer/StageDirector.h"
 #include "composer/UnderstandingStore.h"
@@ -136,6 +138,16 @@ struct GenerationRequest {
     // across figures, layers that keep each figure's colours). Default: on, or the
     // previous show's; false generates as before, to compare.
     std::optional<bool> stageDirector;
+    // The colour direction: a family of colours with a hierarchy, a palette per scene, a
+    // colour role per figure and gestures that stand out from what is lit. Default: on,
+    // or the previous show's; false keeps the colours as before, to compare. The sliders
+    // (0-1) and the song's colours default to the previous show's, else to the middle.
+    std::optional<bool> colorDirector;
+    std::optional<double> colorVariety;
+    std::optional<double> colorContrast;
+    std::optional<double> colorAccents;
+    std::optional<double> colorEvolution;
+    std::optional<std::vector<std::string>> songColors;
     CancelCheck cancel;
     std::function<void(GenerationStage stage, const std::string& what)> progress;
 };
@@ -241,6 +253,13 @@ struct GenerationRun {
     GlobalStageScore stageScore;
     int stageEdits = 0;
     StageCheck stageCheck; // what the render did with the installation
+
+    // The colour direction (when on)
+    bool colorWanted = false;
+    bool colored = false;
+    ChromaticScore chromatic;
+    int colorEdits = 0;
+    ColorCheck colorCheck; // the colours the render really showed
 
     // Sequence
     SequenceSpec spec;
