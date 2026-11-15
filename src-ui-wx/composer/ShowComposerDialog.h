@@ -36,6 +36,7 @@
 #include "composer/UnderstandingStore.h"
 
 #include "composer/MusicAssist.h"
+#include "composer/ProductionCheck.h"
 #include "composer/SequenceComparison.h"
 
 #include "ComposerJob.h"
@@ -294,6 +295,16 @@ public:
     [[nodiscard]] ColorDirectorPanel* ColorPanel() const { return _colorPanel; }
     void SetColorSliders(int variety, int contrast, int accents, int evolution);
     void SetColorStyle(int style); // 0 contained - 100 expressive
+    // How far the song's visual ideas are developed: "full", "motifs", "direction", "f19".
+    void SetArtDirection(const std::string& id);
+    [[nodiscard]] std::string ArtDirectionId() const;
+    // Before the show goes out (step 5): the check, run apart from this window, and its report.
+    void CheckProductionReadiness(bool show);
+    [[nodiscard]] const composer::ProductionReport& LastProductionCheck() const { return _production; }
+    // The person's decision about each change of their corrected version.
+    bool ApplyCorrectionDecisions(const std::vector<composer::ComparisonDecision>& decisions);
+    [[nodiscard]] const std::vector<composer::StageLibraryEntry>& OfferedCompositions() const { return _offeredCompositions; }
+    void OpenVisualIdeas();
     [[nodiscard]] std::string ResultFseq() const;
     // Step 5: the generated sequence against the one a person corrected in xLights (run apart);
     // and observations with their scene and figure, saved with the review.
@@ -536,6 +547,11 @@ private:
     ColorDirectorPanel* _colorPanel = nullptr;
     wxSlider* _colorVariety = nullptr;
     wxSlider* _colorStyle = nullptr;
+    wxChoice* _artDirection = nullptr;
+    wxStaticText* _productionState = nullptr;
+    composer::ProductionReport _production;
+    bool _showProduction = false;
+    std::vector<composer::StageLibraryEntry> _offeredCompositions;
     composer::SequenceComparison _comparison;
     bool _showComparison = true;
     wxSlider* _colorContrast = nullptr;

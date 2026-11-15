@@ -1265,45 +1265,108 @@ wxString ObservationWords(const std::string& kind) {
     return it != W.end() ? it->second : U(kind);
 }
 
-CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison& comparison) :
-    wxDialog(parent, wxID_ANY, _("Your Corrected Version"), wxDefaultPosition, wxSize(860, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+namespace {
+
+wxString CategoryWords(const std::string& c) {
+    if (c == "technical") return _("a nudge in time");
+    if (c == "necessary") return _("something that should not light");
+    return _("a matter of taste");
+}
+
+wxString DecisionWords(const std::string& d) {
+    if (d == "learn") return _("Learn it");
+    if (d == "song") return _("Only this song");
+    if (d == "general") return _("General preference");
+    if (d == "reject") return _("Reject it");
+    return _("Ignore it");
+}
+
+} // namespace
+
+CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison& comparison, const ComparisonDecisions* record) :
+    wxDialog(parent, wxID_ANY, _("Your Corrected Version"), wxDefaultPosition, wxSize(960, 640), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
     _comparison(comparison) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(Muted(this, wxString::Format(_("%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: tick only what the next shows should learn. A taste needs two shows before it acts, and can be undone in \"What Has Been Learned\"."),
+    sizer->Add(Muted(this, wxString::Format(_("%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: choose what each one becomes. Nothing is learned unless you choose it."),
                                             comparison.generatedEffects, comparison.correctedEffects, comparison.matched)),
                0, wxALL, 8);
-    wxArrayString rows;
-    for (size_t i = 0; i < comparison.changes.size(); ++i) {
-        const SequenceChange& c = comparison.changes[i];
-        rows.Add(wxString::Format("%s - %s, %s: %s%s", ClockText(c.startMS), U(c.figure), ChangeWords(c.kind), ChangeReasonWords(c), c.suggestion.empty() ? wxString(" ") + _("(nothing to learn)") : wxString()));
-        _rows.push_back(i);
+    sizer->Add(Muted(this, _("Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Ignore: nothing. Reject: nothing, and it is not offered again.")),
+               0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 400), wxLC_REPORT);
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("When"), 60 }, { _("Figure"), 150 }, { _("What changed"), 340 }, { _("Kind"), 170 }, { _("Decision"), 140 } }) {
+        _list->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
-    _list = new wxCheckListBox(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 440), rows);
+    const std::vector<size_t> offered = record != nullptr ? OfferedChanges(comparison, *record) : std::vector<size_t>();
+    for (size_t i = 0; i < comparison.changes.size(); ++i) {
+        if (record != nullptr && std::find(offered.begin(), offered.end(), i) == offered.end()) {
+            continue;
+        }
+        const SequenceChange& c = comparison.changes[i];
+        const long row = _list->InsertItem(_list->GetItemCount(), ClockText(c.startMS));
+        _list->SetItem(row, 1, U(c.figure));
+        _list->SetItem(row, 2, wxString::Format("%s: %s%s", ChangeWords(c.kind), ChangeReasonWords(c), c.suggestion.empty() ? wxString(" ") + _("(nothing to learn for other songs)") : wxString()));
+        _list->SetItem(row, 3, CategoryWords(c.category));
+        _rows.push_back(i);
+        _choices.push_back("ignore");
+        ShowDecision(_rows.size() - 1);
+    }
     sizer->Add(_list, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    auto* choose = new wxBoxSizer(wxHORIZONTAL);
+    choose->Add(new wxStaticText(this, wxID_ANY, _("The changes chosen above:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    for (const char* d : { "learn", "song", "general", "ignore", "reject" }) {
+        auto* b = new wxButton(this, wxID_ANY, DecisionWords(d));
+        choose->Add(b, 0, wxRIGHT, 4);
+        const std::string choice = d;
+        b->Bind(wxEVT_BUTTON, [this, choice](wxCommandEvent&) {
+            for (long i = _list->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED); i >= 0; i = _list->GetNextItem(i, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) {
+                Decide(static_cast<size_t>(i), choice);
+            }
+        });
+    }
+    sizer->Add(choose, 0, wxALL, 8);
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
     buttons->AddStretchSpacer();
-    buttons->Add(new wxButton(this, wxID_OK, _("Learn What I Ticked")), 0, wxRIGHT, 4);
+    buttons->Add(new wxButton(this, wxID_OK, _("Apply My Decisions")), 0, wxRIGHT, 4);
     buttons->Add(new wxButton(this, wxID_CANCEL, _("Close")), 0);
     sizer->Add(buttons, 0, wxEXPAND | wxALL, 8);
     SetSizer(sizer);
 }
 
+void CorrectionsDialog::ShowDecision(size_t row) {
+    if (row < _choices.size()) {
+        _list->SetItem(static_cast<long>(row), 4, DecisionWords(_choices[row]));
+    }
+}
+
 int CorrectionsDialog::Rows() const {
-    return static_cast<int>(_list->GetCount());
+    return _list->GetItemCount();
+}
+
+void CorrectionsDialog::Decide(size_t index, const std::string& choice) {
+    if (index < _choices.size()) {
+        _choices[index] = choice;
+        ShowDecision(index);
+    }
 }
 
 void CorrectionsDialog::Pick(size_t index, bool picked) {
-    if (index < _list->GetCount()) {
-        _list->Check(static_cast<unsigned>(index), picked);
-    }
+    Decide(index, picked ? "learn" : "ignore");
 }
 
 std::vector<size_t> CorrectionsDialog::Picked() const {
     std::vector<size_t> out;
-    for (unsigned i = 0; i < _list->GetCount(); ++i) {
-        if (_list->IsChecked(i)) {
+    for (size_t i = 0; i < _choices.size(); ++i) {
+        if (_choices[i] == "learn") {
             out.push_back(_rows[i]);
         }
+    }
+    return out;
+}
+
+std::vector<ComparisonDecision> CorrectionsDialog::Decisions() const {
+    std::vector<ComparisonDecision> out;
+    for (size_t i = 0; i < _choices.size(); ++i) {
+        out.push_back({ _rows[i], _choices[i] });
     }
     return out;
 }

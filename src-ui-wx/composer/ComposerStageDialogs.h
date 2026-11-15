@@ -141,6 +141,9 @@ public:
 
     bool Toggle(const std::string& id, bool favourite, bool value);
     bool AddOwn(const std::string& title, const std::string& function);
+    // A composition's own values: how bright (0.1-1) and at most how many figures (0: any).
+    bool SetValues(const std::string& id, double brightness, int maxFigures);
+    [[nodiscard]] wxString About(const composer::StageLibraryEntry& entry) const;
     bool Save();
     [[nodiscard]] const composer::StageLibrary& Library() const { return _library; }
 
@@ -175,6 +178,7 @@ public:
     std::string Edit(const composer::StageEdit& edit);
     std::string Undo();
     [[nodiscard]] int PendingEdits() const { return static_cast<int>(_edits.edits.size()); }
+    void OpenLibraryDialog() { OpenLibrary(); }
 
     std::function<void()> onRecompose;
     std::function<void()> onDirectorChanged;

@@ -14674,3 +14674,786 @@ msgstr ""
 
 msgid "other colours, as many"
 msgstr ""
+
+msgid "%d corrections to learn, %d general preferences, %d decisions for this song only, %d ignored, %d rejected."
+msgstr ""
+
+msgid "%d could not be asked of the composer for this song."
+msgstr ""
+
+msgid "%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: choose what each one becomes. Nothing is learned unless you choose it."
+msgstr ""
+
+msgid "%d figures"
+msgstr ""
+
+msgid "%d things stop it, %d may make it wrong, %d to look at, %d artistic suggestions."
+msgstr ""
+
+msgid "%d things stop this show from going out. Correct them and check it again."
+msgstr ""
+
+msgid "%s sings: no gesture goes over its face while it does."
+msgstr ""
+
+msgid "%s was locked by you: it is left as it is."
+msgstr ""
+
+msgid "(nothing to learn for other songs)"
+msgstr ""
+
+msgid ", with %s.\n"
+msgstr ""
+
+msgid "A few hits close together: one figure for each, across the house."
+msgstr ""
+
+msgid "A flash on the hit"
+msgstr ""
+
+msgid "A single figure carries the moment; a dim field keeps the others company."
+msgstr ""
+
+msgid "A tree turning"
+msgstr ""
+
+msgid "A tree's own spiral, kept for a figure that can show it."
+msgstr ""
+
+msgid "A visual idea is who carries it, with which gesture, from where and in what order. The song presents it, develops it, transforms it, brings it back and closes it. Choose an idea to see every scene that uses it."
+msgstr ""
+
+msgid "An echo as the sound dies"
+msgstr ""
+
+msgid "Apply My Decisions"
+msgstr ""
+
+msgid "As in phase 19"
+msgstr ""
+
+msgid "At most how many figures (0: as many as the scene gives):"
+msgstr ""
+
+msgid "At the peak, the light spreads from where the idea was born to the whole house."
+msgstr ""
+
+msgid "Brightness %d%%. Where it comes from: %s."
+msgstr ""
+
+msgid "Check the Show Before It Goes Out..."
+msgstr ""
+
+msgid "Checking the show: the audio, lyrics, layout, figures, pictures and videos, effects and a new render... (the window stays usable)"
+msgstr ""
+
+msgid "Choose a composition first."
+msgstr ""
+
+msgid "Complete: present, develop, bring back and close the ideas (recommended)"
+msgstr ""
+
+msgid "Composition of a group"
+msgstr ""
+
+msgid "Composition of one figure"
+msgstr ""
+
+msgid "Composition of the whole house"
+msgstr ""
+
+msgid "Decision"
+msgstr ""
+
+msgid "Development of the ideas:"
+msgstr ""
+
+msgid "From %d figures, as many as the scene gives."
+msgstr ""
+
+msgid "From %d to %d figures."
+msgstr ""
+
+msgid "From one bulb, a wave reaches every figure when its distance says."
+msgstr ""
+
+msgid "General preference"
+msgstr ""
+
+msgid "Hits in turn"
+msgstr ""
+
+msgid "How bright it is, 10 to 100:"
+msgstr ""
+
+msgid "Idea"
+msgstr ""
+
+msgid "Idea %s: %s."
+msgstr ""
+
+msgid "Ideas that come back"
+msgstr ""
+
+msgid "Ignored"
+msgstr ""
+
+msgid "In the song"
+msgstr ""
+
+msgid "In the song, this scene %s."
+msgstr ""
+
+msgid "In your version, %s work together (%s). Keep it as a composition of your own, to use in other songs?"
+msgstr ""
+
+msgid "It has no gesture of its own yet: it is carried by the figures' own effects."
+msgstr ""
+
+msgid "It is carried by %s"
+msgstr ""
+
+msgid "It is dressed in the colour idea %s."
+msgstr ""
+
+msgid "Its Values"
+msgstr ""
+
+msgid "Its Values..."
+msgstr ""
+
+msgid "Its gesture: %s, %s"
+msgstr ""
+
+msgid "Its gesture: %s, %s."
+msgstr ""
+
+msgid "Keep This Idea as My Composition..."
+msgstr ""
+
+msgid "Keep the idea %s as a composition of your own? The director may then use it in other songs; you can exclude it again in \"Compositions and Gestures\"."
+msgstr ""
+
+msgid "Kept in \"Compositions and Gestures\"."
+msgstr ""
+
+msgid "Learn it"
+msgstr ""
+
+msgid "Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Ignore: nothing. Reject: nothing, and it is not offered again."
+msgstr ""
+
+msgid "Left and right do different things at once, like two voices."
+msgstr ""
+
+msgid "Made with: %s."
+msgstr ""
+
+msgid "Neighbours answer"
+msgstr ""
+
+msgid "Not checked yet: the audio, lyrics, layout, figures, pictures and videos, effects and render are all checked, and nothing is approved by itself."
+msgstr ""
+
+msgid "Nothing stops this show from going out. It still has to be seen in xLights before the lights go on."
+msgstr ""
+
+msgid "One figure starts and its neighbours answer, half a beat apart."
+msgstr ""
+
+msgid "One figure tells, the house listens"
+msgstr ""
+
+msgid "One or two figures mark a strong hit and fall quiet again."
+msgstr ""
+
+msgid "Only this song"
+msgstr ""
+
+msgid "Open in xLights"
+msgstr ""
+
+msgid "Pictures and videos complete"
+msgstr ""
+
+msgid "Prepare the Production Folder"
+msgstr ""
+
+msgid "Prepare the Show"
+msgstr ""
+
+msgid "Prepare the show"
+msgstr ""
+
+msgid "Production folder ready: %s (%d files copied, %d already where the show is)."
+msgstr ""
+
+msgid "Render correct"
+msgstr ""
+
+msgid "Saved again by xLights and the same"
+msgstr ""
+
+msgid "Scene direction only"
+msgstr ""
+
+msgid "Scenes"
+msgstr ""
+
+msgid "Technical generation correct"
+msgstr ""
+
+msgid "The accents go to %s."
+msgstr ""
+
+msgid "The changes chosen above:"
+msgstr ""
+
+msgid "The check could not be started."
+msgstr ""
+
+msgid "The check opens the show without switching any controller on and changes none of its files. Nothing here approves the show: only you do, after seeing it in xLights."
+msgstr ""
+
+msgid "The check was stopped before the end: check the show again before it goes out."
+msgstr ""
+
+msgid "The composition could not be kept."
+msgstr ""
+
+msgid "The house gathers back, figure by figure, to the one that began."
+msgstr ""
+
+msgid "The last gesture comes again, weaker, as the sound fades."
+msgstr ""
+
+msgid "The light gathers to close"
+msgstr ""
+
+msgid "The light grows across"
+msgstr ""
+
+msgid "The peak opens"
+msgstr ""
+
+msgid "The show can go out, but %d things may make it look wrong. Look at them first."
+msgstr ""
+
+msgid "The show could not be checked."
+msgstr ""
+
+msgid "The voice calls and the figures answer it in turn."
+msgstr ""
+
+msgid "This composition has no visual ideas yet: work it out on step 3 with the idea development on (step 1)."
+msgstr ""
+
+msgid "Two halves"
+msgstr ""
+
+msgid "Visual Ideas and How They Develop"
+msgstr ""
+
+msgid "Visual Ideas and How They Develop..."
+msgstr ""
+
+msgid "Visual Ideas..."
+msgstr ""
+
+msgid "Visual idea %s (%s): %s."
+msgstr ""
+
+msgid "Visual review"
+msgstr ""
+
+msgid "What changed"
+msgstr ""
+
+msgid "What changes: %s. How it goes on: %s."
+msgstr ""
+
+msgid "What each figure does when it is presented:"
+msgstr ""
+
+msgid "What it says"
+msgstr ""
+
+msgid "Where it suits: %s."
+msgstr ""
+
+msgid "While the music builds, a sweep crosses the house before the peak."
+msgstr ""
+
+msgid "Work out the composition on step 3 first: the visual ideas come from it."
+msgstr ""
+
+msgid "a few figures"
+msgstr ""
+
+msgid "a gesture travelling across the house"
+msgstr ""
+
+msgid "a matter of taste"
+msgstr ""
+
+msgid "a nudge in time"
+msgstr ""
+
+msgid "a person asked to keep the song's main colour here"
+msgstr ""
+
+msgid "a rest"
+msgstr ""
+
+msgid "all together"
+msgstr ""
+
+msgid "answering one another"
+msgstr ""
+
+msgid "answers it"
+msgstr ""
+
+msgid "anticipating what comes"
+msgstr ""
+
+msgid "anywhere"
+msgstr ""
+
+msgid "brings a contrasting idea"
+msgstr ""
+
+msgid "brings it back"
+msgstr ""
+
+msgid "brings it back stronger"
+msgstr ""
+
+msgid "brought back by its own figures"
+msgstr ""
+
+msgid "closes the song"
+msgstr ""
+
+msgid "continuing what came before"
+msgstr ""
+
+msgid "developed: a couple more figures take it up"
+msgstr ""
+
+msgid "develops it"
+msgstr ""
+
+msgid "ending figure by figure"
+msgstr ""
+
+msgid "intensified: everyone takes it up"
+msgstr ""
+
+msgid "is the peak"
+msgstr ""
+
+msgid "kept"
+msgstr ""
+
+msgid "not all at once: the nearest figures answer first, half a beat apart"
+msgstr ""
+
+msgid "one after another"
+msgstr ""
+
+msgid "one figure"
+msgstr ""
+
+msgid "outwards from %s"
+msgstr ""
+
+msgid "overlapping"
+msgstr ""
+
+msgid "prepares the peak"
+msgstr ""
+
+msgid "presented"
+msgstr ""
+
+msgid "presents the idea"
+msgstr ""
+
+msgid "reduced to its protagonist, before the peak"
+msgstr ""
+
+msgid "resolved, quietly"
+msgstr ""
+
+msgid "something that should not light"
+msgstr ""
+
+msgid "split: some figures call, others answer"
+msgstr ""
+
+msgid "the attention is on a few figures: the others rest"
+msgstr ""
+
+msgid "the figures below"
+msgstr ""
+
+msgid "the idea comes back stronger: the whole house joins"
+msgstr ""
+
+msgid "the part keeps the song's identity: its main colour stays and a contrast joins it"
+msgstr ""
+
+msgid "the peak opens from where the idea was born"
+msgstr ""
+
+msgid "the program"
+msgstr ""
+
+msgid "the whole installation"
+msgstr ""
+
+msgid "transformed: the same idea travels another way"
+msgstr ""
+
+msgid "transforms it"
+msgstr ""
+
+msgid "travelling from one to the next"
+msgstr ""
+
+msgid "two figures"
+msgstr ""
+
+msgid "you"
+msgstr ""
+
+msgid "your corrected version %s"
+msgstr ""
+
+msgid "the song's idea"
+msgstr ""
+
+msgid "the returning part's idea, answering the first"
+msgstr ""
+
+msgid "a new idea"
+msgstr ""
+
+msgid "presented first: the rest of the song develops, answers and brings it back"
+msgstr ""
+
+msgid "presented where the song's returning part first plays: it comes back with it"
+msgstr ""
+
+msgid "the show begins"
+msgstr ""
+
+msgid "the house rests"
+msgstr ""
+
+msgid "a new idea appears"
+msgstr ""
+
+msgid "an earlier idea comes back"
+msgstr ""
+
+msgid "more figures join"
+msgstr ""
+
+msgid "the light gathers on fewer figures"
+msgstr ""
+
+msgid "the same idea carries on"
+msgstr ""
+
+msgid "the song ends"
+msgstr ""
+
+msgid "it prepares the peak"
+msgstr ""
+
+msgid "it fades into a rest"
+msgstr ""
+
+msgid "the idea carries on"
+msgstr ""
+
+msgid "it hands over to another idea"
+msgstr ""
+
+msgid "it hands over to the next scene"
+msgstr ""
+
+msgid "across the house"
+msgstr ""
+
+msgid "from one figure to its neighbours"
+msgstr ""
+
+msgid "each figure on its own"
+msgstr ""
+
+msgid "it carries the idea it presented"
+msgstr ""
+
+msgid "it carries the scene's idea"
+msgstr ""
+
+msgid "the peak is near: the light grows towards it"
+msgstr ""
+
+msgid "the song closes: the light gathers back, figure by figure"
+msgstr ""
+
+msgid "intro"
+msgstr ""
+
+msgid "solo"
+msgstr ""
+
+msgid "accent"
+msgstr ""
+
+msgid "transition"
+msgstr ""
+
+msgid "no"
+msgstr ""
+
+msgid "Show check"
+msgstr ""
+
+msgid "Artistic suggestion"
+msgstr ""
+
+msgid "May make it wrong"
+msgstr ""
+
+msgid "Stops the show"
+msgstr ""
+
+msgid "To look at"
+msgstr ""
+
+msgid "Locks"
+msgstr ""
+
+msgid "Render"
+msgstr ""
+
+msgid "Review"
+msgstr ""
+
+msgid "approved by a person"
+msgstr ""
+
+msgid "being reviewed"
+msgstr ""
+
+msgid "nobody has reviewed it yet"
+msgstr ""
+
+msgid "The check was stopped before the end."
+msgstr ""
+
+msgid "No controller is switched on in this show folder: the lights will not come on until they are switched on in xLights (the composer never switches them on)"
+msgstr ""
+
+msgid "Nobody has approved this show yet: watch it in xLights before the lights go on"
+msgstr ""
+
+msgid "Nobody has checked the song's parts and beats: if a change of light falls wrong, correct them in step 2"
+msgstr ""
+
+msgid "Saved again by xLights, the sequence is not the same: open it in xLights and check it"
+msgstr ""
+
+msgid "The approval was for another version of this show: it has to be seen again"
+msgstr ""
+
+msgid "The composer's notes for this sequence were not found: it is checked as any sequence"
+msgstr ""
+
+msgid "The layout changed after the show was made: some effects may light other lights. Generate it again or check it in xLights"
+msgstr ""
+
+msgid "The lyrics' times are approximate: watch the mouths once in xLights"
+msgstr ""
+
+msgid "The native renderer could not render the sequence"
+msgstr ""
+
+msgid "The render has {} problems: some effects do not light as planned"
+msgstr ""
+
+msgid "The saved render (.fseq) is not the same as a new one: render it again in xLights before the show"
+msgstr ""
+
+msgid "The sequence has no song"
+msgstr ""
+
+msgid "The sequence lasts {} s and the song {} s"
+msgstr ""
+
+msgid "The sequence saved again by xLights cannot be read back"
+msgstr ""
+
+msgid "The sequence {} is not there"
+msgstr ""
+
+msgid "The show folder {} has no layout xLights can read"
+msgstr ""
+
+msgid "The song file is not the one the show was made with: the lights may not follow it"
+msgstr ""
+
+msgid "The song is outside the show folder: copy it into the show before moving it to another computer"
+msgstr ""
+
+msgid "The song {} is not there: the show would play in silence"
+msgstr ""
+
+msgid "There is no saved render (.fseq) beside the sequence: xLights will render it when the show is saved"
+msgstr ""
+
+msgid "a video is not there"
+msgstr ""
+
+msgid "a video is outside the show folder"
+msgstr ""
+
+msgid "another file than the one the show was made with"
+msgstr ""
+
+msgid "it does not render"
+msgstr ""
+
+msgid "made without recipes"
+msgstr ""
+
+msgid "no face sings in this show"
+msgstr ""
+
+msgid "no song"
+msgstr ""
+
+msgid "not checked"
+msgstr ""
+
+msgid "renders with the native renderer"
+msgstr ""
+
+msgid "renders with the native renderer, the same as the saved one"
+msgstr ""
+
+msgid "the artistic director's recipes were used"
+msgstr ""
+
+msgid "the layout cannot be read"
+msgstr ""
+
+msgid "the layout changed after the show was made"
+msgstr ""
+
+msgid "the lyrics are not synchronized"
+msgstr ""
+
+msgid "the sequence is not there"
+msgstr ""
+
+msgid "the song is not there"
+msgstr ""
+
+msgid "xLights cannot open the sequence"
+msgstr ""
+
+msgid "xLights could not save the sequence again: {}"
+msgstr ""
+
+msgid "{} ({} at {} s)"
+msgstr ""
+
+msgid "{} ({} s)"
+msgstr ""
+
+msgid "{} at {} s on {} is not there: it would show black"
+msgstr ""
+
+msgid "{} controllers, none switched on"
+msgstr ""
+
+msgid "{} controllers, {} switched on"
+msgstr ""
+
+msgid "{} decisions locked by a person, kept as they are"
+msgstr ""
+
+msgid "{} effects go on after the song ends"
+msgstr ""
+
+msgid "{} effects; {} errors, {} after the end"
+msgstr ""
+
+msgid "{} faces sing but the lyrics are not synchronized: the mouths will not follow the voice"
+msgstr ""
+
+msgid "{} gesture effects; {} visual ideas"
+msgstr ""
+
+msgid "{} is outside the show folder: it will not move with the show (the production folder copies it)"
+msgstr ""
+
+msgid "{} models; the layout is the one the show was made for"
+msgstr ""
+
+msgid "{} pairs of figures share their lights (for example {}): what one shows, the other shows too"
+msgstr ""
+
+msgid "{} pictures and videos, all in the show"
+msgstr ""
+
+msgid "{} pictures and videos, {} not there"
+msgstr ""
+
+msgid "{} pictures and videos, {} outside the show folder"
+msgstr ""
+
+msgid "{} problems in the render"
+msgstr ""
+
+msgid "{} videos"
+msgstr ""
+
+msgid "{} figures used; {} pairs share lights"
+msgstr ""
+
+msgid "{} timing tracks"
+msgstr ""
+
+msgid "{} effects, no error, {} notes"
+msgstr ""
+
+msgid "{} pictures and videos"
+msgstr ""
+
+msgid "{} different palettes; colour direction on"
+msgstr ""
+
+msgid "{} different palettes; colour direction off"
+msgstr ""
+
+msgid "Carried by: %s."
+msgstr ""
+
+msgid "Ignore it"
+msgstr ""
+
+msgid "Reject it"
+msgstr ""
+
+msgid "lyrics synchronized; {} face effects"
+msgstr ""
+
+msgid "lyrics synchronized approximately"
+msgstr ""

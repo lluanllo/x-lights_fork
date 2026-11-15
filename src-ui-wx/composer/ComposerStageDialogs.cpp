@@ -22,6 +22,7 @@
 #include <wx/slider.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <wx/numdlg.h>
 #include <wx/textdlg.h>
 
 #include <algorithm>
@@ -554,7 +555,25 @@ StageLibraryDialog::StageLibraryDialog(wxWindow* parent, const std::string& show
     buttons->Add(favourite, 0, wxRIGHT, 4);
     buttons->Add(exclude, 0, wxRIGHT, 4);
     buttons->Add(include, 0, wxRIGHT, 12);
-    buttons->Add(own, 0);
+    buttons->Add(own, 0, wxRIGHT, 4);
+    auto* values = new wxButton(this, wxID_ANY, _("Its Values..."));
+    buttons->Add(values, 0);
+    values->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const StageLibraryEntry* e = _library.Find(Selected());
+        if (e == nullptr || e->kind != "composition") {
+            wxMessageBox(_("Choose a composition first."), _("Compositions and Gestures"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        const long bright = wxGetNumberFromUser(_("How bright it is, 10 to 100:"), _("Brightness"), _("Its Values"), static_cast<long>(e->level0 * 100), 10, 100, this);
+        if (bright < 0) {
+            return;
+        }
+        const long most = wxGetNumberFromUser(_("At most how many figures (0: as many as the scene gives):"), _("Figures"), _("Its Values"), e->maxFigures, 0, 200, this);
+        if (most < 0) {
+            return;
+        }
+        (void)SetValues(Selected(), bright / 100.0, static_cast<int>(most));
+    });
     sizer->Add(buttons, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
     // The recipes taken from the reference shows stay on this computer; only their count is shown.
     int recipes = 0;
@@ -573,7 +592,7 @@ StageLibraryDialog::StageLibraryDialog(wxWindow* parent, const std::string& show
     Fill();
     _list->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent&) {
         const StageLibraryEntry* e = _library.Find(Selected());
-        _about->SetValue(e != nullptr ? Words(e->description) : wxString());
+        _about->SetValue(e != nullptr ? About(*e) : wxString());
     });
     favourite->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         const StageLibraryEntry* e = _library.Find(Selected());
@@ -609,7 +628,8 @@ void StageLibraryDialog::Fill() {
     _list->DeleteAllItems();
     for (const StageLibraryEntry& e : _library.entries) {
         const long row = _list->InsertItem(_list->GetItemCount(), e.custom ? U(e.title) : Words(e.title));
-        _list->SetItem(row, 1, e.custom ? _("Yours") : e.kind == "gesture" ? _("Whole installation") : _("One figure"));
+        const wxString level = e.level == "local" ? _("Composition of one figure") : e.level == "group" ? _("Composition of a group") : _("Composition of the whole house");
+        _list->SetItem(row, 1, e.kind == "composition" ? (e.custom ? _("Yours") + ": " + level : level) : e.custom ? _("Yours") : e.kind == "gesture" ? _("Whole installation") : _("One figure"));
         _list->SetItem(row, 2, e.favorite ? _("Yes") : "");
         _list->SetItem(row, 3, e.excluded ? _("Yes") : "");
     }
@@ -624,6 +644,48 @@ bool StageLibraryDialog::Toggle(const std::string& id, bool favourite, bool valu
     for (StageLibraryEntry& e : _library.entries) {
         if (e.id == id) {
             (favourite ? e.favorite : e.excluded) = value;
+            Fill();
+            return true;
+        }
+    }
+    return false;
+}
+
+wxString StageLibraryDialog::About(const StageLibraryEntry& e) const {
+    wxString out = e.custom ? U(e.description) : Words(e.description);
+    if (e.kind != "composition") {
+        return out;
+    }
+    wxString where;
+    for (const std::string& c : e.contexts) {
+        where += (where.empty() ? "" : ", ") + Words(c);
+    }
+    out += "\n" + wxString::Format(_("Where it suits: %s."), where.empty() ? _("anywhere") : where);
+    out += "\n" + (e.maxFigures > 0 ? wxString::Format(_("From %d to %d figures."), e.minFigures, e.maxFigures) : wxString::Format(_("From %d figures, as many as the scene gives."), e.minFigures));
+    GestureKind kind;
+    if (!e.gesture.empty() && GestureKindFromId(e.gesture, kind)) {
+        out += "\n" + wxString::Format(_("Its gesture: %s, %s."), Words(GestureKindPhrase(kind)), Words(RelationPhrase(e.temporal)));
+    }
+    if (!e.figures.empty()) {
+        wxString names;
+        for (size_t k = 0; k < e.figures.size() && k < 8; ++k) {
+            names += (k == 0 ? "" : ", ") + U(e.figures[k]);
+        }
+        out += "\n" + wxString::Format(_("Made with: %s."), names);
+    }
+    out += "\n" + wxString::Format(_("Brightness %d%%. Where it comes from: %s."), static_cast<int>(e.level0 * 100 + 0.5),
+                                    e.source == "built-in" ? _("the program") : e.source.rfind("learned:", 0) == 0 ? wxString::Format(_("your corrected version %s"), U(e.source.substr(8))) : _("you"));
+    return out;
+}
+
+bool StageLibraryDialog::SetValues(const std::string& id, double brightness, int maxFigures) {
+    for (StageLibraryEntry& e : _library.entries) {
+        if (e.id == id && e.kind == "composition") {
+            e.level0 = std::clamp(brightness, 0.1, 1.0);
+            e.maxFigures = std::max(0, maxFigures);
+            if (e.maxFigures > 0) {
+                e.minFigures = std::min(e.minFigures, e.maxFigures);
+            }
             Fill();
             return true;
         }
@@ -648,7 +710,8 @@ bool StageLibraryDialog::Save() {
     const StageLibrary builtIn = BuiltInStageLibrary();
     for (const StageLibraryEntry& e : _library.entries) {
         const StageLibraryEntry* b = builtIn.Find(e.id);
-        if (e.custom || b == nullptr || b->favorite != e.favorite || b->excluded != e.excluded) {
+        const bool values = b != nullptr && e.kind == "composition" && (b->level0 != e.level0 || b->maxFigures != e.maxFigures || b->minFigures != e.minFigures || b->speed != e.speed || b->beats != e.beats);
+        if (e.custom || b == nullptr || b->favorite != e.favorite || b->excluded != e.excluded || values) {
             personal.entries.push_back(e);
         }
     }
@@ -666,7 +729,7 @@ StageDirectorPanel::StageDirectorPanel(wxWindow* parent) : wxPanel(parent) {
     sizer->Add(_state, 0, wxEXPAND | wxBOTTOM, 4);
     auto* body = new wxBoxSizer(wxHORIZONTAL);
     _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(470, 170), wxLC_REPORT | wxLC_SINGLE_SEL);
-    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 60 }, { _("How the house is used"), 190 }, { _("Figures"), 60 }, { _("Gestures"), 70 }, { _("Changed"), 70 } }) {
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 60 }, { _("How the house is used"), 190 }, { _("Figures"), 60 }, { _("Gestures"), 70 }, { _("Changed"), 70 }, { _("In the song"), 160 } }) {
         _list->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
     body->Add(_list, 3, wxEXPAND | wxRIGHT, 6);
@@ -795,6 +858,9 @@ void StageDirectorPanel::Fill() {
         _list->SetItem(row, 2, wxString::Format("%d", taking));
         _list->SetItem(row, 3, wxString::Format("%d", static_cast<int>(s.gestures.size())));
         _list->SetItem(row, 4, s.manual ? _("By you") : "");
+        if (!s.narrative.empty()) {
+            _list->SetItem(row, 5, Words(NarrativePhrase(s.narrative)) + (s.visualMotif.empty() ? wxString() : " (" + U(s.visualMotif) + ")"));
+        }
         changed += s.manual ? 1 : 0;
     }
     wxString state = wxString::Format(_("%d scenes, %d gestures across the installation."), static_cast<int>(_score.scenes.size()), static_cast<int>(_score.gestures.size()));
@@ -819,6 +885,21 @@ void StageDirectorPanel::ShowScene() {
         return;
     }
     wxString out = wxString::Format(_("%s, from %s to %s."), StageModeWords(s->mode), ClockText(s->startMS), ClockText(s->endMS)) + "\n";
+    if (!s->narrative.empty()) {
+        out += wxString::Format(_("In the song, this scene %s."), Words(NarrativePhrase(s->narrative))) + "\n";
+        if (const VisualMotif* m = _score.Motif(s->visualMotif); m != nullptr) {
+            out += wxString::Format(_("Visual idea %s (%s): %s."), U(m->id), Words(m->intent), Words(MotifOperationPhrase(s->motifOperation))) + "\n";
+        }
+        if (!s->attention.empty()) {
+            out += wxString::Format(_("Carried by: %s."), Words(AttentionPhrase(s->attention))) + "\n";
+        }
+        if (!s->accentFigure.empty()) {
+            out += wxString::Format(_("The accents go to %s."), U(s->accentFigure)) + "\n";
+        }
+        if (!s->changes.empty()) {
+            out += wxString::Format(_("What changes: %s. How it goes on: %s."), Words(s->changes), Words(s->leadsTo)) + "\n";
+        }
+    }
     for (const std::string& r : s->reasons) {
         out += "- " + Words(r) + "\n";
     }
@@ -846,6 +927,9 @@ void StageDirectorPanel::ShowScene() {
     for (const std::string& id : s->gestures) {
         if (const GlobalGesture* g = _score.Gesture(id)) {
             out += wxString::Format(_("%s at %s (%d figures)"), GestureWords(g->kind), ClockText(g->startMS), static_cast<int>(g->participants.size()));
+            if (!g->relation.empty()) {
+                out += ", " + Words(RelationPhrase(g->relation));
+            }
             if (!g->reasons.empty()) {
                 out += ": " + Words(g->reasons.back());
             }

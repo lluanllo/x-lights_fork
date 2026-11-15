@@ -61,6 +61,7 @@
 #include "ComposerScreens.h"
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
+#include "ComposerProductionDialogs.h"
 #include "ComposerStageDialogs.h"
 #include "ComposerColorDialogs.h"
 #include "ComposerTimeline.h"
@@ -735,6 +736,18 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     director->Add(_variety, 0, wxALIGN_CENTER_VERTICAL);
     director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("change often")), 0, wxALIGN_CENTER_VERTICAL);
     style->Add(director, 0, wxALL, 4);
+    auto* ideas = new wxBoxSizer(wxHORIZONTAL);
+    ideas->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("Development of the ideas:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    wxArrayString artChoices;
+    artChoices.Add(_("Complete: present, develop, bring back and close the ideas (recommended)"));
+    artChoices.Add(_("Ideas that come back"));
+    artChoices.Add(_("Scene direction only"));
+    artChoices.Add(_("As in phase 19"));
+    _artDirection = new wxChoice(style->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, artChoices);
+    _artDirection->SetSelection(0);
+    _artDirection->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) { RefreshAll(); });
+    ideas->Add(_artDirection, 0, wxALIGN_CENTER_VERTICAL);
+    style->Add(ideas, 0, wxALL, 4);
     auto* colours = new wxStaticBoxSizer(wxVERTICAL, style->GetStaticBox(), _("Colour direction"));
     wxWindow* cbox = colours->GetStaticBox();
     auto* songRow = new wxBoxSizer(wxHORIZONTAL);
@@ -1037,6 +1050,9 @@ wxWindow* ShowComposerDialog::BuildAnalysisPage(wxWindow* parent) {
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EditVoices(); }, ID_VOICES);
     auto* recordingRow = new wxBoxSizer(wxHORIZONTAL);
     recordingRow->Add(new wxButton(page, ID_RECORDING, _("What Happens in the Recording...")), 0, wxRIGHT, 8);
+    auto* ideasButton = new wxButton(page, wxID_ANY, _("Visual Ideas and How They Develop..."));
+    recordingRow->Add(ideasButton, 0, wxRIGHT, 8);
+    ideasButton->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenVisualIdeas(); });
     _recordingInfo = new wxStaticText(page, wxID_ANY, "");
     recordingRow->Add(_recordingInfo, 1, wxALIGN_CENTER_VERTICAL);
     sizer->Add(recordingRow, 0, wxEXPAND | wxBOTTOM, 6);
@@ -1181,7 +1197,17 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     auto* head = new wxBoxSizer(wxHORIZONTAL);
     head->Add(Bold(page, _("Review the composition")), 1, wxALIGN_CENTER_VERTICAL);
+    auto* compositions = new wxButton(page, wxID_ANY, _("Compositions and Gestures..."));
+    auto* ideas = new wxButton(page, wxID_ANY, _("Visual Ideas..."));
+    head->Add(compositions, 0, wxRIGHT, 4);
+    head->Add(ideas, 0, wxRIGHT, 4);
     head->Add(new wxButton(page, ID_COMPOSE, _("Work Out the Composition")), 0);
+    compositions->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_stagePanel != nullptr) {
+            _stagePanel->OpenLibraryDialog();
+        }
+    });
+    ideas->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenVisualIdeas(); });
     sizer->Add(head, 0, wxEXPAND | wxBOTTOM, 6);
     _compositionInfo = new wxStaticText(page, wxID_ANY, "");
     sizer->Add(_compositionInfo, 0, wxEXPAND | wxBOTTOM, 6);
@@ -1441,6 +1467,16 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     auto* showColours = new wxButton(page, wxID_ANY, _("Colours of the Show..."));
     review->Add(showColours, 0);
     showColours->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenShowColors(); });
+    auto* prepare = new wxStaticBoxSizer(wxVERTICAL, page, _("Prepare the show"));
+    auto* prepareRow = new wxBoxSizer(wxHORIZONTAL);
+    auto* check = new wxButton(prepare->GetStaticBox(), wxID_ANY, _("Check the Show Before It Goes Out..."));
+    prepareRow->Add(check, 0, wxRIGHT, 8);
+    _productionState = new wxStaticText(prepare->GetStaticBox(), wxID_ANY, _("Not checked yet: the audio, lyrics, layout, figures, pictures and videos, effects and render are all checked, and nothing is approved by itself."));
+    _productionState->Wrap(620);
+    prepareRow->Add(_productionState, 1, wxALIGN_CENTER_VERTICAL);
+    prepare->Add(prepareRow, 0, wxEXPAND | wxALL, 4);
+    sizer->Add(prepare, 0, wxEXPAND | wxBOTTOM, 8);
+    check->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { CheckProductionReadiness(true); });
     auto* learning = new wxBoxSizer(wxHORIZONTAL);
     auto* corrected = new wxButton(page, wxID_ANY, _("Compare with My Corrected Version..."));
     auto* observations = new wxButton(page, wxID_ANY, _("Observations with Their Place..."));
@@ -1683,6 +1719,22 @@ std::string ShowComposerDialog::ResultFseq() const {
     return fseq;
 }
 
+std::string ShowComposerDialog::ArtDirectionId() const {
+    static const char* IDS[] = { "full", "motifs", "direction", "f19" };
+    const int i = _artDirection != nullptr ? _artDirection->GetSelection() : 0;
+    return IDS[i >= 0 && i < 4 ? i : 0];
+}
+
+void ShowComposerDialog::SetArtDirection(const std::string& id) {
+    static const char* IDS[] = { "full", "motifs", "direction", "f19" };
+    for (int i = 0; i < 4; ++i) {
+        if (id == IDS[i] && _artDirection != nullptr) {
+            _artDirection->SetSelection(i);
+            RefreshAll();
+        }
+    }
+}
+
 void ShowComposerDialog::SetColorStyle(int style) {
     if (_colorStyle != nullptr) {
         _colorStyle->SetValue(style);
@@ -1712,6 +1764,70 @@ void ShowComposerDialog::CompareWithCorrected(const std::string& correctedPath, 
         return;
     }
     _assistInfo->SetLabel(_("Comparing the show with your corrected version..."));
+}
+
+void ShowComposerDialog::CheckProductionReadiness(bool show) {
+    if (_resultSequence.empty()) {
+        ShowError(_("Generate the show first."), wxString());
+        return;
+    }
+    if (_assistJob.Running()) {
+        ShowError(_("The assistant is still working on the last request."), wxString());
+        return;
+    }
+    _assistAction = "production";
+    _showProduction = show;
+    const std::string dir = NewWorkFolder("production");
+    _assistResultPath = (fs::path(dir) / "production-check.json").string();
+    const std::vector<std::string> args = { "--composer-production", "-s", _showDir, "--sequence", _resultSequence, "--out", dir };
+    std::string error;
+    _assistExit = -1;
+    if (!_assistJob.Start(args, (fs::path(dir) / "cancel").string(), error)) {
+        ShowError(_("The check could not be started."), U(error));
+        return;
+    }
+    _productionState->SetLabel(_("Checking the show: the audio, lyrics, layout, figures, pictures and videos, effects and a new render... (the window stays usable)"));
+}
+
+bool ShowComposerDialog::ApplyCorrectionDecisions(const std::vector<ComparisonDecision>& decisions) {
+    if (_resultSequence.empty()) {
+        return false;
+    }
+    ArtisticPreferences prefs = ShowPreferences();
+    StageEdits stage;
+    ChromaticEdits colour;
+    ComparisonDecisions record;
+    std::string error;
+    const std::string recordPath = ComparisonDecisionsPath(_showDir, _resultSequence);
+    (void)FromJson(ReadFile(fs::path(recordPath)), record, error);
+    const DecisionOutcome done = ApplyComparisonDecisions(prefs, stage, colour, record, _comparison, decisions, fs::path(_resultSequence).filename().string());
+    bool ok = SetShowPreferences(prefs);
+    for (const StageEdit& e : stage.edits) {
+        ok = _stagePanel != nullptr && _stagePanel->Edit(e).empty() && ok;
+    }
+    for (const ChromaticEdit& e : colour.edits) {
+        ok = _colorPanel != nullptr && _colorPanel->Edit(e).empty() && ok;
+    }
+    std::error_code ec;
+    fs::create_directories(fs::path(recordPath).parent_path(), ec);
+    std::ofstream(fs::path(recordPath), std::ios::binary) << ToJson(record);
+    _assistMessage = S(wxString::Format(_("%d corrections to learn, %d general preferences, %d decisions for this song only, %d ignored, %d rejected."), done.learned, done.general, done.songEdits,
+                                        done.ignored, done.rejected));
+    if (!done.notes.empty()) {
+        _assistMessage += " " + S(wxString::Format(_("%d could not be asked of the composer for this song."), static_cast<int>(done.notes.size())));
+    }
+    SetWrapped(_assistInfo, U(_assistMessage));
+    RefreshAll();
+    return ok;
+}
+
+void ShowComposerDialog::OpenVisualIdeas() {
+    if (_stagePanel == nullptr || _stagePanel->Scenes() == 0) {
+        wxMessageBox(_("Work out the composition on step 3 first: the visual ideas come from it."), _("Visual Ideas and How They Develop"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    MotifsDialog dialog(this, _stagePanel->Score(), _showDir, fs::path(_audioPath).stem().string());
+    dialog.ShowModal();
 }
 
 bool ShowComposerDialog::LearnCorrections(const std::vector<size_t>& picked) {
@@ -1914,13 +2030,57 @@ void ShowComposerDialog::AssistFinished(int exitCode) {
             return;
         }
         _comparison = c;
+        _offeredCompositions.clear();
+        StageLibrary offered;
+        std::string offeredError;
+        if (FromJson(ReadFile(fs::path(_assistResultPath).parent_path() / "composition-proposals.json"), offered, offeredError)) {
+            _offeredCompositions = offered.entries;
+        }
         _assistMessage = S(wxString::Format(_("%d changes found in your version."), static_cast<int>(c.changes.size())));
         SetWrapped(_assistInfo, U(_assistMessage));
         if (_showComparison) {
-            CorrectionsDialog dialog(this, c);
+            ComparisonDecisions record;
+            std::string recordError;
+            (void)FromJson(ReadFile(fs::path(ComparisonDecisionsPath(_showDir, _resultSequence))), record, recordError);
+            CorrectionsDialog dialog(this, c, &record);
             if (dialog.ShowModal() == wxID_OK) {
-                (void)LearnCorrections(dialog.Picked());
+                (void)ApplyCorrectionDecisions(dialog.Decisions());
             }
+            for (const StageLibraryEntry& e : _offeredCompositions) {
+                if (wxMessageBox(wxString::Format(_("In your version, %s work together (%s). Keep it as a composition of your own, to use in other songs?"), wxString::Format(_("%d figures"), static_cast<int>(e.figures.size())),
+                                                  U(e.title)),
+                                 _("Your Corrected Version"), wxYES_NO | wxICON_QUESTION, this) == wxYES) {
+                    std::string keepError;
+                    if (!KeepComposition(_showDir, e, keepError)) {
+                        ShowError(_("The composition could not be kept."), U(keepError));
+                    }
+                }
+            }
+        }
+        return;
+    }
+    if (_assistAction == "production") {
+        ProductionReport r;
+        std::string error;
+        if (!FromJson(ReadFile(fs::path(_assistResultPath)), r, error) || !r.ran) {
+            _assistMessage = S(_("The show could not be checked."));
+            SetWrapped(_productionState, U(_assistMessage));
+            return;
+        }
+        _production = r;
+        wxString state = ProductionStatusText(r);
+        state.Replace("\n", "   ");
+        _productionState->SetLabel(state + "\n" + wxString::Format(_("%d things stop it, %d may make it wrong, %d to look at, %d artistic suggestions."), r.Count("blocker"), r.Count("risk"),
+                                                                 r.Count("warning"), r.Count("artistic")));
+        _productionState->Wrap(620);
+        Layout();
+        if (_showProduction) {
+            ProductionDialog dialog(this, r, _showDir);
+            dialog.openInXLights = [this, &dialog]() {
+                dialog.EndModal(wxID_CANCEL);
+                OpenResult();
+            };
+            dialog.ShowModal();
         }
         return;
     }
@@ -2384,6 +2544,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
         add("--stems", StemListText(_stems));
     }
     add("--stage-director", _stagePanel == nullptr || _stagePanel->DirectorOn() ? "on" : "off");
+    add("--art-direction", ArtDirectionId());
     add("--color-director", _colorPanel == nullptr || _colorPanel->DirectorOn() ? "on" : "off");
     if (_colorVariety != nullptr) {
         add("--color-style", fmt::format("{:.2f}", _colorStyle->GetValue() / 100.0));
@@ -2436,7 +2597,7 @@ std::string ShowComposerDialog::InputsKey() const {
            fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
            (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string()) +
            fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp) +
-           (_stagePanel != nullptr ? fmt::format("|st{}|{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText()) : std::string()) +
+           (_stagePanel != nullptr ? fmt::format("|st{}|{}|a{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText(), ArtDirectionId()) : std::string()) +
            (_colorPanel != nullptr && _colorVariety != nullptr
                 ? fmt::format("|c{}|{}|s{}|{}|{}|{}|{}|{}", _colorPanel->DirectorOn() ? 1 : 0, _colorVariety->GetValue(), _colorStyle->GetValue(), _colorContrast->GetValue(), _colorAccents->GetValue(),
                               _colorEvolution->GetValue(), std::accumulate(_songColors.begin(), _songColors.end(), std::string(), [](std::string x, const std::string& y) { return x + y + ","; }), _colorPanel->EditsText())
