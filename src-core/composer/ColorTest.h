@@ -17,4 +17,10 @@ namespace composer {
 // color-check.json and color-check.txt to `outDir`. Returns 0 written, 1 failed, 2 refused.
 [[nodiscard]] int RunColorMeasure(const std::string& showDir, const std::string& fseqPath, const std::string& scorePath, const std::string& chromaPath, const std::string& outDir);
 
+// Behind --composer-compare: the generated sequence against the one a person corrected in
+// xLights, both in the show folder (a copy with every controller inactive), read with xLights'
+// own reader. `chromaPath` (a color-score.json) places the changes in their scenes. Writes
+// sequence-comparison.json to `outDir`. Returns 0 written, 1 failed, 2 refused.
+[[nodiscard]] int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir);
+
 } // namespace composer

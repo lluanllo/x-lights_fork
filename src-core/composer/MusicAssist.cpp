@@ -1088,7 +1088,11 @@ std::string VisualBriefPrompt() {
            "\"character\": up to 3 of festive, epic, intimate, nostalgic, playful, dramatic, tender, calm, majestic, mysterious, joyful; "
            "\"arc\": for each kind of part the song has (intro, verse, pre-chorus, chorus, bridge, instrumental, outro) an object with "
            "\"part\", \"feeling\" (one of the moods), \"intensity\" (0 to 1) and \"color\" (one #RRGGBB the part suggests); "
-           "\"colors\": up to 4 colours the whole song suggests, as #RRGGBB, the most characteristic first; "
+           "\"colors\": at most 3 colours that carry the song's identity, as #RRGGBB, the most characteristic first (a palette is chosen from them, not a list to use all at once); "
+           "\"identity\": one short sentence on the song's emotional identity; "
+           "\"keep\": the kinds of part that should keep that identity (from intro, verse, pre-chorus, chorus, bridge, instrumental, outro); "
+           "\"change\": the kinds of part where the colours may turn to something else; "
+           "\"intention\": one short sentence on the colour intention (contained or expressive, where to hold and where to contrast); "
            "\"colorIntensity\": 0 soft to 1 full, how strong its colours want to be; "
            "\"warmth\": -1 cool to 1 warm; "
            "\"contrast\": one short sentence on how its parts differ; "
@@ -1196,7 +1200,7 @@ std::string BriefCachePath(const std::string& showDir, const std::string& lyrics
     if (showDir.empty()) {
         return "";
     }
-    const std::string key = AssistCacheKey("", TextKey(lyricsText + "\n--\n" + acoustic), "groq", model.empty() ? std::string("auto") : model, "brief-v2");
+    const std::string key = AssistCacheKey("", TextKey(lyricsText + "\n--\n" + acoustic), "groq", model.empty() ? std::string("auto") : model, "brief-v3");
     return AssistCachePath(showDir, key, "brief");
 }
 

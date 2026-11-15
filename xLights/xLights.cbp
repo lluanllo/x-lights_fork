@@ -604,6 +604,10 @@
 		<Unit filename="../src-core/composer/ChromaticDirector.h" />
 		<Unit filename="../src-core/composer/ColorTest.cpp" />
 		<Unit filename="../src-core/composer/ColorTest.h" />
+		<Unit filename="../src-core/composer/ArtEvaluation.cpp" />
+		<Unit filename="../src-core/composer/ArtEvaluation.h" />
+		<Unit filename="../src-core/composer/SequenceComparison.cpp" />
+		<Unit filename="../src-core/composer/SequenceComparison.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />
 		<Unit filename="../src-core/composer/UnderstandingTest.h" />
 		<Unit filename="../src-core/composer/CompositionPlan.cpp" />

@@ -38,6 +38,7 @@ struct TimelineColors {
     int transitionMS = -1;        // from here to endMS it moves towards the next colours; -1 none
     std::vector<wxColour> next;
     bool manual = false;
+    std::string label; // the colour idea it plays ("A", "B+"...), drawn on the lane
 };
 
 // The song on one time scale: its waveform, sections, beats, bars, onsets, silences and

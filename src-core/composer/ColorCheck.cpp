@@ -254,6 +254,8 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
     std::vector<std::vector<FigureFrame>> seen(static_cast<size_t>(check.frames), std::vector<FigureFrame>(figures.size()));
     std::vector<Histogram> house(static_cast<size_t>(check.frames));
     std::vector<char> lit(static_cast<size_t>(check.frames), 0);
+    std::vector<float> spread(static_cast<size_t>(check.frames), 0);   // 1 - |mean hue vector|
+    std::vector<float> perFigure(static_cast<size_t>(check.frames), 0); // families over 10% in a lit figure
     file->prepareRead({ { 0, channels } });
     std::vector<uint8_t> data(channels, 0);
     for (int f = 0; f < check.frames; ++f) {
@@ -265,6 +267,9 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
         Histogram& h = house[f];
         h.fill(0);
         int litLights = 0;
+        double va = 0, vb = 0, vc = 0;
+        double figureColours = 0;
+        int litFigures = 0;
         for (size_t k = 0; k < figures.size(); ++k) {
             const Measured& m = figures[k];
             Accum acc;
@@ -282,6 +287,12 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
                 const double w = top / 255.0;
                 acc.Add(s, w);
                 fh[s.family] += static_cast<float>(w);
+                const double C = std::sqrt(static_cast<double>(s.a) * s.a + static_cast<double>(s.b) * s.b);
+                if (C >= NEUTRAL_CHROMA) {
+                    va += w * s.a;
+                    vb += w * s.b;
+                    vc += w * C;
+                }
             }
             FigureFrame& ff = seen[f][k];
             if (acc.w > 0) {
@@ -292,9 +303,17 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
                 for (int q = 0; q < FAMILY_COUNT; ++q) {
                     h[q] += fh[q];
                 }
+                int inside = 0;
+                for (int q = 0; q < FAMILY_COUNT; ++q) {
+                    inside += fh[q] >= 0.1 * acc.w ? 1 : 0;
+                }
+                figureColours += inside;
+                ++litFigures;
             }
         }
         lit[f] = litLights >= std::max(1, static_cast<int>(check.lights * MIN_LIT)) ? 1 : 0;
+        spread[f] = vc > 0 ? static_cast<float>(1.0 - std::sqrt(va * va + vb * vb) / vc) : 0.0F;
+        perFigure[f] = litFigures > 0 ? static_cast<float>(figureColours / litFigures) : 0.0F;
         // The probes that read this frame.
         if (const auto pa = probesAt.find(f); pa != probesAt.end()) {
             for (size_t pi : pa->second) {
@@ -372,6 +391,8 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
     std::vector<Histogram> sceneHist(check.scenes.size());
     std::vector<int> sceneFrames(check.scenes.size(), 0), sceneMonotone(check.scenes.size(), 0);
     std::vector<double> sceneDiff(check.scenes.size(), 0), sceneFams(check.scenes.size(), 0), sceneAccent(check.scenes.size(), 0);
+    std::vector<double> sceneFamilies(check.scenes.size(), 0), sceneTopTwo(check.scenes.size(), 0), sceneSpread(check.scenes.size(), 0), scenePerFigure(check.scenes.size(), 0);
+    double sumFamilies = 0, sumTopTwo = 0, sumSpread = 0, sumPerFigure = 0;
     std::vector<Accum> sceneMean(check.scenes.size());
     std::vector<double> sceneChroma(check.scenes.size(), 0);
     for (int f = 0; f < check.frames; ++f) {
@@ -424,7 +445,23 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
             accent |= q != dom && h[q] / total >= 0.03 && h[q] / total <= 0.2;
         }
         sumAccent += accent ? 1 : 0;
+        // How many families share the house, and how much the two largest hold.
+        std::array<float, FAMILY_COUNT> sorted = h;
+        std::sort(sorted.begin(), sorted.end(), std::greater<float>());
+        int families = 0;
+        for (int q = 0; q < FAMILY_COUNT && total > 0; ++q) {
+            families += h[q] / total >= 0.05 ? 1 : 0;
+        }
+        const double topTwo = total > 0 ? (sorted[0] + sorted[1]) / total : 0;
+        sumFamilies += families;
+        sumTopTwo += topTwo;
+        sumSpread += spread[f];
+        sumPerFigure += perFigure[f];
         if (sc != nullptr) {
+            sceneFamilies[si] += families;
+            sceneTopTwo[si] += topTwo;
+            sceneSpread[si] += spread[f];
+            scenePerFigure[si] += perFigure[f];
             for (int q = 0; q < FAMILY_COUNT; ++q) {
                 sceneHist[si][q] += h[q];
             }
@@ -448,6 +485,11 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
         check.figureDifference = Round3(sumDiff / n);
         check.figureFamilies = Round3(sumFams / n);
         check.accentFrames = Round3(sumAccent / n);
+        check.familiesAtOnce = Round3(sumFamilies / n);
+        check.topTwoShare = Round3(sumTopTwo / n);
+        check.minorLight = Round3(1.0 - sumTopTwo / n);
+        check.hueSpread = Round3(sumSpread / n);
+        check.colorsPerFigure = Round3(sumPerFigure / n);
     }
     double share = 0;
     check.dominant = ColorFamilyId(Dominant(song, share));
@@ -475,6 +517,12 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
         s.figureDifference = Round3(sceneDiff[i] / n);
         s.figureFamilies = Round3(sceneFams[i] / n);
         s.accentFrames = Round3(sceneAccent[i] / n);
+        s.familiesAtOnce = Round3(sceneFamilies[i] / n);
+        s.topTwoShare = Round3(sceneTopTwo[i] / n);
+        s.minorLight = Round3(1.0 - sceneTopTwo[i] / n);
+        s.hueSpread = Round3(sceneSpread[i] / n);
+        s.colorsPerFigure = Round3(scenePerFigure[i] / n);
+        check.overloadedScenes += s.familiesAtOnce > 4.0 && !s.intended ? 1 : 0;
         s.chroma = Round3(sceneMean[i].w > 0 ? sceneChroma[i] / sceneMean[i].w : 0);
         s.lightness = Round3(sceneMean[i].Mean().L);
         s.meanHex = HexOf(sceneMean[i].Mean());
@@ -619,6 +667,15 @@ ColorCheck CheckColors(const std::string& fseqPath, const FigureCatalog& geometr
     if (check.litFrames > 0 && check.accentFrames < 0.1) {
         check.warnings.push_back(fmt::format("few-accents: a minority colour appears in {:.0f}% of the lit time", check.accentFrames * 100));
     }
+    if (check.overloadedScenes > 0) {
+        check.warnings.push_back(fmt::format("too-many-colours-at-once: in {} scenes more than four families of colour share the house at once, on average", check.overloadedScenes));
+    }
+    if (check.litFrames > 0 && check.minorLight > 0.35) {
+        check.warnings.push_back(fmt::format("colours-scattered: {:.0f}% of the light is outside the two main families of colour", check.minorLight * 100));
+    }
+    if (check.litFrames > 0 && check.colorsPerFigure > 2.2) {
+        check.warnings.push_back(fmt::format("figures-in-many-colours: a lit figure wears {:.1f} families of colour at once on average", check.colorsPerFigure));
+    }
     if (!contrasts.empty() && check.gestureContrast < FAINT) {
         check.warnings.push_back(fmt::format("gestures-blend-in: {} of {} gesture parts changed their lights by under {:.0f} ΔE (median {:.1f})", check.gesturesFaint, contrasts.size(), FAINT,
                                              check.gestureContrast));
@@ -640,7 +697,8 @@ std::string ToJson(const ColorCheck& c) {
     for (const SceneColor& s : c.scenes) {
         scenes.push_back({ { "id", s.id }, { "mode", s.mode }, { "startMS", s.startMS }, { "endMS", s.endMS }, { "dominant", s.dominant }, { "dominantShare", s.dominantShare },
                            { "monotoneShare", s.monotoneShare }, { "entropy", s.entropy }, { "effectiveColors", s.effectiveColors }, { "figureDifference", s.figureDifference },
-                           { "figureFamilies", s.figureFamilies }, { "accentFrames", s.accentFrames }, { "chroma", s.chroma }, { "lightness", s.lightness }, { "meanHex", s.meanHex },
+                           { "figureFamilies", s.figureFamilies }, { "accentFrames", s.accentFrames }, { "familiesAtOnce", s.familiesAtOnce },
+                           { "topTwoShare", s.topTwoShare }, { "minorLight", s.minorLight }, { "hueSpread", s.hueSpread }, { "colorsPerFigure", s.colorsPerFigure }, { "chroma", s.chroma }, { "lightness", s.lightness }, { "meanHex", s.meanHex },
                            { "intended", s.intended }, { "families", shares(s.families) } });
     }
     json figures = json::array();
@@ -658,6 +716,8 @@ std::string ToJson(const ColorCheck& c) {
                   { "effectiveColors", c.effectiveColors }, { "monotoneShare", c.monotoneShare }, { "monotoneThreshold", MONOTONE_SHARE }, { "longestMonotoneMS", c.longestMonotoneMS },
                   { "longestMonotoneStartMS", c.longestMonotoneStartMS }, { "longestMonotoneFamily", c.longestMonotoneFamily }, { "sceneDominants", c.sceneDominants },
                   { "sceneVariation", c.sceneVariation }, { "figureDifference", c.figureDifference }, { "figureFamilies", c.figureFamilies }, { "accentFrames", c.accentFrames },
+                  { "familiesAtOnce", c.familiesAtOnce }, { "topTwoShare", c.topTwoShare }, { "minorLight", c.minorLight }, { "hueSpread", c.hueSpread },
+                  { "colorsPerFigure", c.colorsPerFigure }, { "overloadedScenes", c.overloadedScenes },
                   { "gestureContrast", c.gestureContrast }, { "gestureHouseContrast", c.gestureHouseContrast }, { "gesturesFaint", c.gesturesFaint }, { "families", shares(c.families) },
                   { "scenes", scenes }, { "figureColors", figures }, { "gestures", gestures }, { "warnings", c.warnings }, { "review", "not-reviewed" } })
         .dump(1);
@@ -677,6 +737,8 @@ std::string ColorCheckReport(const ColorCheck& c) {
                        c.longestMonotoneMS / 1000.0, c.longestMonotoneFamily.empty() ? "-" : c.longestMonotoneFamily, c.longestMonotoneStartMS / 1000.0);
     out += fmt::format("scenes: {} main colours over {} scenes; the mix changes {:.0f}% from one to the next\n", c.sceneDominants, c.scenes.size(), c.sceneVariation * 100);
     out += fmt::format("figures: differ by {:.1f} ΔE, wear {:.1f} families at once; a minority accent in {:.0f}% of the time\n", c.figureDifference, c.figureFamilies, c.accentFrames * 100);
+    out += fmt::format("cohesion: {:.1f} families over 5% of the house at once, the two largest hold {:.0f}% of the light, hue spread {:.2f}, {:.1f} colours inside a lit figure; {} scenes over four families\n",
+                       c.familiesAtOnce, c.topTwoShare * 100, c.hueSpread, c.colorsPerFigure, c.overloadedScenes);
     if (!c.gestures.empty()) {
         out += fmt::format("gestures: {} parts measured, median {:.1f} ΔE against what was lit before and {:.1f} against the rest of the house; {} under 15\n", c.gestures.size(),
                            c.gestureContrast, c.gestureHouseContrast, c.gesturesFaint);

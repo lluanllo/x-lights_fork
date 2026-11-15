@@ -401,6 +401,12 @@ void ComposerTimeline::OnPaint(wxPaintEvent&) {
         dc.SetPen(wxPen(c.manual ? wxColour(40, 150, 60) : wxColour(90, 90, 90)));
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
         dc.DrawRectangle(x, COLORS_Y, std::max(2, ToX(c.endMS) - x), COLORS_H);
+        if (!c.label.empty()) {
+            dc.SetClippingRegion(x, COLORS_Y, std::max(2, ToX(c.endMS) - x), COLORS_H);
+            dc.SetTextForeground(*wxBLACK);
+            dc.DrawText(wxString::FromUTF8(c.label), x + 3, COLORS_Y);
+            dc.DestroyClippingRegion();
+        }
     }
 
     if (HasSelection()) {

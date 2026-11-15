@@ -12,6 +12,15 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: art direction chooses fewer colours that belong together: each scene uses
+                                 only the hues its moment needs, the song keeps a colour identity that comes back with
+                                 the choruses and changes when the music turns, one figure leads and others stay discreet
+    -enh (lluanllo)              Show Composer: a colour style from contained to expressive, and in the window: keep this
+                                 identity, bring a motif back, fewer colours, fewer accents, fix a combination, change the
+                                 main colour, compare two scenes
+    -enh (lluanllo)              Show Composer: compare a show with the version you corrected in xLights and choose which
+                                 changes the next shows should learn; observations with their scene and figure; the
+                                 composition read in words, never a grade
     -enh (lluanllo)              Show Composer: a colour director gives each song a family of colours with a hierarchy
                                  (main, second, accent, contrast...), a palette per scene that changes with the music,
                                  a colour role per figure so the house is not one colour, gestures in colours that

@@ -153,6 +153,26 @@ int LearnFromReview(ArtisticPreferences& prefs, const VisualReview& review, cons
             add(origin, "color.identity", 1.0, 1.0, rule);
         }
     }
+    // Observations with their context: the ones about taste teach; decisions about this
+    // song only stay with its colour plan.
+    for (size_t i = 0; i < review.evaluation.observations.size(); ++i) {
+        const ArtisticObservation& o = review.evaluation.observations[i];
+        if (ObservationIsSongDecision(o)) {
+            continue;
+        }
+        const std::string origin = review.sequence + "|observation:" + std::to_string(i) + ":" + o.kind;
+        if (o.kind == "too-many-colours" || o.kind == "incoherent") {
+            add(origin, "color.cohesion", 1.0, 1.0, o.kind);
+        } else if (o.kind == "accents-excessive") {
+            add(origin, "color.accents", -1.0, 1.0, o.kind);
+        } else if (o.kind == "inelegant-transition") {
+            add(origin, "color.gradual", 1.0, 1.0, o.kind);
+        } else if (o.kind == "recall-motif") {
+            add(origin, "color.evolution", -1.0, 1.0, o.kind); // more continuity in general
+        } else if (o.kind == "figure-stand-out" || o.kind == "figure-rest") {
+            add(origin, "figure." + o.figure + ".prominence", o.kind == "figure-stand-out" ? 1.0 : -1.0, 1.0, o.kind);
+        }
+    }
     for (const ClipReview& c : review.clips) {
         if (c.state == ClipState::Pending) {
             continue; // no decision is not a rejection
@@ -242,7 +262,8 @@ int LearnFromReview(ArtisticPreferences& prefs, const VisualReview& review, cons
             }
         }
     }
-    std::erase_if(prefs.signals, [&](const PreferenceSignal& s) { return s.origin.rfind(review.sequence + "|", 0) == 0; });
+    // What a person corrected in the sequence itself is kept: it is not part of this review.
+    std::erase_if(prefs.signals, [&](const PreferenceSignal& s) { return s.origin.rfind(review.sequence + "|", 0) == 0 && s.origin.find("|corrected:") == std::string::npos; });
     prefs.signals.insert(prefs.signals.end(), fresh.begin(), fresh.end());
     prefs.session = known ? prefs.session : session;
     int changed = 0;

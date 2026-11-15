@@ -136,7 +136,7 @@ std::string ToJson(const GenerationSidecar& s) {
                                   { "corrections", s.understanding.corrections }, { "manualAssignments", s.understanding.manualAssignments } };
     }
     if (s.color.decided) {
-        root["color"] = { { "enabled", s.color.enabled }, { "directorVersion", s.color.directorVersion }, { "variety", s.color.variety }, { "contrast", s.color.contrast },
+        root["color"] = { { "enabled", s.color.enabled }, { "directorVersion", s.color.directorVersion }, { "variety", s.color.variety }, { "style", s.color.style }, { "contrast", s.color.contrast },
                           { "accents", s.color.accents }, { "evolution", s.color.evolution }, { "songColors", s.color.songColors }, { "briefSource", s.color.briefSource },
                           { "scenes", s.color.scenes }, { "edits", s.color.edits } };
     }
@@ -243,6 +243,7 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
             s.color.enabled = g.value("enabled", false);
             s.color.directorVersion = g.value("directorVersion", std::string());
             s.color.variety = std::clamp(g.value("variety", 0.5), 0.0, 1.0);
+            s.color.style = std::clamp(g.value("style", 0.4), 0.0, 1.0);
             s.color.contrast = std::clamp(g.value("contrast", 0.5), 0.0, 1.0);
             s.color.accents = std::clamp(g.value("accents", 0.5), 0.0, 1.0);
             s.color.evolution = std::clamp(g.value("evolution", 0.5), 0.0, 1.0);

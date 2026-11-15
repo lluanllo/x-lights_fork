@@ -13,6 +13,8 @@
 #include <wx/bitmap.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
+#include <wx/checklst.h>
+#include <wx/choice.h>
 #include <wx/choicdlg.h>
 #include <wx/colordlg.h>
 #include <wx/dcbuffer.h>
@@ -31,10 +33,12 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
 
+#include "ComposerStageDialogs.h"
 #include "ComposerTimeline.h"
 #include "composer/ColorSpace.h"
 #include "composer/UnderstandingStore.h"
@@ -157,6 +161,14 @@ wxString SourceWords(const std::string& source) {
     return U(source);
 }
 
+wxString GestureIntentWords(const std::string& intent) {
+    if (intent == "reinforce") return _("it reinforces the scene's colour");
+    if (intent == "accent") return _("an accent for a strong moment");
+    if (intent == "transform") return _("it prepares the next scene's colour");
+    if (intent == "resolve") return _("it resolves to the identity");
+    return U(intent);
+}
+
 wxString ColorWarningWords(const std::string& w) {
     const std::string code = w.substr(0, w.find(':'));
     static const std::map<std::string, wxString> W = {
@@ -167,9 +179,126 @@ wxString ColorWarningWords(const std::string& w) {
         { "figures-alike", _("The figures are almost the same colour.") },
         { "few-accents", _("Few accents: a minority colour rarely appears.") },
         { "gestures-blend-in", _("Many gestures are lit in colours close to what was already there.") },
+        { "too-many-colours-at-once", _("In some scenes more than four colour families share the house at once.") },
+        { "colours-scattered", _("Much of the light goes to colours that are each used only a little: the colours look scattered.") },
+        { "figures-in-many-colours", _("Each figure carries many colours at once.") },
     };
     const auto it = W.find(code);
     return it != W.end() ? it->second : U(w);
+}
+
+} // namespace
+
+wxString ColorFamilyWords(const std::string& family);
+
+namespace {
+// The colours a scene really uses (its grammar), main first.
+std::vector<std::string> UsedColors(const ChromaticScenePlan& s) {
+    std::vector<std::string> out;
+    for (const char* role : { "anchor", "secondary", "contrast", "accent", "transition", "highlight", "neutral" }) {
+        if (std::find(s.used.begin(), s.used.end(), role) != s.used.end() || s.used.empty()) {
+            const std::string hex = s.palette.Hex(role);
+            if (!hex.empty() && std::find(out.begin(), out.end(), hex) == out.end()) {
+                out.push_back(hex);
+            }
+        }
+        if (s.used.empty() && out.size() >= 4) {
+            break;
+        }
+    }
+    return out;
+}
+
+wxString MotifKindWords(const std::string& kind) {
+    if (kind == "identity") return _("the song's identity");
+    if (kind == "contrast") return _("the identity with a contrast");
+    if (kind == "transformed") return _("the identity transformed");
+    return U(kind);
+}
+
+wxString OperationWords(const std::string& op) {
+    static const std::map<std::string, wxString> W = { { "present", _("Presents the identity") }, { "develop", _("Develops it") }, { "introduce", _("Brings a contrast") },
+                                                       { "recall", _("Brings an idea back") }, { "intensify", _("Brings it back stronger") }, { "transform", _("Transforms it") },
+                                                       { "resolve", _("Resolves to the identity") }, { "hold", _("Keeps the colours before") }, { "rest", _("Rests") } };
+    const auto it = W.find(op);
+    return it != W.end() ? it->second : U(op);
+}
+
+wxString IntentWords(const std::string& intent) {
+    static const std::map<std::string, wxString> W = { { "open", _("opens the song and presents its colours") }, { "tell", _("tells, with the song's own colours") },
+                                                       { "lift", _("lifts: a contrast comes in") }, { "celebrate", _("celebrates: the fullest moment") },
+                                                       { "answer", _("call and answer between figures") }, { "turn", _("turns somewhere else") },
+                                                       { "close", _("closes and resolves") }, { "rest", _("rests") } };
+    const auto it = W.find(intent);
+    return it != W.end() ? it->second : U(intent);
+}
+
+wxString Names(const std::vector<std::string>& names, size_t most = 4) {
+    wxString out;
+    for (size_t k = 0; k < names.size() && k < most; ++k) {
+        out += (k == 0 ? "" : ", ") + U(names[k]);
+    }
+    if (names.size() > most) {
+        out += wxString::Format(_(" and %d more"), static_cast<int>(names.size() - most));
+    }
+    return out;
+}
+
+wxString ColourNames(const std::vector<std::string>& hexes) {
+    wxString out;
+    std::set<std::string> seen;
+    for (const std::string& h : hexes) {
+        const std::string family = ColorFamilyId(ColorFamily(OklchOfHex(h)));
+        if (seen.insert(family).second) {
+            out += (out.empty() ? "" : ", ") + ColorFamilyWords(family);
+        }
+    }
+    return out;
+}
+
+// A scene in plain words: what it wants to say, its colours, who carries them, what it keeps.
+wxString SceneText(const ChromaticScenePlan& s, const ChromaticScore& score) {
+    (void)score;
+    wxString out = wxString::Format(_("From %s to %s (%s): it %s."), ClockText(s.startMS), ClockText(s.endMS), PartWords(s.sectionKind), IntentWords(s.intent)) + "\n";
+    if (!s.motif.empty()) {
+        out += wxString::Format(_("Colour idea %s: %s."), U(s.motif), OperationWords(s.motifOperation)) + "\n";
+    }
+    const wxString ranges = s.hueBudget <= 1 ? _("all from one range of neighbouring hues") : s.hueBudget == 2 ? _("from two ranges of hues") : _("from three ranges of hues");
+    out += wxString::Format(_("Colours in use: %s (%s)"), ColourNames(UsedColors(s)), ranges) + "\n";
+    if (!s.kept.empty()) {
+        out += wxString::Format(_("It keeps: %s"), ColourNames(s.kept)) + "\n";
+    }
+    if (!s.introduced.empty()) {
+        out += wxString::Format(_("It brings: %s"), ColourNames(s.introduced)) + "\n";
+    }
+    if (!s.protagonist.empty()) {
+        out += wxString::Format(_("Carried by: %s"), U(s.protagonist)) + "\n";
+    }
+    if (!s.companions.empty()) {
+        out += wxString::Format(_("Accompanied by: %s"), Names(s.companions)) + "\n";
+    }
+    if (!s.discreet.empty()) {
+        out += wxString::Format(_("Discreet: %s"), Names(s.discreet)) + "\n";
+    }
+    if (!s.feeling.empty()) {
+        out += wxString::Format(_("According to %s, this part feels %s."), SourceWords(s.feelingSource), FeelingWords(s.feeling)) + "\n";
+    }
+    std::map<std::string, std::vector<std::string>> byRole;
+    for (const FigureColorRole& r : s.figures) {
+        byRole[r.role].push_back(r.figure);
+    }
+    for (const char* role : { "main", "complement", "accent", "response", "decorative", "background", "identity", "manual" }) {
+        if (const auto it = byRole.find(role); it != byRole.end()) {
+            out += Words(ColorRolePhrase(role)) + ": " + Names(it->second, 5) + "\n";
+        }
+    }
+    for (const GestureChromaticProfile& g : s.gestures) {
+        out += wxString::Format(_("Gesture at %s: %s, in %s"), ClockText(std::strtol(g.gesture.substr(g.gesture.find('@') + 1).c_str(), nullptr, 10)), GestureIntentWords(g.intent),
+                                ColorFamilyWords(ColorFamilyId(ColorFamily(OklchOfHex(g.front))))) +
+               "\n";
+    }
+    out += wxString::Format(_("Into the next scene: %s."), Words(ChromaticTransitionPhrase(s.toNext.kind))) + "\n";
+    return out;
 }
 
 } // namespace
@@ -247,6 +376,7 @@ std::vector<TimelineColors> TimelineColorsOf(const ChromaticScore& score) {
             }
         }
         c.manual = sp.manual;
+        c.label = sp.motif.empty() ? std::string() : sp.motif + (sp.motifOperation == "recall" ? "=" : sp.motifOperation == "intensify" ? "+" : sp.motifOperation == "transform" ? "~" : "");
         out.push_back(c);
     }
     return out;
@@ -270,14 +400,14 @@ ColorDirectorPanel::ColorDirectorPanel(wxWindow* parent) :
     song->Add(_songText, 1, wxALIGN_CENTER_VERTICAL);
     sizer->Add(song, 0, wxEXPAND | wxBOTTOM, 4);
     auto* body = new wxBoxSizer(wxHORIZONTAL);
-    _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(470, 170), wxLC_REPORT | wxLC_SINGLE_SEL);
+    _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(500, 180), wxLC_REPORT | wxLC_SINGLE_SEL);
     _images = new wxImageList(64, 14, false);
     _list->SetImageList(_images, wxIMAGE_LIST_SMALL);
-    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("Colours"), 90 }, { _("From"), 50 }, { _("Part"), 80 }, { _("How the colours go"), 170 }, { _("Changed"), 70 } }) {
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("Colours"), 90 }, { _("From"), 50 }, { _("Part"), 80 }, { _("Motif"), 55 }, { _("What it does"), 150 }, { _("Changed"), 65 } }) {
         _list->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
     body->Add(_list, 3, wxEXPAND | wxRIGHT, 6);
-    _detail = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(300, 170), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
+    _detail = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(300, 180), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
     body->Add(_detail, 2, wxEXPAND);
     sizer->Add(body, 1, wxEXPAND | wxBOTTOM, 4);
     const auto button = [&](wxSizer* row, const wxString& label, std::function<void()> action) {
@@ -286,44 +416,45 @@ ColorDirectorPanel::ColorDirectorPanel(wxWindow* parent) :
         row->Add(b, 0, wxRIGHT, 4);
     };
     auto* edits = new wxBoxSizer(wxHORIZONTAL);
-    button(edits, _("Change a Colour..."), [this]() { AskColor(); });
-    button(edits, _("Fix This Palette"), [this]() {
-        if (const ChromaticScenePlan* s = Scene()) {
-            std::string value;
-            for (const PaletteColor& c : s->palette.colors) {
-                value += (value.empty() ? "" : ";") + c.role + "=" + c.hex;
-            }
-            (void)Edit({ "lock-palette", s->startMS, "", "", value, "" });
+    button(edits, _("Keep This Identity"), [this]() { (void)KeepIdentity(); });
+    button(edits, _("Bring a Motif Back..."), [this]() {
+        if (_score.motifDefs.empty()) {
+            return;
+        }
+        wxArrayString choices;
+        for (const ChromaticMotif& m : _score.motifDefs) {
+            choices.Add(wxString::Format("%s - %s", U(m.id), MotifKindWords(m.kind)));
+        }
+        const int pick = wxGetSingleChoiceIndex(_("Which colour idea should come back in this scene?"), _("Art Direction"), choices, this);
+        if (pick >= 0) {
+            (void)RecallMotif(_score.motifDefs[static_cast<size_t>(pick)].id);
         }
     });
+    button(edits, _("Fewer Colours"), [this]() { (void)FewerColours(); });
     button(edits, _("More Contrast"), [this]() {
         if (const ChromaticScenePlan* s = Scene()) {
             (void)Edit({ "more-contrast", s->startMS, "", "", "", "" });
         }
     });
-    button(edits, _("Less Contrast"), [this]() {
-        if (const ChromaticScenePlan* s = Scene()) {
-            (void)Edit({ "less-contrast", s->startMS, "", "", "", "" });
-        }
-    });
-    button(edits, _("One Family Only"), [this]() {
-        if (const ChromaticScenePlan* s = Scene()) {
-            (void)Edit({ s->monochrome ? "no-monochrome" : "monochrome", s->startMS, "", "", "", "" });
-        }
-    });
+    button(edits, _("Fewer Accents"), [this]() { (void)FewerAccents(); });
     sizer->Add(edits, 0, wxBOTTOM, 4);
-    auto* tools = new wxBoxSizer(wxHORIZONTAL);
-    button(tools, _("Undo the Last Change"), [this]() { (void)Undo(); });
-    button(tools, _("Back to the Original Plan"), [this]() {
-        if (wxMessageBox(_("Drop every change you made to the colours of this song?"), _("Colour Director"), wxYES_NO | wxICON_QUESTION, this) == wxYES) {
+    auto* edits2 = new wxBoxSizer(wxHORIZONTAL);
+    button(edits2, _("Change the Main Colour..."), [this]() { AskColor(); });
+    button(edits2, _("Fix This Combination"), [this]() { (void)FixCombination(); });
+    button(edits2, _("Undo the Last Change"), [this]() { (void)Undo(); });
+    button(edits2, _("Back to the Original Plan"), [this]() {
+        if (wxMessageBox(_("Drop every change you made to the colours of this song?"), _("Art Direction"), wxYES_NO | wxICON_QUESTION, this) == wxYES) {
             (void)Reset();
         }
     });
-    button(tools, _("Apply the Changes"), [this]() {
+    button(edits2, _("Apply the Changes"), [this]() {
         if (onRecompose) {
             onRecompose();
         }
     });
+    sizer->Add(edits2, 0, wxBOTTOM, 4);
+    auto* tools = new wxBoxSizer(wxHORIZONTAL);
+    button(tools, _("Compare Scenes..."), [this]() { CompareScenes(); });
     button(tools, _("Colours of the Figures..."), [this]() { OpenFigures(); });
     button(tools, _("Colours of the Show..."), [this]() { OpenReview(); });
     sizer->Add(tools, 0);
@@ -417,16 +548,17 @@ void ColorDirectorPanel::Fill() {
         return;
     }
     _song->SetColors(MainColors(_score.song));
-    _songText->SetLabel(Words(HarmonyPhrase(_score.song.harmony)) + " - " + wxString::Format(_("reading of the song: %s"), SourceWords(_score.briefSource)));
+    _songText->SetLabel(wxString::Format(_("reading of the song: %s"), SourceWords(_score.briefSource)));
     for (const ChromaticScenePlan& s : _score.scenes) {
-        const int image = _images->Add(PaletteBitmap(MainColors(s.palette), 64, 14));
+        const int image = _images->Add(PaletteBitmap(UsedColors(s), 64, 14));
         const long row = _list->InsertItem(_list->GetItemCount(), "", image);
         _list->SetItem(row, 1, ClockText(s.startMS));
         _list->SetItem(row, 2, PartWords(s.sectionKind));
-        _list->SetItem(row, 3, Words(HarmonyPhrase(s.palette.harmony)) + (s.monochrome ? wxString(" ") + _("(on purpose)") : wxString()));
-        _list->SetItem(row, 4, s.manual ? _("By you") : "");
+        _list->SetItem(row, 3, U(s.motif));
+        _list->SetItem(row, 4, OperationWords(s.motifOperation));
+        _list->SetItem(row, 5, s.manual ? _("By you") : "");
     }
-    wxString state = wxString::Format(_("%d scenes with their own palette, from one family for the whole song."), static_cast<int>(_score.scenes.size()));
+    wxString state = wxString::Format(_("%d scenes; %d colour ideas that come and go through the song."), static_cast<int>(_score.scenes.size()), static_cast<int>(_score.motifDefs.size()));
     if (!_edits.edits.empty()) {
         state += " " + wxString::Format(_("%d changes of yours are saved; press \"Apply the Changes\" to see them."), static_cast<int>(_edits.edits.size()));
     }
@@ -444,44 +576,56 @@ wxString ColorDirectorPanel::Detail() const {
 void ColorDirectorPanel::ShowScene() {
     const ChromaticScenePlan* s = Scene();
     if (s == nullptr) {
-        _detail->SetValue(_("Choose a scene to see its colours, which figure carries each one and why."));
+        _detail->SetValue(_("Choose a scene to see what it wants to say, its colours, who carries them and why."));
         return;
     }
-    wxString out = wxString::Format(_("From %s to %s: %s."), ClockText(s->startMS), ClockText(s->endMS), EvolutionWords(s->evolution)) + "\n";
-    out += Words(HarmonyPhrase(s->palette.harmony)) + (s->monochrome ? wxString(" - ") + _("one family on purpose: the light changes, the colour holds") : wxString()) + "\n";
+    _detail->SetValue(SceneText(*s, _score));
+}
+
+std::string ColorDirectorPanel::KeepIdentity() {
+    const ChromaticScenePlan* s = Scene();
+    return s == nullptr ? std::string("no-scene") : Edit({ "keep-identity", s->startMS, "", "", "", "" });
+}
+
+std::string ColorDirectorPanel::RecallMotif(const std::string& motif) {
+    const ChromaticScenePlan* s = Scene();
+    return s == nullptr ? std::string("no-scene") : Edit({ "recall-motif", s->startMS, "", "", motif, "" });
+}
+
+std::string ColorDirectorPanel::FewerColours() {
+    const ChromaticScenePlan* s = Scene();
+    return s == nullptr ? std::string("no-scene") : Edit({ "fewer-colours", s->startMS, "", "", "", "" });
+}
+
+std::string ColorDirectorPanel::FewerAccents() {
+    const ChromaticScenePlan* s = Scene();
+    return s == nullptr ? std::string("no-scene") : Edit({ "fewer-accents", s->startMS, "", "", "", "" });
+}
+
+std::string ColorDirectorPanel::FixCombination() {
+    const ChromaticScenePlan* s = Scene();
+    if (s == nullptr) {
+        return "no-scene";
+    }
+    std::string value;
     for (const PaletteColor& c : s->palette.colors) {
-        if (c.role == "anchor" || c.role == "secondary" || c.role == "accent" || c.role == "contrast") {
-            out += "  " + Words(PaletteRolePhrase(c.role)) + ": " + ColorFamilyWords(ColorFamilyId(ColorFamily(OklchOfHex(c.hex)))) + " (" + U(c.hex) + ")\n";
-        }
+        value += (value.empty() ? "" : ";") + c.role + "=" + c.hex;
     }
-    if (!s->feeling.empty()) {
-        out += wxString::Format(_("According to %s, this part feels %s."), SourceWords(s->feelingSource), FeelingWords(s->feeling)) + "\n";
+    return Edit({ "lock-palette", s->startMS, "", "", value, "" });
+}
+
+std::string ColorDirectorPanel::ChangeMainColour(const std::string& hex) {
+    const ChromaticScenePlan* s = Scene();
+    return s == nullptr ? std::string("no-scene") : Edit({ "color", s->startMS, "", "anchor", hex, "" });
+}
+
+void ColorDirectorPanel::CompareScenes() {
+    if (_score.scenes.size() < 2) {
+        return;
     }
-    std::map<std::string, std::vector<std::string>> byRole;
-    for (const FigureColorRole& r : s->figures) {
-        byRole[r.role].push_back(r.figure);
-    }
-    for (const char* role : { "main", "complement", "accent", "response", "decorative", "background", "identity", "manual" }) {
-        const auto it = byRole.find(role);
-        if (it == byRole.end()) {
-            continue;
-        }
-        wxString names;
-        for (size_t k = 0; k < it->second.size() && k < 5; ++k) {
-            names += (k == 0 ? "" : ", ") + U(it->second[k]);
-        }
-        if (it->second.size() > 5) {
-            names += wxString::Format(_(" and %d more"), static_cast<int>(it->second.size() - 5));
-        }
-        out += Words(ColorRolePhrase(role)) + ": " + names + "\n";
-    }
-    for (const GestureChromaticProfile& g : s->gestures) {
-        out += wxString::Format(_("Gesture at %s: %s over %d colours lit (%.0f points of difference)"), ClockText(std::strtol(g.gesture.substr(g.gesture.find('@') + 1).c_str(), nullptr, 10)),
-                                U(g.front), static_cast<int>(g.background.size()), g.contrast) +
-               "\n";
-    }
-    out += wxString::Format(_("Into the next scene: %s."), Words(ChromaticTransitionPhrase(s->toNext.kind))) + "\n";
-    _detail->SetValue(out);
+    const int first = std::max(0, _scene);
+    SceneCompareDialog d(this, _score, first, first + 1 < static_cast<int>(_score.scenes.size()) ? first + 1 : first - 1);
+    d.ShowModal();
 }
 
 bool ColorDirectorPanel::SelectScene(int index) {
@@ -554,27 +698,16 @@ std::string ColorDirectorPanel::Reset() {
 void ColorDirectorPanel::AskColor() {
     const ChromaticScenePlan* s = Scene();
     if (s == nullptr) {
-        wxMessageBox(_("Choose a scene first."), _("Colour Director"), wxOK | wxICON_INFORMATION, this);
-        return;
-    }
-    const std::vector<std::string> roles = { "anchor", "secondary", "accent", "contrast" };
-    wxArrayString choices;
-    for (const std::string& r : roles) {
-        choices.Add(Words(PaletteRolePhrase(r)) + " (" + U(s->palette.Hex(r)) + ")");
-    }
-    const int pick = wxGetSingleChoiceIndex(_("Which colour of this scene do you want to change?"), _("Colour Director"), choices, this);
-    if (pick < 0) {
+        wxMessageBox(_("Choose a scene first."), _("Art Direction"), wxOK | wxICON_INFORMATION, this);
         return;
     }
     wxColourData data;
-    data.SetColour(wxColour(U(s->palette.Hex(roles[static_cast<size_t>(pick)]))));
+    data.SetColour(wxColour(U(s->palette.Hex("anchor"))));
     wxColourDialog dialog(this, &data);
     if (dialog.ShowModal() != wxID_OK) {
         return;
     }
-    const wxColour c = dialog.GetColourData().GetColour();
-    (void)Edit({ roles[static_cast<size_t>(pick)] == "accent" ? "accent" : "color", s->startMS, "", roles[static_cast<size_t>(pick)] == "accent" ? "" : roles[static_cast<size_t>(pick)],
-                 S(c.GetAsString(wxC2S_HTML_SYNTAX)), "" });
+    (void)ChangeMainColour(S(dialog.GetColourData().GetColour().GetAsString(wxC2S_HTML_SYNTAX)));
 }
 
 void ColorDirectorPanel::OpenFigures() {
@@ -590,7 +723,7 @@ void ColorDirectorPanel::OpenReview() {
         wxMessageBox(_("Generate the show first: its colours are measured on xLights' own render."), _("Colours of the Show"), wxOK | wxICON_INFORMATION, this);
         return;
     }
-    ColorReviewDialog d(this, *r);
+    ColorReviewDialog d(this, *r, resultFseq ? resultFseq() : std::string());
     d.ShowModal();
 }
 
@@ -821,7 +954,7 @@ ColorCheck ReadCheck(const std::string& text) {
 
 } // namespace
 
-ColorReviewDialog::ColorReviewDialog(wxWindow* parent, const ReportFolder& report) :
+ColorReviewDialog::ColorReviewDialog(wxWindow* parent, const ReportFolder& report, const std::string& fseqPath) :
     wxDialog(parent, wxID_ANY, _("Colours of the Show"), wxDefaultPosition, wxSize(900, 720), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER) {
     _check = ReadCheck(report.colorCheck);
     std::string error;
@@ -834,6 +967,9 @@ ColorReviewDialog::ColorReviewDialog(wxWindow* parent, const ReportFolder& repor
     sizer->Add(new EvolutionStrip(this, _score, _check), 0, wxEXPAND | wxALL, 8);
     _summary = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, 130), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
     sizer->Add(_summary, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    sizer->Add(new wxStaticText(this, wxID_ANY, _("The composition, in words (signs, never a grade):")), 0, wxLEFT | wxRIGHT | wxTOP, 8);
+    _composition = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, 90), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
+    sizer->Add(_composition, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
     auto* lists = new wxBoxSizer(wxHORIZONTAL);
     _scenes = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 300), wxLC_REPORT | wxLC_SINGLE_SEL);
     auto* sceneImages = new wxImageList(60, 14, false);
@@ -872,8 +1008,43 @@ ColorReviewDialog::ColorReviewDialog(wxWindow* parent, const ReportFolder& repor
     }
     lists->Add(_figures, 1, wxEXPAND);
     sizer->Add(lists, 1, wxEXPAND | wxALL, 8);
-    sizer->Add(new wxButton(this, wxID_OK, _("Close")), 0, wxALIGN_RIGHT | wxALL, 8);
+    auto* end = new wxBoxSizer(wxHORIZONTAL);
+    auto* house = new wxButton(this, wxID_ANY, _("See This Scene in the House..."));
+    house->Enable(!fseqPath.empty() && !report.stageLights.empty());
+    end->Add(house, 0);
+    end->AddStretchSpacer();
+    end->Add(new wxButton(this, wxID_OK, _("Close")), 0);
+    sizer->Add(end, 0, wxEXPAND | wxALL, 8);
     SetSizer(sizer);
+    house->Bind(wxEVT_BUTTON, [this, &report, fseqPath](wxCommandEvent&) {
+        const long i = _scenes->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        const SceneColor* s = i >= 0 && i < static_cast<long>(_check.scenes.size()) ? &_check.scenes[static_cast<size_t>(i)] : nullptr;
+        StageMapDialog d(this, report, fseqPath, s == nullptr ? 0 : (s->startMS + s->endMS) / 2);
+        d.ShowModal();
+    });
+    {
+        const nlohmann::json root = nlohmann::json::parse(report.composition, nullptr, false);
+        wxString words;
+        static const std::map<std::string, wxString> NAMES = { { "cohesion", _("Cohesion") }, { "variety", _("Variety") }, { "contrast", _("Contrast") }, { "hierarchy", _("Hierarchy") },
+                                                               { "continuity", _("Continuity") }, { "identity", _("Identity of the song") }, { "motifs", _("Motifs") },
+                                                               { "distribution", _("Colours per figure") }, { "overload", _("Overload") }, { "gestures", _("Gestures") } };
+        static const std::map<std::string, wxString> READINGS = {
+            { "cohesive", _("cohesive") }, { "related", _("related colours") }, { "scattered", _("scattered") }, { "repetitive", _("repetitive") }, { "evolving", _("evolving") },
+            { "restless", _("restless") }, { "flat", _("flat") }, { "clear", _("clear") }, { "harsh", _("harsh") }, { "clear lead", _("a clear lead") }, { "shared", _("shared") },
+            { "no lead", _("no lead") }, { "one idea per figure", _("one idea per figure") }, { "some busy figures", _("some busy figures") }, { "busy figures", _("busy figures") },
+            { "none", _("none") }, { "a few scenes", _("a few scenes") }, { "many scenes", _("many scenes") }, { "blend in", _("blend in") }, { "read", _("can be read") },
+            { "jump out", _("jump out") }, { "a steady thread", _("a steady thread") }, { "a thread with turns", _("a thread with turns") }, { "many new ideas", _("many new ideas") },
+            { "recurring", _("recurring") }, { "not recalled", _("never recalled") }, { "present", _("present") }, { "lost", _("lost") }
+        };
+        for (const nlohmann::json& sign : root.is_object() ? root.value("signs", nlohmann::json::array()) : nlohmann::json::array()) {
+            const std::string id = sign.value("id", std::string());
+            const std::string reading = sign.value("reading", std::string());
+            const auto n = NAMES.find(id);
+            const auto r = READINGS.find(reading);
+            words += (n != NAMES.end() ? n->second : U(id)) + ": " + (r != READINGS.end() ? r->second : U(reading)) + "\n";
+        }
+        _composition->SetValue(words.IsEmpty() ? _("No reading of the composition for this show.") : words);
+    }
     if (!_check.ran) {
         _summary->SetValue(_("The colours of this show were not measured: generate it with the render check on."));
         return;
@@ -908,6 +1079,10 @@ int ColorReviewDialog::SceneRows() const {
 
 int ColorReviewDialog::FigureRows() const {
     return _figures->GetItemCount();
+}
+
+wxString ColorReviewDialog::Composition() const {
+    return _composition->GetValue();
 }
 
 // ============================================================ Groq check
@@ -980,3 +1155,266 @@ ArtisticCheckDialog::ArtisticCheckDialog(wxWindow* parent, const ArtisticCheck& 
 wxString ArtisticCheckDialog::Text() const {
     return _text->GetValue();
 }
+
+// ============================================================ phase 19 dialogs
+
+SceneCompareDialog::SceneCompareDialog(wxWindow* parent, const ChromaticScore& score, int first, int second) :
+    wxDialog(parent, wxID_ANY, _("Compare Scenes"), wxDefaultPosition, wxSize(820, 560), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    _score(score) {
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    auto* row = new wxBoxSizer(wxHORIZONTAL);
+    wxArrayString names;
+    for (const ChromaticScenePlan& s : score.scenes) {
+        names.Add(wxString::Format("%s %s", ClockText(s.startMS), PartWords(s.sectionKind)));
+    }
+    _a = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, names);
+    _b = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, names);
+    row->Add(_a, 1, wxRIGHT, 8);
+    row->Add(_b, 1);
+    sizer->Add(row, 0, wxEXPAND | wxALL, 8);
+    _text = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, 420), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
+    sizer->Add(_text, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    sizer->Add(new wxButton(this, wxID_OK, _("Close")), 0, wxALIGN_RIGHT | wxALL, 8);
+    SetSizer(sizer);
+    const auto changed = [this](wxCommandEvent&) { ShowScenes(_a->GetSelection(), _b->GetSelection()); };
+    _a->Bind(wxEVT_CHOICE, changed);
+    _b->Bind(wxEVT_CHOICE, changed);
+    ShowScenes(first, second);
+}
+
+void SceneCompareDialog::ShowScenes(int first, int second) {
+    const int n = static_cast<int>(_score.scenes.size());
+    if (n == 0) {
+        return;
+    }
+    first = std::clamp(first, 0, n - 1);
+    second = std::clamp(second, 0, n - 1);
+    _a->SetSelection(first);
+    _b->SetSelection(second);
+    const ChromaticScenePlan& a = _score.scenes[static_cast<size_t>(first)];
+    const ChromaticScenePlan& b = _score.scenes[static_cast<size_t>(second)];
+    wxString out = SceneText(a, _score) + "\n----------------------------------------\n\n" + SceneText(b, _score) + "\n";
+    out += a.motif == b.motif && !a.motif.empty() ? wxString::Format(_("Both scenes use the colour idea %s."), U(a.motif)) : _("Each scene has its own colour idea.");
+    out += "\n";
+    int shared = 0;
+    for (const std::string& x : UsedColors(a)) {
+        for (const std::string& y : UsedColors(b)) {
+            shared += DeltaE(x, y) < 8 ? 1 : 0;
+        }
+    }
+    out += wxString::Format(_("They share %d colours."), shared) + "\n";
+    _text->SetValue(out);
+}
+
+wxString SceneCompareDialog::Text() const {
+    return _text->GetValue();
+}
+
+wxString ChangeWords(const std::string& kind) {
+    static const std::map<std::string, wxString> W = { { "colour", _("Colours changed") }, { "effect", _("Effect replaced or added") }, { "layer-added", _("Layer added") },
+                                                       { "layer-removed", _("Effect taken out") }, { "intensity", _("Brighter or dimmer") }, { "timing", _("Moved in time") },
+                                                       { "figure-added", _("Figure brought in") }, { "figure-removed", _("Figure left dark") } };
+    const auto it = W.find(kind);
+    return it != W.end() ? it->second : U(kind);
+}
+
+// Why a change was found, from what it holds (the core's own reason is for the logs).
+wxString ChangeReasonWords(const SequenceChange& c) {
+    const auto split = [](const std::string& joined) {
+        std::vector<std::string> out;
+        std::istringstream in(joined);
+        for (std::string hex; in >> hex;) {
+            out.push_back(hex);
+        }
+        return out;
+    };
+    if (c.kind == "colour") {
+        const wxString before = ColourNames(split(c.before));
+        const wxString after = ColourNames(split(c.after));
+        const wxString lesson = c.sign > 0 ? _("fewer colours together") : c.sign < 0 ? _("more colours together") : _("other colours, as many");
+        return wxString::Format(_("before %s, now %s (%s)"), before, after, lesson);
+    }
+    if (c.kind == "intensity") {
+        return c.sign > 0 ? _("brighter") : _("dimmer");
+    }
+    if (c.kind == "timing") {
+        return _("moved or made longer or shorter");
+    }
+    if (c.kind == "effect") {
+        return c.before.empty() ? wxString::Format(_("%s was added"), U(c.after)) : wxString::Format(_("%s instead of %s"), U(c.after), U(c.before));
+    }
+    if (c.kind == "layer-added") {
+        return wxString::Format(_("%s on top"), U(c.after));
+    }
+    if (c.kind == "layer-removed" || c.kind == "figure-removed") {
+        return wxString::Format(_("%s taken out"), U(c.before));
+    }
+    if (c.kind == "figure-added") {
+        return wxString::Format(_("%s, where the show left it dark"), U(c.after));
+    }
+    return U(c.why);
+}
+
+wxString ObservationWords(const std::string& kind) {
+    static const std::map<std::string, wxString> W = { { "too-many-colours", _("Too many colours") }, { "incoherent", _("Colours do not belong together") },
+                                                       { "wrong-main-colour", _("Wrong main colour") }, { "good-contrast", _("Good contrast") },
+                                                       { "accents-excessive", _("Too many accents") }, { "inelegant-transition", _("Clumsy change of colour") },
+                                                       { "keep-combination", _("Keep this combination") }, { "recall-motif", _("Bring back an earlier motif") },
+                                                       { "figure-stand-out", _("This figure should stand out") }, { "figure-rest", _("This figure should rest") } };
+    const auto it = W.find(kind);
+    return it != W.end() ? it->second : U(kind);
+}
+
+CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison& comparison) :
+    wxDialog(parent, wxID_ANY, _("Your Corrected Version"), wxDefaultPosition, wxSize(860, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    _comparison(comparison) {
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(Muted(this, wxString::Format(_("%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: tick only what the next shows should learn. A taste needs two shows before it acts, and can be undone in \"What Has Been Learned\"."),
+                                            comparison.generatedEffects, comparison.correctedEffects, comparison.matched)),
+               0, wxALL, 8);
+    wxArrayString rows;
+    for (size_t i = 0; i < comparison.changes.size(); ++i) {
+        const SequenceChange& c = comparison.changes[i];
+        rows.Add(wxString::Format("%s - %s, %s: %s%s", ClockText(c.startMS), U(c.figure), ChangeWords(c.kind), ChangeReasonWords(c), c.suggestion.empty() ? wxString(" ") + _("(nothing to learn)") : wxString()));
+        _rows.push_back(i);
+    }
+    _list = new wxCheckListBox(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 440), rows);
+    sizer->Add(_list, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    buttons->AddStretchSpacer();
+    buttons->Add(new wxButton(this, wxID_OK, _("Learn What I Ticked")), 0, wxRIGHT, 4);
+    buttons->Add(new wxButton(this, wxID_CANCEL, _("Close")), 0);
+    sizer->Add(buttons, 0, wxEXPAND | wxALL, 8);
+    SetSizer(sizer);
+}
+
+int CorrectionsDialog::Rows() const {
+    return static_cast<int>(_list->GetCount());
+}
+
+void CorrectionsDialog::Pick(size_t index, bool picked) {
+    if (index < _list->GetCount()) {
+        _list->Check(static_cast<unsigned>(index), picked);
+    }
+}
+
+std::vector<size_t> CorrectionsDialog::Picked() const {
+    std::vector<size_t> out;
+    for (unsigned i = 0; i < _list->GetCount(); ++i) {
+        if (_list->IsChecked(i)) {
+            out.push_back(_rows[i]);
+        }
+    }
+    return out;
+}
+
+ObservationsDialog::ObservationsDialog(wxWindow* parent, const ChromaticScore& score, std::vector<ArtisticObservation> observations, const std::string& reviewer) :
+    wxDialog(parent, wxID_ANY, _("Observations with Their Place"), wxDefaultPosition, wxSize(820, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    _score(score),
+    _observations(std::move(observations)) {
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(Muted(this, _("Say what you noticed and where. Some observations teach the next shows (after two shows); others are decisions for this song only, applied to its colours when you confirm them.")),
+               0, wxALL, 8);
+    auto* who = new wxBoxSizer(wxHORIZONTAL);
+    who->Add(new wxStaticText(this, wxID_ANY, _("Who observes:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    _reviewer = new wxTextCtrl(this, wxID_ANY, U(reviewer), wxDefaultPosition, wxSize(200, -1));
+    who->Add(_reviewer, 0);
+    sizer->Add(who, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    auto* grid = new wxFlexGridSizer(2, 6, 8);
+    wxArrayString kinds;
+    for (const std::string& k : ArtisticObservationKinds()) {
+        kinds.Add(ObservationWords(k));
+    }
+    _kind = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, kinds);
+    _kind->SetSelection(0);
+    wxArrayString scenes;
+    scenes.Add(_("The whole song"));
+    for (const ChromaticScenePlan& s : score.scenes) {
+        scenes.Add(wxString::Format("%s %s", ClockText(s.startMS), PartWords(s.sectionKind)));
+    }
+    _scene = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, scenes);
+    _scene->SetSelection(0);
+    std::set<std::string> names;
+    for (const ChromaticScenePlan& s : score.scenes) {
+        for (const FigureColorRole& r : s.figures) {
+            names.insert(r.figure);
+        }
+    }
+    wxArrayString figures;
+    figures.Add(_("No figure"));
+    for (const std::string& n : names) {
+        figures.Add(U(n));
+    }
+    _figure = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, figures);
+    _figure->SetSelection(0);
+    _note = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(360, -1));
+    grid->Add(new wxStaticText(this, wxID_ANY, _("What:")), 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(_kind, 0);
+    grid->Add(new wxStaticText(this, wxID_ANY, _("Where in the song:")), 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(_scene, 0);
+    grid->Add(new wxStaticText(this, wxID_ANY, _("Which figure:")), 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(_figure, 0);
+    grid->Add(new wxStaticText(this, wxID_ANY, _("Note:")), 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(_note, 0);
+    sizer->Add(grid, 0, wxLEFT | wxRIGHT, 8);
+    auto* add = new wxButton(this, wxID_ANY, _("Add the Observation"));
+    sizer->Add(add, 0, wxALL, 8);
+    _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 220), wxLC_REPORT | wxLC_SINGLE_SEL);
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("What"), 230 }, { _("Where"), 120 }, { _("Figure"), 160 }, { _("Teaches or decides"), 220 } }) {
+        _list->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
+    }
+    sizer->Add(_list, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
+    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    auto* remove = new wxButton(this, wxID_ANY, _("Remove the Selected One"));
+    buttons->Add(remove, 0);
+    buttons->AddStretchSpacer();
+    buttons->Add(new wxButton(this, wxID_OK, _("Save")), 0, wxRIGHT, 4);
+    buttons->Add(new wxButton(this, wxID_CANCEL, _("Cancel")), 0);
+    sizer->Add(buttons, 0, wxEXPAND | wxALL, 8);
+    SetSizer(sizer);
+    add->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        ArtisticObservation o;
+        o.kind = ArtisticObservationKinds()[static_cast<size_t>(std::max(0, _kind->GetSelection()))];
+        o.sceneStartMS = _scene->GetSelection() <= 0 ? -1 : _score.scenes[static_cast<size_t>(_scene->GetSelection() - 1)].startMS;
+        o.figure = _figure->GetSelection() <= 0 ? std::string() : S(_figure->GetStringSelection());
+        o.note = S(_note->GetValue());
+        if (!Add(o)) {
+            wxMessageBox(o.kind == "keep-combination" ? _("Say in which scene.") : _("Say which figure."), _("Observations with Their Place"), wxOK | wxICON_INFORMATION, this);
+        }
+    });
+    remove->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        const long i = _list->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        if (i >= 0 && i < static_cast<long>(_observations.size())) {
+            _observations.erase(_observations.begin() + i);
+            Fill();
+        }
+    });
+    Fill();
+}
+
+bool ObservationsDialog::Add(const ArtisticObservation& o) {
+    if ((o.kind == "figure-stand-out" || o.kind == "figure-rest") && o.figure.empty()) {
+        return false;
+    }
+    if (o.kind == "keep-combination" && o.sceneStartMS < 0) {
+        return false;
+    }
+    _observations.push_back(o);
+    Fill();
+    return true;
+}
+
+std::string ObservationsDialog::Reviewer() const {
+    return S(_reviewer->GetValue());
+}
+
+void ObservationsDialog::Fill() {
+    _list->DeleteAllItems();
+    for (const ArtisticObservation& o : _observations) {
+        const long row = _list->InsertItem(_list->GetItemCount(), ObservationWords(o.kind));
+        _list->SetItem(row, 1, o.sceneStartMS < 0 ? _("The whole song") : ClockText(o.sceneStartMS));
+        _list->SetItem(row, 2, U(o.figure));
+        _list->SetItem(row, 3, ObservationIsSongDecision(o) ? _("A decision for this song") : _("Teaches the next shows"));
+    }
+}
+

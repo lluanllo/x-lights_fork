@@ -22,8 +22,10 @@
 // written as the "#RRGGBB" xLights uses, always inside its gamut.
 namespace composer {
 
-inline constexpr int CHROMATIC_SCORE_SCHEMA_VERSION = 1;
-inline constexpr const char* CHROMATIC_DIRECTOR_VERSION = "1.0.0";
+// 2 (phase 19): a hue budget per scene, the colours each scene really uses, recurring
+// motifs with what each scene does with them, and the scene's artistic intention.
+inline constexpr int CHROMATIC_SCORE_SCHEMA_VERSION = 2;
+inline constexpr const char* CHROMATIC_DIRECTOR_VERSION = "2.0.0";
 
 struct CompositionPlan;
 struct SongAnalysis;
@@ -108,6 +110,25 @@ struct GestureChromaticProfile {
     std::string colorBy;   // FieldSpec::colorBy
     std::vector<std::string> background; // the colours lit under it on its figures
     double contrast = 0;   // ΔE between its front and the closest of the background colours
+    // What the gesture does with the scene's colours: "reinforce" (the scene's own hue,
+    // lighter), "accent" (the accent, kept for strong moments), "transform" (the next
+    // scene's colour, preparing it) or "resolve" (back to the identity).
+    std::string intent;
+    std::string why;
+};
+
+// A colour idea that comes back: presented once, then recalled, developed, made more
+// intense, transformed or resolved, so the song has a visual thread and not only
+// scenes with different palettes.
+struct ChromaticMotif {
+    std::string id;          // "A", "B"...
+    std::string kind;        // "identity", "contrast", "transformed"
+    std::string anchor;      // its main colour
+    std::string second;      // the colour it brings with the main one ("" none)
+    std::string accent;
+    std::string from;        // the motif it grew from ("" the first)
+    std::string firstScene;
+    std::vector<std::string> scenes; // where it appears
     std::string why;
 };
 
@@ -128,6 +149,19 @@ struct ChromaticScenePlan {
     bool monochrome = false; // in one family on purpose
     std::string evolution;   // "establish", "develop", "expand", "shift", "climax", "resolve", "return", "hold", "rest"
     std::string motif;       // "motif:<repeat group>": a returning part comes back to its colours
+    // The art direction (phase 19): how many different hues may live together here, how
+    // many accents the music earns, the colours really used (a grammar over the palette),
+    // what the scene does with its motif, and what it wants to say.
+    int hueBudget = 1;
+    double accentShare = 0;  // of the scene's hits on downbeats, the share that takes the accent
+    std::vector<std::string> used;       // palette roles in use: "anchor", "highlight", "secondary"...
+    std::string motifOperation;          // "present", "develop", "introduce", "recall", "intensify", "transform", "resolve", "hold", "rest"
+    std::string intent;                  // "open", "tell", "lift", "celebrate", "answer", "turn", "close", "rest"
+    std::string protagonist;             // the figure that carries the attention ("" the whole house)
+    std::vector<std::string> companions; // figures that accompany it
+    std::vector<std::string> discreet;   // figures kept in the background
+    std::vector<std::string> kept;       // colours it keeps from the scene before
+    std::vector<std::string> introduced; // colours it brings
     std::string feeling;     // what the interpretation felt in this kind of part ("" none)
     std::string feelingColor; // the colour it suggested for it
     std::string feelingSource; // where the interpretation came from
@@ -144,6 +178,7 @@ struct ChromaticScenePlan {
 struct ChromaticOptions {
     bool enabled = true;
     double variety = 0.5;    // "Variedad cromática": how many colour roles share a scene
+    double style = 0.4;      // "Estilo de color": 0 contained (one hue and its lights), 1 expressive
     double contrast = 0.5;   // "Contraste"
     double accents = 0.5;    // "Intensidad de acentos"
     double evolution = 0.5;  // "Evolución entre escenas": how far the palette moves from scene to scene
@@ -153,6 +188,7 @@ struct ChromaticOptions {
     double warmth = 0;       // -1 cooler, 1 warmer
     double gradual = 0.5;    // slower, softer transitions (1) or quicker (0)
     bool respectIdentity = false; // every figure with parts of its own colour keeps them
+    std::map<std::string, double> figureWeight; // figure -> -1 (rests) .. 1 (stands out), from what the maker taught
     std::vector<std::string> songColors; // the person's colours for the song; first the anchor
     uint64_t seed = 2026;
 };
@@ -168,6 +204,7 @@ struct ChromaticScore {
     std::string mood;
     std::vector<ChromaticScenePlan> scenes;
     std::vector<std::string> motifs;
+    std::vector<ChromaticMotif> motifDefs;
     int edits = 0;
     std::vector<std::string> warnings;
     std::vector<std::string> limits;
@@ -178,7 +215,8 @@ struct ChromaticScore {
 
 // A person's changes to the colours, kept per song and applied after every new score.
 struct ChromaticEdit {
-    std::string action;    // "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome"
+    std::string action;    // "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome",
+                           // "keep-identity" (the scene keeps the one before's colours), "recall-motif" (value: a motif id), "fewer-colours", "fewer-accents"
     int sceneStartMS = -1; // the scene, found again by its start (within 1.5 s); -1: every scene / the song
     std::string figure;    // figure-color, identity, no-identity
     std::string role;      // color: the palette role it replaces ("anchor", "secondary"...)
@@ -215,6 +253,11 @@ struct ChromaticInput {
 // Events a person locked or whose palette a person chose, pictures, videos and faces'
 // own effects are left as they are. Returns notes for the report.
 std::vector<std::string> ApplyChromaticScore(const ChromaticScore& score, Choreography& choreography);
+// The decisions about this song a person's observations ask for (keep this combination,
+// bring this motif back), as edits of its colour plan; nothing is learned for other songs.
+struct ArtisticObservation;
+[[nodiscard]] std::vector<ChromaticEdit> DecisionsFromObservations(const std::vector<ArtisticObservation>& observations, const ChromaticScore& score);
+
 // The gestures' colours and how they spread, into the stage score (before it is realized).
 int ColorGestures(const ChromaticScore& score, GlobalStageScore& stage);
 

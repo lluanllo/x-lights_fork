@@ -36,7 +36,7 @@ msgid " ... Writing fseq."
 msgstr "... Escribiendo fseq."
 
 msgid " and %d more"
-msgstr "y %d más"
+msgstr " y %d más"
 
 msgid "# Blades"
 msgstr "Cuchillas"
@@ -14159,3 +14159,520 @@ msgstr "el almacén seguro de xLights"
 
 msgid "yellow"
 msgstr "amarillo"
+
+msgid "%d changes found in your version."
+msgstr "Se han encontrado %d cambios en tu versión."
+
+msgid "%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: tick only what the next shows should learn. A taste needs two shows before it acts, and can be undone in \"What Has Been Learned\"."
+msgstr "%d efectos en el espectáculo generado, %d en el tuyo, %d se han quedado igual. No todo cambio es un gusto: marca solo lo que deben aprender los próximos espectáculos. Un gusto necesita dos espectáculos antes de actuar y se puede deshacer en «Lo aprendido»."
+
+msgid "%d scenes; %d colour ideas that come and go through the song."
+msgstr "%d escenas; %d ideas de color que van y vuelven a lo largo de la canción."
+
+msgid "(nothing to learn)"
+msgstr "(nada que aprender)"
+
+msgid "A decision for this song"
+msgstr "Una decisión para esta canción"
+
+msgid "Accompanied by: %s"
+msgstr "Acompañan: %s"
+
+msgid "Add the Observation"
+msgstr "Añadir la observación"
+
+msgid "Apply the decisions about this song (keep a combination, bring a motif back) to its colours now?"
+msgstr "¿Aplicar ahora a los colores las decisiones sobre esta canción (mantener una combinación, recuperar un motivo)?"
+
+msgid "Art Direction"
+msgstr "Dirección artística"
+
+msgid "Both scenes use the colour idea %s."
+msgstr "Las dos escenas usan la idea de color %s."
+
+msgid "Brighter or dimmer"
+msgstr "Más brillante o más apagado"
+
+msgid "Bring a Motif Back..."
+msgstr "Recuperar un motivo..."
+
+msgid "Bring back an earlier motif"
+msgstr "Recuperar un motivo anterior"
+
+msgid "Brings a contrast"
+msgstr "Trae un contraste"
+
+msgid "Brings an idea back"
+msgstr "Recupera una idea"
+
+msgid "Brings it back stronger"
+msgstr "La recupera con más fuerza"
+
+msgid "Carried by: %s"
+msgstr "La lleva: %s"
+
+msgid "Change the Main Colour..."
+msgstr "Cambiar el color principal..."
+
+msgid "Choose a scene to see what it wants to say, its colours, who carries them and why."
+msgstr "Elige una escena para ver qué quiere transmitir, sus colores, quién los lleva y por qué."
+
+msgid "Clumsy change of colour"
+msgstr "Cambio de color poco elegante"
+
+msgid "Cohesion"
+msgstr "Cohesión"
+
+msgid "Colour idea %s: %s."
+msgstr "Idea de color %s: %s."
+
+msgid "Colour style:"
+msgstr "Estilo de color:"
+
+msgid "Colours changed"
+msgstr "Colores cambiados"
+
+msgid "Colours do not belong together"
+msgstr "Los colores no combinan"
+
+
+msgid "Colours per figure"
+msgstr "Colores por figura"
+
+msgid "Compare Scenes"
+msgstr "Comparar escenas"
+
+msgid "Compare Scenes..."
+msgstr "Comparar escenas..."
+
+msgid "Compare with My Corrected Version..."
+msgstr "Comparar con mi versión corregida..."
+
+msgid "Comparing the show with your corrected version..."
+msgstr "Comparando el espectáculo con tu versión corregida..."
+
+msgid "Continuity"
+msgstr "Continuidad"
+
+msgid "Develops it"
+msgstr "La desarrolla"
+
+msgid "Discreet: %s"
+msgstr "Discretas: %s"
+
+msgid "Each scene has its own colour idea."
+msgstr "Cada escena tiene su propia idea de color."
+
+msgid "Effect replaced or added"
+msgstr "Efecto cambiado o añadido"
+
+msgid "Effect taken out"
+msgstr "Efecto quitado"
+
+msgid "Fewer Accents"
+msgstr "Menos acentos"
+
+msgid "Fewer Colours"
+msgstr "Reducir colores"
+
+msgid "Figure brought in"
+msgstr "Figura añadida"
+
+msgid "Figure left dark"
+msgstr "Figura dejada apagada"
+
+msgid "Fix This Combination"
+msgstr "Fijar esta combinación"
+
+msgid "From %s to %s (%s): it %s."
+msgstr "De %s a %s (%s): %s."
+
+msgid "Generate the show first."
+msgstr "Primero genera el espectáculo."
+
+msgid "Gesture at %s: %s, in %s"
+msgstr "Gesto en %s: %s, en %s"
+
+msgid "Good contrast"
+msgstr "Buen contraste"
+
+msgid "Hierarchy"
+msgstr "Jerarquía"
+
+msgid "Identity of the song"
+msgstr "Identidad de la canción"
+
+msgid "It brings: %s"
+msgstr "Trae: %s"
+
+msgid "It keeps: %s"
+msgstr "Mantiene: %s"
+
+msgid "Keep This Identity"
+msgstr "Mantener esta identidad"
+
+msgid "Keep this combination"
+msgstr "Mantener esta combinación"
+
+msgid "Keeps the colours before"
+msgstr "Mantiene los colores de antes"
+
+msgid "Layer added"
+msgstr "Capa añadida"
+
+msgid "Learn What I Ticked"
+msgstr "Aprender lo marcado"
+
+msgid "Motif"
+msgstr "Motivo"
+
+msgid "Motifs"
+msgstr "Motivos"
+
+msgid "Moved in time"
+msgstr "Movido en el tiempo"
+
+msgid "No figure"
+msgstr "Ninguna figura"
+
+msgid "No reading of the composition for this show."
+msgstr "No hay lectura de la composición para este espectáculo."
+
+msgid "Note:"
+msgstr "Nota:"
+
+msgid "Observations with Their Place"
+msgstr "Observaciones con su lugar"
+
+msgid "Observations with Their Place..."
+msgstr "Observaciones con su lugar..."
+
+msgid "Overload"
+msgstr "Sobrecarga"
+
+msgid "Presents the identity"
+msgstr "Presenta la identidad"
+
+msgid "Remove the Selected One"
+msgstr "Quitar la seleccionada"
+
+msgid "Resolves to the identity"
+msgstr "Vuelve a la identidad"
+
+msgid "Say in which scene."
+msgstr "Di en qué escena."
+
+msgid "Say what you noticed and where. Some observations teach the next shows (after two shows); others are decisions for this song only, applied to its colours when you confirm them."
+msgstr "Di qué has notado y dónde. Algunas observaciones enseñan a los próximos espectáculos (después de dos espectáculos); otras son decisiones solo para esta canción y se aplican a sus colores cuando las confirmas."
+
+msgid "Say which figure."
+msgstr "Di qué figura."
+
+msgid "Say who observes."
+msgstr "Di quién observa."
+
+msgid "See This Scene in the House..."
+msgstr "Ver esta escena en la casa..."
+
+msgid "Teaches or decides"
+msgstr "Enseña o decide"
+
+msgid "Teaches the next shows"
+msgstr "Enseña a los próximos espectáculos"
+
+msgid "The comparison could not be started."
+msgstr "No se ha podido empezar la comparación."
+
+msgid "The composition, in words (signs, never a grade):"
+msgstr "La composición, en palabras (señales, nunca una nota):"
+
+msgid "The observations could not be kept."
+msgstr "No se han podido guardar las observaciones."
+
+msgid "The two versions could not be compared."
+msgstr "No se han podido comparar las dos versiones."
+
+msgid "The whole song"
+msgstr "Toda la canción"
+
+msgid "They share %d colours."
+msgstr "Comparten %d colores."
+
+msgid "This figure should rest"
+msgstr "Esta figura debería descansar"
+
+msgid "This figure should stand out"
+msgstr "Esta figura debería destacar"
+
+msgid "Too many accents"
+msgstr "Demasiados acentos"
+
+msgid "Too many colours"
+msgstr "Demasiados colores"
+
+msgid "Transforms it"
+msgstr "La transforma"
+
+msgid "What it does"
+msgstr "Qué hace"
+
+msgid "What:"
+msgstr "Qué:"
+
+msgid "Where"
+msgstr "Dónde"
+
+msgid "Where in the song:"
+msgstr "Dónde en la canción:"
+
+msgid "Which colour idea should come back in this scene?"
+msgstr "¿Qué idea de color debe volver en esta escena?"
+
+msgid "Which figure:"
+msgstr "Qué figura:"
+
+msgid "Who observes:"
+msgstr "Quién observa:"
+
+msgid "Wrong main colour"
+msgstr "Color principal equivocado"
+
+msgid "Your Corrected Version"
+msgstr "Tu versión corregida"
+
+msgid "Your corrected version of this show"
+msgstr "Tu versión corregida de este espectáculo"
+
+msgid "a clear lead"
+msgstr "un protagonista claro"
+
+msgid "a few scenes"
+msgstr "algunas escenas"
+
+msgid "a person asked for one family here"
+msgstr "una persona pidió aquí una sola familia"
+
+msgid "a person asked to bring this motif back"
+msgstr "una persona pidió recuperar este motivo"
+
+msgid "a person asked to keep the colours of the scene before"
+msgstr "una persona pidió mantener los colores de la escena anterior"
+
+msgid "a steady thread"
+msgstr "un hilo constante"
+
+msgid "a thread with turns"
+msgstr "un hilo con giros"
+
+msgid "an accent for a strong moment"
+msgstr "un acento para un momento fuerte"
+
+msgid "an expressive style: the hue moves a little from the verse before"
+msgstr "un estilo expresivo: el tono se mueve un poco respecto a la estrofa anterior"
+
+msgid "another figure carries the scene: this one stays discreet"
+msgstr "otra figura lleva la escena: esta se queda discreta"
+
+msgid "back to the identity the song started with"
+msgstr "vuelta a la identidad con la que empezó la canción"
+
+msgid "blend in"
+msgstr "se confunden"
+
+msgid "busy figures"
+msgstr "figuras recargadas"
+
+msgid "call and answer between figures"
+msgstr "pregunta y respuesta entre figuras"
+
+msgid "can be read"
+msgstr "se distinguen"
+
+msgid "celebrates: the fullest moment"
+msgstr "celebra: el momento más lleno"
+
+msgid "closes and resolves"
+msgstr "cierra y resuelve"
+
+msgid "cohesive"
+msgstr "cohesionado"
+
+msgid "contained"
+msgstr "contenido"
+
+msgid "evolving"
+msgstr "en evolución"
+
+msgid "expressive"
+msgstr "expresivo"
+
+msgid "flat"
+msgstr "plano"
+
+msgid "harsh"
+msgstr "brusco"
+
+msgid "it prepares the next scene's colour"
+msgstr "prepara el color de la escena siguiente"
+
+msgid "it reinforces the scene's colour"
+msgstr "refuerza el color de la escena"
+
+msgid "it resolves to the identity"
+msgstr "vuelve a la identidad"
+
+msgid "jump out"
+msgstr "saltan a la vista"
+
+msgid "lifts: a contrast comes in"
+msgstr "eleva: entra un contraste"
+
+msgid "lost"
+msgstr "perdida"
+
+msgid "many new ideas"
+msgstr "muchas ideas nuevas"
+
+msgid "many scenes"
+msgstr "muchas escenas"
+
+msgid "never recalled"
+msgstr "nunca se recuperan"
+
+msgid "no lead"
+msgstr "sin protagonista"
+
+msgid "one idea per figure"
+msgstr "una idea por figura"
+
+msgid "opens the song and presents its colours"
+msgstr "abre la canción y presenta sus colores"
+
+msgid "present"
+msgstr "presente"
+
+msgid "recurring"
+msgstr "recurrentes"
+
+msgid "related colours"
+msgstr "colores emparentados"
+
+msgid "repetitive"
+msgstr "repetitivo"
+
+msgid "restless"
+msgstr "inquieto"
+
+msgid "rests"
+msgstr "descansa"
+
+msgid "scattered"
+msgstr "disperso"
+
+msgid "shared"
+msgstr "compartido"
+
+msgid "some busy figures"
+msgstr "algunas figuras recargadas"
+
+msgid "tells, with the song's own colours"
+msgstr "cuenta, con los colores propios de la canción"
+
+msgid "the identity transformed"
+msgstr "la identidad transformada"
+
+msgid "the identity transformed: the music turns somewhere else"
+msgstr "la identidad transformada: la música gira hacia otro lugar"
+
+msgid "the identity with a contrast"
+msgstr "la identidad con un contraste"
+
+msgid "the identity with a contrast: the music opens"
+msgstr "la identidad con un contraste: la música se abre"
+
+msgid "the interpretation asks this part to keep the song's identity"
+msgstr "la interpretación pide que esta parte mantenga la identidad de la canción"
+
+msgid "the maker asked for this figure to rest"
+msgstr "quien lo hizo pidió que esta figura descanse"
+
+msgid "the maker asked for this figure to stand out"
+msgstr "quien lo hizo pidió que esta figura destaque"
+
+msgid "the motif comes back after a turn of the music"
+msgstr "el motivo vuelve tras un giro de la música"
+
+msgid "the same colour idea, developed in light and roles"
+msgstr "la misma idea de color, desarrollada en luz y papeles"
+
+msgid "the same motif as before, more intense: the music comes back stronger"
+msgstr "el mismo motivo de antes, más intenso: la música vuelve con más fuerza"
+
+msgid "the same music, the same colour idea"
+msgstr "la misma música, la misma idea de color"
+
+msgid "the song's colour identity, presented"
+msgstr "se presenta la identidad de color de la canción"
+
+msgid "the song's identity"
+msgstr "la identidad de la canción"
+
+msgid "turns somewhere else"
+msgstr "gira hacia otro lugar"
+
+msgid "Colours in use: %s (%s)"
+msgstr "Colores en uso: %s (%s)"
+
+msgid "all from one range of neighbouring hues"
+msgstr "todos de una misma gama de tonos vecinos"
+
+msgid "from three ranges of hues"
+msgstr "de tres gamas de tonos"
+
+msgid "from two ranges of hues"
+msgstr "de dos gamas de tonos"
+
+msgid "%s instead of %s"
+msgstr "%s en lugar de %s"
+
+msgid "%s on top"
+msgstr "%s por encima"
+
+msgid "%s taken out"
+msgstr "se ha quitado %s"
+
+msgid "%s was added"
+msgstr "se ha añadido %s"
+
+msgid "%s, where the show left it dark"
+msgstr "%s, donde el espectáculo la dejaba apagada"
+
+msgid "Each figure carries many colours at once."
+msgstr "Cada figura lleva muchos colores a la vez."
+
+msgid "In some scenes more than four colour families share the house at once."
+msgstr "En algunas escenas hay más de cuatro familias de color a la vez en la casa."
+
+msgid "Much of the light goes to colours that are each used only a little: the colours look scattered."
+msgstr "Buena parte de la luz va a colores que se usan muy poco cada uno: los colores se ven dispersos."
+
+msgid "before %s, now %s (%s)"
+msgstr "antes %s, ahora %s (%s)"
+
+msgid "brighter"
+msgstr "más brillante"
+
+msgid "dimmer"
+msgstr "más apagado"
+
+msgid "fewer colours together"
+msgstr "menos colores juntos"
+
+msgid "more colours together"
+msgstr "más colores juntos"
+
+msgid "moved or made longer or shorter"
+msgstr "movido, alargado o acortado"
+
+msgid "other colours, as many"
+msgstr "otros colores, los mismos en número"

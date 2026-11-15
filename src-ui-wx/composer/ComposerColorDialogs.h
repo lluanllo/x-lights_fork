@@ -21,8 +21,12 @@
 #include "composer/ColorCheck.h"
 #include "composer/ComposerReview.h"
 #include "composer/MusicAssist.h"
+#include "composer/SequenceComparison.h"
+#include "composer/VisualReview.h"
 
 class wxButton;
+class wxCheckListBox;
+class wxChoice;
 class wxCheckBox;
 class wxImageList;
 class wxListCtrl;
@@ -68,6 +72,14 @@ public:
     std::string Edit(const composer::ChromaticEdit& edit);
     std::string Undo();
     std::string Reset(); // every change dropped: the original plan
+    // The art direction's own actions on the selected scene (phase 19).
+    std::string KeepIdentity();
+    std::string RecallMotif(const std::string& motif);
+    std::string FewerColours();
+    std::string FewerAccents();
+    std::string FixCombination();
+    std::string ChangeMainColour(const std::string& hex);
+    void CompareScenes();
     [[nodiscard]] int PendingEdits() const { return static_cast<int>(_edits.edits.size()); }
     void OpenFigures();
     void OpenReview();
@@ -75,6 +87,7 @@ public:
     std::function<void()> onRecompose;
     std::function<void()> onDirectorChanged;
     std::function<const composer::ReportFolder*()> resultReport; // step 5's report, for the review
+    std::function<std::string()> resultFseq;                     // its rendered .fseq, to see a scene in the house
 
 private:
     void Fill();
@@ -100,6 +113,58 @@ private:
     wxImageList* _images = nullptr;
     wxTextCtrl* _detail = nullptr;
 };
+
+// Two scenes side by side: their palettes, motifs, what each keeps and brings, who carries them.
+class SceneCompareDialog : public wxDialog {
+public:
+    SceneCompareDialog(wxWindow* parent, const composer::ChromaticScore& score, int first, int second);
+    void ShowScenes(int first, int second);
+    [[nodiscard]] wxString Text() const;
+
+private:
+    const composer::ChromaticScore& _score;
+    wxChoice* _a = nullptr;
+    wxChoice* _b = nullptr;
+    wxTextCtrl* _text = nullptr;
+};
+
+// "Comparar con mi versión corregida": what a person changed in xLights, change by change;
+// the ones they tick become preferences (after two shows), the rest stay observations.
+class CorrectionsDialog : public wxDialog {
+public:
+    CorrectionsDialog(wxWindow* parent, const composer::SequenceComparison& comparison);
+    [[nodiscard]] int Rows() const;
+    void Pick(size_t index, bool picked);
+    [[nodiscard]] std::vector<size_t> Picked() const;
+
+private:
+    composer::SequenceComparison _comparison;
+    std::vector<size_t> _rows; // list row -> change
+    wxCheckListBox* _list = nullptr;
+};
+
+// "Observaciones con contexto": what a person noticed, in a scene or on a figure.
+class ObservationsDialog : public wxDialog {
+public:
+    ObservationsDialog(wxWindow* parent, const composer::ChromaticScore& score, std::vector<composer::ArtisticObservation> observations, const std::string& reviewer);
+    bool Add(const composer::ArtisticObservation& observation);
+    [[nodiscard]] const std::vector<composer::ArtisticObservation>& Observations() const { return _observations; }
+    [[nodiscard]] std::string Reviewer() const;
+
+private:
+    void Fill();
+    const composer::ChromaticScore& _score;
+    std::vector<composer::ArtisticObservation> _observations;
+    wxChoice* _kind = nullptr;
+    wxChoice* _scene = nullptr;
+    wxChoice* _figure = nullptr;
+    wxTextCtrl* _note = nullptr;
+    wxTextCtrl* _reviewer = nullptr;
+    wxListCtrl* _list = nullptr;
+};
+
+[[nodiscard]] wxString ObservationWords(const std::string& kind);
+[[nodiscard]] wxString ChangeWords(const std::string& kind);
 
 // Step 3, "Colores de las figuras": the colour each figure carries in a scene and why;
 // a figure can keep its own colours, take the palette, or get colours chosen by hand.
@@ -128,14 +193,16 @@ private:
 // in one colour, and how the colour moved through the song. Measurements, never a verdict.
 class ColorReviewDialog : public wxDialog {
 public:
-    ColorReviewDialog(wxWindow* parent, const composer::ReportFolder& report);
+    ColorReviewDialog(wxWindow* parent, const composer::ReportFolder& report, const std::string& fseqPath = "");
     [[nodiscard]] wxString Summary() const;
     [[nodiscard]] int SceneRows() const;
     [[nodiscard]] int FigureRows() const;
     [[nodiscard]] bool HasMeasure() const { return _check.ran; }
+    [[nodiscard]] wxString Composition() const;
 
 private:
     composer::ColorCheck _check;
+    wxTextCtrl* _composition = nullptr;
     composer::ChromaticScore _score;
     wxTextCtrl* _summary = nullptr;
     wxListCtrl* _scenes = nullptr;

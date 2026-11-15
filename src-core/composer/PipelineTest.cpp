@@ -1825,6 +1825,16 @@ private:
         Check(ReadSidecar(_base.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.schemaVersion == SIDECAR_SCHEMA_VERSION && sidecar.color.decided && sidecar.color.enabled &&
                   sidecar.color.directorVersion == CHROMATIC_DIRECTOR_VERSION && sidecar.color.scenes == static_cast<int>(_base.chromatic.scenes.size()),
               "the sidecar keeps the colour direction and its settings (schema 5)");
+        Check(sidecar.color.style >= 0 && sidecar.color.style <= 1 && (!_base.request.colorStyle || std::fabs(sidecar.color.style - *_base.request.colorStyle) < 0.001),
+              fmt::format("and the colour style it was made with ({:.2f})", sidecar.color.style));
+        Check(!_base.chromatic.motifDefs.empty() && std::all_of(_base.chromatic.scenes.begin(), _base.chromatic.scenes.end(), [](const ChromaticScenePlan& s) {
+                  return s.hueBudget >= 1 && s.hueBudget <= 3 && !s.intent.empty() && (s.motifOperation == "rest" || !s.motif.empty());
+              }),
+              fmt::format("every scene has a hue budget, an intention and the colour idea it plays ({} ideas)", _base.chromatic.motifDefs.size()));
+        const std::string evaluation = ReadText((report / "composition-eval.json").string());
+        Check(evaluation.find("\"score\": null") != std::string::npos && evaluation.find("\"review\": \"not-reviewed\"") != std::string::npos &&
+                  FileExists((report / "composition-eval.txt").string()),
+              "the composition is read in signs, with no grade and nothing approved");
         nlohmann::json older = nlohmann::json::parse(ToJson(sidecar));
         older.erase("color");
         older["schemaVersion"] = 4;
@@ -2090,6 +2100,7 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
         }
     };
     slider(o.colorVariety, r.colorVariety);
+    slider(o.colorStyle, r.colorStyle);
     slider(o.colorContrast, r.colorContrast);
     slider(o.colorAccents, r.colorAccents);
     slider(o.colorEvolution, r.colorEvolution);

@@ -1015,6 +1015,8 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-core\composer\ColorCheck.cpp" />
     <ClCompile Include="..\src-core\composer\ChromaticDirector.cpp" />
     <ClCompile Include="..\src-core\composer\ColorTest.cpp" />
+    <ClCompile Include="..\src-core\composer\ArtEvaluation.cpp" />
+    <ClCompile Include="..\src-core\composer\SequenceComparison.cpp" />
     <ClCompile Include="..\src-core\composer\UnderstandingTest.cpp" />
     <ClCompile Include="..\src-core\composer\CompositionPlan.cpp" />
     <ClCompile Include="..\src-core\composer\PlanTest.cpp" />
@@ -1771,6 +1773,8 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-core\composer\ColorCheck.h" />
     <ClInclude Include="..\src-core\composer\ChromaticDirector.h" />
     <ClInclude Include="..\src-core\composer\ColorTest.h" />
+    <ClInclude Include="..\src-core\composer\ArtEvaluation.h" />
+    <ClInclude Include="..\src-core\composer\SequenceComparison.h" />
     <ClInclude Include="..\src-core\composer\UnderstandingTest.h" />
     <ClInclude Include="..\src-core\composer\CompositionPlan.h" />
     <ClInclude Include="..\src-core\composer\PlanTest.h" />

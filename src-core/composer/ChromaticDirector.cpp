@@ -7,6 +7,7 @@
 #include "composer/SongAnalysis.h"
 #include "composer/SongVisualPlan.h"
 #include "composer/VisualDirection.h"
+#include "composer/VisualReview.h"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/fmt.h>
@@ -342,11 +343,11 @@ public:
             score.scenes.push_back(std::move(sp));
         }
         for (size_t i = 0; i < score.scenes.size(); ++i) {
-            Gestures(score, score.scenes[i]);
+            Gestures(score, score.scenes[i], i);
             Transition(score, i);
         }
-        for (const auto& [group, motif] : _motifs) {
-            score.motifs.push_back(fmt::format("motif:{} {}", group, motif.id));
+        for (const ChromaticMotif& m : score.motifDefs) {
+            score.motifs.push_back(fmt::format("{} {} ({} scenes)", m.id, m.kind, m.scenes.size()));
         }
         Check(score);
         return score;
@@ -444,7 +445,9 @@ private:
             }
         }
         if (b != nullptr) {
-            for (const std::string& c : b->colors) {
+            // At most its first three colours: a reading suggests an identity, not a list to use.
+            for (size_t i = 0; i < b->colors.size() && i < 3; ++i) {
+                const std::string& c = b->colors[i];
                 const Oklch k = OklchOfHex(c);
                 if (k.C >= NEUTRAL_CHROMA) {
                     _suggested.push_back({ k.h, 0.8 });
@@ -523,6 +526,11 @@ private:
         }
         _songHarmony = chosen;
         _direction = DirectionTowards(chosen, anchor, songHues);
+        // Warmer or cooler, as the maker taught: the neighbours of the main colour lean that way.
+        if (std::fabs(_o.warmth) >= 0.3) {
+            const double target = _o.warmth < 0 ? ICE_BLUE : 55.0;
+            _direction = WrapHue(target - anchor) <= 180 ? 1 : -1;
+        }
         PaletteRequest r;
         r.anchorHue = anchor;
         r.harmony = chosen;
@@ -600,6 +608,11 @@ private:
                 s.segment = &seg;
                 s.visual = _in.visualPlan != nullptr ? _in.visualPlan->Scene(seg.id) : nullptr;
                 _sources.push_back(s);
+            }
+        }
+        for (const SceneSource& src : _sources) {
+            if (src.segment != nullptr && src.segment->repeatGroup >= 0) {
+                _groupCount[src.segment->repeatGroup]++;
             }
         }
         // Who plays in each scene: the targets of its effects.
@@ -708,6 +721,103 @@ private:
         return "develop";
     }
 
+    // How much a moment matters in the song's colour story, 0-1.
+    static double ImportanceOf(const std::string& evolution) {
+        if (evolution == "rest") return 0;
+        if (evolution == "establish" || evolution == "resolve") return 0.25;
+        if (evolution == "develop" || evolution == "hold" || evolution == "return") return 0.45;
+        if (evolution == "expand" || evolution == "shift") return 0.7;
+        if (evolution == "climax") return 1.0;
+        return 0.45;
+    }
+
+    // Two colours of different hue groups: far enough apart round the circle to be read
+    // as two colours, not as one in two lights.
+    static bool OtherHue(const PaletteColor* a, const PaletteColor* b) {
+        return a != nullptr && b != nullptr && a->C >= NEUTRAL_CHROMA && b->C >= NEUTRAL_CHROMA && HueDistance(a->h, b->h) >= 40;
+    }
+
+    // The grammar of a scene: which colours of its palette it really uses. Always the main
+    // colour with its light and deep versions and the neutral; a second hue only when the
+    // budget allows two; the accent's hue as a lasting colour only with three.
+    static std::vector<std::string> Grammar(const ColorPaletteProfile& p, int budget) {
+        std::vector<std::string> used = { "anchor", "highlight", "shadow", "neutral" };
+        const PaletteColor* a = p.Get("anchor");
+        const auto sameHue = [&](const char* role) { return !OtherHue(a, p.Get(role)); };
+        for (const char* role : { "secondary", "transition", "contrast", "accent" }) {
+            if (p.Get(role) != nullptr && sameHue(role)) {
+                used.push_back(role); // the same hue in another light: no new colour
+            }
+        }
+        if (budget >= 2) {
+            // One other hue: the secondary when it is one, else the contrast.
+            const char* second = OtherHue(a, p.Get("secondary")) ? "secondary" : OtherHue(a, p.Get("contrast")) ? "contrast" : nullptr;
+            if (second != nullptr && std::find(used.begin(), used.end(), second) == used.end()) {
+                used.push_back(second);
+            }
+        }
+        if (budget >= 3) {
+            for (const char* role : { "accent", "contrast", "secondary" }) {
+                if (p.Get(role) != nullptr && std::find(used.begin(), used.end(), role) == used.end()) {
+                    used.push_back(role);
+                    break;
+                }
+            }
+        }
+        return used;
+    }
+
+    static bool Uses(const ChromaticScenePlan& sp, const std::string& role) {
+        return std::find(sp.used.begin(), sp.used.end(), role) == sp.used.end() ? false : true;
+    }
+
+    // The other hue the scene uses, if any: the role name.
+    static std::string SecondHue(const ChromaticScenePlan& sp) {
+        const PaletteColor* a = sp.palette.Get("anchor");
+        for (const char* role : { "secondary", "contrast", "accent" }) {
+            if (Uses(sp, role) && OtherHue(a, sp.palette.Get(role))) {
+                return role;
+            }
+        }
+        return "";
+    }
+
+    ColorPaletteProfile MotifPalette(const std::string& id) const {
+        const auto it = _motifPalettes.find(id);
+        return it == _motifPalettes.end() ? ColorPaletteProfile() : it->second;
+    }
+
+    ChromaticMotif& NewMotif(ChromaticScore& score, const std::string& kind, const ColorPaletteProfile& p, const std::string& from, const std::string& sceneId, const std::string& why) {
+        ChromaticMotif m;
+        m.id = std::string(1, static_cast<char>('A' + std::min<size_t>(25, score.motifDefs.size())));
+        m.kind = kind;
+        m.anchor = p.Hex("anchor");
+        const PaletteColor* a = p.Get("anchor");
+        m.second = OtherHue(a, p.Get("secondary")) ? p.Hex("secondary") : OtherHue(a, p.Get("contrast")) ? p.Hex("contrast") : std::string();
+        m.accent = p.Hex("accent");
+        m.from = from;
+        m.firstScene = sceneId;
+        m.why = why;
+        _motifPalettes[m.id] = p;
+        score.motifDefs.push_back(m);
+        return score.motifDefs.back();
+    }
+
+    ChromaticMotif* FindMotif(ChromaticScore& score, const std::string& id) {
+        for (ChromaticMotif& m : score.motifDefs) {
+            if (m.id == id) {
+                return &m;
+            }
+        }
+        return nullptr;
+    }
+
+    // What the interpretation says should keep its identity or may change here.
+    bool BriefSays(const std::vector<std::string>& parts, const std::string& sectionKind) const {
+        std::string kind = sectionKind == "interlude" || sectionKind == "solo" ? "instrumental" : sectionKind;
+        return std::find(parts.begin(), parts.end(), kind) != parts.end();
+    }
+
     ChromaticScenePlan Scene(ChromaticScore& score, size_t index) {
         const SceneSource& s = _sources[index];
         ChromaticScenePlan sp;
@@ -727,107 +837,190 @@ private:
         }
         sp.reasons.push_back(fmt::format("{}: {}", sp.evolution, EvolutionPhrase(sp.evolution)));
 
-        // A returning part comes back to its colours, a little changed each time.
-        const bool asked = SceneEdit("monochrome", s.startMS) != nullptr || SceneEdit("no-monochrome", s.startMS) != nullptr || SceneEdit("more-contrast", s.startMS) != nullptr ||
-                           SceneEdit("less-contrast", s.startMS) != nullptr;
-        if (group >= 0 && occurrence > 0 && _motifs.contains(group) && sp.evolution != "climax" && !asked) {
-            sp.palette = _motifs.at(group);
-            sp.motif = fmt::format("motif:{}", group);
-            const int variation = _o.evolution < 0.25 ? 0 : occurrence % 3;
-            if (variation == 1) {
-                // Its accent turns to the song's own accent or a light one.
-                PaletteColor* accent = nullptr;
-                PaletteColor* light = nullptr;
-                for (PaletteColor& c : sp.palette.colors) {
-                    accent = c.role == "accent" ? &c : accent;
-                    light = c.role == "highlight" ? &c : light;
+        // ---- the budget: how many hues may live together in this moment.
+        // A returning part matters as what it is: a chorus that comes back is still a chorus.
+        double importance = ImportanceOf(sp.evolution);
+        if (sp.evolution == "return" && (s.sectionKind == "chorus" || s.sectionKind == "pre-chorus")) {
+            importance = ImportanceOf("expand");
+        }
+        const double style = std::clamp(_o.style, 0.0, 1.0);
+        int budget = 1 + static_cast<int>(std::floor(importance * (0.8 + 2.0 * style) + 0.1));
+        if (_players[index].size() < 4) {
+            budget = std::min(budget, 2); // few figures: a third hue would only scatter them
+        }
+        if (SceneEdit("fewer-colours", s.startMS) != nullptr || SceneEdit("fewer-colours", -1) != nullptr) {
+            budget = std::max(1, budget - 1);
+            sp.manual = true;
+        }
+        if (SceneEdit("monochrome", s.startMS) != nullptr) {
+            budget = 1;
+            sp.manual = true;
+        }
+        sp.hueBudget = std::clamp(budget, 1, 3);
+        double accents = std::clamp(0.1 + 0.6 * _o.accents * importance * (0.5 + style), 0.0, 0.6);
+        if (SceneEdit("fewer-accents", s.startMS) != nullptr || SceneEdit("fewer-accents", -1) != nullptr) {
+            accents *= 0.4;
+            sp.manual = true;
+        }
+        sp.accentShare = Round3(accents);
+        sp.reasons.push_back(fmt::format("{} hue{} at once ({:.0f}% of the colour budget asked for by a {} moment; style {:.0f}%)", sp.hueBudget, sp.hueBudget == 1 ? "" : "s",
+                                         importance * 100, sp.evolution, style * 100));
+
+        // ---- the motif: what this scene does with the song's colour ideas.
+        double wanted = 0.4;
+        if (sp.evolution == "establish" || sp.evolution == "resolve") {
+            wanted = 0.2;
+        } else if (sp.evolution == "rest") {
+            wanted = 0.05;
+        } else if (sp.evolution == "expand" || sp.evolution == "shift") {
+            wanted = 0.65;
+        } else if (sp.evolution == "climax") {
+            wanted = 0.9;
+        }
+        wanted = std::clamp(wanted + (_o.contrast - 0.5) * 0.6, 0.0, 1.0);
+        if (SceneEdit("more-contrast", s.startMS) != nullptr || SceneEdit("more-contrast", -1) != nullptr) {
+            wanted = std::min(1.0, wanted + 0.3);
+            sp.manual = true;
+        }
+        if (SceneEdit("less-contrast", s.startMS) != nullptr || SceneEdit("less-contrast", -1) != nullptr) {
+            wanted = std::max(0.0, wanted - 0.3);
+            sp.manual = true;
+        }
+        std::string feeling;
+        std::vector<std::pair<double, double>> partHues;
+        if (const BriefPart* part = BriefPartFor(s.sectionKind); part != nullptr) {
+            feeling = part->feeling;
+            sp.feeling = part->feeling;
+            sp.feelingColor = part->color;
+            sp.feelingSource = _in.brief->source + (_in.brief->origin.empty() ? std::string() : ":" + _in.brief->origin);
+            if (part->intensity >= 0) {
+                wanted = std::clamp(wanted + (part->intensity - 0.5) * 0.4, 0.0, 1.0);
+            }
+            if (!part->color.empty()) {
+                const Oklch k = OklchOfHex(part->color);
+                if (k.C >= NEUTRAL_CHROMA) {
+                    partHues.push_back({ k.h, 0.7 });
                 }
-                if (accent != nullptr && light != nullptr) {
-                    std::swap(*accent, *light);
-                    std::swap(accent->role, light->role);
-                }
-                sp.reasons.push_back(COMPOSER_TEXT("the same family as its first time, its accent turned light"));
-            } else if (variation == 2) {
-                PaletteRequest r = RequestFor(sp.palette.anchorHue, sp.palette.harmony, sp.palette.saturation, sp.palette.lightness, _o.contrast);
-                r.direction = -_direction;
-                r.id = sp.id;
-                sp.palette = BuildPalette(r);
-                sp.reasons.push_back(COMPOSER_TEXT("the same anchor as its first time, its related colours from the other side of the circle"));
-            } else {
-                sp.reasons.push_back(COMPOSER_TEXT("comes back to the colours of its first time"));
             }
-        } else {
-            // The colour that leads this part, from the song's family.
-            const std::string lead = sp.evolution == "shift" ? (_songHarmony == Harmony::Monochromatic ? "anchor" : "secondary") : "anchor";
-            const PaletteColor* lc = score.song.Get(lead);
-            double hue = lc != nullptr ? lc->h : _anchor;
-            // Parts of the same kind do not repeat each other exactly: the hue moves a little.
-            const int same = _kindCount[s.sectionKind]++;
-            if (same > 0 && sp.evolution == "develop") {
-                hue = WrapHue(hue + (same % 2 == 1 ? 1 : -1) * 14.0 * _o.evolution);
-                sp.reasons.push_back(fmt::format("the {} part number {} of its kind: the hue moves {:.0f}°", s.sectionKind, same + 1, 14.0 * _o.evolution));
-            }
-            double wanted = 0.4;
-            if (sp.evolution == "establish" || sp.evolution == "resolve") {
-                wanted = 0.2;
-            } else if (sp.evolution == "rest") {
-                wanted = 0.05;
-            } else if (sp.evolution == "expand" || sp.evolution == "shift") {
-                wanted = 0.65;
-            } else if (sp.evolution == "climax") {
-                wanted = 0.9;
-            }
-            wanted = std::clamp(wanted + (_o.contrast - 0.5) * 0.6, 0.0, 1.0);
-            if (SceneEdit("more-contrast", s.startMS) != nullptr || SceneEdit("more-contrast", -1) != nullptr) {
-                wanted = std::min(1.0, wanted + 0.3);
-                sp.manual = true;
-            }
-            if (SceneEdit("less-contrast", s.startMS) != nullptr || SceneEdit("less-contrast", -1) != nullptr) {
-                wanted = std::max(0.0, wanted - 0.3);
-                sp.manual = true;
-            }
-            // What the interpretation says of this kind of part.
-            std::string feeling;
-            std::vector<std::pair<double, double>> partHues;
-            if (const BriefPart* part = BriefPartFor(s.sectionKind); part != nullptr) {
-                feeling = part->feeling;
-                sp.feeling = part->feeling;
-                sp.feelingColor = part->color;
-                sp.feelingSource = _in.brief->source + (_in.brief->origin.empty() ? std::string() : ":" + _in.brief->origin);
-                if (part->intensity >= 0) {
-                    wanted = std::clamp(wanted + (part->intensity - 0.5) * 0.4, 0.0, 1.0);
-                }
-                if (!part->color.empty()) {
-                    const Oklch k = OklchOfHex(part->color);
-                    if (k.C >= NEUTRAL_CHROMA) {
-                        partHues.push_back({ k.h, 0.7 });
-                    }
-                }
-                sp.reasons.push_back(fmt::format("the interpretation ({}): this part feels {}{}{}", _in.brief->source, feeling.empty() ? std::string("-") : feeling,
-                                                 part->intensity >= 0 ? fmt::format(", intensity {:.1f}", part->intensity) : std::string(),
-                                                 part->color.empty() ? std::string() : ", suggests " + part->color));
-            }
-            Harmony h = ChooseHarmony(sp, wanted, index, feeling);
+            sp.reasons.push_back(fmt::format("the interpretation ({}): this part feels {}{}{}", _in.brief->source, feeling.empty() ? std::string("-") : feeling,
+                                             part->intensity >= 0 ? fmt::format(", intensity {:.1f}", part->intensity) : std::string(),
+                                             part->color.empty() ? std::string() : ", suggests " + part->color));
+        }
+        const bool keepHere = _in.brief != nullptr && BriefSays(_in.brief->keep, s.sectionKind);
+        const bool changeHere = _in.brief != nullptr && BriefSays(_in.brief->change, s.sectionKind);
+        const double sat = std::clamp((0.72 + 0.26 * sp.energy + (sp.evolution == "climax" ? 0.06 : 0.0) - (sp.evolution == "rest" ? 0.25 : 0.0)) * _intensity, 0.3, 1.0);
+        const double light = std::clamp(0.62 + 0.08 * sp.energy, 0.5, 0.75);
+        const auto build = [&](double hue, double contrast) {
+            Harmony h = ChooseHarmony(sp, contrast, index, feeling);
             if (SceneEdit("monochrome", s.startMS) != nullptr) {
                 h = Harmony::Monochromatic;
-                sp.manual = true;
             } else if (h == Harmony::Monochromatic && SceneEdit("no-monochrome", s.startMS) != nullptr) {
-                h = _songHarmony == Harmony::Monochromatic ? Harmony::Analogous : _songHarmony;
+                h = Harmony::Analogous;
                 sp.manual = true;
             }
-            const double sat = std::clamp((0.72 + 0.26 * sp.energy + (sp.evolution == "climax" ? 0.06 : 0.0) - (sp.evolution == "rest" ? 0.25 : 0.0)) * _intensity, 0.3, 1.0);
-            const double light = std::clamp(0.62 + 0.08 * sp.energy, 0.5, 0.75);
-            PaletteRequest r = RequestFor(hue, h, sat, light, wanted);
+            PaletteRequest r = RequestFor(hue, h, sat, light, contrast);
             r.suggested.insert(r.suggested.end(), partHues.begin(), partHues.end());
             r.id = sp.id;
-            sp.palette = BuildPalette(r);
             sp.reasons.push_back(_harmonyWhy);
-            if (group >= 0 && occurrence == 0) {
-                _motifs[group] = sp.palette;
-                sp.motif = fmt::format("motif:{}", group);
+            return BuildPalette(r);
+        };
+        const ChromaticEdit* recall = SceneEdit("recall-motif", s.startMS);
+        const ChromaticScenePlan* previous = score.scenes.empty() ? nullptr : &score.scenes.back();
+        std::string motif;
+        std::string op;
+        if (sp.evolution == "rest") {
+            op = "rest";
+            sp.palette = build(_anchor, wanted);
+        } else if (recall != nullptr && _motifPalettes.contains(recall->value)) {
+            op = "recall";
+            motif = recall->value;
+            sp.palette = MotifPalette(motif);
+            sp.manual = true;
+            sp.reasons.push_back(COMPOSER_TEXT("a person asked to bring this motif back"));
+        } else if (SceneEdit("keep-identity", s.startMS) != nullptr && previous != nullptr && previous->evolution != "rest") {
+            op = "hold";
+            motif = previous->motif;
+            sp.palette = previous->palette;
+            sp.manual = true;
+            sp.reasons.push_back(COMPOSER_TEXT("a person asked to keep the colours of the scene before"));
+        } else if (group >= 0 && occurrence > 0 && _groupMotif.contains(group)) {
+            motif = _groupMotif.at(group);
+            sp.palette = MotifPalette(motif);
+            const bool stronger = sp.energy > _groupEnergy[group] + 0.05 || sp.evolution == "climax" || occurrence + 1 == _groupCount[group];
+            op = stronger && !keepHere ? "intensify" : "recall";
+            if (op == "intensify") {
+                PaletteRequest r = RequestFor(sp.palette.anchorHue, sp.palette.harmony, std::min(1.0, sp.palette.saturation + 0.08), sp.palette.lightness, std::min(1.0, wanted + 0.15));
+                r.id = sp.id;
+                sp.palette = BuildPalette(r);
+                sp.hueBudget = std::min(3, sp.hueBudget + (style >= 0.3 ? 1 : 0));
+                sp.reasons.push_back(COMPOSER_TEXT("the same motif as before, more intense: the music comes back stronger"));
+            } else {
+                sp.reasons.push_back(previous != nullptr && (previous->evolution == "shift" || previous->evolution == "rest") ? COMPOSER_TEXT("the motif comes back after a turn of the music")
+                                                                                                                         : COMPOSER_TEXT("the same music, the same colour idea"));
+            }
+        } else if (_identity.empty()) {
+            op = "present";
+            sp.palette = build(score.song.anchorHue, std::min(wanted, 0.35));
+            motif = NewMotif(score, "identity", sp.palette, "", sp.id, COMPOSER_TEXT("the song's colour identity, presented")).id;
+            _identity = motif;
+        } else if (sp.evolution == "resolve") {
+            op = "resolve";
+            motif = _identity;
+            sp.palette = MotifPalette(motif);
+            sp.palette.saturation = Round3(std::max(0.3, sp.palette.saturation - 0.1));
+            sp.reasons.push_back(COMPOSER_TEXT("back to the identity the song started with"));
+        } else if (sp.evolution == "shift" && (!keepHere || changeHere)) {
+            op = "transform";
+            const ColorPaletteProfile base = MotifPalette(_current.empty() ? _identity : _current);
+            // A turn of the music turns the identity: towards its second colour, or round
+            // the circle by a step the style allows.
+            const PaletteColor* second = base.Get("secondary");
+            const double turn = second != nullptr && OtherHue(base.Get("anchor"), second) ? HueDistance(base.anchorHue, second->h) * 0.6 : 35.0 + 25.0 * style;
+            const double hue = WrapHue(base.anchorHue + _direction * std::min(turn, 70.0));
+            sp.palette = build(hue, wanted);
+            motif = NewMotif(score, "transformed", sp.palette, _identity, sp.id, COMPOSER_TEXT("the identity transformed: the music turns somewhere else")).id;
+        } else if ((sp.evolution == "expand" || sp.evolution == "climax") && !keepHere) {
+            op = "introduce";
+            sp.palette = build(MotifPalette(_identity).anchorHue, wanted);
+            motif = NewMotif(score, "contrast", sp.palette, _identity, sp.id, COMPOSER_TEXT("the identity with a contrast: the music opens")).id;
+        } else {
+            op = "develop";
+            motif = _current.empty() ? _identity : _current;
+            if (FindMotif(score, motif) != nullptr && FindMotif(score, motif)->kind == "contrast" && sp.evolution == "develop") {
+                motif = _identity; // a verse after a chorus goes back to the identity
+            }
+            sp.palette = MotifPalette(motif);
+            if (style >= 0.75 && sp.evolution == "develop") {
+                // Only an expressive style lets the hue move between verses.
+                const int same = _kindCount[s.sectionKind]++;
+                if (same > 0) {
+                    PaletteRequest r = RequestFor(WrapHue(sp.palette.anchorHue + (same % 2 == 1 ? 1 : -1) * 10.0), sp.palette.harmony, sp.palette.saturation, sp.palette.lightness, wanted);
+                    r.id = sp.id;
+                    sp.palette = BuildPalette(r);
+                    sp.reasons.push_back(COMPOSER_TEXT("an expressive style: the hue moves a little from the verse before"));
+                }
+            }
+            sp.reasons.push_back(keepHere ? COMPOSER_TEXT("the interpretation asks this part to keep the song's identity") : COMPOSER_TEXT("the same colour idea, developed in light and roles"));
+        }
+        if (group >= 0 && occurrence == 0 && !motif.empty()) {
+            _groupMotif[group] = motif;
+            _groupEnergy[group] = sp.energy;
+        }
+        if (!motif.empty()) {
+            _current = motif;
+            if (ChromaticMotif* m = FindMotif(score, motif)) {
+                m->scenes.push_back(sp.id);
             }
         }
-        const int before = static_cast<int>(sp.palette.colors.size());
+        sp.motif = motif;
+        sp.motifOperation = op;
+        if (SceneEdit("monochrome", s.startMS) != nullptr && sp.palette.harmony != Harmony::Monochromatic) {
+            // One family asked: the same main colour in its lights, whatever the motif was.
+            PaletteRequest r = RequestFor(sp.palette.anchorHue, Harmony::Monochromatic, sp.palette.saturation, sp.palette.lightness, wanted);
+            r.id = sp.id;
+            sp.palette = BuildPalette(r);
+            sp.reasons.push_back(COMPOSER_TEXT("a person asked for one family here"));
+        }
         ApplyPaletteEdits(sp.palette, s.startMS);
         if (SceneEdit("lock-palette", s.startMS) != nullptr) {
             sp.locked = true;
@@ -835,18 +1028,60 @@ private:
         } else if (SceneEdit("color", s.startMS) != nullptr || SceneEdit("accent", s.startMS) != nullptr) {
             sp.manual = true;
         }
-        (void)before;
         _previous.push_back(sp.palette.harmony);
-        sp.monochrome = sp.palette.harmony == Harmony::Monochromatic;
+        sp.used = Grammar(sp.palette, sp.hueBudget);
+        sp.monochrome = sp.palette.harmony == Harmony::Monochromatic || (sp.hueBudget == 1 && SecondHue(sp).empty());
+        if (sp.evolution == "rest") {
+            sp.monochrome = true;
+        }
         if (sp.monochrome) {
             sp.reasons.push_back(COMPOSER_TEXT("one family on purpose: the light changes, the colour holds"));
         }
         sp.saturation = Round3(sp.palette.saturation);
         sp.intensity = Round3(std::clamp(0.45 + 0.55 * sp.energy, 0.3, 1.0));
         sp.dominant = sp.palette.Hex("anchor");
-        sp.secondary = { sp.palette.Hex("secondary"), sp.palette.Hex("transition") };
-        sp.accents = { sp.palette.Hex("accent"), sp.palette.Hex("highlight") };
-        sp.contrasts = { sp.palette.Hex("contrast") };
+        const std::string second = SecondHue(sp);
+        sp.secondary = second.empty() ? std::vector<std::string> { sp.palette.Hex("highlight") } : std::vector<std::string> { sp.palette.Hex(second) };
+        sp.accents = { Uses(sp, "accent") ? sp.palette.Hex("accent") : sp.palette.Hex("highlight") };
+        sp.contrasts = { Uses(sp, "contrast") ? sp.palette.Hex("contrast") : sp.palette.Hex("shadow") };
+        // What it keeps from the scene before and what it brings.
+        const auto colours = [](const ChromaticScenePlan& p) {
+            std::vector<std::string> out;
+            for (const std::string& role : p.used) {
+                const PaletteColor* c = p.palette.Get(role);
+                if (c != nullptr && c->C >= NEUTRAL_CHROMA && role != "shadow" && role != "highlight") {
+                    out.push_back(c->hex);
+                }
+            }
+            return out;
+        };
+        const std::vector<std::string> mine = colours(sp);
+        const std::vector<std::string> theirs = previous == nullptr ? std::vector<std::string>() : colours(*previous);
+        for (const std::string& c : mine) {
+            bool near = false;
+            for (const std::string& t : theirs) {
+                near |= DeltaE(c, t) < 8;
+            }
+            (near ? sp.kept : sp.introduced).push_back(c);
+        }
+        // What the scene wants to say, from its place in the song and how the stage is used.
+        if (sp.evolution == "rest") {
+            sp.intent = "rest";
+        } else if (sp.mode == "call-response") {
+            sp.intent = "answer";
+        } else if (op == "present") {
+            sp.intent = "open";
+        } else if (op == "resolve") {
+            sp.intent = "close";
+        } else if (op == "transform") {
+            sp.intent = "turn";
+        } else if (sp.evolution == "climax" || op == "intensify") {
+            sp.intent = "celebrate";
+        } else if (op == "introduce" || sp.evolution == "expand") {
+            sp.intent = "lift";
+        } else {
+            sp.intent = "tell";
+        }
         return sp;
     }
 
@@ -903,13 +1138,20 @@ private:
             if (h == Harmony::Monochromatic && wanted > 0.3) {
                 v -= 1;
             }
+            // The budget decides how far the harmony may reach: one hue keeps to
+            // neighbours, two leave out the harmonies of three or four hues.
+            if (sp.hueBudget <= 1 && h != Harmony::Monochromatic && h != Harmony::Analogous) {
+                v -= 3;
+            } else if (sp.hueBudget == 2 && (h == Harmony::Triadic || h == Harmony::Tetradic)) {
+                v -= 3;
+            }
             if (v > best + 1e-9) {
                 best = v;
                 chosen = h;
             }
         }
         (void)index;
-        _harmonyWhy = fmt::format("{}: {} contrast wanted ({:.0f}%)", HarmonyPhrase(chosen), sp.evolution, wanted * 100);
+        _harmonyWhy = fmt::format("{}: {} contrast wanted ({:.0f}%), {} hue{} allowed", HarmonyPhrase(chosen), sp.evolution, wanted * 100, sp.hueBudget, sp.hueBudget == 1 ? "" : "s");
         return chosen;
     }
 
@@ -927,35 +1169,59 @@ private:
     }
 
     // ------------------------------------------------------------ roles
+    // The colours a role gets: one hue each, in its lights (a figure never mixes two
+    // hue groups in one effect), always within what the scene's grammar uses.
     std::vector<std::string> RoleColors(const ChromaticScenePlan& sp, const std::string& role, const FigureFacts* f) const {
         const ColorPaletteProfile& p = sp.palette;
-        std::vector<std::string> roles;
-        if (role == "main") {
-            roles = { "anchor", "secondary", "transition" };
-        } else if (role == "complement") {
-            roles = { "secondary", "transition", "anchor" };
-        } else if (role == "accent") {
-            roles = { "accent", "highlight", "secondary" };
-        } else if (role == "response") {
-            roles = { "contrast", "accent", "highlight" };
-        } else if (role == "background") {
-            roles = { "shadow", "anchor", "transition" };
-        } else if (role == "neutral") {
-            roles = { "neutral", "highlight" };
-        } else if (role == "decorative") {
-            roles = { "highlight", "accent", "secondary" };
-        }
-        std::vector<std::string> out;
         if (role == "identity" && f != nullptr) {
-            out = f->identity;
+            std::vector<std::string> out = f->identity;
             out.push_back(p.Hex("neutral"));
             return out;
         }
+        const std::string second = SecondHue(sp);
+        std::vector<std::string> roles;
+        // A neighbour of the main colour (same hue group, still a colour of its own): what
+        // accompanies or decorates in a scene of one hue, so it is rich without scattering.
+        const auto neighbour = [&](std::initializer_list<const char*> order) -> std::string {
+            const PaletteColor* a = p.Get("anchor");
+            for (const char* r : order) {
+                const PaletteColor* c = p.Get(r);
+                if (c != nullptr && Uses(sp, r) && c->C >= NEUTRAL_CHROMA && !OtherHue(a, c) && DeltaE(c->hex, a->hex) >= 10) {
+                    return r;
+                }
+            }
+            return "";
+        };
+        const double style = std::clamp(_o.style, 0.0, 1.0);
+        if (role == "main") {
+            roles = { "anchor", "highlight", "shadow" };
+        } else if (role == "complement") {
+            const std::string n = neighbour({ "secondary", "transition", "accent" });
+            roles = !second.empty() ? std::vector<std::string> { second, "neutral" } : !n.empty() ? std::vector<std::string> { n, "anchor" } : std::vector<std::string> { "highlight", "anchor", "neutral" };
+        } else if (role == "accent") {
+            roles = Uses(sp, "accent") ? std::vector<std::string> { "accent", "highlight" } : !second.empty() ? std::vector<std::string> { second, "highlight" }
+                                                                                                                : std::vector<std::string> { "highlight", "neutral" };
+        } else if (role == "response") {
+            roles = second.empty() ? std::vector<std::string> { "highlight", "neutral" } : std::vector<std::string> { second, "neutral" };
+        } else if (role == "background") {
+            roles = { "shadow", "anchor" };
+        } else if (role == "neutral") {
+            roles = { "neutral", "highlight" };
+        } else if (role == "decorative") {
+            // Small figures decorate: in white when the style is contained, else in the other
+            // neighbour of the main colour, or its light tone.
+            const std::string n = neighbour({ "accent", "transition", "secondary" });
+            roles = style < 0.25 || n.empty() ? std::vector<std::string> { "neutral", "highlight" } : std::vector<std::string> { n, "neutral" };
+        }
+        std::vector<std::string> out;
         for (const std::string& r : roles) {
             const std::string hex = p.Hex(r);
-            if (!hex.empty() && std::find(out.begin(), out.end(), hex) == out.end()) {
+            if (!hex.empty() && (Uses(sp, r) || r == "neutral" || r == "highlight" || r == "shadow") && std::find(out.begin(), out.end(), hex) == out.end()) {
                 out.push_back(hex);
             }
+        }
+        if (out.empty()) {
+            out.push_back(p.Hex("anchor"));
         }
         return out;
     }
@@ -964,7 +1230,6 @@ private:
         (void)score;
         const size_t index = static_cast<size_t>(&s - _sources.data());
         std::vector<std::string> players(_players[index].begin(), _players[index].end());
-        // Families present, largest first.
         std::map<std::string, int> familyNodes;
         for (const std::string& p : players) {
             const auto f = _facts.find(p);
@@ -974,71 +1239,61 @@ private:
         }
         std::vector<std::pair<std::string, int>> families(familyNodes.begin(), familyNodes.end());
         std::stable_sort(families.begin(), families.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+        const double style = std::clamp(_o.style, 0.0, 1.0);
         const bool quiet = sp.evolution == "rest" || sp.monochrome;
-        const bool accents = _o.accents >= 0.25 && !quiet;
-        std::vector<std::string> sequence = { "main", "complement" };
-        const int kinds = quiet ? 2 : 2 + static_cast<int>(std::lround(_o.variety * 2));
-        if (kinds >= 3) {
-            sequence.push_back(accents ? "accent" : "decorative");
-        }
-        if (kinds >= 4) {
-            sequence.push_back(accents && sequence.back() != "accent" ? "accent" : "decorative");
-        }
-        if (sp.evolution == "climax" && accents && std::find(sequence.begin(), sequence.end(), "response") == sequence.end()) {
-            sequence.push_back("response");
-        }
-        // The canvas is not the anchor everywhere: in shifts the family leads with the secondary.
-        if (sp.evolution == "shift") {
-            std::swap(sequence[0], sequence[1]);
-        }
-        // A hierarchy by light, as a designer would weigh it (about 60-30-10): the largest
-        // families carry the main colour, the next the second, the small ones the accents.
-        // Variety moves the lines: more of the house leaves the main colour.
+        // A hierarchy by light: the largest families carry the main colour, the next ones
+        // accompany it (in the second hue when the scene has one, else in light tones), the
+        // small ones decorate in white and tints. A lasting accent colour on small figures
+        // only in an expressive style with room for three hues: otherwise an accent is a
+        // moment, not a figure.
+        const bool lastingAccents = style >= 0.7 && sp.hueBudget >= 3 && _o.accents >= 0.25 && !quiet;
         std::map<std::string, std::string> familyRole;
         double total = 0;
         for (const auto& [family, nodes] : families) {
             total += nodes;
         }
-        const double mainLine = 0.65 - 0.2 * _o.variety;
-        const double secondLine = 0.92 - 0.1 * _o.variety;
+        // The style moves the line too: an expressive scene gives more of the house to the
+        // second colour, a contained one keeps more of it in the main one.
+        const double mainLine = 0.7 - 0.25 * style - 0.1 * _o.variety;
+        const double secondLine = 0.92 - 0.08 * _o.variety - 0.04 * style;
         double before = 0;
         int small = 0;
         for (const auto& [family, nodes] : families) {
             const double share = total > 0 ? before / total : 0;
             std::string role;
             if (share < mainLine || familyRole.empty()) {
-                role = sequence[0];
-            } else if (share < secondLine || sequence.size() < 3) {
-                role = sequence[1];
+                role = sp.evolution == "shift" && !SecondHue(sp).empty() ? "complement" : "main";
+            } else if (share < secondLine) {
+                role = sp.evolution == "shift" && !SecondHue(sp).empty() ? "main" : "complement";
             } else {
-                role = sequence[2 + static_cast<size_t>(small++) % (sequence.size() - 2)];
+                role = lastingAccents && (small++ % 2 == 1) ? "accent" : "decorative";
             }
             familyRole[family] = role;
             before += nodes;
         }
-        // Small props of one family, many of them, alternate in a lively part.
-        std::map<std::string, std::vector<std::string>> members;
-        for (const std::string& p : players) {
-            const auto f = _facts.find(p);
-            if (f != _facts.end() && !f->second.group) {
-                members[f->second.family].push_back(p);
-            }
-        }
+        // Many small figures of one family alternate only in an expressive style.
         std::map<std::string, std::string> alternate;
-        if (!quiet && sp.energy >= 0.6 && _o.variety >= 0.5) {
+        if (!quiet && sp.energy >= 0.7 && style >= 0.7 && _o.variety >= 0.5) {
+            std::map<std::string, std::vector<std::string>> members;
+            for (const std::string& p : players) {
+                const auto f = _facts.find(p);
+                if (f != _facts.end() && !f->second.group) {
+                    members[f->second.family].push_back(p);
+                }
+            }
             for (auto& [family, list] : members) {
                 if (list.size() < 4 || family == "matrix" || family == "mega-tree" || family == "faces") {
                     continue;
                 }
                 std::stable_sort(list.begin(), list.end(), [&](const std::string& a, const std::string& b) { return _facts[a].cx < _facts[b].cx; });
-                const std::string base = familyRole[family];
-                const std::string other = base == "accent" ? "complement" : accents ? "accent" : "decorative";
                 for (size_t i = 1; i < list.size(); i += 2) {
-                    alternate[list[i]] = other;
+                    alternate[list[i]] = familyRole[family] == "decorative" ? "complement" : "decorative";
                 }
             }
         }
         const StageScene* stage = s.stage;
+        // When one figure or two carry the scene, the rest stay discreet instead of competing.
+        const bool focused = sp.mode == "protagonist" || sp.mode == "duo" || sp.mode == "call-response";
         for (const std::string& p : players) {
             const auto it = _facts.find(p);
             const FigureFacts* f = it == _facts.end() ? nullptr : &it->second;
@@ -1076,23 +1331,29 @@ private:
             }
             if (r.role.empty() && !stageRole.empty() && stageRole != "background") {
                 if (stageRole == "protagonist") {
-                    r.role = sp.mode == "protagonist" || sp.mode == "duo" ? "accent" : "main";
+                    // A selective accent: the protagonist stands out only where the scene
+                    // is about it and has room for a second hue.
+                    r.role = focused && sp.hueBudget >= 2 ? "accent" : "main";
                     r.why = r.role == "accent" ? COMPOSER_TEXT("the protagonist stands out in the scene's accent") : COMPOSER_TEXT("the protagonist carries the scene's colour");
+                    sp.protagonist = sp.protagonist.empty() ? p : sp.protagonist;
                 } else if (stageRole == "complement") {
                     r.role = "complement";
                     r.why = COMPOSER_TEXT("it accompanies the protagonist in the secondary");
+                    sp.companions.push_back(p);
                 } else if (stageRole == "responder") {
                     r.role = "response";
                     r.why = COMPOSER_TEXT("it answers in the contrast colour");
+                    sp.companions.push_back(p);
                 } else if (stageRole == "accent") {
-                    r.role = accents ? "accent" : "decorative";
+                    r.role = "decorative";
                     r.why = COMPOSER_TEXT("an accent of the scene");
+                } else if (stageRole == "rest" && focused) {
+                    r.role = "background";
+                    r.why = COMPOSER_TEXT("another figure carries the scene: this one stays discreet");
+                    sp.discreet.push_back(p);
                 }
-                // "rest" is about attention, not colour: a resting figure that still lights
-                // takes its family's colour like any other.
             }
             if (r.role.empty() && f != nullptr && f->group) {
-                // A group is the canvas under its figures: the anchor deep, or its family's role.
                 if (f->flatFamilies.size() == 1 && familyRole.contains(f->flatFamilies.front())) {
                     r.role = familyRole[f->flatFamilies.front()];
                     r.why = COMPOSER_TEXT("a group of one family: its family's colour");
@@ -1114,19 +1375,49 @@ private:
                     r.why = COMPOSER_TEXT("the scene's colour");
                 }
             }
+            // What the maker taught about this figure: it stands out, or it rests.
+            if (const auto w = _o.figureWeight.find(p); w != _o.figureWeight.end() && r.role != "identity" && r.role != "manual") {
+                if (w->second >= 0.3 && (r.role == "decorative" || r.role == "background" || r.role == "complement")) {
+                    r.role = focused && sp.hueBudget >= 2 ? "accent" : "main";
+                    r.why = COMPOSER_TEXT("the maker asked for this figure to stand out");
+                } else if (w->second <= -0.3 && r.role != "background") {
+                    r.role = "background";
+                    r.why = COMPOSER_TEXT("the maker asked for this figure to rest");
+                    sp.discreet.push_back(p);
+                }
+            }
             if (r.colors.empty()) {
                 r.colors = RoleColors(sp, r.role, f);
             }
             sp.figures.push_back(std::move(r));
         }
         std::sort(sp.figures.begin(), sp.figures.end(), [](const FigureColorRole& a, const FigureColorRole& b) { return a.figure < b.figure; });
+        if (sp.protagonist.empty() && !families.empty()) {
+            // The largest figure of the main family carries the scene.
+            int most = -1;
+            for (const FigureColorRole& r : sp.figures) {
+                const auto f = _facts.find(r.figure);
+                if (f != _facts.end() && !f->second.group && r.role == "main" && f->second.nodes > most) {
+                    most = f->second.nodes;
+                    sp.protagonist = r.figure;
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------ gestures
-    void Gestures(const ChromaticScore& score, ChromaticScenePlan& sp) {
+    // A gesture's colours follow what it does in the scene: most reinforce the scene's own
+    // hue in a lighter tone (standing out by light, not by a new colour); only strong moments
+    // take the accent; a gesture near the end of a scene can prepare the next one's colour;
+    // in a closing scene it resolves to the identity.
+    void Gestures(const ChromaticScore& score, ChromaticScenePlan& sp, size_t index) {
         if (_in.stage == nullptr) {
             return;
         }
+        const ChromaticScenePlan* next = index + 1 < score.scenes.size() ? &score.scenes[index + 1] : nullptr;
+        const double style = std::clamp(_o.style, 0.0, 1.0);
+        int accentsLeft = sp.evolution == "climax" ? 2 + static_cast<int>(style * 2) : sp.evolution == "expand" || sp.motifOperation == "intensify" ? 1 + static_cast<int>(style * 2)
+                                                                                                                                                    : static_cast<int>(style >= 0.7);
         for (const GlobalGesture& g : _in.stage->gestures) {
             if (g.startMS < sp.startMS || g.startMS >= sp.endMS) {
                 continue;
@@ -1149,79 +1440,106 @@ private:
             if (gp.background.empty()) {
                 gp.background.push_back(sp.palette.Hex("anchor"));
             }
-            // The candidates: the scene's family first, then the song's accent and contrast.
-            std::vector<std::pair<std::string, std::string>> candidates;
-            for (const char* role : { "accent", "contrast", "highlight", "secondary", "transition", "anchor", "neutral" }) {
-                candidates.push_back({ sp.palette.Hex(role), role });
+            // A gesture is seen against the house as a whole, not against every colour some
+            // figure wears: the mix of each figure's first colour, weighted by its lights.
+            Oklab house;
+            double weight = 0;
+            for (const FigureColorRole& r : sp.figures) {
+                const auto f = _facts.find(r.figure);
+                if (r.colors.empty() || f == _facts.end() || f->second.group || f->second.nodes <= 0) {
+                    continue;
+                }
+                const Oklab c = ToOklab(OklchOfHex(r.colors.front()));
+                const double w = static_cast<double>(f->second.nodes);
+                house.L += c.L * w;
+                house.a += c.a * w;
+                house.b += c.b * w;
+                weight += w;
             }
-            for (const char* role : { "accent", "contrast" }) {
-                candidates.push_back({ score.song.Hex(role), std::string("song ") + role });
+            if (weight > 0) {
+                house = { house.L / weight, house.a / weight, house.b / weight };
+            } else {
+                house = ToOklab(OklchOfHex(sp.palette.Hex("anchor")));
             }
             const auto against = [&](const std::string& hex) {
-                double d = 1e9;
-                for (const std::string& b : gp.background) {
-                    d = std::min(d, DeltaE(hex, b));
-                }
+                double d = DeltaE(ToOklab(OklchOfHex(hex)), house);
                 for (const std::string& b : identity) {
-                    d = std::min(d, DeltaE(hex, b) + 6); // not the colour a figure keeps as its own
+                    d = std::min(d, DeltaE(hex, b) + 6);
                 }
                 return d;
             };
-            const auto value = [&](const std::string& hex, const std::string& role) {
-                double v = against(hex);
-                const Oklch k = OklchOfHex(hex);
-                if (k.C < NEUTRAL_CHROMA) {
-                    v -= 12; // white works against anything; it is the last choice, not the first
+            // What the gesture does here.
+            const bool strong = (sp.evolution == "climax" || sp.evolution == "expand" || sp.motifOperation == "intensify") && accentsLeft > 0 && sp.energy >= 0.6;
+            const bool late = next != nullptr && g.startMS >= sp.startMS + 0.75 * (sp.endMS - sp.startMS) && next->motif != sp.motif && !next->motif.empty();
+            std::vector<std::pair<std::string, std::string>> candidates; // hex, why
+            if (sp.motifOperation == "resolve") {
+                gp.intent = "resolve";
+                candidates = { { sp.palette.Hex("highlight"), "highlight" }, { sp.palette.Hex("neutral"), "neutral" }, { sp.palette.Hex("anchor"), "anchor" } };
+            } else if (late) {
+                gp.intent = "transform";
+                candidates = { { next->palette.Hex("anchor"), "next anchor" }, { next->palette.Hex("highlight"), "next highlight" }, { sp.palette.Hex("highlight"), "highlight" } };
+            } else if (strong) {
+                gp.intent = "accent";
+                const std::string second = SecondHue(sp);
+                candidates = { { sp.palette.Hex("accent"), "accent" }, { second.empty() ? std::string() : sp.palette.Hex(second), second }, { sp.palette.Hex("highlight"), "highlight" },
+                               { sp.palette.Hex("neutral"), "neutral" } };
+                --accentsLeft;
+            } else {
+                gp.intent = "reinforce";
+                // The scene's own colour at full strength first: over tints and white it reads;
+                // its light tone and white when the figures already wear the main colour.
+                candidates = { { sp.palette.Hex("anchor"), "anchor" }, { sp.palette.Hex("highlight"), "highlight" } };
+                // Then a colour the scene already uses (its second hue or a neighbour), and
+                // white only last.
+                const std::string second = SecondHue(sp);
+                for (const char* role : { "secondary", "transition", "accent" }) {
+                    if (Uses(sp, role) && (second.empty() || second == role) && sp.palette.Get(role) != nullptr && sp.palette.Get(role)->C >= NEUTRAL_CHROMA) {
+                        candidates.push_back({ sp.palette.Hex(role), role });
+                    }
                 }
-                if (role == "accent" || role == "song accent") {
-                    v += 4 * _o.accents;
+                if (!second.empty() && second != "secondary" && second != "transition" && second != "accent") {
+                    candidates.push_back({ sp.palette.Hex(second), second });
                 }
-                return v;
-            };
-            std::string front, frontRole;
-            double best = -1e9;
-            for (const auto& [hex, role] : candidates) {
+                candidates.push_back({ sp.palette.Hex("neutral"), "neutral" });
+            }
+            // The first candidate that still reads against what is lit; failing that, the one
+            // that reads best.
+            std::string front, frontWhy;
+            double best = -1;
+            for (const auto& [hex, why] : candidates) {
                 if (hex.empty()) {
                     continue;
                 }
-                const double v = value(hex, role);
-                if (v > best + 1e-9) {
-                    best = v;
+                const double d = against(hex);
+                if (d >= 18) {
                     front = hex;
-                    frontRole = role;
+                    frontWhy = why;
+                    break;
+                }
+                if (d > best) {
+                    best = d;
+                    front = hex;
+                    frontWhy = why;
                 }
             }
             gp.front = front;
             gp.contrast = std::round(against(front) * 10.0) / 10.0;
-            // A second colour of the family it brings on the way, distinct from the front
-            // and from what is lit.
-            std::string second;
-            double secondBest = -1e9;
-            for (const auto& [hex, role] : candidates) {
-                if (hex.empty() || hex == front || DeltaE(hex, front) < 12) {
-                    continue;
-                }
-                const double v = std::min(against(hex), DeltaE(hex, front)) - (OklchOfHex(hex).C < NEUTRAL_CHROMA ? 8 : 0);
-                if (v > secondBest + 1e-9) {
-                    secondBest = v;
-                    second = hex;
-                }
-            }
-            if (second.empty()) {
-                const Oklch f = OklchOfHex(front);
-                second = ToHex(Oklch { std::min(0.92, f.L + 0.15), f.C * 0.5, f.h });
-            }
-            gp.secondary = second;
             const Oklch f = OklchOfHex(front);
+            // Its second colour stays in the scene's identity: the main colour, or the
+            // next scene's when it prepares it.
+            gp.secondary = gp.intent == "transform" ? next->palette.Hex("anchor") : sp.palette.Hex("anchor");
+            if (gp.secondary == front) {
+                gp.secondary = sp.palette.Hex("shadow");
+            }
             gp.tail = ToHex(Oklch { std::max(0.3, f.L - 0.18), f.C * 0.8, f.h });
             gp.start = front;
-            gp.arrival = second;
+            gp.arrival = gp.secondary;
             switch (g.kind) {
             case GestureKind::PropagatedWave:
             case GestureKind::SpatialSweep:
             case GestureKind::Expansion:
             case GestureKind::Contraction:
-                gp.colorBy = _o.evolution >= 0.3 ? "distance" : "trail";
+                gp.colorBy = gp.intent == "transform" || (_o.evolution >= 0.3 && style >= 0.5) ? "distance" : "trail";
                 break;
             case GestureKind::Echo:
             case GestureKind::Cascade:
@@ -1231,12 +1549,7 @@ private:
                 gp.colorBy = "field";
                 break;
             }
-            const bool white = OklchOfHex(front).C < NEUTRAL_CHROMA;
-            gp.why = fmt::format("{} ({}) stands {:.0f} ΔE from what is lit on its figures{}; {}", front, frontRole, gp.contrast,
-                                 white ? COMPOSER_TEXT(": only white stood out enough") : "",
-                                 gp.colorBy == "distance"  ? COMPOSER_TEXT("its colour turns as it travels across the house")
-                                 : gp.colorBy == "trail" ? COMPOSER_TEXT("its front in one colour, its trail in a deeper one")
-                                                         : COMPOSER_TEXT("one family on every figure"));
+            gp.why = fmt::format("{}: {} ({}) stands {:.0f} ΔE from what is lit on its figures", gp.intent, front, frontWhy, gp.contrast);
             sp.gestures.push_back(std::move(gp));
         }
     }
@@ -1382,11 +1695,20 @@ private:
     int _direction = 1;
     std::map<int, int> _seen;
     std::map<std::string, int> _kindCount;
-    std::map<int, ColorPaletteProfile> _motifs;
+    std::map<std::string, ColorPaletteProfile> _motifPalettes; // motif id -> its palette
+    std::map<int, std::string> _groupMotif;  // repeat group -> the motif of its first time
+    std::map<int, double> _groupEnergy;      // repeat group -> the energy of its first time
+    std::map<int, int> _groupCount;          // repeat group -> how many times it plays
+    std::string _identity;                   // the song's first motif
+    std::string _current;                    // the motif of the last scene
     std::vector<Harmony> _previous;
     std::string _harmonyWhy;
     double _intensity = 1; // how strong the interpretation wants the colours
 };
+
+bool UsesRole(const ChromaticScenePlan& sp, const std::string& role) {
+    return std::find(sp.used.begin(), sp.used.end(), role) != sp.used.end();
+}
 
 const std::set<std::string>& UntouchedEffects() {
     static const std::set<std::string> e = { "Off", "Video", "Pictures", "Faces", "Shader", "Duplicate", "DMX", "Servo", "Moving Head", "State" };
@@ -1428,6 +1750,8 @@ std::vector<std::string> ApplyChromaticScore(const ChromaticScore& score, Choreo
     }
     int recoloured = 0, curves = 0, kept = 0;
     std::map<std::string, int> roles;
+    std::map<std::string, int> functions;
+    std::map<size_t, int> downbeats;
     for (ChoreographyEvent& e : choreography.events) {
         if (e.colors.empty() || UntouchedEffects().contains(e.effect) || e.state == DecisionState::Locked || e.state == DecisionState::ManualEdit) {
             ++kept;
@@ -1450,11 +1774,36 @@ std::vector<std::string> ApplyChromaticScore(const ChromaticScore& score, Choreo
             continue;
         }
         const size_t n = e.colors.size();
+        std::vector<std::string> source = role->colors;
+        std::string function = "base";
+        if (role->role != "identity" && role->role != "manual") {
+            if (e.prominence == Prominence::Accent) {
+                // A hit: on a downbeat it may take the accent, in the share the music
+                // earns; otherwise it flashes in the figure's own light tone.
+                bool downbeat = false;
+                for (const Reason& r : e.reasons) {
+                    downbeat |= r.code == "downbeat";
+                }
+                const size_t at = static_cast<size_t>(sp - score.scenes.data());
+                int& hits = downbeats[at];
+                const bool earned = downbeat && (hits++ % 10) < static_cast<int>(std::lround(sp->accentShare * 10));
+                const std::string accent = UsesRole(*sp, "accent") ? sp->palette.Hex("accent") : sp->palette.Hex("highlight");
+                source = earned ? std::vector<std::string> { accent } : std::vector<std::string> { role->colors.front() };
+                function = earned ? "accent" : "hit";
+            } else if (e.prominence == Prominence::Support && role->colors.size() > 1) {
+                std::rotate(source.begin(), source.begin() + 1, source.end()); // the same hue, in its other light
+                function = "complement";
+            } else if (e.prominence == Prominence::Rest) {
+                source = { sp->palette.Hex("shadow") };
+                function = "background";
+            }
+        }
         std::vector<std::string> colors;
         for (size_t k = 0; k < n; ++k) {
-            colors.push_back(role->colors[k % role->colors.size()]);
+            colors.push_back(source[k % source.size()]);
         }
         e.colors = colors;
+        functions[function]++;
         e.colorCurves.clear();
         e.paletteId = "chroma:" + sp->id + ":" + role->role;
         e.reasons.push_back({ "color-role", role->role });
@@ -1504,8 +1853,35 @@ std::vector<std::string> ApplyChromaticScore(const ChromaticScore& score, Choreo
     for (const auto& [r, n] : roles) {
         roleText += fmt::format("{}{} x{}", roleText.empty() ? "" : ", ", r, n);
     }
-    notes.push_back(fmt::format("{} effects took their figure's colour role ({}), {} change colour into the next scene, {} kept as they were", recoloured, roleText, curves, kept));
+    std::string functionText;
+    for (const auto& [f, n] : functions) {
+        functionText += fmt::format("{}{} x{}", functionText.empty() ? "" : ", ", f, n);
+    }
+    notes.push_back(fmt::format("{} effects took their figure's colour role ({}; as {}), {} change colour into the next scene, {} kept as they were", recoloured, roleText, functionText, curves, kept));
     return notes;
+}
+
+std::vector<ChromaticEdit> DecisionsFromObservations(const std::vector<ArtisticObservation>& observations, const ChromaticScore& score) {
+    std::vector<ChromaticEdit> out;
+    for (const ArtisticObservation& o : observations) {
+        if (!ObservationIsSongDecision(o)) {
+            continue;
+        }
+        const ChromaticScenePlan* sp = o.sceneStartMS >= 0 ? score.SceneAt(o.sceneStartMS) : nullptr;
+        if (o.kind == "keep-combination" && sp != nullptr) {
+            std::string value;
+            for (const PaletteColor& c : sp->palette.colors) {
+                value += (value.empty() ? "" : ";") + c.role + "=" + c.hex;
+            }
+            out.push_back({ "lock-palette", sp->startMS, "", "", value, "from an observation: keep this combination" });
+        } else if (o.kind == "recall-motif" && sp != nullptr) {
+            const std::string motif = !o.note.empty() && o.note.size() <= 2 ? o.note : score.motifDefs.empty() ? std::string() : score.motifDefs.front().id;
+            if (!motif.empty()) {
+                out.push_back({ "recall-motif", sp->startMS, "", "", motif, "from an observation: bring this motif back here" });
+            }
+        }
+    }
+    return out;
 }
 
 int ColorGestures(const ChromaticScore& score, GlobalStageScore& stage) {
@@ -1621,6 +1997,15 @@ json PaletteJson(const ColorPaletteProfile& p) {
     return { { "id", p.id }, { "harmony", HarmonyId(p.harmony) }, { "anchorHue", Round3(p.anchorHue) }, { "saturation", p.saturation }, { "lightness", p.lightness }, { "colors", colors }, { "reason", p.reason } };
 }
 
+json MotifsJson(const std::vector<ChromaticMotif>& motifs) {
+    json out = json::array();
+    for (const ChromaticMotif& m : motifs) {
+        out.push_back({ { "id", m.id }, { "kind", m.kind }, { "anchor", m.anchor }, { "second", m.second }, { "accent", m.accent }, { "from", m.from },
+                        { "firstScene", m.firstScene }, { "scenes", m.scenes }, { "why", m.why } });
+    }
+    return out;
+}
+
 ColorPaletteProfile PaletteFrom(const json& j) {
     ColorPaletteProfile p;
     p.id = j.value("id", std::string());
@@ -1654,22 +2039,24 @@ std::string ToJson(const ChromaticScore& s) {
         json gestures = json::array();
         for (const GestureChromaticProfile& g : sp.gestures) {
             gestures.push_back({ { "gesture", g.gesture }, { "start", g.start }, { "front", g.front }, { "secondary", g.secondary }, { "tail", g.tail }, { "arrival", g.arrival },
-                                 { "colorBy", g.colorBy }, { "background", g.background }, { "contrast", g.contrast }, { "why", g.why } });
+                                 { "colorBy", g.colorBy }, { "background", g.background }, { "contrast", g.contrast }, { "intent", g.intent }, { "why", g.why } });
         }
         scenes.push_back({ { "id", sp.id }, { "startMS", sp.startMS }, { "endMS", sp.endMS }, { "sectionKind", sp.sectionKind }, { "mode", sp.mode }, { "energy", sp.energy },
                            { "palette", PaletteJson(sp.palette) }, { "dominant", sp.dominant }, { "secondary", sp.secondary }, { "accents", sp.accents }, { "contrasts", sp.contrasts },
-                           { "saturation", sp.saturation }, { "intensity", sp.intensity }, { "monochrome", sp.monochrome }, { "evolution", sp.evolution }, { "motif", sp.motif }, { "feeling", sp.feeling }, { "feelingColor", sp.feelingColor }, { "feelingSource", sp.feelingSource },
+                           { "saturation", sp.saturation }, { "intensity", sp.intensity }, { "monochrome", sp.monochrome }, { "evolution", sp.evolution }, { "motif", sp.motif }, { "motifOperation", sp.motifOperation }, { "hueBudget", sp.hueBudget }, { "accentShare", sp.accentShare },
+                           { "used", sp.used }, { "intent", sp.intent }, { "protagonist", sp.protagonist }, { "companions", sp.companions }, { "discreet", sp.discreet },
+                           { "kept", sp.kept }, { "introduced", sp.introduced }, { "feeling", sp.feeling }, { "feelingColor", sp.feelingColor }, { "feelingSource", sp.feelingSource },
                            { "figures", figures }, { "gestures", gestures },
                            { "toNext", { { "kind", sp.toNext.kind }, { "startMS", sp.toNext.startMS }, { "endMS", sp.toNext.endMS }, { "order", sp.toNext.order }, { "why", sp.toNext.why } } },
                            { "reasons", sp.reasons }, { "manual", sp.manual }, { "locked", sp.locked } });
     }
     const ChromaticOptions& o = s.options;
     return json({ { "kind", "composer-color-score" }, { "schemaVersion", s.schemaVersion }, { "version", s.version }, { "enabled", s.enabled },
-                  { "options", { { "enabled", o.enabled }, { "variety", o.variety }, { "contrast", o.contrast }, { "accents", o.accents }, { "evolution", o.evolution },
+                  { "options", { { "enabled", o.enabled }, { "variety", o.variety }, { "style", o.style }, { "contrast", o.contrast }, { "accents", o.accents }, { "evolution", o.evolution },
                                  { "christmasInfluence", o.christmasInfluence }, { "saturation", o.saturation }, { "warmth", o.warmth }, { "gradual", o.gradual },
                                  { "respectIdentity", o.respectIdentity }, { "songColors", o.songColors }, { "seed", o.seed } } },
                   { "song", PaletteJson(s.song) }, { "identityReason", s.identityReason }, { "briefSource", s.briefSource }, { "mood", s.mood }, { "scenes", scenes },
-                  { "motifs", s.motifs }, { "edits", s.edits }, { "warnings", s.warnings }, { "limits", s.limits }, { "review", "not-reviewed" } })
+                  { "motifs", s.motifs }, { "motifDefs", MotifsJson(s.motifDefs) }, { "edits", s.edits }, { "warnings", s.warnings }, { "limits", s.limits }, { "review", "not-reviewed" } })
         .dump(1);
 }
 
@@ -1679,7 +2066,7 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
         error = "not a colour score";
         return false;
     }
-    if (root.value("schemaVersion", 0) < 1 || root.value("schemaVersion", 0) > CHROMATIC_SCORE_SCHEMA_VERSION) {
+    if (root.value("schemaVersion", 0) < 1 || root.value("schemaVersion", 0) > CHROMATIC_SCORE_SCHEMA_VERSION) { // 1 reads as a score without motifs
         error = "colour score: schema not read";
         return false;
     }
@@ -1690,6 +2077,7 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
         const json o = root.value("options", json::object());
         s.options.enabled = o.value("enabled", true);
         s.options.variety = o.value("variety", 0.5);
+        s.options.style = o.value("style", 0.4);
         s.options.contrast = o.value("contrast", 0.5);
         s.options.accents = o.value("accents", 0.5);
         s.options.evolution = o.value("evolution", 0.5);
@@ -1705,6 +2093,19 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
         s.briefSource = root.value("briefSource", std::string());
         s.mood = root.value("mood", std::string());
         s.motifs = root.value("motifs", std::vector<std::string>());
+        for (const json& m : root.value("motifDefs", json::array())) {
+            ChromaticMotif k;
+            k.id = m.value("id", std::string());
+            k.kind = m.value("kind", std::string());
+            k.anchor = m.value("anchor", std::string());
+            k.second = m.value("second", std::string());
+            k.accent = m.value("accent", std::string());
+            k.from = m.value("from", std::string());
+            k.firstScene = m.value("firstScene", std::string());
+            k.scenes = m.value("scenes", std::vector<std::string>());
+            k.why = m.value("why", std::string());
+            s.motifDefs.push_back(k);
+        }
         s.edits = root.value("edits", 0);
         s.warnings = root.value("warnings", std::vector<std::string>());
         s.limits = root.value("limits", std::vector<std::string>());
@@ -1726,6 +2127,16 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
             sp.monochrome = j.value("monochrome", false);
             sp.evolution = j.value("evolution", std::string());
             sp.motif = j.value("motif", std::string());
+            sp.motifOperation = j.value("motifOperation", std::string());
+            sp.hueBudget = j.value("hueBudget", 1);
+            sp.accentShare = j.value("accentShare", 0.0);
+            sp.used = j.value("used", std::vector<std::string>());
+            sp.intent = j.value("intent", std::string());
+            sp.protagonist = j.value("protagonist", std::string());
+            sp.companions = j.value("companions", std::vector<std::string>());
+            sp.discreet = j.value("discreet", std::vector<std::string>());
+            sp.kept = j.value("kept", std::vector<std::string>());
+            sp.introduced = j.value("introduced", std::vector<std::string>());
             sp.feeling = j.value("feeling", std::string());
             sp.feelingColor = j.value("feelingColor", std::string());
             sp.feelingSource = j.value("feelingSource", std::string());
@@ -1744,6 +2155,7 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
                 gp.background = g.value("background", std::vector<std::string>());
                 gp.contrast = g.value("contrast", 0.0);
                 gp.why = g.value("why", std::string());
+                gp.intent = g.value("intent", std::string());
                 sp.gestures.push_back(gp);
             }
             const json t = j.value("toNext", json::object());
@@ -1808,7 +2220,8 @@ std::string ToJson(const ChromaticEdits& e) {
 }
 
 bool FromJson(const std::string& text, ChromaticEdits& e, std::string& error) {
-    static const std::set<std::string> ACTIONS = { "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome" };
+    static const std::set<std::string> ACTIONS = { "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome",
+                                                   "keep-identity", "recall-motif", "fewer-colours", "fewer-accents" };
     const json root = json::parse(text, nullptr, false);
     if (!root.is_object() || root.value("kind", std::string()) != "composer-color-edits") {
         error = "not a file of colour edits";

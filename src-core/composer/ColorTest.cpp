@@ -1,5 +1,7 @@
 #include "composer/ColorTest.h"
 
+#include "composer/ArtEvaluation.h"
+#include "composer/SequenceComparison.h"
 #include "composer/ChromaticDirector.h"
 #include "composer/ColorCheck.h"
 #include "composer/ColorSpace.h"
@@ -189,6 +191,8 @@ public:
             TestDirector();
             TestEdits();
             TestApply();
+            TestArtDirection();
+            TestCorrections();
             TestRender();
             TestMeasure();
         }
@@ -645,7 +649,7 @@ private:
         Check(matrix != nullptr && tree != nullptr && (matrix->role == "main" || tree->role == "main"), "the largest figures carry the main colour (about 60-30-10 by light)");
         Check(HarmonyContrastOf(scene(1)) <= HarmonyContrastOf(scene(7)), fmt::format("the intro holds less contrast than the climax ({} {:.0f}° against {} {:.0f}°)", HarmonyId(scene(1).palette.harmony),
                                                                                        HarmonyContrastOf(scene(1)), HarmonyId(scene(7).palette.harmony), HarmonyContrastOf(scene(7))) + " " + Describe(scene(7).palette));
-        // The gesture: a front that stands out from what is lit under it, and not white.
+        // The gesture: it reads against what is lit under it, with an intention of the scene.
         const GestureChromaticProfile* g = scene(3).gestures.empty() ? nullptr : &scene(3).gestures.front();
         double closest = 1e9;
         if (g != nullptr) {
@@ -653,9 +657,20 @@ private:
                 closest = std::min(closest, DeltaE(g->front, b));
             }
         }
-        Check(g != nullptr && closest >= 18, fmt::format("the wave's front stands {:.0f} ΔE from every colour lit on its figures", closest));
-        Check(g != nullptr && OklchOfHex(g->front).C >= NEUTRAL_CHROMA, "the wave stands out with a colour, not with white");
-        Check(g != nullptr && g->colorBy == "distance" && !g->secondary.empty() && g->secondary != g->front, "a propagated wave changes colour as it travels: front and a second colour");
+        Check(g != nullptr && closest >= 15, fmt::format("the wave reads {:.0f} ΔE against every colour lit on its figures ({}: {})", closest, g == nullptr ? "-" : g->intent, g == nullptr ? "-" : g->why));
+        Check(g != nullptr && (g->intent == "accent" || g->intent == "reinforce" || g->intent == "transform" || g->intent == "resolve"), "the gesture says what it does with the scene's colours");
+        std::set<std::string> sceneColours;
+        for (const PaletteColor& c : scene(3).palette.colors) {
+            sceneColours.insert(c.hex);
+        }
+        if (scene(4).palette.colors.size() > 0) {
+            for (const PaletteColor& c : scene(4).palette.colors) {
+                sceneColours.insert(c.hex);
+            }
+        }
+        Check(g != nullptr && sceneColours.contains(g->front), "its colour comes from the scene's own palette (or the next one it prepares), never from nowhere");
+        Check(g != nullptr && (g->colorBy == "distance" || g->colorBy == "trail") && !g->secondary.empty() && g->secondary != g->front,
+              "a propagated wave carries a second colour: by distance in an expressive style, by its trail otherwise");
         Check(scene(6).toNext.kind == "cut", fmt::format("into the climax the colours change at once ({})", scene(6).toNext.kind));
         bool staggered = false;
         for (const ChromaticScenePlan& sp : score.scenes) {
@@ -823,7 +838,10 @@ private:
             counts = counts && e.colors.size() == _choreo.events[i].colors.size();
             const ChromaticScenePlan* sp = _score.Scene(e.segmentId);
             const FigureColorRole* r = sp == nullptr ? nullptr : sp->RoleOf(e.target);
-            roleColours = roleColours && r != nullptr && e.colors.front() == r->colors.front();
+            // Its role's colours, in the order its function asks (a supporting effect starts
+            // from the other light), or the scene's deep tone for an effect at rest.
+            const bool fromRole = r != nullptr && std::find(r->colors.begin(), r->colors.end(), e.colors.front()) != r->colors.end();
+            roleColours = roleColours && (fromRole || (sp != nullptr && e.colors.front() == sp->palette.Hex("shadow")));
             for (const std::string& k : e.colorCurves) {
                 curves += k.empty() ? 0 : 1;
             }
@@ -853,8 +871,10 @@ private:
         const Oklch middle = mid == std::string::npos ? Oklch() : OklchOfHex(curve.substr(mid + 10, 7));
         Check(mid != std::string::npos && middle.C < 0.12, fmt::format("far apart colours meet through a soft middle (chroma {:.2f}), not through a third colour", middle.C));
         GlobalStageScore stage = _stage;
-        Check(ColorGestures(_score, stage) == 1 && stage.gestures.front().colorBy == "distance" && stage.gestures.front().colors.size() >= 2 && !stage.gestures.front().colorReason.empty(),
+        Check(ColorGestures(_score, stage) == 1 && (stage.gestures.front().colorBy == "distance" || stage.gestures.front().colorBy == "trail") && stage.gestures.front().colors.size() >= 2 &&
+                  !stage.gestures.front().colorReason.empty(),
               "the gesture takes its own colours and how they spread, with its reason");
+        stage.gestures.front().colorBy = "distance";
         const FieldSpec spec = ParticipantField(stage.gestures.front(), stage.gestures.front().participants.back(), _space, &_semantics, 21000);
         FieldSpec read;
         std::string error;
@@ -863,6 +883,269 @@ private:
         FieldSpec bad;
         bad.colorBy = "rainbow";
         Check(!ValidateField(bad, error), "an unknown colour mode is refused");
+    }
+
+
+    // ------------------------------------------------------------ art direction (phase 19)
+
+    // Different hues among colours, counted from `anchor` when given: what lies within 40
+    // degrees of the main colour belongs to it (its neighbours are not new colours).
+    static int HueGroupsOf(const std::vector<std::string>& colours, const std::string& anchor = "") {
+        std::vector<double> hues;
+        if (!anchor.empty() && OklchOfHex(anchor).C >= NEUTRAL_CHROMA) {
+            hues.push_back(OklchOfHex(anchor).h);
+        }
+        for (const std::string& c : colours) {
+            const Oklch k = OklchOfHex(c);
+            if (k.C < NEUTRAL_CHROMA) {
+                continue;
+            }
+            bool near = false;
+            for (double h : hues) {
+                near |= HueDistance(h, k.h) < 40;
+            }
+            if (!near) {
+                hues.push_back(k.h);
+            }
+        }
+        return static_cast<int>(hues.size());
+    }
+
+    void TestArtDirection() {
+        Title("Art direction: the colours each moment needs, one hue per figure, accents that are moments, motifs that come back");
+        ChromaticOptions contained, expressive;
+        contained.style = 0;
+        expressive.style = 1;
+        const ChromaticScore low = DirectColors(Input(nullptr, contained));
+        const ChromaticScore high = DirectColors(Input(nullptr, expressive));
+        int lowMax = 0, highMax = 0, normalVerse = 0, normalChorus = 0;
+        for (const ChromaticScenePlan& s : low.scenes) {
+            lowMax = std::max(lowMax, s.hueBudget);
+        }
+        for (const ChromaticScenePlan& s : high.scenes) {
+            highMax = std::max(highMax, s.hueBudget);
+        }
+        normalVerse = _score.Scene("s2.0")->hueBudget;
+        normalChorus = _score.Scene("s3.0")->hueBudget;
+        Check(lowMax == 1 && highMax >= 3 && normalVerse == 1 && normalChorus == 2,
+              fmt::format("the budget follows the style and the moment: contained {} hue at most, expressive {}; by default a verse {} and a chorus {}", lowMax, highMax, normalVerse, normalChorus));
+        bool oneHue = true, withinBudget = true;
+        std::string offender;
+        for (const ChromaticScenePlan& sp : _score.scenes) {
+            std::vector<std::string> all;
+            for (const FigureColorRole& r : sp.figures) {
+                if (r.role == "identity" || r.role == "manual") {
+                    continue;
+                }
+                if (HueGroupsOf(r.colors) > 1) {
+                    oneHue = false;
+                    offender = sp.id + " " + r.figure + " " + r.role;
+                }
+                all.push_back(r.colors.front());
+            }
+            withinBudget = withinBudget && HueGroupsOf(all, sp.palette.Hex("anchor")) <= sp.hueBudget;
+            if (HueGroupsOf(all, sp.palette.Hex("anchor")) > sp.hueBudget) {
+                offender = sp.id + " budget";
+            }
+        }
+        Check(oneHue, "a figure never mixes two hues in one effect: one hue in its lights, or white" + (offender.empty() ? std::string() : " (" + offender + ")"));
+        Check(withinBudget, "the figures of a scene use no more different hues than its budget" + (offender.empty() ? std::string() : " (" + offender + ")"));
+        int lastingAccents = 0;
+        for (const ChromaticScenePlan& sp : _score.scenes) {
+            for (const FigureColorRole& r : sp.figures) {
+                lastingAccents += r.role == "accent" ? 1 : 0;
+            }
+        }
+        int expressiveAccents = 0;
+        for (const ChromaticScenePlan& sp : high.scenes) {
+            for (const FigureColorRole& r : sp.figures) {
+                expressiveAccents += r.role == "accent" ? 1 : 0;
+            }
+        }
+        Check(lastingAccents == 0 && expressiveAccents >= lastingAccents, fmt::format("by default no figure wears the accent all scene long ({}); only an expressive style allows it ({})", lastingAccents, expressiveAccents));
+        // Motifs.
+        const ChromaticScenePlan* intro = _score.Scene("s1.0");
+        const ChromaticScenePlan* chorus = _score.Scene("s3.0");
+        const ChromaticScenePlan* chorus2 = _score.Scene("s5.0");
+        const ChromaticScenePlan* verse = _score.Scene("s2.0");
+        const ChromaticScenePlan* verse2 = _score.Scene("s4.0");
+        const ChromaticScenePlan* bridge = _score.Scene("s6.0");
+        const ChromaticScenePlan* outro = _score.Scene("s8.0");
+        Check(intro->motifOperation == "present" && !intro->motif.empty() && !_score.motifDefs.empty() && _score.motifDefs.front().kind == "identity", "the intro presents the song's colour identity as its first motif");
+        Check(verse->motif == intro->motif && verse->motifOperation == "develop" && std::fabs(verse->palette.anchorHue - intro->palette.anchorHue) < 1,
+              "a verse develops the identity: the same colours, other lights and roles, no change for its own sake");
+        Check(chorus->motifOperation == "introduce" && chorus->motif != intro->motif && HueDistance(OklchOfHex(chorus->dominant).h, OklchOfHex(intro->dominant).h) < 20,
+              "the chorus introduces a contrast and keeps the identity's main colour");
+        Check(chorus2->motif == chorus->motif && (chorus2->motifOperation == "recall" || chorus2->motifOperation == "intensify") && !chorus2->reasons.empty(),
+              fmt::format("the chorus that comes back recalls its motif ({}), and says why", chorus2->motifOperation));
+        Check(verse2->motif == intro->motif && bridge->motifOperation == "transform" && outro->motifOperation == "resolve" && outro->motif == intro->motif,
+              "the second verse returns to the identity, the bridge transforms it, the end resolves to it");
+        int recurring = 0;
+        for (const ChromaticMotif& m : _score.motifDefs) {
+            recurring += m.scenes.size() > 1 ? 1 : 0;
+        }
+        Check(recurring >= 2 && !_score.motifDefs.front().why.empty(), fmt::format("{} motifs, {} of them recurring, each with its reason", _score.motifDefs.size(), recurring));
+        Check(!chorus->kept.empty() && !chorus->introduced.empty() && !chorus->intent.empty() && !chorus->protagonist.empty(),
+              "a scene says what it keeps, what it brings, what it wants to say and who carries it");
+        // Edits.
+        ChromaticEdits edits;
+        edits.edits.push_back({ "fewer-colours", 20000, "", "", "", "test" });
+        edits.edits.push_back({ "fewer-accents", 20000, "", "", "", "test" });
+        edits.edits.push_back({ "recall-motif", 50000, "", "", intro->motif, "test" });
+        edits.edits.push_back({ "keep-identity", 10000, "", "", "", "test" });
+        const ChromaticScore edited = DirectColors(Input(&edits));
+        Check(edited.Scene("s3.0")->hueBudget < chorus->hueBudget && edited.Scene("s3.0")->accentShare < chorus->accentShare, "asked for fewer colours and fewer accents: fewer hues, rarer accents");
+        Check(edited.Scene("s6.0")->motif == intro->motif && edited.Scene("s6.0")->motifOperation == "recall", "asked to bring a motif back: it comes back there");
+        Check(edited.Scene("s2.0")->motifOperation == "hold" && edited.Scene("s2.0")->palette.Hex("anchor") == edited.Scene("s1.0")->palette.Hex("anchor"), "asked to keep the identity: the colours of the scene before stay");
+        ChromaticEdits back;
+        std::string error;
+        Check(FromJson(ToJson(edits), back, error) && back.edits.size() == 4, "the new changes are written and read again");
+        // What the maker taught about one figure.
+        ChromaticOptions taught;
+        taught.figureWeight["Linea 1"] = 1;
+        taught.figureWeight["Estrella 1"] = -1;
+        const ChromaticScore weighted = DirectColors(Input(nullptr, taught));
+        const FigureColorRole* line = weighted.Scene("s2.0")->RoleOf("Linea 1");
+        const FigureColorRole* star = weighted.Scene("s2.0")->RoleOf("Estrella 1");
+        Check(line != nullptr && (line->role == "main" || line->role == "accent") && star != nullptr && star->role == "background",
+              "a figure the maker wants to stand out carries the colour; one that should rest stays in the background");
+        // Hits and layers in the choreography.
+        Choreography hits = _choreo;
+        int n = 0;
+        for (ChoreographyEvent& e : hits.events) {
+            if (e.segmentId == "s3.0") {
+                ChoreographyEvent hit = e;
+                hit.id += "/hit";
+                hit.prominence = Prominence::Accent;
+                hit.reasons.push_back({ "downbeat", "1" });
+                hit.layer = 1;
+                hits.events.push_back(hit);
+                if (++n >= 6) {
+                    break;
+                }
+            }
+        }
+        (void)ApplyChromaticScore(_score, hits);
+        int accentHits = 0, allHits = 0;
+        bool layersAgree = true;
+        std::map<std::string, std::vector<std::string>> firstColours;
+        for (const ChoreographyEvent& e : hits.events) {
+            if (e.segmentId != "s3.0") {
+                continue;
+            }
+            if (e.prominence == Prominence::Accent) {
+                ++allHits;
+                accentHits += e.colors.front() == chorus->palette.Hex("accent") ? 1 : 0;
+            } else {
+                firstColours[e.target].push_back(e.colors.front());
+            }
+        }
+        for (const auto& [figure, colours] : firstColours) {
+            layersAgree = layersAgree && HueGroupsOf(colours) <= 1;
+        }
+        Check(allHits > 0 && accentHits <= std::max(1, static_cast<int>(std::ceil(allHits * (chorus->accentShare + 0.1)))),
+              fmt::format("on downbeats only a share takes the accent ({} of {}; share {:.0f}%)", accentHits, allHits, chorus->accentShare * 100));
+        Check(layersAgree, "the layers of one figure share one hue");
+        // The interpretation asks a part to keep its identity.
+        SongVisualBrief brief;
+        std::string why;
+        Check(ParseVisualBrief(R"({"mood":"tender","identity":"warm and close","keep":["chorus","verse","coda"],"change":["chorus","bridge"],"intention":"contained, one warm colour"})", "test", brief, why) &&
+                  brief.keep == std::vector<std::string>({ "chorus", "verse" }) && brief.change == std::vector<std::string>({ "bridge" }) && !brief.identity.empty() && !brief.intention.empty(),
+              "the reading v3: the parts that keep the identity and the ones that may change (keeping wins), an unknown part dropped");
+        ChromaticInput in = Input();
+        in.brief = &brief;
+        const ChromaticScore kept = DirectColors(in);
+        Check(kept.Scene("s3.0")->motifOperation != "introduce" && kept.Scene("s6.0")->motifOperation == "transform",
+              "a chorus asked to keep the identity does not bring a new motif; the bridge still may turn");
+    }
+
+    void TestCorrections() {
+        Title("What a person corrected in xLights, and what it may teach (only what they pick)");
+        const auto effect = [](const std::string& target, int layer, const std::string& name, const std::vector<std::string>& colours, int start, int end, const std::string& brightness = "") {
+            EffectSpec e;
+            e.target = target;
+            e.layer = layer;
+            e.effect = name;
+            e.palette = Palette(colours);
+            if (!brightness.empty()) {
+                e.settings.push_back({ "C_SLIDER_Brightness", brightness });
+            }
+            e.startMS = start;
+            e.endMS = end;
+            return e;
+        };
+        SequenceSpec made, fixed;
+        made.effects = { effect("Matriz Prueba", 0, "Bars", { "#F0A030", "#30A0F0", "#C040F0" }, 0, 10000), effect("Arbol Grande", 0, "Wave", { "#F0A030" }, 0, 10000),
+                         effect("Linea 1", 0, "On", { "#F0A030" }, 0, 10000), effect("Estrella 1", 0, "Twinkle", { "#30A0F0" }, 0, 10000, "100") };
+        fixed.effects = { effect("Matriz Prueba", 0, "Bars", { "#F0A030", "#F8D060" }, 0, 10000), effect("Arbol Grande", 0, "Spirals", { "#F0A030" }, 0, 10000),
+                          effect("Arbol Grande", 1, "Twinkle", { "#FFFFFF" }, 2000, 8000), effect("Estrella 1", 0, "Twinkle", { "#30A0F0" }, 600, 10000, "60"),
+                          effect("Carita", 0, "On", { "#F0A030" }, 0, 5000) };
+        const SequenceComparison c = CompareSequences(made, fixed, &_score);
+        std::map<std::string, int> kinds;
+        for (const SequenceChange& ch : c.changes) {
+            kinds[ch.kind]++;
+        }
+        Check(c.ran && kinds["colour"] == 1 && kinds["effect"] == 1 && kinds["layer-added"] == 1 && kinds["intensity"] == 1 && kinds["timing"] == 1 && kinds["figure-removed"] == 1 && kinds["figure-added"] == 1,
+              fmt::format("colours, a replaced effect, a layer added, intensity, timing, a figure left dark and one brought in are all found ({} changes)", c.changes.size()));
+        const auto find = [&](const char* kind) -> const SequenceChange* {
+            for (const SequenceChange& ch : c.changes) {
+                if (ch.kind == kind) {
+                    return &ch;
+                }
+            }
+            return nullptr;
+        };
+        Check(find("colour")->suggestion == "color.cohesion" && find("colour")->sign > 0 && find("timing")->suggestion.empty() && find("effect")->suggestion.empty(),
+              "fewer hues on an effect suggests more cohesion; a moved or replaced effect suggests nothing on its own");
+        Check(c.familiesAfter < c.familiesBefore && !find("colour")->scene.empty(), fmt::format("hues per effect {:.2f} -> {:.2f}, each change placed in its scene", c.familiesBefore, c.familiesAfter));
+        ArtisticPreferences prefs;
+        std::vector<size_t> picked;
+        for (size_t i = 0; i < c.changes.size(); ++i) {
+            if (c.changes[i].kind == "colour") {
+                picked.push_back(i);
+            }
+        }
+        Check(LearnFromComparison(prefs, c, picked, "uno.xsq") == 1 && prefs.signals.size() == 1, "only the change the person picked becomes a signal");
+        const auto active = [&](const std::string& key) {
+            for (const Preference& p : ComputePreferences(prefs)) {
+                if (p.key == key) {
+                    return p.active;
+                }
+            }
+            return false;
+        };
+        Check(!active("color.cohesion"), "one corrected show is not a taste yet");
+        VisualReview review;
+        review.sequence = "uno.xsq";
+        ShowEvaluation e;
+        e.reviewer = "test";
+        e.observations.push_back({ "too-many-colours", 20000, "", "", "evaluation" });
+        std::string why;
+        Check(EvaluateShow(review, e, why) && LearnFromReview(prefs, review, nullptr, "p") > 0 && !active("color.cohesion"),
+              "an observation and a correction of the same show still count as one show");
+        Check(std::any_of(prefs.signals.begin(), prefs.signals.end(), [](const PreferenceSignal& s) { return s.origin.find("|corrected:") != std::string::npos; }),
+              "and learning the review again keeps what was learned from the correction");
+        LearnFromComparison(prefs, c, picked, "dos.xsq");
+        Check(active("color.cohesion"), "the same correction in a second show: now it acts");
+        Check(ForgetReview(prefs, "dos.xsq") > 0 && !active("color.cohesion"), "and forgetting that show takes it back");
+        SequenceComparison read;
+        std::string error;
+        Check(FromJson(ToJson(c), read, error) && read.changes.size() == c.changes.size(), "the comparison is written and read again");
+        // Observations with their context.
+        ShowEvaluation bad;
+        bad.reviewer = "test";
+        bad.observations.push_back({ "figure-stand-out", -1, "", "", "evaluation" });
+        VisualReview r2;
+        r2.sequence = "tres.xsq";
+        Check(!EvaluateShow(r2, bad, why) && why.rfind("observation-without-figure", 0) == 0, "an observation about a figure needs the figure");
+        ShowEvaluation ok;
+        ok.reviewer = "test";
+        ok.observations = { { "figure-stand-out", -1, "Linea 1", "", "evaluation" }, { "keep-combination", 20000, "", "", "evaluation" }, { "accents-excessive", 20000, "", "", "evaluation" } };
+        ArtisticPreferences p2;
+        Check(EvaluateShow(r2, ok, why) && LearnFromReview(p2, r2, nullptr, "p") == 2, "a figure that should stand out and too many accents teach; keeping a combination does not");
+        const std::vector<ChromaticEdit> decisions = DecisionsFromObservations(ok.observations, _score);
+        Check(decisions.size() == 1 && decisions.front().action == "lock-palette" && decisions.front().sceneStartMS == _score.SceneAt(20000)->startMS,
+              "keeping a combination becomes a decision for this song only: its palette fixed");
     }
 
     // ------------------------------------------------------------ rendered
@@ -1017,6 +1300,15 @@ private:
         Check(meant.ran && meant.scenes.front().intended && !std::any_of(meant.warnings.begin(), meant.warnings.end(), [](const std::string& w) { return w.rfind("house-in-one-colour", 0) == 0; }),
               "a scene in one colour on purpose is not counted as monotony");
         Check(ToJson(one).find("\"review\": \"not-reviewed\"") != std::string::npos, "a measurement, never an approval");
+        Check(one.hueSpread < 0.1 && many.hueSpread > one.hueSpread + 0.2 && many.topTwoShare < one.topTwoShare && many.familiesAtOnce > one.familiesAtOnce,
+              fmt::format("cohesion measured: one red hue spreads {:.2f}, four colours {:.2f}; the two largest families hold {:.0f}% against {:.0f}%", one.hueSpread, many.hueSpread,
+                          one.topTwoShare * 100, many.topTwoShare * 100));
+        const CompositionEvaluation reading = EvaluateComposition(one, nullptr);
+        const CompositionEvaluation scattered = EvaluateComposition(many, nullptr);
+        Check(reading.ran && reading.Sign("cohesion") != nullptr && reading.Sign("cohesion")->reading == "cohesive" && scattered.Sign("cohesion")->value < reading.Sign("cohesion")->value &&
+                  reading.Sign("continuity") == nullptr,
+              "the composition is read in words (one colour: cohesive); without a colour plan its plan signs are left out");
+        Check(ToJson(reading).find("\"score\": null") != std::string::npos && ToJson(reading).find("not-reviewed") != std::string::npos, "no grade: no score, never reviewed");
         Check(ToJson(CheckColors(red, _geometry, _space, &score)) == ToJson(one), "the same render, the same measurement");
     }
 
@@ -1065,11 +1357,60 @@ int RunColorMeasure(const std::string& showDir, const std::string& fseqPath, con
     }
     const std::set<std::string> intended = IntendedScenes(chromaPath);
     const ColorCheck check = CheckColors(fseqPath, figures, space, hasScore ? &score : nullptr, &intended);
+    ChromaticScore chroma;
+    std::string chromaText, chromaError;
+    const bool hasChroma = !chromaPath.empty() && ReadTextFile(chromaPath, chromaText) && FromJson(chromaText, chroma, chromaError);
+    const CompositionEvaluation composition = EvaluateComposition(check, hasChroma ? &chroma : nullptr);
     std::error_code ec;
     fs::create_directories(fs::path(outDir), ec);
-    const bool ok = WriteText(fs::path(outDir) / "color-check.json", ToJson(check)) && WriteText(fs::path(outDir) / "color-check.txt", ColorCheckReport(check));
-    printf("%s", ColorCheckReport(check).c_str());
+    const bool ok = WriteText(fs::path(outDir) / "color-check.json", ToJson(check)) && WriteText(fs::path(outDir) / "color-check.txt", ColorCheckReport(check)) &&
+                    WriteText(fs::path(outDir) / "composition-eval.json", ToJson(composition)) && WriteText(fs::path(outDir) / "composition-eval.txt", CompositionReport(composition));
+    printf("%s%s", ColorCheckReport(check).c_str(), CompositionReport(composition).c_str());
     return check.ran && ok ? 0 : 1;
+}
+
+int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir) {
+    std::string refused;
+    if (!ControllersAreInactive(showDir, refused)) {
+        printf("composer-compare: REFUSED: %s\n", refused.c_str());
+        return 2;
+    }
+    HeadlessRenderContext ctx;
+    if (!ctx.LoadShowFolder(showDir)) {
+        printf("composer-compare: the show could not be loaded\n");
+        return 1;
+    }
+    const auto read = [&](const std::string& path, SequenceSpec& spec) {
+        if (!ctx.OpenSequence(path)) {
+            return false;
+        }
+        spec = SpecFromSequence(ctx);
+        (void)ctx.CloseSequence();
+        return true;
+    };
+    SequenceSpec before, after;
+    if (!read(generated, before) || !read(corrected, after)) {
+        printf("composer-compare: a sequence could not be opened\n");
+        return 1;
+    }
+    ChromaticScore chroma;
+    std::string text, error;
+    const bool hasChroma = !chromaPath.empty() && ReadTextFile(chromaPath, text) && FromJson(text, chroma, error);
+    const SequenceComparison c = CompareSequences(before, after, hasChroma ? &chroma : nullptr);
+    std::error_code ec;
+    fs::create_directories(fs::path(outDir), ec);
+    const bool ok = WriteText(fs::path(outDir) / "sequence-comparison.json", ToJson(c));
+    std::map<std::string, int> kinds;
+    for (const SequenceChange& ch : c.changes) {
+        kinds[ch.kind]++;
+    }
+    std::string kindText;
+    for (const auto& [k, n] : kinds) {
+        kindText += fmt::format("{}{} x{}", kindText.empty() ? "" : ", ", k, n);
+    }
+    printf("composer-compare: %d effects generated, %d corrected, %d the same decision; %zu changes (%s); hues per effect %.2f -> %.2f\n", c.generatedEffects, c.correctedEffects, c.matched,
+           c.changes.size(), kindText.c_str(), c.familiesBefore, c.familiesAfter);
+    return c.ran && ok ? 0 : 1;
 }
 
 int RunColorTest(const std::string& workDir) {

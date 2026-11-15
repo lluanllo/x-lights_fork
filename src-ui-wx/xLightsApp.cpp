@@ -1161,7 +1161,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure" || a == "--composer-color-test" || a == "--composer-color-measure") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure" || a == "--composer-color-test" || a == "--composer-color-measure" || a == "--composer-compare") {
             headlessArg = true;
             break;
         }
@@ -1335,6 +1335,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "recipes", "with --composer-generate: a recipes.json instead of <show>/ShowComposer/recipes.json" },
         { wxCMD_LINE_SWITCH, "", "no-recipes", "with --composer-generate: no recipes, only the templates" },
         { wxCMD_LINE_OPTION, "", "color-director", "with --composer-generate: on or off, whether the colours are directed by scene and figure (default: on, or the previous show's)" },
+        { wxCMD_LINE_OPTION, "", "color-style", "with --composer-generate: 0 contained (one hue and its lights) to 1 expressive (more hues when the music earns them)" },
         { wxCMD_LINE_OPTION, "", "color-variety", "with --composer-generate: 0-1, how many colour roles share a scene" },
         { wxCMD_LINE_OPTION, "", "color-contrast", "with --composer-generate: 0-1, how much contrast between colours" },
         { wxCMD_LINE_OPTION, "", "color-accents", "with --composer-generate: 0-1, how strong the accents are" },
@@ -1351,6 +1352,9 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "authorship", "with --composer-recipe-extract: who made the source" },
         { wxCMD_LINE_SWITCH, "", "composer-stage-measure", "internal tool: what the rendered --fseq of the show (-s, controllers inactive) did with the installation, with an optional --stage-score, into --out, and exit" },
         { wxCMD_LINE_OPTION, "", "stage-score", "with --composer-stage-measure: a stage-score.json, to measure scenes and gestures" },
+        { wxCMD_LINE_SWITCH, "", "composer-compare", "internal tool: the --generated sequence against the --corrected one of the show (-s, controllers inactive), with an optional --color-score, into --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "generated", "with --composer-compare: the sequence the composer made" },
+        { wxCMD_LINE_OPTION, "", "corrected", "with --composer-compare: the same sequence after a person corrected it in xLights" },
         { wxCMD_LINE_SWITCH, "", "composer-color-test", "internal test: the colour space, harmonies, palettes, the colour director, gesture colours and the artistic analysis with a simulated service, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-color-measure", "internal tool: the colours the rendered --fseq of the show (-s, controllers inactive) put on the installation, with an optional --stage-score and --color-score, into --out, and exit" },
         { wxCMD_LINE_OPTION, "", "color-score", "with --composer-color-measure: a color-score.json, so scenes in one colour on purpose are not counted as monotony" },
@@ -2310,6 +2314,9 @@ bool xLightsApp::OnInit()
         if (parser.Found("color-variety", &value)) {
             command.colorVariety = value.ToStdString(wxConvUTF8);
         }
+        if (parser.Found("color-style", &value)) {
+            command.colorStyle = value.ToStdString(wxConvUTF8);
+        }
         if (parser.Found("color-contrast", &value)) {
             command.colorContrast = value.ToStdString(wxConvUTF8);
         }
@@ -2422,6 +2429,20 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunColorMeasure(showDir.ToStdString(wxConvUTF8), fseq.ToStdString(wxConvUTF8), score.ToStdString(wxConvUTF8), chroma.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-compare")) {
+        wxString out, generated, corrected, chroma;
+        if (showDir.IsEmpty() || !parser.Found("out", &out) || !parser.Found("generated", &generated) || !parser.Found("corrected", &corrected)) {
+            spdlog::error("--composer-compare requires -s <dir>, --generated <xsq>, --corrected <xsq> and --out <folder>");
+            std::exit(2);
+        }
+        (void)parser.Found("color-score", &chroma);
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunSequenceCompare(showDir.ToStdString(wxConvUTF8), generated.ToStdString(wxConvUTF8), corrected.ToStdString(wxConvUTF8), chroma.ToStdString(wxConvUTF8),
+                                               out.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-color-test")) {

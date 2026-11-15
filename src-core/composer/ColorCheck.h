@@ -39,6 +39,12 @@ struct SceneColor {
     double figureDifference = 0; // mean difference between lit figures' colours (ΔE x100)
     double figureFamilies = 0;   // mean number of different families the lit figures wear
     double accentFrames = 0;     // share of frames with a minority colour (3-20% of the light)
+    // Cohesion (phase 19): how much the colours lit at once belong together.
+    double familiesAtOnce = 0;   // mean number of families each over 5% of the house's light
+    double topTwoShare = 0;      // mean share of the light held by the two largest families
+    double hueSpread = 0;        // 0 every coloured light in one hue, 1 hues all round the circle
+    double minorLight = 0;       // mean share of the light outside the two largest families
+    double colorsPerFigure = 0;  // mean number of families over 10% inside one lit figure
     double chroma = 0;           // mean OKLCH chroma of lit lights
     double lightness = 0;
     std::string meanHex;
@@ -90,6 +96,12 @@ struct ColorCheck {
     double figureDifference = 0;
     double figureFamilies = 0;
     double accentFrames = 0;
+    double familiesAtOnce = 0;
+    double topTwoShare = 0;
+    double hueSpread = 0;
+    double minorLight = 0;
+    double colorsPerFigure = 0;
+    int overloadedScenes = 0;       // scenes with more than four families over 5% at once, on average
     double gestureContrast = 0;     // median ΔE against what was lit before
     double gestureHouseContrast = 0;
     int gesturesFaint = 0;          // gestures under 15 ΔE against what was there
