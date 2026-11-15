@@ -12,6 +12,16 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: the song's visual ideas are developed: an idea is presented by a few
+                                 figures, grows through the song, comes back with its own figures in the choruses,
+                                 turns into a wave across the house in the instrumental, is taken up by the whole
+                                 house at the peak and gathers back at the end; figures answer each other instead of
+                                 lighting all at once
+    -enh (lluanllo)              Show Composer: before a show goes out, check everything it needs (song, lyrics,
+                                 layout, figures, pictures and videos, effects, render) and prepare a production
+                                 folder; whole compositions of one figure, a group or the house; a decision for each
+                                 change of your corrected version
+
     -enh (lluanllo)              Show Composer: art direction chooses fewer colours that belong together: each scene uses
                                  only the hues its moment needs, the song keeps a colour identity that comes back with
                                  the choruses and changes when the music turns, one figure leads and others stay discreet
