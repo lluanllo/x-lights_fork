@@ -284,12 +284,18 @@ const std::vector<std::string>& EvaluationCriteria() {
 }
 
 const std::vector<std::string>& EvaluationTags() {
-    static const std::vector<std::string> T = { "liked", "monotonous", "too-busy", "too-calm", "too-christmas", "not-christmas" };
+    static const std::vector<std::string> T = { "liked", "monotonous", "too-busy", "too-calm", "too-christmas", "not-christmas",
+                                                // the colours (phase 18)
+                                                "too-monochrome", "too-saturated", "low-contrast", "unrelated-colours", "few-accents", "too-much-contrast",
+                                                "abrupt-colour-changes", "colours-unlike-song", "figures-alike", "identity-altered", "no-colour-evolution" };
     return T;
 }
 
 const std::vector<std::string>& EvaluationRules() {
-    static const std::vector<std::string> R = { "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes" };
+    static const std::vector<std::string> R = { "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes",
+                                                // the colours (phase 18)
+                                                "more-colour-variety", "keep-colour-families", "more-accents", "more-figure-contrast", "less-contrast",
+                                                "smoother-colour-transitions", "fewer-warm-colours", "softer-colours", "more-scene-variation", "respect-own-colours" };
     return R;
 }
 
@@ -319,6 +325,36 @@ std::vector<std::string> SuggestRules(const ShowEvaluation& e) {
     }
     if (has("liked") || e.overall >= 70 || rating("direction") >= 4) {
         add("keep-recipes");
+    }
+    if (has("too-monochrome") || has("figures-alike") || (rating("colour") > 0 && rating("colour") <= 2 && has("monotonous"))) {
+        add("more-colour-variety");
+    }
+    if (has("figures-alike") || has("low-contrast")) {
+        add("more-figure-contrast");
+    }
+    if (has("unrelated-colours")) {
+        add("keep-colour-families");
+    }
+    if (has("too-much-contrast")) {
+        add("less-contrast");
+    }
+    if (has("few-accents")) {
+        add("more-accents");
+    }
+    if (has("abrupt-colour-changes")) {
+        add("smoother-colour-transitions");
+    }
+    if (has("too-saturated")) {
+        add("softer-colours");
+    }
+    if (has("colours-unlike-song")) {
+        add("more-song-colours");
+    }
+    if (has("identity-altered")) {
+        add("respect-own-colours");
+    }
+    if (has("no-colour-evolution")) {
+        add("more-scene-variation");
     }
     return out;
 }
@@ -351,7 +387,8 @@ bool EvaluateShow(VisualReview& review, const ShowEvaluation& e, std::string& wh
             return false;
         }
     }
-    if ((known(e.rules, "more-variety") && known(e.rules, "less-variety")) || (known(e.rules, "more-christmas") && known(e.rules, "more-song-colours"))) {
+    if ((known(e.rules, "more-variety") && known(e.rules, "less-variety")) || (known(e.rules, "more-christmas") && known(e.rules, "more-song-colours")) ||
+        (known(e.rules, "more-colour-variety") && known(e.rules, "keep-colour-families")) || (known(e.rules, "more-figure-contrast") && known(e.rules, "less-contrast"))) {
         why = "rules-contradict";
         return false;
     }

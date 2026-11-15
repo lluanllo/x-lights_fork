@@ -416,6 +416,17 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.stage.scenes = static_cast<int>(run.stageScore.scenes.size());
     s.stage.gestures = static_cast<int>(run.stageScore.gestures.size());
     s.stage.edits = run.stageEdits;
+    s.color.decided = true;
+    s.color.enabled = run.colorWanted;
+    s.color.directorVersion = run.colored ? run.chromatic.version : "";
+    s.color.variety = run.chromatic.options.variety;
+    s.color.contrast = run.chromatic.options.contrast;
+    s.color.accents = run.chromatic.options.accents;
+    s.color.evolution = run.chromatic.options.evolution;
+    s.color.songColors = run.chromatic.options.songColors;
+    s.color.briefSource = run.chromatic.briefSource;
+    s.color.scenes = static_cast<int>(run.chromatic.scenes.size());
+    s.color.edits = run.colorEdits;
     if (run.understood) {
         s.understanding = { true, fs::path(run.understanding.folder).filename().string(), run.understanding.audio.version, static_cast<int>(run.understanding.audio.corrections.size()),
                             static_cast<int>(run.understanding.manual.size()) };
@@ -1357,6 +1368,128 @@ void PlanShowMedia(GenerationRun& run, GenerationStage S) {
 // The whole installation as one stage: how each scene uses the figures, the gestures
 // that cross them, the figures composed whole. It never stops a generation: when it
 // cannot run, the show is made as before and the notes say why.
+// The colours of the show: a family with a hierarchy, a palette per scene, a role per
+// figure and gestures that stand out. Runs after the stage was directed (or decided not to
+// be) and before the stage is realized, so the gestures carry their own colours.
+void DirectTheColors(GenerationRun& run, GenerationStage S) {
+    const GenerationRequest& r = run.request;
+    const ColorSettings& before = run.previous.color;
+    const bool keep = run.hasPrevious && before.decided;
+    bool on = true;
+    if (r.colorDirector.has_value()) {
+        on = *r.colorDirector;
+    } else if (keep) {
+        on = before.enabled;
+    }
+    ChromaticOptions o;
+    o.enabled = on;
+    std::map<std::string, double> taught;
+    if (r.learning && !r.showDir.empty()) {
+        ArtisticPreferences prefs;
+        std::string perr;
+        if (ReadPreferences(PreferencesPath(r.showDir), prefs, perr)) {
+            taught = EffectivePreferences(prefs);
+        }
+    }
+    const auto start = [&](const char* key, double previous) {
+        if (keep) {
+            return previous;
+        }
+        const auto it = taught.find(key);
+        return it == taught.end() ? 0.5 : std::clamp(0.5 + 0.3 * it->second, 0.0, 1.0);
+    };
+    o.variety = std::clamp(r.colorVariety.value_or(start("color.variety", before.variety)), 0.0, 1.0);
+    o.contrast = std::clamp(r.colorContrast.value_or(start("color.contrast", before.contrast)), 0.0, 1.0);
+    o.accents = std::clamp(r.colorAccents.value_or(start("color.accents", before.accents)), 0.0, 1.0);
+    o.evolution = std::clamp(r.colorEvolution.value_or(start("color.evolution", before.evolution)), 0.0, 1.0);
+    for (const char* key : { "color.variety", "color.contrast", "color.accents", "color.evolution" }) {
+        if (taught.contains(key) && !keep) {
+            Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
+        }
+    }
+    o.songColors = r.songColors.value_or(keep ? before.songColors : std::vector<std::string>());
+    // What only the maker's evaluations set: the middle until two shows say otherwise.
+    const auto taughtValue = [&](const char* key) { return taught.contains(key) ? taught.at(key) : 0.0; };
+    o.saturation = std::clamp(0.5 + 0.3 * taughtValue("color.saturation"), 0.0, 1.0);
+    o.warmth = std::clamp(0.6 * taughtValue("color.warmth"), -1.0, 1.0);
+    o.gradual = std::clamp(0.5 + 0.3 * taughtValue("color.gradual"), 0.0, 1.0);
+    o.respectIdentity = taughtValue("color.identity") > 0.2;
+    for (const char* key : { "color.saturation", "color.warmth", "color.gradual", "color.identity" }) {
+        if (taught.contains(key)) {
+            Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
+        }
+    }
+    o.christmasInfluence = run.visualPlan.enabled ? run.visualPlan.options.christmasInfluence : 0.5;
+    o.seed = run.plan.seed;
+    run.colorWanted = on;
+    run.chromatic = ChromaticScore();
+    run.chromatic.options = o;
+    if (!on) {
+        Note(run, S, "color-off", "the colours are chosen as before, by the scene's palette");
+        return;
+    }
+    std::string text, error;
+    if (run.figures.figures.empty()) {
+        run.figures = DescribeFigures(*run.context, run.capabilities, true);
+    }
+    if (run.semantics.profiles.empty()) {
+        FigureChoices choices;
+        if (ReadTextFile(FigureChoicesPath(r.showDir), text) && !FromJson(text, choices, error)) {
+            Note(run, S, "figure-choices-unreadable", error);
+        }
+        run.semantics = DescribeSemantics(*run.context, run.figures, run.capabilities, &choices);
+    }
+    if (run.stageSpace.figures.empty()) {
+        run.stageSpace = BuildStageSpace(run.figures, nullptr);
+    }
+    ChromaticEdits edits;
+    if (!run.analysis.audioHash.empty() && ReadTextFile(ChromaticEditsPath(r.showDir, run.analysis.audioHash), text) && !FromJson(text, edits, error)) {
+        Note(run, S, "color-edits-unreadable", error);
+        edits = ChromaticEdits();
+    }
+    ChromaticInput in;
+    in.plan = &run.plan;
+    in.analysis = &run.analysis;
+    in.visualPlan = run.visualPlan.enabled ? &run.visualPlan : nullptr;
+    in.brief = run.brief.Empty() ? nullptr : &run.brief;
+    in.audio = run.understood ? &run.understanding.audio : nullptr;
+    in.stage = run.stageScore.scenes.empty() ? nullptr : &run.stageScore;
+    in.geometry = &run.figures;
+    in.semantics = &run.semantics;
+    in.space = &run.stageSpace;
+    in.choreography = &run.choreography;
+    in.capabilities = &run.capabilities;
+    in.edits = edits.edits.empty() ? nullptr : &edits;
+    in.options = o;
+    run.chromatic = DirectColors(in);
+    if (!run.chromatic.enabled || run.chromatic.scenes.empty()) {
+        Note(run, S, "color-not-directed", run.chromatic.warnings.empty() ? std::string("no scene") : run.chromatic.warnings.front());
+        return;
+    }
+    for (const std::string& n : ApplyChromaticScore(run.chromatic, run.choreography)) {
+        Note(run, S, "color-realized", n);
+    }
+    const int gestures = ColorGestures(run.chromatic, run.stageScore);
+    run.colored = true;
+    run.colorEdits = static_cast<int>(edits.edits.size());
+    std::map<std::string, int> harmonies;
+    int mono = 0;
+    for (const ChromaticScenePlan& sp : run.chromatic.scenes) {
+        harmonies[HarmonyId(sp.palette.harmony)]++;
+        mono += sp.monochrome ? 1 : 0;
+    }
+    std::string harmonyText;
+    for (const auto& [h, n] : harmonies) {
+        harmonyText += fmt::format("{}{} x{}", harmonyText.empty() ? "" : ", ", h, n);
+    }
+    Note(run, S, "color-score", fmt::format("song {} round {:.0f} deg ({}); {} scenes ({}), {} in one family on purpose; {} gestures coloured; interpretation from {}; {} changes by a person",
+                                            HarmonyId(run.chromatic.song.harmony), run.chromatic.song.anchorHue, run.chromatic.identityReason, run.chromatic.scenes.size(), harmonyText, mono, gestures,
+                                            run.chromatic.briefSource.empty() ? std::string("none") : run.chromatic.briefSource, run.colorEdits));
+    for (const std::string& w : run.chromatic.warnings) {
+        Note(run, S, "color-warning", w);
+    }
+}
+
 void DirectTheStage(GenerationRun& run, GenerationStage S) {
     const GenerationRequest& r = run.request;
     bool on = true;
@@ -1367,6 +1500,7 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     }
     if (!on) {
         Note(run, S, "stage-off", "the installation is not directed as one stage");
+        DirectTheColors(run, S);
         return;
     }
     run.stageWanted = true;
@@ -1416,8 +1550,10 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     run.stageScore = DirectStage(in);
     if (run.stageScore.scenes.empty()) {
         Note(run, S, "stage-not-directed", run.stageScore.warnings.empty() ? std::string("no scene") : run.stageScore.warnings.front());
+        DirectTheColors(run, S);
         return;
     }
+    DirectTheColors(run, S);
     in.choreography = nullptr; // the colours are read; from here the choreography is changed
     for (const std::string& n : RealizeStage(run.stageScore, in, run.choreography)) {
         Note(run, S, "stage-realized", n);
@@ -1510,6 +1646,15 @@ bool ChoreographShow(GenerationRun& run) {
                 if (!ReadText(r.briefPath, text) || !ParseVisualBrief(text, "file", run.brief, error)) {
                     Note(run, S, "brief-unusable", r.briefPath + (error.empty() ? std::string() : ": " + error));
                     run.brief = SongVisualBrief();
+                } else {
+                    // A stored answer keeps the name of the service that gave it, and says it
+                    // was read from a file: nothing was asked in this generation.
+                    const nlohmann::json root = nlohmann::json::parse(text, nullptr, false);
+                    const std::string from = root.is_object() ? root.value("source", std::string()) : std::string();
+                    if (from.rfind("groq:", 0) == 0) {
+                        run.brief.source = from;
+                    }
+                    run.brief.origin = "file";
                 }
             }
             if (run.brief.Empty() && run.hasLyrics) {
@@ -1732,6 +1877,24 @@ bool WriteAndPublish(GenerationRun& run) {
                                                            run.stageCheck.arrivals.size(), run.stageCheck.arrivalsOnTime));
                     }
                 }
+                if (run.colored) {
+                    Progress(run, S, "measure the colours");
+                    std::set<std::string> intended;
+                    for (const ChromaticScenePlan& sp : run.chromatic.scenes) {
+                        if (sp.monochrome) {
+                            intended.insert(sp.id);
+                        }
+                    }
+                    run.colorCheck = CheckColors(run.fseqPath, run.figures, run.stageSpace, run.staged ? &run.stageScore : nullptr, &intended);
+                    if (run.colorCheck.ran) {
+                        run.findings.push_back(fmt::format("info color-check: about {:.1f} families share the light, {:.0f}% of the time in one colour (longest {:.1f} s), figures differ by {:.1f} dE, gestures {:.1f} dE over what was lit",
+                                                           run.colorCheck.effectiveColors, run.colorCheck.monotoneShare * 100, run.colorCheck.longestMonotoneMS / 1000.0,
+                                                           run.colorCheck.figureDifference, run.colorCheck.gestureContrast));
+                        for (const std::string& w : run.colorCheck.warnings) {
+                            run.findings.push_back("info color-warning: " + w);
+                        }
+                    }
+                }
                 if (run.render.layoutChannels != 0 && run.render.channels != run.render.layoutChannels) {
                     // As on the desktop, the file only carries the controllers' channels.
                     run.findings.push_back(fmt::format("info fseq-channels: the file has {} channels and the layout {}; models without a controller are outside the file", run.render.channels, run.render.layoutChannels));
@@ -1895,6 +2058,14 @@ void WriteDiagnostics(GenerationRun& run) {
         ok &= WriteText(report / "stage-space.json", ToJson(run.stageSpace));
         ok &= WriteText(report / "stage-score.json", ToJson(run.stageScore));
         ok &= WriteText(report / "stage-lights.json", StageLightsJson(run.figures, run.stageSpace));
+    }
+    if (run.colored) {
+        ok &= WriteText(report / "color-score.json", ToJson(run.chromatic));
+        ok &= WriteText(report / "color-score.txt", ChromaticReport(run.chromatic));
+    }
+    if (run.colorCheck.ran) {
+        ok &= WriteText(report / "color-check.json", ToJson(run.colorCheck));
+        ok &= WriteText(report / "color-check.txt", ColorCheckReport(run.colorCheck));
     }
     if (run.stageCheck.ran) {
         ok &= WriteText(report / "stage-check.json", ToJson(run.stageCheck));

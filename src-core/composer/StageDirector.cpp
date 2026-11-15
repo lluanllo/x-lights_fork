@@ -1193,6 +1193,26 @@ FieldSpec ParticipantField(const GlobalGesture& g, const GestureParticipant& p, 
         s.scale = 3;
         s.at = (effectStartMS - (g.startMS + p.delayMS)) / 1000.0; // below 0: the effect waits in the dark for its moment
     }
+    if (g.colorBy == "distance" || g.colorBy == "trail" || g.colorBy == "time") {
+        s.colorBy = g.colorBy;
+        if (s.colorBy == "distance") {
+            // Spread over as far as the gesture goes: its farthest figure's farthest corner.
+            double reach = 0.05;
+            for (const GestureParticipant& q : g.participants) {
+                if (const StageFigure* qf = space.Find(q.figure); qf != nullptr) {
+                    for (const double x : { qf->minX, qf->maxX }) {
+                        for (const double y : { qf->minY, qf->maxY }) {
+                            reach = std::max(reach, shared ? std::hypot(x - g.ox, y - g.oy) : 0.0);
+                        }
+                    }
+                }
+            }
+            if (!shared && f != nullptr) {
+                reach = std::max({ 0.02, f->maxX - f->minX, f->maxY - f->minY });
+            }
+            s.reach = std::clamp(reach, 0.02, 10.0);
+        }
+    }
     const std::vector<int> keep = ProtectedNodes(semantics, p.figure);
     s.skip = NodeRangesText(keep);
     return s;
@@ -1574,7 +1594,7 @@ json GestureJson(const GlobalGesture& g) {
     }
     return { { "id", g.id }, { "kind", GestureKindId(g.kind) }, { "origin", g.origin }, { "ox", g.ox }, { "oy", g.oy }, { "trajectory", g.trajectory }, { "angle", g.angle },
              { "participants", ps }, { "excluded", g.excluded }, { "speed", g.speed }, { "width", g.width }, { "loss", g.loss }, { "level", g.level }, { "startMS", g.startMS },
-             { "endMS", g.endMS }, { "envelope", g.envelope }, { "colors", g.colors }, { "trigger", g.trigger }, { "related", g.related }, { "confidence", g.confidence },
+             { "endMS", g.endMS }, { "envelope", g.envelope }, { "colors", g.colors }, { "colorBy", g.colorBy }, { "colorReason", g.colorReason }, { "trigger", g.trigger }, { "related", g.related }, { "confidence", g.confidence },
              { "reasons", g.reasons }, { "manual", g.manual } };
 }
 } // namespace
@@ -1656,6 +1676,8 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
             g.endMS = j.value("endMS", 0);
             g.envelope = j.value("envelope", std::string("short"));
             g.colors = j.value("colors", std::vector<std::string>());
+            g.colorBy = j.value("colorBy", std::string("field"));
+            g.colorReason = j.value("colorReason", std::string());
             g.trigger = j.value("trigger", std::string());
             g.related = j.value("related", std::string());
             g.confidence = j.value("confidence", 0.0);

@@ -30,6 +30,14 @@
 //   file.<media>@<screen>             one file on one screen
 //   director.variety                  recipes changing more from scene to scene
 //   director.christmas                colours nearer the Christmas ones than the song's
+//   color.variety                     more colour roles in a scene (less: keep one family)
+//   color.contrast                    more contrast between figures' colours
+//   color.accents                     stronger and more accents
+//   color.evolution                   palettes changing more from scene to scene
+//   color.gradual                     transitions between colours slower and softer
+//   color.saturation                  fuller colours (less: softer)
+//   color.warmth                      warmer colours (less: cooler)
+//   color.identity                    figures keep their own colours (trunks, foliage...)
 namespace composer {
 
 inline constexpr int PREFERENCES_VERSION = 1;

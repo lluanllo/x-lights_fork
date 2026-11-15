@@ -35,11 +35,15 @@
 #include "composer/RenderUnderstanding.h"
 #include "composer/UnderstandingStore.h"
 
+#include "composer/MusicAssist.h"
+
 #include "ComposerJob.h"
 
 class AudioManager;
 class ComposerTimeline;
 class StageDirectorPanel;
+class ColorDirectorPanel;
+class ColorSwatches;
 class MediaAnalysisRunner;
 class ModelDownloadRunner;
 class StoryboardView;
@@ -285,6 +289,16 @@ public:
     // The artistic director's settings, for the UI test.
     void SetDirector(int christmas, int variety, bool recipes);
     [[nodiscard]] StageDirectorPanel* StagePanel() const { return _stagePanel; }
+    // The colour direction's settings and checks, for the UI test.
+    [[nodiscard]] ColorDirectorPanel* ColorPanel() const { return _colorPanel; }
+    void SetColorSliders(int variety, int contrast, int accents, int evolution);
+    void SetSongColors(const std::vector<std::string>& colors);
+    // "Check the artistic analysis with Groq": nothing is sent without `consent`; `refresh`
+    // asks Groq again. The result is kept in LastArtisticCheck and, when `show`, shown.
+    void CheckArtistic(bool consent, bool refresh, bool show);
+    [[nodiscard]] const composer::ArtisticCheck& LastArtisticCheck() const { return _artisticCheck; }
+    void OpenShowColors(); // step 5: the colours the render showed, against the plan
+    [[nodiscard]] int TimelineColorScenes() const;
     void OpenInstallation(); // step 5: the whole installation as the render drew it
     // The person's evaluation of the result, kept with its review; false when refused.
     bool SaveEvaluation(const composer::ShowEvaluation& evaluation);
@@ -510,6 +524,16 @@ private:
     // Generate
     wxListCtrl* _stageList = nullptr;
     StageDirectorPanel* _stagePanel = nullptr;
+    ColorDirectorPanel* _colorPanel = nullptr;
+    wxSlider* _colorVariety = nullptr;
+    wxSlider* _colorContrast = nullptr;
+    wxSlider* _colorAccents = nullptr;
+    wxSlider* _colorEvolution = nullptr;
+    ColorSwatches* _songSwatch = nullptr;
+    std::vector<std::string> _songColors;
+    bool _assistRefresh = false;
+    bool _showArtistic = true;
+    composer::ArtisticCheck _artisticCheck;
     wxGauge* _gauge = nullptr;
     wxStaticText* _stageInfo = nullptr;
     wxStaticText* _generateSummary = nullptr;

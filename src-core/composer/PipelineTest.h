@@ -52,6 +52,12 @@ struct GenerateCommandOptions {
     std::string understanding; // "on", "off"; empty: on when the song was already understood
     std::string stems;         // "role=path;role=path" (voice, chorus, narration, music)
     std::string stageDirector; // "on", "off"; empty: on, or the previous show's
+    std::string colorDirector; // "on", "off"; empty: on, or the previous show's
+    std::string colorVariety;  // 0-1; empty: the previous show's or the middle
+    std::string colorContrast;
+    std::string colorAccents;
+    std::string colorEvolution;
+    std::string songColors;    // "#RRGGBB,#RRGGBB"; "none" clears them; empty: the previous show's
 };
 
 // Returns the process exit code: 0 published, 1 failed, 2 refused, 3 cancelled.

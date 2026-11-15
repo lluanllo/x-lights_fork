@@ -78,6 +78,10 @@ struct GlobalGesture {
     int endMS = 0;
     std::string envelope = "short"; // "short", "long", "swell"
     std::vector<std::string> colors;
+    // How the colours spread over the gesture (FieldSpec::colorBy): "field", "distance",
+    // "trail" or "time". The colour direction sets it with the colours; "field" before it.
+    std::string colorBy = "field";
+    std::string colorReason;
     std::string trigger; // the moment of the music that starts it: "<kind>@<ms>"
     std::string related; // a gesture it answers or echoes
     double confidence = 0;

@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -1069,7 +1070,8 @@ std::string ChooseGroqChatModel(const std::vector<std::string>& offered, const s
         return wanted;
     }
     // Preferred in this order; only what the service lists is ever used.
-    static const std::vector<std::string> PREFERRED = { "llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant" };
+    // Large models that follow a JSON schema well first; only what the service lists is used.
+    static const std::vector<std::string> PREFERRED = { "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "moonshotai/kimi-k2-instruct", "qwen/qwen3-32b", "openai/gpt-oss-20b", "llama-3.1-8b-instant" };
     for (const std::string& id : PREFERRED) {
         if (has(id)) {
             return id;
@@ -1079,16 +1081,39 @@ std::string ChooseGroqChatModel(const std::vector<std::string>& offered, const s
 }
 
 std::string VisualBriefPrompt() {
-    return "You help light a Christmas house show to a song. From the song's lyrics, answer only with a JSON object with these fields: "
+    return "You help a lighting designer light a Christmas house show to a song. You are given the song's title, the text of its lyrics and, when there is one, "
+           "a short acoustic summary measured on the designer's computer (tempo, key, its parts and their energy). You never hear the audio. "
+           "Interpret the song; do not choose the show's exact colours. Answer only with a JSON object with these fields: "
            "\"mood\": one of joyful, tender, epic, playful, nostalgic, dark, calm, festive; "
-           "\"colors\": up to 4 colours the words suggest, as #RRGGBB; "
+           "\"character\": up to 3 of festive, epic, intimate, nostalgic, playful, dramatic, tender, calm, majestic, mysterious, joyful; "
+           "\"arc\": for each kind of part the song has (intro, verse, pre-chorus, chorus, bridge, instrumental, outro) an object with "
+           "\"part\", \"feeling\" (one of the moods), \"intensity\" (0 to 1) and \"color\" (one #RRGGBB the part suggests); "
+           "\"colors\": up to 4 colours the whole song suggests, as #RRGGBB, the most characteristic first; "
+           "\"colorIntensity\": 0 soft to 1 full, how strong its colours want to be; "
+           "\"warmth\": -1 cool to 1 warm; "
+           "\"contrast\": one short sentence on how its parts differ; "
            "\"imagery\": up to 6 short images the words evoke, in the song's language; "
            "\"christmas\": 0 to 1, how much the song itself is about Christmas; "
-           "\"energy\": 0 to 1, how lively it reads. Do not quote the lyrics.";
+           "\"energy\": 0 to 1, how lively it is. Do not quote the lyrics.";
 }
 
+namespace {
+std::string NowIso() {
+    const std::time_t t = std::time(nullptr);
+    std::tm tm {};
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+    char out[32];
+    std::strftime(out, sizeof(out), "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return out;
+}
+} // namespace
+
 bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std::string& title, const ApiKey& key, bool consent, const RetryPolicy& policy, std::string& model,
-                   SongVisualBrief& brief, AssistFailure& failure) {
+                   SongVisualBrief& brief, AssistFailure& failure, const std::string& acoustic, std::vector<std::string>* offeredModels) {
     failure = AssistFailure();
     if (!consent) {
         failure = { AssistError::NoConsent, 0, -1, 0, "the lyrics are only sent when the person allows it" };
@@ -1117,6 +1142,9 @@ bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std
         failure = { AssistError::BadResponse, offered.status, -1, failure.attempts, error };
         return false;
     }
+    if (offeredModels != nullptr) {
+        *offeredModels = models;
+    }
     model = ChooseGroqChatModel(models, model);
     if (model.empty()) {
         failure = { AssistError::NotFound, offered.status, -1, failure.attempts, "the key offers none of the chat models this program uses" };
@@ -1131,7 +1159,11 @@ bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std
     chat.body = json({ { "model", model },
                        { "temperature", 0 },
                        { "response_format", { { "type", "json_object" } } },
-                       { "messages", json::array({ { { "role", "system" }, { "content", VisualBriefPrompt() } }, { { "role", "user" }, { "content", "Title: " + title + "\n\n" + lyricsText } } }) } })
+                       { "messages", json::array({ { { "role", "system" }, { "content", VisualBriefPrompt() } },
+                                                   { { "role", "user" },
+                                                     { "content", "Title: " + title + "\n\n" +
+                                                                      (acoustic.empty() ? std::string() : "Acoustic summary (measured on this computer, not the audio):\n" + acoustic + "\n\n") +
+                                                                      "Lyrics:\n" + lyricsText } } }) } })
                     .dump();
     const HttpResponse answer = SendWithRetry(client, chat, policy, failure);
     failure.message = RedactSecrets(failure.message, { key.value });
@@ -1146,6 +1178,148 @@ bool BriefWithGroq(IHttpClient& client, const std::string& lyricsText, const std
     if (content.empty() || !ParseVisualBrief(content, "groq:" + model, brief, error)) {
         failure = { AssistError::BadResponse, answer.status, -1, failure.attempts, content.empty() ? std::string("no answer text") : error };
         return false;
+    }
+    brief.received = { "title", "lyrics" };
+    if (!acoustic.empty()) {
+        brief.received.push_back("acoustic-summary");
+    }
+    brief.analyzedAt = NowIso();
+    brief.origin = "request";
+    return true;
+}
+
+namespace {
+std::string TextKey(const std::string& text);
+} // namespace
+
+std::string BriefCachePath(const std::string& showDir, const std::string& lyricsText, const std::string& acoustic, const std::string& model) {
+    if (showDir.empty()) {
+        return "";
+    }
+    const std::string key = AssistCacheKey("", TextKey(lyricsText + "\n--\n" + acoustic), "groq", model.empty() ? std::string("auto") : model, "brief-v2");
+    return AssistCachePath(showDir, key, "brief");
+}
+
+ArtisticCheck CheckArtisticAnalysis(IHttpClient& client, const ArtisticCheckOptions& o, const IServiceSettingsStore* keys, const RetryPolicy& policy) {
+    ArtisticCheck c;
+    c.checkedAt = NowIso();
+    const ApiKey key = ResolveApiKey(keys, "Groq", "GROQ_API_KEY");
+    c.configured = !key.value.empty();
+    c.credentialSource = key.source;
+    const SongVisualBrief local = LocalVisualBrief(o.lyricsText, o.title);
+    const auto fallBack = [&](const std::string& why) {
+        c.fallback = true;
+        c.fallbackReason = why;
+        c.brief = local;
+    };
+    c.cachePath = BriefCachePath(o.showDir, o.lyricsText, o.acoustic, o.model);
+    // An answer kept from before: used as it is, and said to be from before.
+    if (!o.refresh && !c.cachePath.empty() && FileExists(c.cachePath)) {
+        std::ifstream in(fs::path(c.cachePath), std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        const json root = json::parse(text.str(), nullptr, false);
+        SongVisualBrief b;
+        std::string error;
+        if (root.is_object() && ParseVisualBrief(text.str(), root.value("source", std::string("groq")), b, error)) {
+            b.origin = "cache";
+            c.status = "CACHE_HIT";
+            c.cacheHit = true;
+            c.valid = true;
+            c.validation = b.warnings;
+            c.model = b.source.rfind("groq:", 0) == 0 ? b.source.substr(5) : std::string();
+            c.analyzedAt = b.analyzedAt;
+            c.received = b.received;
+            c.brief = b;
+            return c;
+        }
+        c.validation.push_back("cache-unreadable");
+    }
+    if (!c.configured) {
+        c.status = "NOT_CONFIGURED";
+        fallBack("no Groq key in the secure store or GROQ_API_KEY: the colours read the lyrics on this computer");
+        return c;
+    }
+    if (!o.consent) {
+        c.status = "LOCAL_FALLBACK";
+        fallBack("the person did not agree to send the text: nothing was sent");
+        return c;
+    }
+    if (o.lyricsText.empty()) {
+        c.status = "LOCAL_FALLBACK";
+        fallBack("no lyrics to describe: nothing was sent");
+        return c;
+    }
+    std::string model = o.model;
+    AssistFailure failure;
+    SongVisualBrief brief;
+    std::vector<std::string> offered;
+    c.realRequest = true;
+    const bool ok = BriefWithGroq(client, o.lyricsText, o.title, key, true, policy, model, brief, failure, o.acoustic, &offered);
+    for (const std::string& m : offered) {
+        // Chat models only: the speech models are not for this.
+        if (m.find("whisper") == std::string::npos && m.find("tts") == std::string::npos && m.find("guard") == std::string::npos) {
+            c.modelsOffered.push_back(m);
+        }
+    }
+    c.model = model;
+    if (!ok) {
+        c.status = "ERROR";
+        c.error = std::string(AssistErrorId(failure.error)) + ": " + RedactSecrets(failure.message, { key.value });
+        fallBack("Groq did not give a usable answer: the colours read the lyrics on this computer");
+        return c;
+    }
+    c.status = "REAL_REQUEST";
+    c.valid = true;
+    c.validation = brief.warnings;
+    c.analyzedAt = brief.analyzedAt;
+    c.received = brief.received;
+    c.brief = brief;
+    if (!c.cachePath.empty()) {
+        std::error_code ec;
+        fs::create_directories(fs::path(c.cachePath).parent_path(), ec);
+        std::ofstream(fs::path(c.cachePath), std::ios::binary) << ToJson(brief);
+    }
+    return c;
+}
+
+std::string ToJson(const ArtisticCheck& c) {
+    return json({ { "kind", "composer-artistic-check" }, { "status", c.status }, { "configured", c.configured }, { "credentialSource", c.credentialSource }, { "model", c.model },
+                  { "modelsOffered", c.modelsOffered }, { "realRequest", c.realRequest }, { "cacheHit", c.cacheHit }, { "cachePath", c.cachePath }, { "analyzedAt", c.analyzedAt },
+                  { "checkedAt", c.checkedAt }, { "valid", c.valid }, { "validation", c.validation }, { "fallback", c.fallback }, { "fallbackReason", c.fallbackReason },
+                  { "error", c.error }, { "received", c.received }, { "brief", json::parse(ToJson(c.brief), nullptr, false) } })
+        .dump(1);
+}
+
+bool FromJson(const std::string& text, ArtisticCheck& c, std::string& error) {
+    const json root = json::parse(text, nullptr, false);
+    if (!root.is_object() || root.value("kind", std::string()) != "composer-artistic-check") {
+        error = "not an artistic analysis check";
+        return false;
+    }
+    c = ArtisticCheck();
+    c.status = root.value("status", std::string());
+    c.configured = root.value("configured", false);
+    c.credentialSource = root.value("credentialSource", std::string());
+    c.model = root.value("model", std::string());
+    c.modelsOffered = root.value("modelsOffered", std::vector<std::string>());
+    c.realRequest = root.value("realRequest", false);
+    c.cacheHit = root.value("cacheHit", false);
+    c.cachePath = root.value("cachePath", std::string());
+    c.analyzedAt = root.value("analyzedAt", std::string());
+    c.checkedAt = root.value("checkedAt", std::string());
+    c.valid = root.value("valid", false);
+    c.validation = root.value("validation", std::vector<std::string>());
+    c.fallback = root.value("fallback", false);
+    c.fallbackReason = root.value("fallbackReason", std::string());
+    c.error = root.value("error", std::string());
+    c.received = root.value("received", std::vector<std::string>());
+    if (root.contains("brief") && root["brief"].is_object()) {
+        std::string e;
+        const json& b = root["brief"];
+        if (ParseVisualBrief(b.dump(), b.value("source", std::string()), c.brief, e)) {
+            c.brief.origin = b.value("origin", std::string());
+        }
     }
     return true;
 }
@@ -1498,7 +1672,7 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
         printf("composer-assist: transcript-lrc: %zu lines, %d doubtful, %zu left out\n", lrc.lines.size(), doubtful, lrc.dropped.size());
         return lrc.lines.empty() ? 1 : 0;
     }
-    if (o.action == "brief") {
+    if (o.action == "brief" || o.action == "artistic-check") {
         std::ifstream in(fs::path(std::u8string(o.lyricsPath.begin(), o.lyricsPath.end())), std::ios::binary);
         std::ostringstream raw;
         raw << in.rdbuf();
@@ -1516,8 +1690,36 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
             }
         }
         const std::string title = fs::path(o.audioPath).stem().string();
-        const std::string key = AssistCacheKey("", TextKey(words), "groq", o.briefModel.empty() ? std::string("auto") : o.briefModel, "brief-v1");
-        const std::string cached = o.showDir.empty() ? std::string() : AssistCachePath(o.showDir, key, "brief");
+        std::string acoustic;
+        if (!o.acousticPath.empty()) {
+            std::ifstream a(fs::path(std::u8string(o.acousticPath.begin(), o.acousticPath.end())), std::ios::binary);
+            std::ostringstream at;
+            at << a.rdbuf();
+            acoustic = at.str().substr(0, 4000);
+            // An analysis (analysis.json) is summarised here; anything else is taken as the summary.
+            SongAnalysis analysis;
+            std::string aerr;
+            if (!acoustic.empty() && acoustic.front() == '{' && FromJson(at.str(), analysis, aerr)) {
+                acoustic = AcousticSummary(analysis);
+            }
+        }
+        if (o.action == "artistic-check") {
+            ArtisticCheckOptions co;
+            co.lyricsText = words;
+            co.title = title;
+            co.acoustic = acoustic;
+            co.showDir = o.showDir;
+            co.model = o.briefModel;
+            co.consent = o.allowUpload;
+            co.refresh = o.refresh;
+            const ArtisticCheck check = CheckArtisticAnalysis(client, co, keys, policy);
+            (void)WriteJson(o.outPath, ToJson(check));
+            printf("composer-assist: artistic-check: %s; key %s; model %s; real request %s; from the cache %s; fallback %s%s\n", check.status.c_str(), check.credentialSource.c_str(),
+                   check.model.empty() ? "-" : check.model.c_str(), check.realRequest ? "yes" : "no", check.cacheHit ? "yes" : "no", check.fallback ? "yes" : "no",
+                   check.error.empty() ? "" : ("; " + check.error).c_str());
+            return check.status == "ERROR" ? 1 : 0;
+        }
+        const std::string cached = BriefCachePath(o.showDir, words, acoustic, o.briefModel);
         if (!cached.empty() && FileExists(cached)) {
             std::ifstream c(fs::path(cached), std::ios::binary);
             std::ostringstream text;
@@ -1526,7 +1728,8 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
             std::string error;
             const json root = json::parse(text.str(), nullptr, false);
             if (root.is_object() && ParseVisualBrief(text.str(), root.value("source", std::string("groq")), b, error)) {
-                (void)WriteJson(o.outPath, text.str());
+                b.origin = "cache";
+                (void)WriteJson(o.outPath, ToJson(b));
                 printf("composer-assist: brief: from the cache, nothing sent (%s)\n", cached.c_str());
                 return 0;
             }
@@ -1535,7 +1738,7 @@ int RunAssistCommand(const AssistCommandOptions& o, IHttpClient& client, const I
         AssistFailure failure;
         std::string model = o.briefModel;
         SongVisualBrief brief;
-        if (!BriefWithGroq(client, words, title, apiKey, o.allowUpload, policy, model, brief, failure)) {
+        if (!BriefWithGroq(client, words, title, apiKey, o.allowUpload, policy, model, brief, failure, acoustic)) {
             return Refused(o, failure);
         }
         const std::string out = ToJson(brief);

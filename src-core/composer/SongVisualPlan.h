@@ -23,15 +23,35 @@ inline constexpr const char* SONG_VISUAL_PLAN_VERSION = "1.0.0";
 
 // What a language model may say about a song, checked before use. Every field is
 // optional and only nudges the choices; without it the director decides alone.
+// One part of the song as the interpretation feels it.
+struct BriefPart {
+    std::string part;     // "intro", "verse", "pre-chorus", "chorus", "bridge", "instrumental", "outro"
+    std::string feeling;  // one of the moods
+    double intensity = -1; // 0-1; -1 unknown
+    std::string color;    // "#RRGGBB" the part suggests; "" none
+};
+
 struct SongVisualBrief {
     std::string source;              // "groq:<model>", "local" or ""
-    std::string mood;                // "joyful", "tender", "epic", "playful", "nostalgic", "dark"
+    std::string mood;                // "joyful", "tender", "epic", "playful", "nostalgic", "dark", "calm", "festive"
     std::vector<std::string> colors; // "#RRGGBB", what the words suggest
     std::vector<std::string> imagery;
     double christmas = -1; // 0-1, how Christmas the song itself is; -1 unknown
     double energy = -1;    // 0-1
+    // The artistic reading (version 2): the song's character, how it feels part by part,
+    // how strong and how warm its colours want to be, and how its parts contrast.
+    std::vector<std::string> character; // "festive", "epic", "intimate", "nostalgic", "playful", "dramatic", "tender", "calm", "majestic", "mysterious", "joyful"
+    std::vector<BriefPart> arc;
+    double colorIntensity = -1; // 0 soft, 1 full; -1 unknown
+    double warmth = -2;         // -1 cool, 1 warm; -2 unknown
+    std::string contrast;       // a short sentence on how the parts differ
+    // Set by this program, never by the service: what the service was given and when.
+    std::vector<std::string> received; // "title", "lyrics", "acoustic-summary"
+    std::string analyzedAt;            // ISO 8601, when the service answered
+    std::string origin;                // "request" (asked now), "cache", "file", "local"
     std::vector<std::string> warnings;
     [[nodiscard]] bool Empty() const { return source.empty(); }
+    [[nodiscard]] const BriefPart* Part(const std::string& kind) const;
 };
 
 struct VisualPlanOptions {
@@ -125,6 +145,10 @@ struct ColorChoice {
 // numbers clamped. False when nothing usable is left.
 [[nodiscard]] bool ParseVisualBrief(const std::string& json, const std::string& source, SongVisualBrief& brief, std::string& error);
 [[nodiscard]] std::string ToJson(const SongVisualBrief& brief);
+// A few lines measured on this computer that a service may read instead of the audio:
+// tempo and metre, key, and each part with its time and energy. No sound, no lyrics.
+[[nodiscard]] std::string AcousticSummary(const SongAnalysis& analysis);
+
 // What the lyrics alone say, with no service: Christmas words, moods and colour words.
 [[nodiscard]] SongVisualBrief LocalVisualBrief(const std::string& lyricsText, const std::string& title);
 

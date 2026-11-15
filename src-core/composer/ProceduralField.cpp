@@ -193,6 +193,15 @@ FieldSample EvaluateField(const FieldSpec& s, double x, double y, double t) {
         break;
     }
     }
+    if (s.colorBy == "distance") {
+        position = std::max(0.0, d) / std::max(1e-3, s.reach);
+    } else if (s.colorBy == "time") {
+        position = t / std::max(1e-3, s.duration);
+    } else if (s.colorBy == "trail") {
+        // How far behind its front a light is, in the front's own time: 0 as it arrives.
+        const double behind = s.function == FieldFunction::Sweep || s.function == FieldFunction::Expansion ? (v * t - std::fabs(d)) / v : t - std::max(0.0, d) / v;
+        position = behind / std::max(0.05, s.attack + s.release);
+    }
     out.intensity = static_cast<float>(std::clamp(i * std::clamp(s.level, 0.0, 1.0), 0.0, 1.0));
     out.position = static_cast<float>(std::clamp(position, 0.0, 1.0));
     return out;
@@ -266,6 +275,9 @@ std::string ToText(const FieldSpec& s) {
             out += (k > 0 ? "," : "") + fmt::format("{:.6g}", s.transform[k]);
         }
     }
+    if (s.colorBy != "field") {
+        out += fmt::format(";col={};reach={}", s.colorBy, Num(s.reach));
+    }
     if (!s.only.empty()) {
         out += ";only=" + s.only;
     }
@@ -316,6 +328,12 @@ bool ValidateField(const FieldSpec& s, std::string& error) {
     if (s.ex <= 0 || s.ey <= 0 || s.turns <= 0 || s.scale <= 0) {
         return bad("ellipse, turns and scale must be over 0");
     }
+    if (s.colorBy != "field" && s.colorBy != "distance" && s.colorBy != "trail" && s.colorBy != "time") {
+        return bad("colour must follow field, distance, trail or time");
+    }
+    if (!finite(s.reach) || s.reach <= 0 || s.reach > 10) {
+        return bad("reach must be over 0 and at most 10 stage units");
+    }
     if (s.at < -60 || s.at > 600) {
         return bad("a light joins a gesture from 60 s before it to 600 s after");
     }
@@ -353,6 +371,10 @@ bool FromText(const std::string& text, FieldSpec& out, std::string& error) {
                 error = "field: unknown function '" + value + "'";
                 return false;
             }
+        } else if (key == "col") {
+            s.colorBy = value;
+        } else if (key == "reach") {
+            s.reach = num;
         } else if (key == "ox") {
             s.ox = num;
         } else if (key == "oy") {

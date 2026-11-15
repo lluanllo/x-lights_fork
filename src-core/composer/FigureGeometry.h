@@ -45,6 +45,7 @@ struct FigureGeometry {
     int nodes = 0;
     int channels = 0;
     int channelsPerNode = 0;
+    std::string colorOrder = "RGB"; // how a light's three channels are ordered; "" a single-colour string
     int bufferWi = 0;
     int bufferHt = 0;
     int strands = 0;

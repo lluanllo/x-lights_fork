@@ -484,6 +484,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerColorDialogs.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerColorDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.h" />
 		<Unit filename="../dependencies/midifile/src/Binasc.cpp" />
@@ -594,6 +596,14 @@
 		<Unit filename="../src-core/composer/StageCheck.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />
 		<Unit filename="../src-core/composer/StageTest.h" />
+		<Unit filename="../src-core/composer/ColorSpace.cpp" />
+		<Unit filename="../src-core/composer/ColorSpace.h" />
+		<Unit filename="../src-core/composer/ColorCheck.cpp" />
+		<Unit filename="../src-core/composer/ColorCheck.h" />
+		<Unit filename="../src-core/composer/ChromaticDirector.cpp" />
+		<Unit filename="../src-core/composer/ChromaticDirector.h" />
+		<Unit filename="../src-core/composer/ColorTest.cpp" />
+		<Unit filename="../src-core/composer/ColorTest.h" />
 		<Unit filename="../src-core/composer/UnderstandingTest.cpp" />
 		<Unit filename="../src-core/composer/UnderstandingTest.h" />
 		<Unit filename="../src-core/composer/CompositionPlan.cpp" />

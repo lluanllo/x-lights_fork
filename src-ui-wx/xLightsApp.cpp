@@ -87,6 +87,7 @@ void SetHeadlessNoDock(); // ExternalHooksMacOSUI.mm — demote to background (n
 #include "composer/RecipeTest.h"
 #include "composer/UnderstandingTest.h"
 #include "composer/StageTest.h"
+#include "composer/ColorTest.h"
 #include "composer/ReferenceStudy.h"
 #include "composer/VisualDirection.h"
 #include "composer/PipelineTest.h"
@@ -1160,7 +1161,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure" || a == "--composer-color-test" || a == "--composer-color-measure") {
             headlessArg = true;
             break;
         }
@@ -1333,6 +1334,12 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "no-learning", "with --composer-generate: ignore the show maker's preferences (ShowComposer/preferences.json)" },
         { wxCMD_LINE_OPTION, "", "recipes", "with --composer-generate: a recipes.json instead of <show>/ShowComposer/recipes.json" },
         { wxCMD_LINE_SWITCH, "", "no-recipes", "with --composer-generate: no recipes, only the templates" },
+        { wxCMD_LINE_OPTION, "", "color-director", "with --composer-generate: on or off, whether the colours are directed by scene and figure (default: on, or the previous show's)" },
+        { wxCMD_LINE_OPTION, "", "color-variety", "with --composer-generate: 0-1, how many colour roles share a scene" },
+        { wxCMD_LINE_OPTION, "", "color-contrast", "with --composer-generate: 0-1, how much contrast between colours" },
+        { wxCMD_LINE_OPTION, "", "color-accents", "with --composer-generate: 0-1, how strong the accents are" },
+        { wxCMD_LINE_OPTION, "", "color-evolution", "with --composer-generate: 0-1, how far the palette moves from scene to scene" },
+        { wxCMD_LINE_OPTION, "", "song-colors", "with --composer-generate: the song's colours, #RRGGBB separated by commas (none: clear them)" },
         { wxCMD_LINE_OPTION, "", "stage-director", "with --composer-generate: on or off, whether the whole installation is directed as one stage (default: on, or the previous show's)" },
         { wxCMD_LINE_OPTION, "", "understanding", "with --composer-generate: on or off, whether the voices and figures heard in the recording are used (default: on when the song was understood)" },
         { wxCMD_LINE_SWITCH, "", "no-color-engine", "with --composer-generate: the theme's colours, not the ones made from the song" },
@@ -1344,6 +1351,9 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "authorship", "with --composer-recipe-extract: who made the source" },
         { wxCMD_LINE_SWITCH, "", "composer-stage-measure", "internal tool: what the rendered --fseq of the show (-s, controllers inactive) did with the installation, with an optional --stage-score, into --out, and exit" },
         { wxCMD_LINE_OPTION, "", "stage-score", "with --composer-stage-measure: a stage-score.json, to measure scenes and gestures" },
+        { wxCMD_LINE_SWITCH, "", "composer-color-test", "internal test: the colour space, harmonies, palettes, the colour director, gesture colours and the artistic analysis with a simulated service, under --out, and exit" },
+        { wxCMD_LINE_SWITCH, "", "composer-color-measure", "internal tool: the colours the rendered --fseq of the show (-s, controllers inactive) put on the installation, with an optional --stage-score and --color-score, into --out, and exit" },
+        { wxCMD_LINE_OPTION, "", "color-score", "with --composer-color-measure: a color-score.json, so scenes in one colour on purpose are not counted as monotony" },
         { wxCMD_LINE_SWITCH, "", "composer-stage-test", "internal test: light fields, the stage space, the Stage Field effect rendered across figures, layers and the global director, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-understanding-test", "internal test: what the recording says, the voices, the figures and who performs what, under --out, and exit" },
         { wxCMD_LINE_SWITCH, "", "composer-understand", "internal tool: what the recording --audio says (with --stems role=path;...) into the folder --out, and exit" },
@@ -1360,7 +1370,10 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
         { wxCMD_LINE_OPTION, "", "sequence", "with --composer-reference-study: the .xsq inside the show copy" },
-        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, brief (colour ideas from the text of --lyrics, through Groq), or transcript-lrc (lyrics from --transcript), answer to --out, and exit; nothing is sent without --allow-upload" },
+        { wxCMD_LINE_OPTION, "", "composer-assist", "internal tool used by the Show Composer window: lrclib, transcribe or describe the song --audio, brief (colour ideas from the text of --lyrics, through Groq), artistic-check (whether that reading comes from Groq now, from its cache or from this computer), or transcript-lrc (lyrics from --transcript), answer to --out, and exit; nothing is sent without --allow-upload" },
+        { wxCMD_LINE_OPTION, "", "acoustic", "with --composer-assist brief or artistic-check: a text file with the song's acoustic summary measured on this computer (never the audio)" },
+        { wxCMD_LINE_OPTION, "", "brief-model", "with --composer-assist brief or artistic-check: a Groq chat model to prefer, if the key offers it" },
+        { wxCMD_LINE_SWITCH, "", "refresh", "with --composer-assist artistic-check: ask Groq even when an answer is kept (needs --allow-upload)" },
         { wxCMD_LINE_SWITCH, "", "allow-upload", "with --composer-assist: the person agreed in the window to send this song to the service" },
         { wxCMD_LINE_OPTION, "", "query", "with --composer-assist lrclib: \"Artist - Title\"" },
         { wxCMD_LINE_OPTION, "", "duration", "with --composer-assist lrclib: the song's length in seconds" },
@@ -2291,6 +2304,24 @@ bool xLightsApp::OnInit()
         if (parser.Found("stage-director", &value)) {
             command.stageDirector = value.ToStdString(wxConvUTF8);
         }
+        if (parser.Found("color-director", &value)) {
+            command.colorDirector = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-variety", &value)) {
+            command.colorVariety = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-contrast", &value)) {
+            command.colorContrast = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-accents", &value)) {
+            command.colorAccents = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("color-evolution", &value)) {
+            command.colorEvolution = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("song-colors", &value)) {
+            command.songColors = value.ToStdString(wxConvUTF8);
+        }
         command.noColorEngine = parser.Found("no-color-engine");
         if (command.showDir.empty() || command.sequenceName.empty() || command.reportDir.empty()) {
             spdlog::error("--composer-generate requires a show directory (-s <dir>), --name <file>.xsq and --out <folder>");
@@ -2326,6 +2357,13 @@ bool xLightsApp::OnInit()
         if (parser.Found("duration", &value)) {
             options.durationS = std::strtod(value.ToStdString().c_str(), nullptr);
         }
+        if (parser.Found("acoustic", &value)) {
+            options.acousticPath = value.ToStdString(wxConvUTF8);
+        }
+        if (parser.Found("brief-model", &value)) {
+            options.briefModel = value.ToStdString(wxConvUTF8);
+        }
+        options.refresh = parser.Found("refresh");
         options.showDir = showDir.ToStdString(wxConvUTF8);
         options.allowUpload = parser.Found("allow-upload");
         WxServiceSettingsStore keys;
@@ -2370,6 +2408,32 @@ bool xLightsApp::OnInit()
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunStageMeasure(showDir.ToStdString(wxConvUTF8), fseq.ToStdString(wxConvUTF8), score.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-color-measure")) {
+        wxString out, fseq, score, chroma;
+        if (showDir.IsEmpty() || !parser.Found("out", &out) || !parser.Found("fseq", &fseq)) {
+            spdlog::error("--composer-color-measure requires -s <dir>, --fseq <file> and --out <folder>");
+            std::exit(2);
+        }
+        (void)parser.Found("stage-score", &score);
+        (void)parser.Found("color-score", &chroma);
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunColorMeasure(showDir.ToStdString(wxConvUTF8), fseq.ToStdString(wxConvUTF8), score.ToStdString(wxConvUTF8), chroma.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
+    }
+
+    if (parser.Found("composer-color-test")) {
+        wxString out;
+        if (!parser.Found("out", &out)) {
+            spdlog::error("--composer-color-test requires --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunColorTest(out.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-stage-test")) {

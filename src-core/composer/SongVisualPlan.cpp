@@ -560,8 +560,19 @@ std::string VisualPlanReport(const SongVisualPlan& p) {
     return out;
 }
 
+const BriefPart* SongVisualBrief::Part(const std::string& kind) const {
+    for (const BriefPart& p : arc) {
+        if (p.part == kind) {
+            return &p;
+        }
+    }
+    return nullptr;
+}
+
 bool ParseVisualBrief(const std::string& text, const std::string& source, SongVisualBrief& brief, std::string& error) {
     static const std::set<std::string> MOODS = { "joyful", "tender", "epic", "playful", "nostalgic", "dark", "calm", "festive" };
+    static const std::set<std::string> CHARACTERS = { "festive", "epic", "intimate", "nostalgic", "playful", "dramatic", "tender", "calm", "majestic", "mysterious", "joyful" };
+    static const std::set<std::string> PARTS = { "intro", "verse", "pre-chorus", "chorus", "bridge", "instrumental", "outro" };
     SongVisualBrief out;
     out.source = source;
     try {
@@ -600,11 +611,64 @@ bool ParseVisualBrief(const std::string& text, const std::string& source, SongVi
         if (root.contains("energy") && root["energy"].is_number()) {
             out.energy = std::clamp(root["energy"].get<double>(), 0.0, 1.0);
         }
+        if (root.contains("character") && root["character"].is_array()) {
+            for (const json& c : root["character"]) {
+                const std::string word = c.is_string() ? c.get<std::string>() : std::string();
+                if (CHARACTERS.contains(word) && out.character.size() < 4) {
+                    out.character.push_back(word);
+                } else if (!word.empty()) {
+                    out.warnings.push_back("character-unknown:" + word.substr(0, 20));
+                }
+            }
+        }
+        if (root.contains("arc") && root["arc"].is_array()) {
+            for (const json& p : root["arc"]) {
+                if (!p.is_object()) {
+                    continue;
+                }
+                BriefPart part;
+                part.part = p.value("part", std::string());
+                if (part.part == "interlude" || part.part == "solo") {
+                    part.part = "instrumental"; // a part without words, as this program calls it
+                }
+                if (!PARTS.contains(part.part) || out.arc.size() >= 12) {
+                    out.warnings.push_back("part-dropped");
+                    continue;
+                }
+                const std::string feeling = p.value("feeling", std::string());
+                part.feeling = MOODS.contains(feeling) ? feeling : std::string();
+                if (p.contains("intensity") && p["intensity"].is_number()) {
+                    part.intensity = std::clamp(p["intensity"].get<double>(), 0.0, 1.0);
+                }
+                std::string hex = p.value("color", std::string());
+                std::transform(hex.begin(), hex.end(), hex.begin(), [](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
+                part.color = IsHex(hex) ? hex : std::string();
+                out.arc.push_back(part);
+            }
+        }
+        if (root.contains("colorIntensity") && root["colorIntensity"].is_number()) {
+            out.colorIntensity = std::clamp(root["colorIntensity"].get<double>(), 0.0, 1.0);
+        }
+        if (root.contains("warmth") && root["warmth"].is_number()) {
+            out.warmth = std::clamp(root["warmth"].get<double>(), -1.0, 1.0);
+        }
+        if (root.contains("contrast") && root["contrast"].is_string()) {
+            out.contrast = root["contrast"].get<std::string>().substr(0, 280);
+        }
+        // What only this program writes, read back from a stored answer.
+        if (root.contains("received") && root["received"].is_array()) {
+            for (const json& r : root["received"]) {
+                if (r.is_string() && (r == "title" || r == "lyrics" || r == "acoustic-summary")) {
+                    out.received.push_back(r.get<std::string>());
+                }
+            }
+        }
+        out.analyzedAt = root.value("analyzedAt", std::string()).substr(0, 32);
     } catch (const json::exception& e) {
         error = e.what();
         return false;
     }
-    if (out.mood.empty() && out.colors.empty() && out.imagery.empty() && out.christmas < 0 && out.energy < 0) {
+    if (out.mood.empty() && out.colors.empty() && out.imagery.empty() && out.christmas < 0 && out.energy < 0 && out.character.empty() && out.arc.empty()) {
         error = "nothing usable";
         return false;
     }
@@ -613,7 +677,41 @@ bool ParseVisualBrief(const std::string& text, const std::string& source, SongVi
 }
 
 std::string ToJson(const SongVisualBrief& b) {
-    return json({ { "source", b.source }, { "mood", b.mood }, { "colors", b.colors }, { "imagery", b.imagery }, { "christmas", b.christmas }, { "energy", b.energy }, { "warnings", b.warnings } }).dump(1);
+    json arc = json::array();
+    for (const BriefPart& p : b.arc) {
+        arc.push_back({ { "part", p.part }, { "feeling", p.feeling }, { "intensity", p.intensity }, { "color", p.color } });
+    }
+    return json({ { "source", b.source }, { "mood", b.mood }, { "colors", b.colors }, { "imagery", b.imagery }, { "christmas", b.christmas }, { "energy", b.energy },
+                  { "character", b.character }, { "arc", arc }, { "colorIntensity", b.colorIntensity }, { "warmth", b.warmth }, { "contrast", b.contrast },
+                  { "received", b.received }, { "analyzedAt", b.analyzedAt }, { "origin", b.origin }, { "warnings", b.warnings } })
+        .dump(1);
+}
+
+std::string AcousticSummary(const SongAnalysis& a) {
+    double bpm = 0;
+    int counted = 0;
+    for (const TempoPoint& t : a.tempo) {
+        if (t.bpm > 30) {
+            bpm += t.bpm;
+            ++counted;
+        }
+    }
+    std::string out = fmt::format("length {:.0f} s", (a.musicEndMS > a.musicStartMS ? a.musicEndMS - a.musicStartMS : 0) / 1000.0);
+    if (counted > 0) {
+        out += fmt::format("; tempo {:.0f} BPM", bpm / counted);
+    }
+    if (a.beatsPerBar > 0) {
+        out += fmt::format(", {}/4", a.beatsPerBar);
+    }
+    if (!a.key.empty()) {
+        out += "; key " + a.key;
+    }
+    out += "\nparts:";
+    for (const SongSection& s : a.sections) {
+        out += fmt::format("\n- {} {:.0f}-{:.0f} s, energy {:.2f}{}", SectionKindId(s.kind), s.startMS / 1000.0, s.endMS / 1000.0, s.energy,
+                           s.repeatGroup >= 0 ? fmt::format(", same music as part group {}", s.repeatGroup) : std::string());
+    }
+    return out;
 }
 
 SongVisualBrief LocalVisualBrief(const std::string& lyricsText, const std::string& title) {
@@ -630,6 +728,7 @@ SongVisualBrief LocalVisualBrief(const std::string& lyricsText, const std::strin
                                                               { "recuerdo", "nostalgic" }, { "happy", "joyful" }, { "dance", "playful" }, { "love", "tender" } };
     SongVisualBrief b;
     b.source = "local";
+    b.origin = "local";
     const std::vector<std::string> words = LineWords(lyricsText + " " + title);
     int christmas = 0;
     std::map<std::string, int> moods;

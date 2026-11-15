@@ -650,3 +650,26 @@ Un `.xsq` generado **no contiene referencias rotas**, porque un recurso solo se 
 - Eventos de la coreografía del director: `intent` = `stage-gesture` o `stage-identity`, `provenance` = `stage:<id del gesto>` o `stage:identity`, efecto `Stage Field` con `E_TEXTCTRL_StageField_Spec`, `E_SLIDER_StageField_Intensity` y `T_CHOICE_LayerMethod` = `Normal`.
 - Especificación de un campo (texto): `fn`, `ox`, `oy`, `ang`, `shape`, `ex`, `ey`, `v`, `w`, `dur`, `att`, `rel`, `loss`, `per`, `rep`, `gain`, `turns`, `scale`, `contract`, `seed`, `level`, `at` (−60 a 600 s), `m` (8 números), `only` y `skip` (rangos de luces desde 1). Una clave desconocida se rechaza.
 - Sidecar versión 4: `stage` (`enabled`, `directorVersion`, `scenes`, `gestures`, `edits`). Un sidecar de versión 1 a 3 se lee como un show que nunca lo decidió (el director viene activo).
+
+### Cambios de la Fase 18
+
+- `FigureGeometry.colorOrder` (`"RGB"`, `"GRB"`…; vacío en las tiras de un solo color) en `figures.json`, para leer el color real de cada luz en el `.fseq`.
+- `FieldSpec.colorBy` (`field`, `distance`, `trail`, `time`) y `reach`, escritos como `col=`/`reach=` solo si no es `field` (versión 2 del campo; un campo de la versión 1 se lee igual). `GlobalGesture` gana `colorBy` y `colorReason`.
+- `ChoreographyEvent.colorCurves`: por hueco de la paleta, una curva de color nativa (`Active=TRUE|Id=ID_BUTTON_Palette<n>|Values=x=…^c=#…;…|`) o vacío.
+- `color-score.json` (`composer-color-score`, `CHROMATIC_SCORE_SCHEMA_VERSION` 1, director 1.0.0):
+  - `options`: `variety`, `contrast`, `accents`, `evolution`, `christmasInfluence`, `saturation`, `warmth`, `gradual`, `respectIdentity` y `songColors`;
+  - `song`: la paleta de la canción, con `harmony`, `anchorHue` y `colors` (`role`, `hex`, `L`, `C`, `h`, `why`);
+  - `identityReason`, `briefSource` (con su origen: consultado ahora, respuesta guardada, leída de un archivo) y `mood`;
+  - `scenes`:
+    - `palette`, `dominant`, `secondary`, `accents`, `contrasts`, `saturation`, `intensity`, `monochrome`, `evolution`, `motif`, `feeling`, `feelingColor` y `feelingSource`;
+    - `figures`: `figure`, `role`, `colors` y `why`;
+    - `gestures`: `gesture`, `start`, `front`, `secondary`, `tail`, `arrival`, `colorBy`, `background`, `contrast` y `why`;
+    - `toNext`: `kind`, `startMS`, `endMS`, `order` y `why`;
+    - `reasons`, `manual` y `locked`;
+  - `motifs`, `warnings` y `limits`; `review` siempre es `not-reviewed`.
+- `color-check.json` (`composer-color-check`, esquema 1): lo que mostró el render, con `families`, `effectiveColors`, `monotoneShare` (umbral 0,6), el tramo más largo, `sceneVariation`, `figureDifference`, `figureFamilies`, `accentFrames`, el contraste de los gestos, `scenes`, `figureColors`, `gestures` y `warnings`; `review` siempre es `not-reviewed`.
+- `ShowComposer/color/<audio>.edits.json` (`composer-color-edits`): acciones `color`, `accent`, `lock-palette`, `more-contrast`, `less-contrast`, `figure-color`, `identity`, `no-identity`, `monochrome` y `no-monochrome`. Una acción desconocida se rechaza.
+- Lectura artística (`SongVisualBrief`, versión 2): `character`, `arc` (`part`, `feeling`, `intensity`, `color`), `colorIntensity`, `warmth` y `contrast`. Además, lo que escribe solo este programa: `received` (`title`, `lyrics`, `acoustic-summary`), `analyzedAt` y `origin` (`request`, `cache`, `file`, `local`). La caché pasa a `brief-v2`, con la clave de la letra más el resumen acústico.
+- `--composer-assist artistic-check` escribe `composer-artistic-check`: `status`, `configured`, `credentialSource`, `model`, `modelsOffered`, `realRequest`, `cacheHit`, `analyzedAt`, `valid`, `validation`, `fallback`, `error`, `received` y `brief`. Nunca contiene la clave.
+- Valoración: once etiquetas y diez reglas de color, y las claves de preferencias `color.variety`, `color.contrast`, `color.accents`, `color.evolution`, `color.gradual`, `color.saturation`, `color.warmth` y `color.identity`.
+- Sidecar versión 5: `color` (`enabled`, `directorVersion`, `variety`, `contrast`, `accents`, `evolution`, `songColors`, `briefSource`, `scenes`, `edits`). Un sidecar de versión 1 a 4 se lee como un show que nunca lo decidió (la dirección cromática viene activa).

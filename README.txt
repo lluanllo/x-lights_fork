@@ -12,6 +12,21 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: a colour director gives each song a family of colours with a hierarchy
+                                 (main, second, accent, contrast...), a palette per scene that changes with the music,
+                                 a colour role per figure so the house is not one colour, gestures in colours that
+                                 stand out from what is lit, and gradual changes figure by figure (native colour curves)
+    -enh (lluanllo)              Show Composer: the colours of a rendered show are measured (stretches in one colour,
+                                 how different the figures are, accents, gestures against what was lit); signs to look
+                                 at, never an approval
+    -enh (lluanllo)              Show Composer: "Check the artistic analysis with Groq" says whether the colours' reading
+                                 of the song comes from Groq now, from a kept answer or from this computer; Groq only
+                                 gets the lyrics' text and a summary measured here, never the audio
+    -enh (lluanllo)              Show Composer: colour controls on step 1, a colour lane on the timeline, the colours of
+                                 the figures, a colour director on step 4 (change a colour, fix a palette, more or less
+                                 contrast, back to the original plan) and the show's colours on step 5
+    -enh (lluanllo)              Stage Field: a gesture's colour can change as it travels across the house or between
+                                 its front and its trail
     -enh (lluanllo)              Show Composer: a stage director plans the whole installation scene by scene (one figure
                                  alone, call and answer, a group, the whole house, a rest...) within an attention
                                  budget, and gives the strong moments gestures that cross the figures: a wave from one

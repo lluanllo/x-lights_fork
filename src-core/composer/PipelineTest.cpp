@@ -154,6 +154,7 @@ public:
         TestCache();
         TestCancel();
         TestSidecar();
+        TestColors();
         TestDeterminism();
         TestReviewData();
         TestMusicCorrections();
@@ -1796,6 +1797,58 @@ private:
         _expectSuccess = true;
     }
 
+    // ------------------------------------------------------------ colours
+
+    void TestColors() {
+        Title("The colours: directed by scene and figure by default, measured on the render, off to compare");
+        if (!_base.ok) {
+            return;
+        }
+        const fs::path report(_base.request.reportDir);
+        Check(_base.colorWanted && _base.colored && !_base.chromatic.scenes.empty() && FileExists((report / "color-score.json").string()) && FileExists((report / "color-score.txt").string()),
+              fmt::format("on by default: a colour plan of {} scenes in the report", _base.chromatic.scenes.size()));
+        Check(_base.colorCheck.ran && FileExists((report / "color-check.json").string()) && ReadText((report / "color-check.json").string()).find("\"review\": \"not-reviewed\"") != std::string::npos,
+              fmt::format("the render's colours are measured ({:.1f} families, {:.0f}% in one colour), and nothing is approved", _base.colorCheck.effectiveColors, _base.colorCheck.monotoneShare * 100));
+        int roled = 0, coloured = 0;
+        for (const ChoreographyEvent& e : _base.choreography.events) {
+            if (e.colors.empty() || e.intent == "stage-gesture" || e.intent == "stage-identity") {
+                continue; // a gesture carries its own colours; a figure's own colours are its own
+            }
+            ++coloured;
+            for (const Reason& r : e.reasons) {
+                roled += r.code == "color-role" ? 1 : 0;
+            }
+        }
+        Check(roled > 0 && roled == coloured, fmt::format("every coloured effect that is not a gesture took its figure's colour role ({} of {})", roled, coloured));
+        GenerationSidecar sidecar;
+        std::string error;
+        Check(ReadSidecar(_base.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.schemaVersion == SIDECAR_SCHEMA_VERSION && sidecar.color.decided && sidecar.color.enabled &&
+                  sidecar.color.directorVersion == CHROMATIC_DIRECTOR_VERSION && sidecar.color.scenes == static_cast<int>(_base.chromatic.scenes.size()),
+              "the sidecar keeps the colour direction and its settings (schema 5)");
+        nlohmann::json older = nlohmann::json::parse(ToJson(sidecar));
+        older.erase("color");
+        older["schemaVersion"] = 4;
+        GenerationSidecar read;
+        Check(FromJson(older.dump(), read, error) == SidecarStatus::Ok && !read.color.decided, "a schema 4 sidecar reads as a show that never decided about colours");
+        GenerationRequest r = Request("sin-color");
+        r.colorDirector = false;
+        const GenerationRun off = Generate(r);
+        bool noRoles = true;
+        for (const ChoreographyEvent& e : off.choreography.events) {
+            for (const Reason& reason : e.reasons) {
+                noRoles = noRoles && reason.code != "color-role";
+            }
+        }
+        GenerationSidecar offSidecar;
+        Check(off.ok && !off.colored && noRoles && !FileExists((fs::path(off.request.reportDir) / "color-score.json").string()) &&
+                  ReadSidecar(off.sidecarPath, offSidecar, error) == SidecarStatus::Ok && offSidecar.color.decided && !offSidecar.color.enabled,
+              "switched off: the colours as before, and the sidecar says so");
+        GenerationRequest again = Request("sin-color-otra-vez");
+        again.previousSidecarPath = off.sidecarPath;
+        const GenerationRun kept = Generate(again);
+        Check(kept.ok && !kept.colorWanted, "regenerating from it keeps the colours as they were chosen");
+    }
+
     // ------------------------------------------------------------ determinism
 
     void TestDeterminism() {
@@ -2027,6 +2080,33 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     r.stems = ParseStemList(o.stems);
     if (o.stageDirector == "on" || o.stageDirector == "off") {
         r.stageDirector = o.stageDirector == "on";
+    }
+    if (o.colorDirector == "on" || o.colorDirector == "off") {
+        r.colorDirector = o.colorDirector == "on";
+    }
+    const auto slider = [](const std::string& v, std::optional<double>& out) {
+        if (!v.empty()) {
+            out = std::clamp(std::strtod(v.c_str(), nullptr), 0.0, 1.0);
+        }
+    };
+    slider(o.colorVariety, r.colorVariety);
+    slider(o.colorContrast, r.colorContrast);
+    slider(o.colorAccents, r.colorAccents);
+    slider(o.colorEvolution, r.colorEvolution);
+    if (o.songColors == "none") {
+        r.songColors = std::vector<std::string>();
+    } else if (!o.songColors.empty()) {
+        std::vector<std::string> colors;
+        size_t at = 0;
+        while (at < o.songColors.size()) {
+            const size_t end = std::min(o.songColors.find(',', at), o.songColors.size());
+            const std::string c = o.songColors.substr(at, end - at);
+            at = end + 1;
+            if (c.size() == 7 && c[0] == '#') {
+                colors.push_back(c);
+            }
+        }
+        r.songColors = colors;
     }
     if (o.noRecipes) {
         r.useRecipes = false;

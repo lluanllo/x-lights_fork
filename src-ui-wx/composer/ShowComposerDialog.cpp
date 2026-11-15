@@ -11,6 +11,7 @@
 #include "ShowComposerDialog.h"
 
 #include <wx/button.h>
+#include <wx/colordlg.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/collpane.h>
@@ -61,6 +62,7 @@
 #include "ComposerStoryboard.h"
 #include "composer/VisualModel.h"
 #include "ComposerStageDialogs.h"
+#include "ComposerColorDialogs.h"
 #include "ComposerTimeline.h"
 #include "ComposerUnderstandingDialogs.h"
 #include "ai/WxServiceSettingsStore.h"
@@ -733,6 +735,52 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     director->Add(_variety, 0, wxALIGN_CENTER_VERTICAL);
     director->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("change often")), 0, wxALIGN_CENTER_VERTICAL);
     style->Add(director, 0, wxALL, 4);
+    auto* colours = new wxStaticBoxSizer(wxVERTICAL, style->GetStaticBox(), _("Colour direction"));
+    wxWindow* cbox = colours->GetStaticBox();
+    auto* songRow = new wxBoxSizer(wxHORIZONTAL);
+    songRow->Add(new wxStaticText(cbox, wxID_ANY, _("Colours of the song:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    _songSwatch = new ColorSwatches(cbox, wxSize(140, 20));
+    songRow->Add(_songSwatch, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    auto* pickSong = new wxButton(cbox, wxID_ANY, _("Add a Colour..."));
+    auto* clearSong = new wxButton(cbox, wxID_ANY, _("None"));
+    songRow->Add(pickSong, 0, wxRIGHT, 4);
+    songRow->Add(clearSong, 0, wxRIGHT, 4);
+    songRow->Add(Muted(cbox, _("(empty: the song and the analysis choose)")), 0, wxALIGN_CENTER_VERTICAL);
+    colours->Add(songRow, 0, wxALL, 4);
+    auto* sliders = new wxFlexGridSizer(4, 6, 8);
+    const auto slider = [&](const wxString& label, const wxString& low, const wxString& high, wxSlider*& out) {
+        sliders->Add(new wxStaticText(cbox, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        sliders->Add(new wxStaticText(cbox, wxID_ANY, low), 0, wxALIGN_CENTER_VERTICAL);
+        out = new wxSlider(cbox, wxID_ANY, 50, 0, 100, wxDefaultPosition, wxSize(180, -1));
+        sliders->Add(out, 0, wxALIGN_CENTER_VERTICAL);
+        sliders->Add(new wxStaticText(cbox, wxID_ANY, high), 0, wxALIGN_CENTER_VERTICAL);
+        out->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) { RefreshAll(); });
+    };
+    slider(_("Colour variety:"), _("one family"), _("many roles"), _colorVariety);
+    slider(_("Contrast:"), _("soft"), _("strong"), _colorContrast);
+    slider(_("Accents:"), _("discreet"), _("intense"), _colorAccents);
+    slider(_("Change between scenes:"), _("holds"), _("changes a lot"), _colorEvolution);
+    colours->Add(sliders, 0, wxALL, 4);
+    auto* groqRow = new wxBoxSizer(wxHORIZONTAL);
+    auto* artistic = new wxButton(cbox, wxID_ANY, _("Check the Artistic Analysis with Groq..."));
+    groqRow->Add(artistic, 0, wxRIGHT, 8);
+    groqRow->Add(Muted(cbox, _("Groq only interprets the song; the colours are chosen on this computer. The Christmas slider above pulls them too.")), 1, wxALIGN_CENTER_VERTICAL);
+    colours->Add(groqRow, 0, wxEXPAND | wxALL, 4);
+    style->Add(colours, 0, wxEXPAND | wxALL, 4);
+    pickSong->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_songColors.size() >= 4) {
+            ShowError(_("Four colours at most: remove them with \"None\" to choose again."), wxString());
+            return;
+        }
+        wxColourDialog dialog(this);
+        if (dialog.ShowModal() == wxID_OK) {
+            std::vector<std::string> next = _songColors;
+            next.push_back(S(dialog.GetColourData().GetColour().GetAsString(wxC2S_HTML_SYNTAX)));
+            SetSongColors(next);
+        }
+    });
+    clearSong->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SetSongColors({}); });
+    artistic->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { CheckArtistic(false, false, true); });
     auto* recipes = new wxBoxSizer(wxHORIZONTAL);
     _useRecipes = new wxCheckBox(style->GetStaticBox(), wxID_ANY, _("Use recipes from the reference shows"));
     _useRecipes->SetValue(true);
@@ -1208,6 +1256,13 @@ wxWindow* ShowComposerDialog::BuildCompositionPage(wxWindow* parent) {
     actions->Add(new wxButton(page, ID_INCLUDE, _("Include It Again")), 0, wxEXPAND);
     actions->Add(new wxButton(page, ID_LOCK, _("Lock Its Effects")), 0, wxEXPAND);
     actions->Add(new wxButton(page, ID_UNLOCK, _("Unlock")), 0, wxEXPAND);
+    auto* figureColours = new wxButton(page, wxID_ANY, _("Colours of the Figures..."));
+    actions->Add(figureColours, 0, wxEXPAND);
+    figureColours->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_colorPanel != nullptr) {
+            _colorPanel->OpenFigures();
+        }
+    });
     right->Add(actions, 0, wxEXPAND);
     figures->Add(right, 2, wxEXPAND);
     sizer->Add(figures, 1, wxEXPAND | wxBOTTOM, 6);
@@ -1317,6 +1372,13 @@ wxWindow* ShowComposerDialog::BuildGeneratePage(wxWindow* parent) {
     _stagePanel->onDirectorChanged = [this]() { RefreshAll(); };
     stage->Add(_stagePanel, 1, wxEXPAND | wxALL, 4);
     sizer->Add(stage, 0, wxEXPAND | wxBOTTOM, 8);
+    auto* colourBox = new wxStaticBoxSizer(wxVERTICAL, page, _("Colour director: the colours of the house"));
+    _colorPanel = new ColorDirectorPanel(colourBox->GetStaticBox());
+    _colorPanel->onRecompose = [this]() { StartComposition(); };
+    _colorPanel->onDirectorChanged = [this]() { RefreshAll(); };
+    _colorPanel->resultReport = [this]() -> const ReportFolder* { return &_result; };
+    colourBox->Add(_colorPanel, 1, wxEXPAND | wxALL, 4);
+    sizer->Add(colourBox, 0, wxEXPAND | wxBOTTOM, 8);
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
     _generate = new wxButton(page, ID_GENERATE, _("Generate the Show"));
     wxFont font = _generate->GetFont();
@@ -1372,7 +1434,10 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     review->Add(new wxButton(page, ID_LEARNED, _("What Has Been Learned...")), 0, wxRIGHT, 4);
     review->Add(new wxButton(page, ID_RENDER_CHECK, _("What the Figures Did...")), 0, wxRIGHT, 4);
     auto* house = new wxButton(page, wxID_ANY, _("The Whole Installation..."));
-    review->Add(house, 0);
+    review->Add(house, 0, wxRIGHT, 4);
+    auto* showColours = new wxButton(page, wxID_ANY, _("Colours of the Show..."));
+    review->Add(showColours, 0);
+    showColours->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenShowColors(); });
     house->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenInstallation(); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenRenderCheck(); }, ID_RENDER_CHECK);
     sizer->Add(review, 0, wxBOTTOM, 8);
@@ -1537,12 +1602,55 @@ bool ShowComposerDialog::AskConsent(const wxString& service, const wxString& why
     return wxMessageBox(message, _("Send the song?"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) == wxYES;
 }
 
+void ShowComposerDialog::SetColorSliders(int variety, int contrast, int accents, int evolution) {
+    if (_colorVariety == nullptr) {
+        return;
+    }
+    _colorVariety->SetValue(variety);
+    _colorContrast->SetValue(contrast);
+    _colorAccents->SetValue(accents);
+    _colorEvolution->SetValue(evolution);
+    RefreshAll();
+}
+
+void ShowComposerDialog::SetSongColors(const std::vector<std::string>& colors) {
+    _songColors = colors;
+    if (_songSwatch != nullptr) {
+        _songSwatch->SetColors(colors);
+    }
+    RefreshAll();
+}
+
+void ShowComposerDialog::CheckArtistic(bool consent, bool refresh, bool show) {
+    if (_lyricsPath.empty()) {
+        ShowError(_("Give the song's lyrics first: only their text is interpreted."), wxString());
+        return;
+    }
+    _assistRefresh = refresh && consent;
+    _showArtistic = show;
+    StartAssist("artistic-check", consent);
+    _assistRefresh = false;
+}
+
+int ShowComposerDialog::TimelineColorScenes() const {
+    return _timeline != nullptr ? _timeline->ColorScenes() : 0;
+}
+
+void ShowComposerDialog::OpenShowColors() {
+    if (_result.colorCheck.empty()) {
+        wxMessageBox(_("Generate the show first: its colours are measured on xLights' own render."), _("Colours of the Show"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+    ColorReviewDialog dialog(this, _result);
+    dialog.ShowModal();
+}
+
 void ShowComposerDialog::StartAssist(const std::string& action, bool consent, const std::string& query) {
     if (_assistJob.Running()) {
         ShowError(_("The assistant is still working on the last request."), wxString());
         return;
     }
-    if (!consent && action != "lrclib") {
+    if (!consent && action != "lrclib" && action != "artistic-check") {
         _assistExit = 2;
         _assistMessage = S(AssistErrorText("no-consent", -1));
         _assistInfo->SetLabel(U(_assistMessage));
@@ -1555,9 +1663,19 @@ void ShowComposerDialog::StartAssist(const std::string& action, bool consent, co
     if (consent) {
         args.push_back("--allow-upload");
     }
-    if (action == "brief") {
+    if (action == "brief" || action == "artistic-check") {
         args.push_back("--lyrics");
         args.push_back(_lyricsPath);
+        // A few lines measured here, never the audio: tempo, key and the parts.
+        if (!_shownAnalysis.sections.empty()) {
+            const fs::path summary = fs::path(dir) / "acoustic.txt";
+            std::ofstream(summary, std::ios::binary) << AcousticSummary(_shownAnalysis);
+            args.push_back("--acoustic");
+            args.push_back(summary.string());
+        }
+        if (_assistRefresh) {
+            args.push_back("--refresh");
+        }
     }
     if (!query.empty()) {
         args.push_back("--query");
@@ -1679,6 +1797,38 @@ void ShowComposerDialog::AssistFinished(int exitCode) {
             _assistMessage = S(wxString::Format(_("%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."), static_cast<int>(t.words.size()), U(t.model)));
         }
         SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    if (_assistAction == "artistic-check") {
+        ArtisticCheck c;
+        std::string error;
+        if (!FromJson(ReadFile(fs::path(_assistResultPath)), c, error)) {
+            _assistMessage = S(_("The artistic analysis check could not be read."));
+            SetWrapped(_styleInfo, U(_assistMessage));
+            return;
+        }
+        _artisticCheck = c;
+        // The reading Groq gave, now or before, is what the next composition uses.
+        if ((c.status == "REAL_REQUEST" || c.status == "CACHE_HIT") && !c.brief.Empty()) {
+            const fs::path file = fs::path(_assistResultPath).parent_path() / "brief.json";
+            std::ofstream(file, std::ios::binary) << ToJson(c.brief);
+            _briefPath = file.string();
+        }
+        _assistMessage = S(ArtisticStatusText(c));
+        SetWrapped(_styleInfo, U(_assistMessage));
+        RefreshAll();
+        if (_showArtistic) {
+            ArtisticCheckDialog dialog(this, c);
+            dialog.onAskAgain = [this]() {
+                CallAfter([this]() {
+                    const bool yes = AskConsent("Groq (api.groq.com)", _("to read the text of the lyrics and a summary measured here (tempo, key, parts) and say how the song feels; never the song itself"));
+                    if (yes) {
+                        CheckArtistic(true, true, true);
+                    }
+                });
+            };
+            dialog.ShowModal();
+        }
         return;
     }
     if (_assistAction == "brief") {
@@ -2109,6 +2259,18 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
         add("--stems", StemListText(_stems));
     }
     add("--stage-director", _stagePanel == nullptr || _stagePanel->DirectorOn() ? "on" : "off");
+    add("--color-director", _colorPanel == nullptr || _colorPanel->DirectorOn() ? "on" : "off");
+    if (_colorVariety != nullptr) {
+        add("--color-variety", fmt::format("{:.2f}", _colorVariety->GetValue() / 100.0));
+        add("--color-contrast", fmt::format("{:.2f}", _colorContrast->GetValue() / 100.0));
+        add("--color-accents", fmt::format("{:.2f}", _colorAccents->GetValue() / 100.0));
+        add("--color-evolution", fmt::format("{:.2f}", _colorEvolution->GetValue() / 100.0));
+        std::string colours;
+        for (const std::string& c : _songColors) {
+            colours += (colours.empty() ? "" : ",") + c;
+        }
+        add("--song-colors", colours.empty() ? std::string("none") : colours);
+    }
     if (!_corrections.Empty()) {
         const fs::path file = fs::path(reportDir).parent_path() / (fs::path(reportDir).filename().string() + ".corrections.json");
         std::ofstream(file, std::ios::binary) << ToJson(_corrections);
@@ -2148,7 +2310,11 @@ std::string ShowComposerDialog::InputsKey() const {
            fmt::format("|{}|{}", _mediaVariant, _mediaStamp) +
            (_christmas != nullptr ? fmt::format("|{}|{}|{}|{}", _christmas->GetValue(), _variety->GetValue(), _useRecipes->GetValue() ? 1 : 0, _recipesStamp) : std::string()) +
            fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp) +
-           (_stagePanel != nullptr ? fmt::format("|st{}|{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText()) : std::string());
+           (_stagePanel != nullptr ? fmt::format("|st{}|{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText()) : std::string()) +
+           (_colorPanel != nullptr && _colorVariety != nullptr
+                ? fmt::format("|c{}|{}|{}|{}|{}|{}|{}", _colorPanel->DirectorOn() ? 1 : 0, _colorVariety->GetValue(), _colorContrast->GetValue(), _colorAccents->GetValue(),
+                              _colorEvolution->GetValue(), std::accumulate(_songColors.begin(), _songColors.end(), std::string(), [](std::string x, const std::string& y) { return x + y + ","; }), _colorPanel->EditsText())
+                : std::string());
 }
 
 void ShowComposerDialog::RunNext() {
@@ -2657,6 +2823,11 @@ void ShowComposerDialog::RefreshAll() {
     timed("RefreshStage", [this] {
         if (_stagePanel != nullptr && _stagePanel->SetReport(&_levels[static_cast<int>(Level())], _showDir, "")) {
             _timeline->SetGestures(TimelineGestures(_stagePanel->Score()));
+        }
+    });
+    timed("RefreshColors", [this] {
+        if (_colorPanel != nullptr && _colorPanel->SetReport(&_levels[static_cast<int>(Level())], _showDir)) {
+            _timeline->SetColors(TimelineColorsOf(_colorPanel->Score()));
         }
     });
     // Texts change length with what they say; the pages follow them.
