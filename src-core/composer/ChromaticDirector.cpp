@@ -1440,11 +1440,29 @@ private:
             if (gp.background.empty()) {
                 gp.background.push_back(sp.palette.Hex("anchor"));
             }
-            const auto against = [&](const std::string& hex) {
-                double d = 1e9;
-                for (const std::string& b : gp.background) {
-                    d = std::min(d, DeltaE(hex, b));
+            // A gesture is seen against the house as a whole, not against every colour some
+            // figure wears: the mix of each figure's first colour, weighted by its lights.
+            Oklab house;
+            double weight = 0;
+            for (const FigureColorRole& r : sp.figures) {
+                const auto f = _facts.find(r.figure);
+                if (r.colors.empty() || f == _facts.end() || f->second.group || f->second.nodes <= 0) {
+                    continue;
                 }
+                const Oklab c = ToOklab(OklchOfHex(r.colors.front()));
+                const double w = static_cast<double>(f->second.nodes);
+                house.L += c.L * w;
+                house.a += c.a * w;
+                house.b += c.b * w;
+                weight += w;
+            }
+            if (weight > 0) {
+                house = { house.L / weight, house.a / weight, house.b / weight };
+            } else {
+                house = ToOklab(OklchOfHex(sp.palette.Hex("anchor")));
+            }
+            const auto against = [&](const std::string& hex) {
+                double d = DeltaE(ToOklab(OklchOfHex(hex)), house);
                 for (const std::string& b : identity) {
                     d = std::min(d, DeltaE(hex, b) + 6);
                 }
