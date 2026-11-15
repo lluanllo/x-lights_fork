@@ -14157,3 +14157,520 @@ msgstr ""
 
 msgid "yellow"
 msgstr ""
+
+msgid "%d changes found in your version."
+msgstr ""
+
+msgid "%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: tick only what the next shows should learn. A taste needs two shows before it acts, and can be undone in \"What Has Been Learned\"."
+msgstr ""
+
+msgid "%d scenes; %d colour ideas that come and go through the song."
+msgstr ""
+
+msgid "(nothing to learn)"
+msgstr ""
+
+msgid "A decision for this song"
+msgstr ""
+
+msgid "Accompanied by: %s"
+msgstr ""
+
+msgid "Add the Observation"
+msgstr ""
+
+msgid "Apply the decisions about this song (keep a combination, bring a motif back) to its colours now?"
+msgstr ""
+
+msgid "Art Direction"
+msgstr ""
+
+msgid "Both scenes use the colour idea %s."
+msgstr ""
+
+msgid "Brighter or dimmer"
+msgstr ""
+
+msgid "Bring a Motif Back..."
+msgstr ""
+
+msgid "Bring back an earlier motif"
+msgstr ""
+
+msgid "Brings a contrast"
+msgstr ""
+
+msgid "Brings an idea back"
+msgstr ""
+
+msgid "Brings it back stronger"
+msgstr ""
+
+msgid "Carried by: %s"
+msgstr ""
+
+msgid "Change the Main Colour..."
+msgstr ""
+
+msgid "Choose a scene to see what it wants to say, its colours, who carries them and why."
+msgstr ""
+
+msgid "Clumsy change of colour"
+msgstr ""
+
+msgid "Cohesion"
+msgstr ""
+
+msgid "Colour idea %s: %s."
+msgstr ""
+
+msgid "Colour style:"
+msgstr ""
+
+msgid "Colours changed"
+msgstr ""
+
+msgid "Colours do not belong together"
+msgstr ""
+
+
+msgid "Colours per figure"
+msgstr ""
+
+msgid "Compare Scenes"
+msgstr ""
+
+msgid "Compare Scenes..."
+msgstr ""
+
+msgid "Compare with My Corrected Version..."
+msgstr ""
+
+msgid "Comparing the show with your corrected version..."
+msgstr ""
+
+msgid "Continuity"
+msgstr ""
+
+msgid "Develops it"
+msgstr ""
+
+msgid "Discreet: %s"
+msgstr ""
+
+msgid "Each scene has its own colour idea."
+msgstr ""
+
+msgid "Effect replaced or added"
+msgstr ""
+
+msgid "Effect taken out"
+msgstr ""
+
+msgid "Fewer Accents"
+msgstr ""
+
+msgid "Fewer Colours"
+msgstr ""
+
+msgid "Figure brought in"
+msgstr ""
+
+msgid "Figure left dark"
+msgstr ""
+
+msgid "Fix This Combination"
+msgstr ""
+
+msgid "From %s to %s (%s): it %s."
+msgstr ""
+
+msgid "Generate the show first."
+msgstr ""
+
+msgid "Gesture at %s: %s, in %s"
+msgstr ""
+
+msgid "Good contrast"
+msgstr ""
+
+msgid "Hierarchy"
+msgstr ""
+
+msgid "Identity of the song"
+msgstr ""
+
+msgid "It brings: %s"
+msgstr ""
+
+msgid "It keeps: %s"
+msgstr ""
+
+msgid "Keep This Identity"
+msgstr ""
+
+msgid "Keep this combination"
+msgstr ""
+
+msgid "Keeps the colours before"
+msgstr ""
+
+msgid "Layer added"
+msgstr ""
+
+msgid "Learn What I Ticked"
+msgstr ""
+
+msgid "Motif"
+msgstr ""
+
+msgid "Motifs"
+msgstr ""
+
+msgid "Moved in time"
+msgstr ""
+
+msgid "No figure"
+msgstr ""
+
+msgid "No reading of the composition for this show."
+msgstr ""
+
+msgid "Note:"
+msgstr ""
+
+msgid "Observations with Their Place"
+msgstr ""
+
+msgid "Observations with Their Place..."
+msgstr ""
+
+msgid "Overload"
+msgstr ""
+
+msgid "Presents the identity"
+msgstr ""
+
+msgid "Remove the Selected One"
+msgstr ""
+
+msgid "Resolves to the identity"
+msgstr ""
+
+msgid "Say in which scene."
+msgstr ""
+
+msgid "Say what you noticed and where. Some observations teach the next shows (after two shows); others are decisions for this song only, applied to its colours when you confirm them."
+msgstr ""
+
+msgid "Say which figure."
+msgstr ""
+
+msgid "Say who observes."
+msgstr ""
+
+msgid "See This Scene in the House..."
+msgstr ""
+
+msgid "Teaches or decides"
+msgstr ""
+
+msgid "Teaches the next shows"
+msgstr ""
+
+msgid "The comparison could not be started."
+msgstr ""
+
+msgid "The composition, in words (signs, never a grade):"
+msgstr ""
+
+msgid "The observations could not be kept."
+msgstr ""
+
+msgid "The two versions could not be compared."
+msgstr ""
+
+msgid "The whole song"
+msgstr ""
+
+msgid "They share %d colours."
+msgstr ""
+
+msgid "This figure should rest"
+msgstr ""
+
+msgid "This figure should stand out"
+msgstr ""
+
+msgid "Too many accents"
+msgstr ""
+
+msgid "Too many colours"
+msgstr ""
+
+msgid "Transforms it"
+msgstr ""
+
+msgid "What it does"
+msgstr ""
+
+msgid "What:"
+msgstr ""
+
+msgid "Where"
+msgstr ""
+
+msgid "Where in the song:"
+msgstr ""
+
+msgid "Which colour idea should come back in this scene?"
+msgstr ""
+
+msgid "Which figure:"
+msgstr ""
+
+msgid "Who observes:"
+msgstr ""
+
+msgid "Wrong main colour"
+msgstr ""
+
+msgid "Your Corrected Version"
+msgstr ""
+
+msgid "Your corrected version of this show"
+msgstr ""
+
+msgid "a clear lead"
+msgstr ""
+
+msgid "a few scenes"
+msgstr ""
+
+msgid "a person asked for one family here"
+msgstr ""
+
+msgid "a person asked to bring this motif back"
+msgstr ""
+
+msgid "a person asked to keep the colours of the scene before"
+msgstr ""
+
+msgid "a steady thread"
+msgstr ""
+
+msgid "a thread with turns"
+msgstr ""
+
+msgid "an accent for a strong moment"
+msgstr ""
+
+msgid "an expressive style: the hue moves a little from the verse before"
+msgstr ""
+
+msgid "another figure carries the scene: this one stays discreet"
+msgstr ""
+
+msgid "back to the identity the song started with"
+msgstr ""
+
+msgid "blend in"
+msgstr ""
+
+msgid "busy figures"
+msgstr ""
+
+msgid "call and answer between figures"
+msgstr ""
+
+msgid "can be read"
+msgstr ""
+
+msgid "celebrates: the fullest moment"
+msgstr ""
+
+msgid "closes and resolves"
+msgstr ""
+
+msgid "cohesive"
+msgstr ""
+
+msgid "contained"
+msgstr ""
+
+msgid "evolving"
+msgstr ""
+
+msgid "expressive"
+msgstr ""
+
+msgid "flat"
+msgstr ""
+
+msgid "harsh"
+msgstr ""
+
+msgid "it prepares the next scene's colour"
+msgstr ""
+
+msgid "it reinforces the scene's colour"
+msgstr ""
+
+msgid "it resolves to the identity"
+msgstr ""
+
+msgid "jump out"
+msgstr ""
+
+msgid "lifts: a contrast comes in"
+msgstr ""
+
+msgid "lost"
+msgstr ""
+
+msgid "many new ideas"
+msgstr ""
+
+msgid "many scenes"
+msgstr ""
+
+msgid "never recalled"
+msgstr ""
+
+msgid "no lead"
+msgstr ""
+
+msgid "one idea per figure"
+msgstr ""
+
+msgid "opens the song and presents its colours"
+msgstr ""
+
+msgid "present"
+msgstr ""
+
+msgid "recurring"
+msgstr ""
+
+msgid "related colours"
+msgstr ""
+
+msgid "repetitive"
+msgstr ""
+
+msgid "restless"
+msgstr ""
+
+msgid "rests"
+msgstr ""
+
+msgid "scattered"
+msgstr ""
+
+msgid "shared"
+msgstr ""
+
+msgid "some busy figures"
+msgstr ""
+
+msgid "tells, with the song's own colours"
+msgstr ""
+
+msgid "the identity transformed"
+msgstr ""
+
+msgid "the identity transformed: the music turns somewhere else"
+msgstr ""
+
+msgid "the identity with a contrast"
+msgstr ""
+
+msgid "the identity with a contrast: the music opens"
+msgstr ""
+
+msgid "the interpretation asks this part to keep the song's identity"
+msgstr ""
+
+msgid "the maker asked for this figure to rest"
+msgstr ""
+
+msgid "the maker asked for this figure to stand out"
+msgstr ""
+
+msgid "the motif comes back after a turn of the music"
+msgstr ""
+
+msgid "the same colour idea, developed in light and roles"
+msgstr ""
+
+msgid "the same motif as before, more intense: the music comes back stronger"
+msgstr ""
+
+msgid "the same music, the same colour idea"
+msgstr ""
+
+msgid "the song's colour identity, presented"
+msgstr ""
+
+msgid "the song's identity"
+msgstr ""
+
+msgid "turns somewhere else"
+msgstr ""
+
+msgid "Colours in use: %s (%s)"
+msgstr ""
+
+msgid "all from one range of neighbouring hues"
+msgstr ""
+
+msgid "from three ranges of hues"
+msgstr ""
+
+msgid "from two ranges of hues"
+msgstr ""
+
+msgid "%s instead of %s"
+msgstr ""
+
+msgid "%s on top"
+msgstr ""
+
+msgid "%s taken out"
+msgstr ""
+
+msgid "%s was added"
+msgstr ""
+
+msgid "%s, where the show left it dark"
+msgstr ""
+
+msgid "Each figure carries many colours at once."
+msgstr ""
+
+msgid "In some scenes more than four colour families share the house at once."
+msgstr ""
+
+msgid "Much of the light goes to colours that are each used only a little: the colours look scattered."
+msgstr ""
+
+msgid "before %s, now %s (%s)"
+msgstr ""
+
+msgid "brighter"
+msgstr ""
+
+msgid "dimmer"
+msgstr ""
+
+msgid "fewer colours together"
+msgstr ""
+
+msgid "more colours together"
+msgstr ""
+
+msgid "moved or made longer or shorter"
+msgstr ""
+
+msgid "other colours, as many"
+msgstr ""

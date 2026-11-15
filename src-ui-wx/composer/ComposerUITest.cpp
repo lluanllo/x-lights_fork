@@ -40,6 +40,7 @@
 #include "ComposerStageDialogs.h"
 #include "ComposerColorDialogs.h"
 #include "composer/ColorCheck.h"
+#include "composer/SequenceComparison.h"
 #include "ComposerUnderstandingDialogs.h"
 #include "ShowComposerDialog.h"
 #include "composer/ComposerReview.h"
@@ -653,6 +654,10 @@ private:
                                     "the colour sliders and the song's colours reach the generator");
                               _dialog->SetColorSliders(50, 50, 50, 50);
                               _dialog->SetSongColors({});
+                              Check(has(_dialog->GenerateArguments(), "--color-style", "0.40"), "the colour style starts contained (0.40)");
+                              _dialog->SetColorStyle(100);
+                              Check(has(_dialog->GenerateArguments(), "--color-style", "1.00"), "and can go expressive");
+                              _dialog->SetColorStyle(40);
                               _dialog->ColorPanel()->SetDirectorOn(false);
                               Check(has(_dialog->GenerateArguments(), "--color-director", "off"), "or the colours as before, to compare");
                               _dialog->ColorPanel()->SetDirectorOn(true);
@@ -735,6 +740,17 @@ private:
                                     "asking for less contrast replaces asking for more");
                               Check(panel->Undo().empty() && panel->PendingEdits() == before + 2 - 1 + 1, "the last change can be undone");
                               Check(panel->Reset().empty() && panel->PendingEdits() == 0, "and every change dropped: the original plan is back");
+                              const std::string motif = panel->Score().motifDefs.empty() ? std::string() : panel->Score().motifDefs.front().id;
+                              Check(!motif.empty() && panel->KeepIdentity().empty() && panel->RecallMotif(motif).empty() && panel->FewerColours().empty() && panel->FewerAccents().empty() &&
+                                        panel->FixCombination().empty() && panel->ChangeMainColour("#2050ff").empty() && panel->PendingEdits() == 6,
+                                    "the art direction's actions: keep this identity, bring a motif back, fewer colours, fewer accents, fix this combination, change the main colour");
+                              Check(panel->Undo().empty() && panel->PendingEdits() == 5 && panel->Reset().empty() && panel->PendingEdits() == 0, "undone one by one, or all at once");
+                              Check(panel->Detail().Find(wxString::FromUTF8(motif)) != wxNOT_FOUND, "a scene says which colour idea it plays and what it does with it");
+                              auto* compare = new SceneCompareDialog(_dialog, panel->Score(), 0, std::min(panel->Scenes() - 1, 3));
+                              compare->Show();
+                              Check(!compare->Text().IsEmpty(), "two scenes compared side by side");
+                              Capture(compare, "comparar-escenas");
+                              compare->Destroy();
                               auto* figures = new FigureColorsDialog(_dialog, panel);
                               figures->ShowScene(pick);
                               figures->Show();
@@ -1119,6 +1135,7 @@ private:
                               review->Show();
                               Check(review->HasMeasure() && review->SceneRows() > 0 && review->FigureRows() > 0 && !review->Summary().IsEmpty(),
                                     fmt::format("plan against render, scene by scene ({}) and figure by figure ({}), in plain words", review->SceneRows(), review->FigureRows()));
+                              Check(!review->Composition().IsEmpty() && review->Composition().Find("%") == wxNOT_FOUND, "the composition read in words, with no grade");
                               Capture(review, "colores-del-espectaculo");
                               review->Destroy();
                               return true;
@@ -1207,6 +1224,67 @@ private:
                               return true;
                           },
                            60 });
+        _steps.push_back({ "a corrected version, compared", [this]() {
+                              if (!_started) {
+                                  // The person's version: here an untouched copy, so nothing has changed.
+                                  const std::filesystem::path made = _dialog->ResultSequence();
+                                  const std::filesystem::path copy = made.parent_path() / "corregida-ui.xsq";
+                                  std::error_code ec;
+                                  std::filesystem::copy_file(made, copy, std::filesystem::copy_options::overwrite_existing, ec);
+                                  _dialog->CompareWithCorrected(copy.string(), false);
+                                  Check(!ec && _dialog->AssistRunning(), "the comparison runs apart from the window");
+                                  _started = true;
+                                  return false;
+                              }
+                              if (_dialog->AssistRunning() || !Waited(0.5)) {
+                                  return false;
+                              }
+                              _started = false;
+                              const SequenceComparison& c = _dialog->LastComparison();
+                              Check(c.ran && c.changes.empty() && c.matched > 0, fmt::format("an unchanged copy: {} decisions kept, no change found", c.matched));
+                              SequenceSpec made, fixed;
+                              EffectSpec e;
+                              e.target = "Arco 1";
+                              e.effect = "On";
+                              e.palette = "C_BUTTON_Palette1=#F0A030,C_BUTTON_Palette2=#30A0F0,C_CHECKBOX_Palette1=1,C_CHECKBOX_Palette2=1";
+                              e.startMS = 0;
+                              e.endMS = 4000;
+                              made.effects.push_back(e);
+                              e.palette = "C_BUTTON_Palette1=#F0A030,C_CHECKBOX_Palette1=1";
+                              fixed.effects.push_back(e);
+                              auto* dialog = new CorrectionsDialog(_dialog, CompareSequences(made, fixed, nullptr));
+                              dialog->Show();
+                              dialog->Pick(0, true);
+                              Check(dialog->Rows() == 1 && dialog->Picked() == std::vector<size_t>({ 0 }), "each change can be ticked to become a taste, or left as it is");
+                              Capture(dialog, "version-corregida");
+                              dialog->Destroy();
+                              return true;
+                          },
+                           120 });
+        _steps.push_back({ "observations with their place", [this]() {
+                              ColorDirectorPanel* panel = _dialog->ColorPanel();
+                              if (panel == nullptr || panel->Score().scenes.empty()) {
+                                  Check(false, "a colour plan to observe");
+                                  return true;
+                              }
+                              const int scene = panel->Score().scenes[std::min<size_t>(2, panel->Score().scenes.size() - 1)].startMS;
+                              const std::string figure = panel->Score().scenes.front().figures.empty() ? std::string("Arco 1") : panel->Score().scenes.front().figures.front().figure;
+                              auto* dialog = new ObservationsDialog(_dialog, panel->Score(), {}, "prueba");
+                              dialog->Show();
+                              Check(!dialog->Add({ "figure-rest", -1, "", "", "evaluation" }), "an observation about a figure needs the figure");
+                              Check(dialog->Add({ "figure-rest", -1, figure, "", "evaluation" }) && dialog->Add({ "keep-combination", scene, "", "", "evaluation" }) && dialog->Observations().size() == 2,
+                                    "a figure that should rest, and a combination to keep in one scene");
+                              Capture(dialog, "observaciones");
+                              const std::vector<ArtisticObservation> observations = dialog->Observations();
+                              dialog->Destroy();
+                              const int before = panel->PendingEdits();
+                              Check(_dialog->SaveObservations(observations, "prueba", true) && _dialog->ResultReview().evaluation.observations.size() == 2,
+                                    "saved with the review, where they came from and where they apply");
+                              Check(panel->PendingEdits() == before + 1, "the decision about this song (keep the combination) goes to its colour plan; the taste is learned apart");
+                              (void)panel->Reset();
+                              return true;
+                          },
+                           30 });
         _steps.push_back({ "a person's labels on the library", [this]() {
                               auto* library = new MediaLibraryDialog(_dialog, _frame->GetShowDirectory(), _dialog->MediaFolders());
                               library->SetQuiet(true);

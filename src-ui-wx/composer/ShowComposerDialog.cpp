@@ -756,6 +756,8 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
         sliders->Add(new wxStaticText(cbox, wxID_ANY, high), 0, wxALIGN_CENTER_VERTICAL);
         out->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) { RefreshAll(); });
     };
+    slider(_("Colour style:"), _("contained"), _("expressive"), _colorStyle);
+    _colorStyle->SetValue(40);
     slider(_("Colour variety:"), _("one family"), _("many roles"), _colorVariety);
     slider(_("Contrast:"), _("soft"), _("strong"), _colorContrast);
     slider(_("Accents:"), _("discreet"), _("intense"), _colorAccents);
@@ -1377,6 +1379,7 @@ wxWindow* ShowComposerDialog::BuildGeneratePage(wxWindow* parent) {
     _colorPanel->onRecompose = [this]() { StartComposition(); };
     _colorPanel->onDirectorChanged = [this]() { RefreshAll(); };
     _colorPanel->resultReport = [this]() -> const ReportFolder* { return &_result; };
+    _colorPanel->resultFseq = [this]() { return ResultFseq(); };
     colourBox->Add(_colorPanel, 1, wxEXPAND | wxALL, 4);
     sizer->Add(colourBox, 0, wxEXPAND | wxBOTTOM, 8);
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
@@ -1438,6 +1441,37 @@ wxWindow* ShowComposerDialog::BuildResultPage(wxWindow* parent) {
     auto* showColours = new wxButton(page, wxID_ANY, _("Colours of the Show..."));
     review->Add(showColours, 0);
     showColours->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenShowColors(); });
+    auto* learning = new wxBoxSizer(wxHORIZONTAL);
+    auto* corrected = new wxButton(page, wxID_ANY, _("Compare with My Corrected Version..."));
+    auto* observations = new wxButton(page, wxID_ANY, _("Observations with Their Place..."));
+    learning->Add(corrected, 0, wxRIGHT, 4);
+    learning->Add(observations, 0);
+    sizer->Add(learning, 0, wxBOTTOM, 8);
+    corrected->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_resultSequence.empty()) {
+            ShowError(_("Generate the show first."), wxString());
+            return;
+        }
+        wxFileDialog dialog(this, _("Your corrected version of this show"), U(_showDir), "", _("xLights sequences (*.xsq)|*.xsq"), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        if (dialog.ShowModal() == wxID_OK) {
+            CompareWithCorrected(S(dialog.GetPath()), true);
+        }
+    });
+    observations->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (_resultSequence.empty() || _colorPanel == nullptr) {
+            ShowError(_("Generate the show first."), wxString());
+            return;
+        }
+        const VisualReview review = ResultReview();
+        ObservationsDialog dialog(this, _colorPanel->Score(), review.evaluation.observations, review.evaluation.reviewer);
+        if (dialog.ShowModal() == wxID_OK) {
+            const bool decide = wxMessageBox(_("Apply the decisions about this song (keep a combination, bring a motif back) to its colours now?"), _("Observations with Their Place"),
+                                             wxYES_NO | wxICON_QUESTION, this) == wxYES;
+            if (!SaveObservations(dialog.Observations(), dialog.Reviewer(), decide)) {
+                ShowError(_("The observations could not be kept."), _("Say who observes."));
+            }
+        }
+    });
     house->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenInstallation(); });
     page->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OpenRenderCheck(); }, ID_RENDER_CHECK);
     sizer->Add(review, 0, wxBOTTOM, 8);
@@ -1636,12 +1670,84 @@ int ShowComposerDialog::TimelineColorScenes() const {
     return _timeline != nullptr ? _timeline->ColorScenes() : 0;
 }
 
+std::string ShowComposerDialog::ResultFseq() const {
+    std::string fseq;
+    std::error_code ec;
+    if (!_resultReportDir.empty()) {
+        for (const auto& entry : fs::directory_iterator(fs::path(_resultReportDir), ec)) {
+            if (entry.path().extension() == ".fseq" && entry.path().string().find(".failed.") == std::string::npos) {
+                fseq = entry.path().string();
+            }
+        }
+    }
+    return fseq;
+}
+
+void ShowComposerDialog::SetColorStyle(int style) {
+    if (_colorStyle != nullptr) {
+        _colorStyle->SetValue(style);
+        RefreshAll();
+    }
+}
+
+void ShowComposerDialog::CompareWithCorrected(const std::string& correctedPath, bool show) {
+    if (_assistJob.Running()) {
+        ShowError(_("The assistant is still working on the last request."), wxString());
+        return;
+    }
+    _assistAction = "compare";
+    _showComparison = show;
+    const std::string dir = NewWorkFolder("compare");
+    _assistResultPath = (fs::path(dir) / "sequence-comparison.json").string();
+    std::vector<std::string> args = { "--composer-compare", "-s", _showDir, "--generated", _resultSequence, "--corrected", correctedPath, "--out", dir };
+    const fs::path score = fs::path(_resultReportDir) / "color-score.json";
+    if (FileExists(score.string())) {
+        args.push_back("--color-score");
+        args.push_back(score.string());
+    }
+    std::string error;
+    _assistExit = -1;
+    if (!_assistJob.Start(args, (fs::path(dir) / "cancel").string(), error)) {
+        ShowError(_("The comparison could not be started."), U(error));
+        return;
+    }
+    _assistInfo->SetLabel(_("Comparing the show with your corrected version..."));
+}
+
+bool ShowComposerDialog::LearnCorrections(const std::vector<size_t>& picked) {
+    if (_resultSequence.empty()) {
+        return false;
+    }
+    ArtisticPreferences prefs = ShowPreferences();
+    (void)LearnFromComparison(prefs, _comparison, picked, fs::path(_resultSequence).filename().string());
+    const bool ok = SetShowPreferences(prefs);
+    RefreshAll();
+    return ok;
+}
+
+bool ShowComposerDialog::SaveObservations(const std::vector<ArtisticObservation>& observations, const std::string& reviewer, bool applyDecisions) {
+    ShowEvaluation evaluation = ResultReview().evaluation;
+    evaluation.observations = observations;
+    if (!reviewer.empty()) {
+        evaluation.reviewer = reviewer;
+    }
+    if (!SaveEvaluation(evaluation)) {
+        return false;
+    }
+    if (applyDecisions && _colorPanel != nullptr) {
+        for (const ChromaticEdit& d : DecisionsFromObservations(observations, _colorPanel->Score())) {
+            (void)_colorPanel->Edit(d);
+        }
+    }
+    return true;
+}
+
 void ShowComposerDialog::OpenShowColors() {
     if (_result.colorCheck.empty()) {
         wxMessageBox(_("Generate the show first: its colours are measured on xLights' own render."), _("Colours of the Show"), wxOK | wxICON_INFORMATION, this);
         return;
     }
-    ColorReviewDialog dialog(this, _result);
+    ColorReviewDialog dialog(this, _result, ResultFseq());
     dialog.ShowModal();
 }
 
@@ -1797,6 +1903,25 @@ void ShowComposerDialog::AssistFinished(int exitCode) {
             _assistMessage = S(wxString::Format(_("%d words heard by %s. They give the words their times; your lyrics stay the text, and words not heard keep no invented time."), static_cast<int>(t.words.size()), U(t.model)));
         }
         SetWrapped(_assistInfo, U(_assistMessage));
+        return;
+    }
+    if (_assistAction == "compare") {
+        std::string error;
+        SequenceComparison c;
+        if (!FromJson(ReadFile(fs::path(_assistResultPath)), c, error) || !c.ran) {
+            _assistMessage = S(_("The two versions could not be compared."));
+            SetWrapped(_assistInfo, U(_assistMessage));
+            return;
+        }
+        _comparison = c;
+        _assistMessage = S(wxString::Format(_("%d changes found in your version."), static_cast<int>(c.changes.size())));
+        SetWrapped(_assistInfo, U(_assistMessage));
+        if (_showComparison) {
+            CorrectionsDialog dialog(this, c);
+            if (dialog.ShowModal() == wxID_OK) {
+                (void)LearnCorrections(dialog.Picked());
+            }
+        }
         return;
     }
     if (_assistAction == "artistic-check") {
@@ -2261,6 +2386,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     add("--stage-director", _stagePanel == nullptr || _stagePanel->DirectorOn() ? "on" : "off");
     add("--color-director", _colorPanel == nullptr || _colorPanel->DirectorOn() ? "on" : "off");
     if (_colorVariety != nullptr) {
+        add("--color-style", fmt::format("{:.2f}", _colorStyle->GetValue() / 100.0));
         add("--color-variety", fmt::format("{:.2f}", _colorVariety->GetValue() / 100.0));
         add("--color-contrast", fmt::format("{:.2f}", _colorContrast->GetValue() / 100.0));
         add("--color-accents", fmt::format("{:.2f}", _colorAccents->GetValue() / 100.0));
@@ -2312,7 +2438,7 @@ std::string ShowComposerDialog::InputsKey() const {
            fmt::format("|u{}|{}|{}", _useUnderstanding ? 1 : 0, _understoodOk ? 1 : 0, _understandStamp) +
            (_stagePanel != nullptr ? fmt::format("|st{}|{}", _stagePanel->DirectorOn() ? 1 : 0, _stagePanel->EditsText()) : std::string()) +
            (_colorPanel != nullptr && _colorVariety != nullptr
-                ? fmt::format("|c{}|{}|{}|{}|{}|{}|{}", _colorPanel->DirectorOn() ? 1 : 0, _colorVariety->GetValue(), _colorContrast->GetValue(), _colorAccents->GetValue(),
+                ? fmt::format("|c{}|{}|s{}|{}|{}|{}|{}|{}", _colorPanel->DirectorOn() ? 1 : 0, _colorVariety->GetValue(), _colorStyle->GetValue(), _colorContrast->GetValue(), _colorAccents->GetValue(),
                               _colorEvolution->GetValue(), std::accumulate(_songColors.begin(), _songColors.end(), std::string(), [](std::string x, const std::string& y) { return x + y + ","; }), _colorPanel->EditsText())
                 : std::string());
 }

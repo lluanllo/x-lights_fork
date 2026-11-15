@@ -36,6 +36,7 @@
 #include "composer/UnderstandingStore.h"
 
 #include "composer/MusicAssist.h"
+#include "composer/SequenceComparison.h"
 
 #include "ComposerJob.h"
 
@@ -292,6 +293,14 @@ public:
     // The colour direction's settings and checks, for the UI test.
     [[nodiscard]] ColorDirectorPanel* ColorPanel() const { return _colorPanel; }
     void SetColorSliders(int variety, int contrast, int accents, int evolution);
+    void SetColorStyle(int style); // 0 contained - 100 expressive
+    [[nodiscard]] std::string ResultFseq() const;
+    // Step 5: the generated sequence against the one a person corrected in xLights (run apart);
+    // and observations with their scene and figure, saved with the review.
+    void CompareWithCorrected(const std::string& correctedPath, bool show);
+    [[nodiscard]] const composer::SequenceComparison& LastComparison() const { return _comparison; }
+    bool LearnCorrections(const std::vector<size_t>& picked);
+    bool SaveObservations(const std::vector<composer::ArtisticObservation>& observations, const std::string& reviewer, bool applyDecisions);
     void SetSongColors(const std::vector<std::string>& colors);
     // "Check the artistic analysis with Groq": nothing is sent without `consent`; `refresh`
     // asks Groq again. The result is kept in LastArtisticCheck and, when `show`, shown.
@@ -526,6 +535,9 @@ private:
     StageDirectorPanel* _stagePanel = nullptr;
     ColorDirectorPanel* _colorPanel = nullptr;
     wxSlider* _colorVariety = nullptr;
+    wxSlider* _colorStyle = nullptr;
+    composer::SequenceComparison _comparison;
+    bool _showComparison = true;
     wxSlider* _colorContrast = nullptr;
     wxSlider* _colorAccents = nullptr;
     wxSlider* _colorEvolution = nullptr;
