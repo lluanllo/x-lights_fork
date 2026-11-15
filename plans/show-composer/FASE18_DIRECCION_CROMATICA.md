@@ -5,7 +5,7 @@ Decisiones de diseño de la fase. Los resultados medidos y las pruebas reales es
 
 ## El problema medido
 
-El render de F17 de *Mi Burrito Sabanero* confirma lo que vio el desarrollador:
+El render de F17 de la canción real de prueba confirma lo que vio el desarrollador:
 - un solo color (rojo) ocupaba más del 60 % de la luz de la casa el 62 % del tiempo;
 - el rojo era el 70 % de toda la luz;
 - los gestos se diferenciaban del resto de la casa en solo 9 puntos ΔE.
@@ -19,8 +19,9 @@ Hay cuatro causas, todas en el código:
    fondo.
 4. Los estribillos repetidos copiaban exactamente su paleta.
 
-En las referencias locales, un solo color domina entre el 9 y el 29 % del tiempo. La
-variedad está en las figuras dentro de cada escena, no en cambiar toda la casa.
+En las referencias estudiadas en local, un solo color domina mucho menos tiempo. La
+variedad está en las figuras dentro de cada escena, no en cambiar toda la casa. Sus números se
+quedan en el informe local, porque derivan de paquetes comerciales.
 
 ## Color perceptual (`ColorSpace`)
 
