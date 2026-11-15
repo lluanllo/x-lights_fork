@@ -857,6 +857,10 @@ private:
             sp.manual = true;
         }
         sp.hueBudget = std::clamp(budget, 1, 3);
+        if (_o.art >= 1 && !score.scenes.empty() && (SceneEdit("no-new-colours", s.startMS) != nullptr || SceneEdit("no-new-colours", -1) != nullptr)) {
+            sp.hueBudget = std::min(sp.hueBudget, std::max(1, score.scenes.back().hueBudget));
+            sp.manual = true;
+        }
         double accents = std::clamp(0.1 + 0.6 * _o.accents * importance * (0.5 + style), 0.0, 0.6);
         if (SceneEdit("fewer-accents", s.startMS) != nullptr || SceneEdit("fewer-accents", -1) != nullptr) {
             accents *= 0.4;
@@ -908,6 +912,13 @@ private:
         }
         const bool keepHere = _in.brief != nullptr && BriefSays(_in.brief->keep, s.sectionKind);
         const bool changeHere = _in.brief != nullptr && BriefSays(_in.brief->change, s.sectionKind);
+        // Phase 20: keeping the identity keeps the main colour, not the whole scene: a part
+        // may still grow stronger or bring a contrast next to it. Only a person freezes more:
+        // the main colour ("keep-main-colour"), no new families ("no-new-colours") or the palette (a lock).
+        const bool refined = _o.art >= 1;
+        const bool keepMain = SceneEdit("keep-main-colour", s.startMS) != nullptr || SceneEdit("keep-main-colour", -1) != nullptr;
+        const bool noNew = SceneEdit("no-new-colours", s.startMS) != nullptr || SceneEdit("no-new-colours", -1) != nullptr;
+        const bool blocksGrowth = refined ? noNew : keepHere;
         const double sat = std::clamp((0.72 + 0.26 * sp.energy + (sp.evolution == "climax" ? 0.06 : 0.0) - (sp.evolution == "rest" ? 0.25 : 0.0)) * _intensity, 0.3, 1.0);
         const double light = std::clamp(0.62 + 0.08 * sp.energy, 0.5, 0.75);
         const auto build = [&](double hue, double contrast) {
@@ -947,7 +958,7 @@ private:
             motif = _groupMotif.at(group);
             sp.palette = MotifPalette(motif);
             const bool stronger = sp.energy > _groupEnergy[group] + 0.05 || sp.evolution == "climax" || occurrence + 1 == _groupCount[group];
-            op = stronger && !keepHere ? "intensify" : "recall";
+            op = stronger && !blocksGrowth ? "intensify" : "recall";
             if (op == "intensify") {
                 PaletteRequest r = RequestFor(sp.palette.anchorHue, sp.palette.harmony, std::min(1.0, sp.palette.saturation + 0.08), sp.palette.lightness, std::min(1.0, wanted + 0.15));
                 r.id = sp.id;
@@ -969,7 +980,7 @@ private:
             sp.palette = MotifPalette(motif);
             sp.palette.saturation = Round3(std::max(0.3, sp.palette.saturation - 0.1));
             sp.reasons.push_back(COMPOSER_TEXT("back to the identity the song started with"));
-        } else if (sp.evolution == "shift" && (!keepHere || changeHere)) {
+        } else if (sp.evolution == "shift" && (!keepHere || changeHere) && !keepMain && !noNew) {
             op = "transform";
             const ColorPaletteProfile base = MotifPalette(_current.empty() ? _identity : _current);
             // A turn of the music turns the identity: towards its second colour, or round
@@ -979,10 +990,13 @@ private:
             const double hue = WrapHue(base.anchorHue + _direction * std::min(turn, 70.0));
             sp.palette = build(hue, wanted);
             motif = NewMotif(score, "transformed", sp.palette, _identity, sp.id, COMPOSER_TEXT("the identity transformed: the music turns somewhere else")).id;
-        } else if ((sp.evolution == "expand" || sp.evolution == "climax") && !keepHere) {
+        } else if ((sp.evolution == "expand" || sp.evolution == "climax") && !blocksGrowth) {
             op = "introduce";
             sp.palette = build(MotifPalette(_identity).anchorHue, wanted);
             motif = NewMotif(score, "contrast", sp.palette, _identity, sp.id, COMPOSER_TEXT("the identity with a contrast: the music opens")).id;
+            if (refined && keepHere) {
+                sp.reasons.push_back(COMPOSER_TEXT("the part keeps the song's identity: its main colour stays and a contrast joins it"));
+            }
         } else {
             op = "develop";
             motif = _current.empty() ? _identity : _current;
@@ -1020,6 +1034,16 @@ private:
             r.id = sp.id;
             sp.palette = BuildPalette(r);
             sp.reasons.push_back(COMPOSER_TEXT("a person asked for one family here"));
+        }
+        if (_o.art >= 1 && !_identity.empty() && (SceneEdit("keep-main-colour", s.startMS) != nullptr || SceneEdit("keep-main-colour", -1) != nullptr)) {
+            const ColorPaletteProfile identity = MotifPalette(_identity);
+            if (HueDistance(identity.anchorHue, sp.palette.anchorHue) > 12) {
+                PaletteRequest r = RequestFor(identity.anchorHue, sp.palette.harmony, sp.palette.saturation, sp.palette.lightness, wanted);
+                r.id = sp.id;
+                sp.palette = BuildPalette(r);
+            }
+            sp.manual = true;
+            sp.reasons.push_back(COMPOSER_TEXT("a person asked to keep the song's main colour here"));
         }
         ApplyPaletteEdits(sp.palette, s.startMS);
         if (SceneEdit("lock-palette", s.startMS) != nullptr) {
@@ -1469,7 +1493,8 @@ private:
                 return d;
             };
             // What the gesture does here.
-            const bool strong = (sp.evolution == "climax" || sp.evolution == "expand" || sp.motifOperation == "intensify") && accentsLeft > 0 && sp.energy >= 0.6;
+            const bool strong = (sp.evolution == "climax" || sp.evolution == "expand" || sp.motifOperation == "intensify" || (_o.art >= 1 && g.presence == "climax")) && accentsLeft > 0 &&
+                                sp.energy >= 0.6;
             const bool late = next != nullptr && g.startMS >= sp.startMS + 0.75 * (sp.endMS - sp.startMS) && next->motif != sp.motif && !next->motif.empty();
             std::vector<std::pair<std::string, std::string>> candidates; // hex, why
             if (sp.motifOperation == "resolve") {
@@ -1503,7 +1528,32 @@ private:
                 candidates.push_back({ sp.palette.Hex("neutral"), "neutral" });
             }
             // The first candidate that still reads against what is lit; failing that, the one
-            // that reads best.
+            // that reads best. From phase 20 how much it must read depends on what the gesture
+            // is: a background stays discreet, an answer is seen, the idea's own gesture stands
+            // out, a peak's is what the house is about. Never white first: the scene's colours lead.
+            double needed = 18;
+            if (_o.art >= 1 && !g.presence.empty()) {
+                needed = g.presence == "background" ? 8 : g.presence == "response" ? 18 : g.presence == "protagonist" ? 24 : 28;
+                if (g.presence == "climax" || g.presence == "protagonist") {
+                    // Colours of the scene that can carry more weight, before its lights and white.
+                    std::vector<std::pair<std::string, std::string>> more;
+                    for (const char* role : { "accent", "contrast", "secondary" }) {
+                        const PaletteColor* c = sp.palette.Get(role);
+                        if (c != nullptr && c->C >= NEUTRAL_CHROMA && (Uses(sp, role) || g.presence == "climax")) {
+                            more.push_back({ c->hex, role });
+                        }
+                    }
+                    auto at = candidates.end();
+                    for (auto it = candidates.begin(); it != candidates.end(); ++it) {
+                        if (it->second == "highlight" || it->second == "neutral") {
+                            at = it;
+                            break;
+                        }
+                    }
+                    candidates.insert(at, more.begin(), more.end());
+                }
+                gp.presence = g.presence;
+            }
             std::string front, frontWhy;
             double best = -1;
             for (const auto& [hex, why] : candidates) {
@@ -1511,7 +1561,7 @@ private:
                     continue;
                 }
                 const double d = against(hex);
-                if (d >= 18) {
+                if (d >= needed) {
                     front = hex;
                     frontWhy = why;
                     break;
@@ -1886,6 +1936,13 @@ std::vector<ChromaticEdit> DecisionsFromObservations(const std::vector<ArtisticO
 
 int ColorGestures(const ChromaticScore& score, GlobalStageScore& stage) {
     int n = 0;
+    // A visual motif is dressed in the colour motif of the scene it was born in.
+    for (VisualMotif& m : stage.motifs) {
+        const std::string scene = m.origin.rfind("scene:", 0) == 0 ? m.origin.substr(6) : std::string();
+        if (const ChromaticScenePlan* sp = score.Scene(scene); sp != nullptr) {
+            m.colorMotif = sp->motif;
+        }
+    }
     for (const ChromaticScenePlan& sp : score.scenes) {
         for (const GestureChromaticProfile& gp : sp.gestures) {
             for (GlobalGesture& g : stage.gestures) {
@@ -2039,7 +2096,7 @@ std::string ToJson(const ChromaticScore& s) {
         json gestures = json::array();
         for (const GestureChromaticProfile& g : sp.gestures) {
             gestures.push_back({ { "gesture", g.gesture }, { "start", g.start }, { "front", g.front }, { "secondary", g.secondary }, { "tail", g.tail }, { "arrival", g.arrival },
-                                 { "colorBy", g.colorBy }, { "background", g.background }, { "contrast", g.contrast }, { "intent", g.intent }, { "why", g.why } });
+                                 { "colorBy", g.colorBy }, { "background", g.background }, { "contrast", g.contrast }, { "intent", g.intent }, { "presence", g.presence }, { "why", g.why } });
         }
         scenes.push_back({ { "id", sp.id }, { "startMS", sp.startMS }, { "endMS", sp.endMS }, { "sectionKind", sp.sectionKind }, { "mode", sp.mode }, { "energy", sp.energy },
                            { "palette", PaletteJson(sp.palette) }, { "dominant", sp.dominant }, { "secondary", sp.secondary }, { "accents", sp.accents }, { "contrasts", sp.contrasts },
@@ -2156,6 +2213,7 @@ bool FromJson(const std::string& text, ChromaticScore& s, std::string& error) {
                 gp.contrast = g.value("contrast", 0.0);
                 gp.why = g.value("why", std::string());
                 gp.intent = g.value("intent", std::string());
+                gp.presence = g.value("presence", std::string());
                 sp.gestures.push_back(gp);
             }
             const json t = j.value("toNext", json::object());
@@ -2221,7 +2279,7 @@ std::string ToJson(const ChromaticEdits& e) {
 
 bool FromJson(const std::string& text, ChromaticEdits& e, std::string& error) {
     static const std::set<std::string> ACTIONS = { "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome",
-                                                   "keep-identity", "recall-motif", "fewer-colours", "fewer-accents" };
+                                                   "keep-identity", "recall-motif", "fewer-colours", "fewer-accents", "keep-main-colour", "no-new-colours" };
     const json root = json::parse(text, nullptr, false);
     if (!root.is_object() || root.value("kind", std::string()) != "composer-color-edits") {
         error = "not a file of colour edits";

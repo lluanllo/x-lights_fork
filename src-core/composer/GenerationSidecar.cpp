@@ -142,6 +142,10 @@ std::string ToJson(const GenerationSidecar& s) {
     }
     if (s.stage.decided) {
         root["stage"] = { { "enabled", s.stage.enabled }, { "directorVersion", s.stage.directorVersion }, { "scenes", s.stage.scenes }, { "gestures", s.stage.gestures }, { "edits", s.stage.edits } };
+        if (!s.stage.art.empty()) {
+            root["stage"]["art"] = s.stage.art;
+            root["stage"]["motifs"] = s.stage.motifs;
+        }
     }
     return root.dump(1);
 }
@@ -266,6 +270,8 @@ SidecarStatus FromJson(const std::string& text, GenerationSidecar& sidecar, std:
             s.stage.scenes = g.value("scenes", 0);
             s.stage.gestures = g.value("gestures", 0);
             s.stage.edits = g.value("edits", 0);
+            s.stage.art = g.value("art", std::string());
+            s.stage.motifs = g.value("motifs", 0);
         }
         s.visualReview = s.review.state == "approved" ? "approved" : s.visualReview == "approved" ? "not-reviewed" : s.visualReview;
         // Read as the current schema from now on: a version 1 file has no review.

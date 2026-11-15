@@ -1057,6 +1057,71 @@ private:
         const ChromaticScore kept = DirectColors(in);
         Check(kept.Scene("s3.0")->motifOperation != "introduce" && kept.Scene("s6.0")->motifOperation == "transform",
               "a chorus asked to keep the identity does not bring a new motif; the bridge still may turn");
+
+        Title("Phase 20: keeping the identity keeps the main colour, not the whole scene");
+        ChromaticOptions refined;
+        refined.art = 1;
+        ChromaticInput rin = Input(nullptr, refined);
+        rin.brief = &brief;
+        const ChromaticScore guided = DirectColors(rin);
+        const ChromaticScenePlan* chorusKept = guided.Scene("s3.0");
+        const double identityHue = OklchOfHex(guided.Scene("s1.0")->dominant).h;
+        Check(chorusKept->motifOperation == "introduce" && HueDistance(OklchOfHex(chorusKept->dominant).h, identityHue) < 15 && guided.Scene("s6.0")->motifOperation == "transform",
+              fmt::format("a chorus that keeps the identity keeps its main colour ({} next to {}) and may still bring a contrast ({}); the bridge may still turn",
+                          chorusKept->dominant, guided.Scene("s1.0")->dominant, chorusKept->motifOperation));
+        const ChromaticScore unrefined = DirectColors(Input(nullptr, ChromaticOptions()));
+        Check(ToJson(unrefined) == ToJson(_score), "without the phase 20 direction the colours are exactly as before");
+        ChromaticEdits noNew;
+        noNew.edits.push_back({ "no-new-colours", -1, "", "", "", "test" });
+        const ChromaticScore frozen = DirectColors(Input(&noNew, refined));
+        bool neverMore = true;
+        for (size_t i = 1; i < frozen.scenes.size(); ++i) {
+            neverMore = neverMore && frozen.scenes[i].hueBudget <= std::max(1, frozen.scenes[i - 1].hueBudget) && frozen.scenes[i].motifOperation != "introduce" &&
+                        frozen.scenes[i].motifOperation != "transform";
+        }
+        Check(neverMore, "asked for no new colours: no scene opens more hue families than the one before, nothing new is introduced or transformed");
+        ChromaticEdits mainKept;
+        mainKept.edits.push_back({ "keep-main-colour", _score.Scene("s6.0")->startMS, "", "", "", "test" });
+        const ChromaticScore held = DirectColors(Input(&mainKept, refined));
+        Check(held.Scene("s6.0")->motifOperation != "transform" && HueDistance(OklchOfHex(held.Scene("s6.0")->dominant).h, OklchOfHex(held.Scene("s1.0")->dominant).h) < 15,
+              "asked to keep the main colour, the bridge does not turn away from it");
+        ChromaticEdits editsBack;
+        std::string backError;
+        Check(FromJson(ToJson(mainKept), editsBack, backError) && editsBack.edits.size() == 1 && editsBack.edits[0].action == "keep-main-colour", "the new colour edits are written and read back");
+        // How much a gesture should be seen sets how far it stands from the house.
+        GlobalStageScore seen = _stage;
+        for (GlobalGesture& g : seen.gestures) {
+            g.presence = "climax";
+        }
+        GlobalStageScore quiet = _stage;
+        for (GlobalGesture& g : quiet.gestures) {
+            g.presence = "background";
+        }
+        ChromaticInput loud = Input(nullptr, refined);
+        loud.stage = &seen;
+        ChromaticInput soft = Input(nullptr, refined);
+        soft.stage = &quiet;
+        const ChromaticScore loudScore = DirectColors(loud);
+        const ChromaticScore softScore = DirectColors(soft);
+        double loudSum = 0, softSum = 0;
+        int profiles = 0, softProfiles = 0;
+        bool presenceKept = true;
+        for (const ChromaticScenePlan& sp : loudScore.scenes) {
+            for (const GestureChromaticProfile& gp : sp.gestures) {
+                loudSum += gp.contrast;
+                presenceKept = presenceKept && gp.presence == "climax";
+                ++profiles;
+            }
+        }
+        for (const ChromaticScenePlan& sp : softScore.scenes) {
+            for (const GestureChromaticProfile& gp : sp.gestures) {
+                softSum += gp.contrast;
+                ++softProfiles;
+            }
+        }
+        const double loudMean = profiles > 0 ? loudSum / profiles : 0, softMean = softProfiles > 0 ? softSum / softProfiles : 0;
+        Check(profiles > 0 && presenceKept && loudMean > softMean,
+              fmt::format("a peak's gestures stand out more than background ones ({:.1f} against {:.1f} ΔE on average)", loudMean, softMean));
     }
 
     void TestCorrections() {
@@ -1146,6 +1211,65 @@ private:
         const std::vector<ChromaticEdit> decisions = DecisionsFromObservations(ok.observations, _score);
         Check(decisions.size() == 1 && decisions.front().action == "lock-palette" && decisions.front().sceneStartMS == _score.SceneAt(20000)->startMS,
               "keeping a combination becomes a decision for this song only: its palette fixed");
+
+        Title("Phase 20: the person decides what each correction becomes");
+        Check(find("timing")->category == "technical" && find("figure-removed")->category == "necessary" && find("colour")->category == "aesthetic" && find("colour")->sceneStartMS >= 0,
+              "each change says whether it looks like taste, a nudge in time or something that should not light, and where its scene starts");
+        std::vector<ComparisonDecision> chosen;
+        size_t removedAt = 0, colourAt = 0, timingAt = 0, layerAt = 0;
+        for (size_t i = 0; i < c.changes.size(); ++i) {
+            const std::string& k = c.changes[i].kind;
+            if (k == "figure-removed") {
+                removedAt = i;
+                chosen.push_back({ i, "song" });
+            } else if (k == "colour") {
+                colourAt = i;
+                chosen.push_back({ i, "general" });
+            } else if (k == "intensity") {
+                chosen.push_back({ i, "learn" });
+            } else if (k == "timing") {
+                timingAt = i;
+                chosen.push_back({ i, "reject" });
+            } else if (k == "layer-added") {
+                layerAt = i;
+                chosen.push_back({ i, "song" });
+            } else {
+                chosen.push_back({ i, "ignore" });
+            }
+        }
+        ArtisticPreferences p3;
+        StageEdits songStage;
+        ChromaticEdits songColour;
+        ComparisonDecisions record;
+        const DecisionOutcome done = ApplyComparisonDecisions(p3, songStage, songColour, record, c, chosen, "cuatro.xsq");
+        const auto value = [&](const std::string& key) {
+            const auto all = EffectivePreferences(p3);
+            const auto it = all.find(key);
+            return it == all.end() ? 0.0 : it->second;
+        };
+        Check(done.general == 1 && value("color.cohesion") > 0 && done.learned == 1 && p3.signals.size() == 1,
+              "a correction made a general preference acts now; one to learn waits for a second show like any review");
+        Check(done.songEdits == 1 && songStage.edits.size() == 1 && songStage.edits[0].action == "exclude" && songStage.edits[0].value == c.changes[removedAt].figure &&
+                  songStage.edits[0].sceneStartMS == c.changes[removedAt].sceneStartMS && !done.notes.empty(),
+              "only for this song: the figure left dark is left out of that scene; a layer the composer cannot ask for is said, not invented");
+        (void)layerAt;
+        (void)colourAt;
+        const std::vector<size_t> offered = OfferedChanges(c, record);
+        Check(done.rejected == 1 && offered.size() == c.changes.size() - 1 && std::find(offered.begin(), offered.end(), timingAt) == offered.end(),
+              "a rejected correction is not offered again");
+        ResetPreference(p3, "color.cohesion");
+        Check(value("color.cohesion") == 0, "a general preference is undone like any other");
+        ComparisonDecisions recordBack;
+        Check(FromJson(ToJson(record), recordBack, error) && recordBack.rejected == record.rejected && recordBack.decisions.size() == chosen.size(), "the decisions are kept and read back");
+        // Figures a person made work together become a proposal, never a saved composition.
+        SequenceSpec together = fixed;
+        for (const char* f : { "Matriz Prueba", "Arbol Grande", "Linea 1", "Carita" }) {
+            together.effects.push_back(effect(f, 2, "Shockwave", { "#F0A030" }, 21000, 22500));
+        }
+        const std::vector<StageLibraryEntry> proposals = ProposeCompositions(made, together, &_score, "cuatro.xsq");
+        Check(proposals.size() == 1 && proposals[0].figures.size() == 4 && proposals[0].temporal == "unison" && proposals[0].kind == "composition" && proposals[0].custom &&
+                  proposals[0].source == "learned:cuatro.xsq" && !proposals[0].contexts.empty(),
+              fmt::format("four figures given the same effect together are offered as a composition ({}), with where it came from", proposals.empty() ? "none" : proposals[0].title));
     }
 
     // ------------------------------------------------------------ rendered
@@ -1410,7 +1534,17 @@ int RunSequenceCompare(const std::string& showDir, const std::string& generated,
     }
     printf("composer-compare: %d effects generated, %d corrected, %d the same decision; %zu changes (%s); hues per effect %.2f -> %.2f\n", c.generatedEffects, c.correctedEffects, c.matched,
            c.changes.size(), kindText.c_str(), c.familiesBefore, c.familiesAfter);
-    return c.ran && ok ? 0 : 1;
+    std::map<std::string, int> categories;
+    for (const SequenceChange& ch : c.changes) {
+        categories[ch.category]++;
+    }
+    const std::vector<StageLibraryEntry> proposals = ProposeCompositions(before, after, hasChroma ? &chroma : nullptr, fs::path(corrected).filename().string());
+    StageLibrary offered;
+    offered.entries = proposals;
+    const bool okProposals = WriteText(fs::path(outDir) / "composition-proposals.json", ToJson(offered));
+    printf("composer-compare: %d aesthetic, %d technical, %d necessary; %zu compositions offered (none saved: a person confirms each)\n", categories["aesthetic"], categories["technical"],
+           categories["necessary"], proposals.size());
+    return c.ran && ok && okProposals ? 0 : 1;
 }
 
 int RunColorTest(const std::string& workDir) {

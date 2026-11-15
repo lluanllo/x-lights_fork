@@ -52,6 +52,7 @@ struct GenerateCommandOptions {
     std::string understanding; // "on", "off"; empty: on when the song was already understood
     std::string stems;         // "role=path;role=path" (voice, chorus, narration, music)
     std::string stageDirector; // "on", "off"; empty: on, or the previous show's
+    std::string artDirection;  // "f19", "direction", "motifs", "full"; empty: full, or the previous show's
     std::string colorDirector; // "on", "off"; empty: on, or the previous show's
     std::string colorVariety;  // 0-1; empty: the previous show's or the middle
     std::string colorStyle;    // 0 contained - 1 expressive; empty: the previous show's or 0.4

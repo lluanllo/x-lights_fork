@@ -416,6 +416,8 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.stage.scenes = static_cast<int>(run.stageScore.scenes.size());
     s.stage.gestures = static_cast<int>(run.stageScore.gestures.size());
     s.stage.edits = run.stageEdits;
+    s.stage.art = ArtLevelId(static_cast<ArtLevel>(run.artLevel));
+    s.stage.motifs = static_cast<int>(run.stageScore.motifs.size());
     s.color.decided = true;
     s.color.enabled = run.colorWanted;
     s.color.directorVersion = run.colored ? run.chromatic.version : "";
@@ -450,8 +452,8 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     return s;
 }
 
-// Saves an opened sequence again through SequenceFile, as xLights does when a person
-// saves it, keeping the audio and the timing.
+} // namespace
+
 bool ResaveSequence(HeadlessRenderContext& ctx, const SequenceSpec& spec, const std::string& path, std::string& error) {
     SequenceFile file(path, static_cast<uint32_t>(spec.frameMS));
     file.SetSequenceDurationMS(static_cast<int>(ctx.GetSeqData().NumFrames() * ctx.GetSeqData().FrameTime()));
@@ -468,8 +470,6 @@ bool ResaveSequence(HeadlessRenderContext& ctx, const SequenceSpec& spec, const 
     }
     return true;
 }
-
-} // namespace
 
 const char* StageId(GenerationStage stage) {
     return STAGE_IDS[static_cast<int>(stage)];
@@ -1425,6 +1425,7 @@ void DirectTheColors(GenerationRun& run, GenerationStage S) {
     o.warmth = std::clamp(0.6 * taughtValue("color.warmth"), -1.0, 1.0);
     o.gradual = std::clamp(0.5 + 0.3 * taughtValue("color.gradual"), 0.0, 1.0);
     o.respectIdentity = taughtValue("color.identity") > 0.2;
+    o.art = run.staged || run.stageWanted ? run.artLevel : 0;
     for (const auto& [key, value] : taught) {
         // "figure.<name>.prominence"
         if (key.rfind("figure.", 0) == 0 && key.size() > 18 && key.compare(key.size() - 11, 11, ".prominence") == 0) {
@@ -1516,7 +1517,19 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     } else if (run.hasPrevious && run.previous.stage.decided) {
         on = run.previous.stage.enabled;
     }
+    // How far the song's ideas are developed: asked for, else the previous show's, else all of it.
+    ArtLevel art = ArtLevel::Full;
+    if (r.artDirection.has_value()) {
+        if (!ArtLevelFromId(*r.artDirection, art)) {
+            Note(run, S, "art-direction-unknown", *r.artDirection + ": full");
+            art = ArtLevel::Full;
+        }
+    } else if (run.hasPrevious && !run.previous.stage.art.empty()) {
+        (void)ArtLevelFromId(run.previous.stage.art, art);
+    }
+    run.artLevel = static_cast<int>(art);
     if (!on) {
+        run.artLevel = 0;
         Note(run, S, "stage-off", "the installation is not directed as one stage");
         DirectTheColors(run, S);
         return;
@@ -1565,6 +1578,11 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     in.choreography = &run.choreography;
     in.edits = edits.edits.empty() ? nullptr : &edits;
     in.library = &library;
+    in.art = static_cast<ArtLevel>(run.artLevel);
+    if (!run.brief.Empty()) {
+        in.keepParts = &run.brief.keep;
+        in.changeParts = &run.brief.change;
+    }
     run.stageScore = DirectStage(in);
     if (run.stageScore.scenes.empty()) {
         Note(run, S, "stage-not-directed", run.stageScore.warnings.empty() ? std::string("no scene") : run.stageScore.warnings.front());

@@ -48,6 +48,8 @@ struct StageSettings {
     int scenes = 0;
     int gestures = 0;
     int edits = 0;
+    std::string art; // the ArtLevel id (phase 20); "" a show older than it
+    int motifs = 0;
 };
 
 // Whether the colour direction chose the show's colours, and with what. The colour score

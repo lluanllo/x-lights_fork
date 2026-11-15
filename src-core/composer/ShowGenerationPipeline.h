@@ -139,6 +139,9 @@ struct GenerationRequest {
     // across figures, layers that keep each figure's colours). Default: on, or the
     // previous show's; false generates as before, to compare.
     std::optional<bool> stageDirector;
+    // How far the stage director develops the song's ideas (ArtLevel, StageDirector.h): "f19"
+    // as in phase 19, "direction", "motifs" or "full". Default: full, or the previous show's.
+    std::optional<std::string> artDirection;
     // The colour direction: a family of colours with a hierarchy, a palette per scene, a
     // colour role per figure and gestures that stand out from what is lit. Default: on,
     // or the previous show's; false keeps the colours as before, to compare. The sliders
@@ -250,6 +253,7 @@ struct GenerationRun {
 
     // The stage director (when on)
     bool stageWanted = false; // asked for, or kept from the previous show
+    int artLevel = 3;         // the ArtLevel used (F19 0 .. Full 3)
     bool staged = false;      // and done
     StageSpace stageSpace;
     GlobalStageScore stageScore;
@@ -310,5 +314,9 @@ void WriteDiagnostics(GenerationRun& run);
 [[nodiscard]] std::string SummaryJson(const GenerationRun& run);
 // What was written, as a stable hash: effects and tracks in order, settings sorted.
 [[nodiscard]] std::string SpecHash(const SequenceSpec& spec);
+
+// Saves an opened sequence again through SequenceFile, as xLights does when a person saves
+// it, keeping the audio and the timing.
+bool ResaveSequence(HeadlessRenderContext& ctx, const SequenceSpec& spec, const std::string& path, std::string& error);
 
 } // namespace composer

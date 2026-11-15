@@ -903,7 +903,213 @@ private:
         }
         Check(none, "a gesture a person excluded is never chosen");
 
+        TestArt(song, score);
         TestRealize(song, score);
+    }
+
+    // ------------------------------------------------------------- phase 20
+
+    static int On(const StageScene* sc) {
+        int n = 0;
+        for (const SceneRole& r : sc != nullptr ? sc->roles : std::vector<SceneRole>()) {
+            n += r.role != "rest";
+        }
+        return n;
+    }
+
+    void TestArt(const Song& song, const GlobalStageScore& f19) {
+        Title("Phase 20: the song's arc, visual ideas that come back, and how many figures carry them");
+        StageDirectorInput same = Input(song);
+        same.art = ArtLevel::F19;
+        Check(ToJson(DirectStage(same)) == ToJson(f19), "at the F19 level the director decides exactly as before");
+        // A song whose first strong part comes back (s1.0 and s4.0 are the same music) and
+        // that closes after its peak.
+        Song repeated = song;
+        repeated.plan.segments[1].repeatGroup = 0;
+        repeated.plan.segments[4].repeatGroup = 0;
+        repeated.plan.segments[5].endMS = 22000;
+        repeated.plan.segments.push_back(Segment("s6.0", 22000, 30000, 1, { "ending" }));
+        repeated.plan.durationMS = 30000;
+        repeated.analysis.durationMS = 30000;
+        MusicalEvent hit;
+        hit.type = MusicalEventType::Onset;
+        hit.timeMS = 22500;
+        hit.intensity = 0.9;
+        hit.confidence = 0.9;
+        repeated.analysis.events.push_back(hit);
+        StageDirectorInput in = Input(repeated);
+
+        in.art = ArtLevel::Direction;
+        const GlobalStageScore dir = DirectStage(in);
+        const auto narrative = [&](const GlobalStageScore& s, const char* id) {
+            const StageScene* sc = SceneOf(s, id);
+            return sc != nullptr ? sc->narrative : std::string("?");
+        };
+        Check(narrative(dir, "s0.0") == "rest" && narrative(dir, "s1.0") == "presentation" && narrative(dir, "s4.0") == "recovery" && narrative(dir, "s5.0") == "climax" &&
+                  narrative(dir, "s6.0") == "resolution",
+              fmt::format("each scene has its role in the song: {} / {} / {} / {} / {} / {} / {}", narrative(dir, "s0.0"), narrative(dir, "s1.0"), narrative(dir, "s2.0"),
+                          narrative(dir, "s3.0"), narrative(dir, "s4.0"), narrative(dir, "s5.0"), narrative(dir, "s6.0")));
+        for (const GlobalGesture& g : dir.gestures) {
+            std::string delays;
+            for (const GestureParticipant& p : g.participants) {
+                delays += fmt::format("{}{}", delays.empty() ? "" : ",", p.delayMS);
+            }
+            const StageScene* sc = dir.SceneAt(g.startMS);
+            printf("    %s in %s (%s): %s / %s, delays %s\n", g.id.c_str(), sc != nullptr ? sc->id.c_str() : "?", sc != nullptr ? sc->narrative.c_str() : "?", g.relation.c_str(),
+                   g.presence.c_str(), delays.c_str());
+        }
+        bool described = !dir.gestures.empty();
+        bool answering = false, together = false, background = true, peak = true;
+        for (const GlobalGesture& g : dir.gestures) {
+            described = described && !g.relation.empty() && !g.presence.empty();
+            const StageScene* sc = dir.SceneAt(g.startMS);
+            const bool climax = sc != nullptr && (sc->narrative == "climax" || sc->narrative == "intensification");
+            if ((g.kind == GestureKind::LocalWaves || g.kind == GestureKind::JointPulse) && g.participants.size() >= 2) {
+                int latest = 0;
+                for (const GestureParticipant& p : g.participants) {
+                    latest = std::max(latest, p.delayMS);
+                }
+                answering = answering || (!climax && g.relation == "answer" && latest > 0);
+                together = together || (!climax && latest == 0);
+            }
+            background = background && (g.kind != GestureKind::AmbientField || g.presence == "background");
+            peak = peak && (!climax || g.kind == GestureKind::AmbientField || g.presence == "climax");
+        }
+        Check(described, "every gesture says how its figures follow in time and how much it should be seen");
+        Check(answering && !together, "away from the peak, figures that share a hit answer one another instead of lighting all at once");
+        Check(background && peak, "a dim field under a voice stays in the background; the peak's gestures are meant to be seen");
+        bool connected = SceneOf(dir, "s0.0") != nullptr && SceneOf(dir, "s0.0")->changes == "the show begins";
+        for (const StageScene& sc : dir.scenes) {
+            connected = connected && !sc.changes.empty() && !sc.leadsTo.empty() && !sc.attention.empty();
+        }
+        Check(connected, "each scene says what changes, how it leads on and how many figures carry it");
+
+        in.art = ArtLevel::Motifs;
+        const GlobalStageScore motifs = DirectStage(in);
+        const VisualMotif* m1 = motifs.Motif("M1");
+        const StageScene* back = SceneOf(motifs, "s4.0");
+        Check(m1 != nullptr && m1->origin == "scene:s1.0" && !m1->gestureKind.empty() && !m1->figures.empty() && !m1->explanation.empty(),
+              fmt::format("the first scene presents a visual idea: who, which gesture ({}), from where", m1 != nullptr ? m1->gestureKind : "none"));
+        bool carried = false;
+        for (const GlobalGesture& g : motifs.gestures) {
+            carried = carried || (g.motif == "M1" && g.startMS >= 3000 && g.startMS < 7000);
+        }
+        Check(carried, "a gesture of the first scene carries the idea");
+        bool sameFigure = false;
+        if (m1 != nullptr && back != nullptr) {
+            for (const std::string& f : m1->figures) {
+                const std::string role = back->RoleOf(f);
+                sameFigure = sameFigure || (!role.empty() && role != "rest");
+            }
+        }
+        Check(back != nullptr && back->visualMotif == "M1" && back->motifOperation == "recall" && sameFigure, "the part that comes back brings the same idea back, with its own figures");
+        bool presented = false, recalled = false;
+        for (const MotifVariant& v : m1 != nullptr ? m1->variants : std::vector<MotifVariant>()) {
+            presented = presented || v.operation == "present";
+            recalled = recalled || v.operation == "recall";
+        }
+        Check(presented && recalled, "the idea keeps every scene that uses it and what each does with it");
+        GlobalStageScore read;
+        std::string error;
+        Check(FromJson(ToJson(motifs), read, error) && ToJson(read) == ToJson(motifs) && read.art == static_cast<int>(ArtLevel::Motifs) && read.motifs.size() == motifs.motifs.size(),
+              "visual ideas, roles and relations are written and read back unchanged");
+        Check(ToJson(DirectStage(in)) == ToJson(motifs), "the same song gives the same ideas");
+        if (m1 != nullptr) {
+            const StageLibraryEntry kept = CompositionFromMotif(*m1, motifs, "prueba");
+            Check(kept.kind == "composition" && kept.custom && kept.source == "person" && kept.figures == m1->figures && kept.gesture == m1->gestureKind && !kept.contexts.empty(),
+                  "a visual idea a person wants to keep becomes a composition of their own, with its figures, gesture and kind of part");
+        }
+
+        in.art = ArtLevel::Full;
+        const GlobalStageScore full = DirectStage(in);
+        const StageScene* open = SceneOf(full, "s1.0");
+        const StageScene* top = SceneOf(full, "s5.0");
+        const StageScene* close = SceneOf(full, "s6.0");
+        int all = 0;
+        for (const SceneRole& r : top != nullptr ? top->roles : std::vector<SceneRole>()) {
+            ++all;
+        }
+        Check(open != nullptr && open->focus && On(open) <= 3, fmt::format("the idea is presented by a few figures ({}), the others rest", On(open)));
+        Check(top != nullptr && On(top) == all && all > 4, fmt::format("at the peak the whole house takes part ({} of {})", On(top), all));
+        std::set<int> counts;
+        for (const StageScene& sc : full.scenes) {
+            if (sc.narrative != "rest") {
+                counts.insert(On(&sc));
+            }
+        }
+        Check(counts.size() >= 3, fmt::format("how many figures take part changes with what each scene does ({} different counts)", counts.size()));
+        bool opens = false, closes = false;
+        for (const GlobalGesture* g : GesturesOf(full, top)) {
+            opens = opens || (g->kind == GestureKind::Expansion && g->startMS < top->startMS + 2000 && !g->motif.empty() && g->motif == top->visualMotif);
+        }
+        for (const GlobalGesture* g : GesturesOf(full, close)) {
+            closes = closes || (g->kind == GestureKind::Contraction && g->relation == "progressive-end" && g->level <= 0.6 + 1e-9);
+        }
+        Check(opens, "the peak opens from where the idea was born");
+        Check(close != nullptr && close->focus && On(close) <= 3 && closes, "the last scene closes the idea: a few figures, the light gathering back quietly");
+        Check(ToJson(DirectStage(in)) == ToJson(full), "the developed song is the same every time");
+        // A person's choices still win over the development.
+        StageEdits edits;
+        edits.edits.push_back({ "mode", 3000, -1, "full-ensemble", "test" });
+        edits.edits.push_back({ "exclude", 19000, -1, "Matriz Prueba", "test" });
+        StageDirectorInput edited = in;
+        edited.edits = &edits;
+        const GlobalStageScore mine = DirectStage(edited);
+        const StageScene* chosen = SceneOf(mine, "s1.0");
+        bool excludedOut = SceneOf(mine, "s5.0") != nullptr && SceneOf(mine, "s5.0")->RoleOf("Matriz Prueba") == "rest";
+        for (const GlobalGesture* g : GesturesOf(mine, SceneOf(mine, "s5.0"))) {
+            for (const GestureParticipant& p : g->participants) {
+                excludedOut = excludedOut && p.figure != "Matriz Prueba";
+            }
+        }
+        Check(chosen != nullptr && chosen->mode == StageMode::FullEnsemble && chosen->manual && !chosen->focus && excludedOut,
+              "a mode a person chose and a figure a person left out win over the development");
+
+        // Compositions: whole ideas a scene can be built on, at three levels.
+        const StageLibrary built = BuiltInStageLibrary();
+        std::set<std::string> levels;
+        int compositions = 0;
+        for (const StageLibraryEntry& e : built.entries) {
+            if (e.kind == "composition") {
+                ++compositions;
+                levels.insert(e.level);
+            }
+        }
+        Check(compositions >= 12 && levels.size() == 3, fmt::format("{} built-in compositions, local, of a group and of the whole house", compositions));
+        bool fits = true;
+        const auto peaks = CompositionsFor(built, "climax");
+        for (const StageLibraryEntry* e : peaks) {
+            fits = fits && std::find(e->contexts.begin(), e->contexts.end(), "climax") != e->contexts.end();
+        }
+        Check(!peaks.empty() && fits, "the compositions for a peak are the ones that suit a peak");
+        StageLibrary personal;
+        StageLibraryEntry fav = *built.Find("composition:gathers-to-close");
+        fav.favorite = true;
+        fav.level0 = 0.3;
+        StageLibraryEntry off = *built.Find("composition:echo-tail");
+        off.excluded = true;
+        StageLibraryEntry own;
+        own.id = "composition:my-chorus";
+        own.kind = "composition";
+        own.title = "My chorus";
+        own.level = "group";
+        own.contexts = { "chorus", "ending" };
+        own.gesture = "local-waves";
+        own.figures = { "Arbol Grande", "Matriz Prueba" };
+        own.custom = true;
+        own.source = "person";
+        personal.entries = { fav, off, own };
+        StageLibrary readLib;
+        Check(FromJson(ToJson(personal), readLib, error) && ToJson(readLib) == ToJson(personal), "a person's compositions are written and read back with their parts");
+        const StageLibrary merged = MergeStageLibrary(readLib);
+        const auto endings = CompositionsFor(merged, "ending");
+        bool echoOut = true, mineIn = false;
+        for (const StageLibraryEntry* e : endings) {
+            echoOut = echoOut && e->id != "composition:echo-tail";
+            mineIn = mineIn || e->id == "composition:my-chorus";
+        }
+        Check(!endings.empty() && endings.front()->id == "composition:gathers-to-close" && std::abs(endings.front()->level0 - 0.3) < 1e-9 && echoOut && mineIn,
+              "a favourite comes first with the person's own values, an excluded one is never offered, a person's own is");
     }
 
     // The score into effects, rendered by xLights: each figure lights when the score says.
