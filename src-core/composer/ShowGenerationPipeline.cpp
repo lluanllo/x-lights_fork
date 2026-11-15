@@ -420,6 +420,7 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.color.enabled = run.colorWanted;
     s.color.directorVersion = run.colored ? run.chromatic.version : "";
     s.color.variety = run.chromatic.options.variety;
+    s.color.style = run.chromatic.options.style;
     s.color.contrast = run.chromatic.options.contrast;
     s.color.accents = run.chromatic.options.accents;
     s.color.evolution = run.chromatic.options.evolution;
@@ -1399,10 +1400,20 @@ void DirectTheColors(GenerationRun& run, GenerationStage S) {
         return it == taught.end() ? 0.5 : std::clamp(0.5 + 0.3 * it->second, 0.0, 1.0);
     };
     o.variety = std::clamp(r.colorVariety.value_or(start("color.variety", before.variety)), 0.0, 1.0);
+    // The style starts contained (0.4): richness from one hue in its lights and white, more
+    // hues only when the music earns them. The maker's cohesion taught moves it.
+    const auto taughtStyle = [&]() {
+        if (keep) {
+            return before.style;
+        }
+        const auto it = taught.find("color.cohesion");
+        return it == taught.end() ? 0.4 : std::clamp(0.4 - 0.3 * it->second, 0.0, 1.0);
+    };
+    o.style = std::clamp(r.colorStyle.value_or(taughtStyle()), 0.0, 1.0);
     o.contrast = std::clamp(r.colorContrast.value_or(start("color.contrast", before.contrast)), 0.0, 1.0);
     o.accents = std::clamp(r.colorAccents.value_or(start("color.accents", before.accents)), 0.0, 1.0);
     o.evolution = std::clamp(r.colorEvolution.value_or(start("color.evolution", before.evolution)), 0.0, 1.0);
-    for (const char* key : { "color.variety", "color.contrast", "color.accents", "color.evolution" }) {
+    for (const char* key : { "color.variety", "color.contrast", "color.accents", "color.evolution", "color.cohesion" }) {
         if (taught.contains(key) && !keep) {
             Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
         }
@@ -1414,6 +1425,13 @@ void DirectTheColors(GenerationRun& run, GenerationStage S) {
     o.warmth = std::clamp(0.6 * taughtValue("color.warmth"), -1.0, 1.0);
     o.gradual = std::clamp(0.5 + 0.3 * taughtValue("color.gradual"), 0.0, 1.0);
     o.respectIdentity = taughtValue("color.identity") > 0.2;
+    for (const auto& [key, value] : taught) {
+        // "figure.<name>.prominence"
+        if (key.rfind("figure.", 0) == 0 && key.size() > 18 && key.compare(key.size() - 11, 11, ".prominence") == 0) {
+            o.figureWeight[key.substr(7, key.size() - 18)] = std::clamp(value, -1.0, 1.0);
+            Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's corrections and observations", key, value));
+        }
+    }
     for (const char* key : { "color.saturation", "color.warmth", "color.gradual", "color.identity" }) {
         if (taught.contains(key)) {
             Note(run, S, "color-taught", fmt::format("{} {:+.2f} from the maker's evaluations", key, taught.at(key)));
@@ -1893,6 +1911,7 @@ bool WriteAndPublish(GenerationRun& run) {
                         for (const std::string& w : run.colorCheck.warnings) {
                             run.findings.push_back("info color-warning: " + w);
                         }
+                        run.composition = EvaluateComposition(run.colorCheck, &run.chromatic);
                     }
                 }
                 if (run.render.layoutChannels != 0 && run.render.channels != run.render.layoutChannels) {
@@ -2062,6 +2081,10 @@ void WriteDiagnostics(GenerationRun& run) {
     if (run.colored) {
         ok &= WriteText(report / "color-score.json", ToJson(run.chromatic));
         ok &= WriteText(report / "color-score.txt", ChromaticReport(run.chromatic));
+    }
+    if (run.composition.ran) {
+        ok &= WriteText(report / "composition-eval.json", ToJson(run.composition));
+        ok &= WriteText(report / "composition-eval.txt", CompositionReport(run.composition));
     }
     if (run.colorCheck.ran) {
         ok &= WriteText(report / "color-check.json", ToJson(run.colorCheck));

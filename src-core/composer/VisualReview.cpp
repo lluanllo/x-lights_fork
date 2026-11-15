@@ -291,6 +291,16 @@ const std::vector<std::string>& EvaluationTags() {
     return T;
 }
 
+const std::vector<std::string>& ArtisticObservationKinds() {
+    static const std::vector<std::string> K = { "too-many-colours", "incoherent", "wrong-main-colour", "good-contrast", "accents-excessive", "inelegant-transition",
+                                                "keep-combination", "recall-motif", "figure-stand-out", "figure-rest" };
+    return K;
+}
+
+bool ObservationIsSongDecision(const ArtisticObservation& o) {
+    return o.kind == "keep-combination" || o.kind == "wrong-main-colour" || o.kind == "good-contrast" || (o.kind == "recall-motif" && o.sceneStartMS >= 0);
+}
+
 const std::vector<std::string>& EvaluationRules() {
     static const std::vector<std::string> R = { "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes",
                                                 // the colours (phase 18)
@@ -387,6 +397,20 @@ bool EvaluateShow(VisualReview& review, const ShowEvaluation& e, std::string& wh
             return false;
         }
     }
+    for (const ArtisticObservation& o : e.observations) {
+        if (!known(ArtisticObservationKinds(), o.kind)) {
+            why = "observation:" + o.kind;
+            return false;
+        }
+        if ((o.kind == "figure-stand-out" || o.kind == "figure-rest") && o.figure.empty()) {
+            why = "observation-without-figure:" + o.kind;
+            return false;
+        }
+        if (o.kind == "keep-combination" && o.sceneStartMS < 0) {
+            why = "observation-without-scene:" + o.kind;
+            return false;
+        }
+    }
     if ((known(e.rules, "more-variety") && known(e.rules, "less-variety")) || (known(e.rules, "more-christmas") && known(e.rules, "more-song-colours")) ||
         (known(e.rules, "more-colour-variety") && known(e.rules, "keep-colour-families")) || (known(e.rules, "more-figure-contrast") && known(e.rules, "less-contrast"))) {
         why = "rules-contradict";
@@ -437,6 +461,13 @@ json VisualReviewJson(const VisualReview& r) {
         const ShowEvaluation& e = r.evaluation;
         root["evaluation"] = { { "ratings", e.ratings }, { "overall", e.overall }, { "quick", e.quick }, { "tags", e.tags }, { "notes", e.notes }, { "rules", e.rules },
                                { "reviewer", e.reviewer }, { "at", e.at }, { "measured", e.measured } };
+        json observations = json::array();
+        for (const ArtisticObservation& o : e.observations) {
+            observations.push_back({ { "kind", o.kind }, { "sceneStartMS", o.sceneStartMS }, { "figure", o.figure }, { "note", o.note }, { "source", o.source } });
+        }
+        if (!observations.empty()) {
+            root["evaluation"]["observations"] = observations;
+        }
     }
     if (r.legacy) {
         root["legacy"] = true;
@@ -482,6 +513,12 @@ bool VisualReviewFrom(const json& j, VisualReview& r, std::string& error) {
         r.evaluation.reviewer = e.value("reviewer", std::string());
         r.evaluation.at = e.value("at", std::string());
         r.evaluation.measured = e.value("measured", std::map<std::string, double>());
+        for (const json& o : e.value("observations", json::array())) {
+            if (o.is_object()) {
+                r.evaluation.observations.push_back({ o.value("kind", std::string()), o.value("sceneStartMS", -1), o.value("figure", std::string()), o.value("note", std::string()),
+                                                      o.value("source", std::string("evaluation")) });
+            }
+        }
     }
     // Read as the current version from now on.
     r.version = VISUAL_REVIEW_VERSION;

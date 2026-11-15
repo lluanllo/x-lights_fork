@@ -20,6 +20,7 @@
 #include "composer/FigureSemantics.h"
 #include "composer/RenderUnderstanding.h"
 #include "composer/ChromaticDirector.h"
+#include "composer/ArtEvaluation.h"
 #include "composer/ColorCheck.h"
 #include "composer/StageCheck.h"
 #include "composer/StageDirector.h"
@@ -144,6 +145,7 @@ struct GenerationRequest {
     // (0-1) and the song's colours default to the previous show's, else to the middle.
     std::optional<bool> colorDirector;
     std::optional<double> colorVariety;
+    std::optional<double> colorStyle;   // 0 contained, 1 expressive
     std::optional<double> colorContrast;
     std::optional<double> colorAccents;
     std::optional<double> colorEvolution;
@@ -260,6 +262,7 @@ struct GenerationRun {
     ChromaticScore chromatic;
     int colorEdits = 0;
     ColorCheck colorCheck; // the colours the render really showed
+    CompositionEvaluation composition; // what those colours say of the composition
 
     // Sequence
     SequenceSpec spec;

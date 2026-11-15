@@ -2090,6 +2090,7 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
         }
     };
     slider(o.colorVariety, r.colorVariety);
+    slider(o.colorStyle, r.colorStyle);
     slider(o.colorContrast, r.colorContrast);
     slider(o.colorAccents, r.colorAccents);
     slider(o.colorEvolution, r.colorEvolution);

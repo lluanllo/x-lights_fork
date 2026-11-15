@@ -44,6 +44,7 @@ struct ReportFolder {
     std::string stageCheck;           // stage-check.json as written: what the render did with the installation
     std::string colorScore;           // color-score.json as written: the colour director's plan
     std::string colorCheck;           // color-check.json as written: the colours the render showed
+    std::string composition;          // composition-eval.json as written: the signs of the composition
 };
 
 // Reads every file it finds; an unreadable one is an error, a missing one is not.

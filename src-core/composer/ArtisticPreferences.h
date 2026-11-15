@@ -38,6 +38,8 @@
 //   color.saturation                  fuller colours (less: softer)
 //   color.warmth                      warmer colours (less: cooler)
 //   color.identity                    figures keep their own colours (trunks, foliage...)
+//   color.cohesion                    fewer different hues at once (a more contained style)
+//   figure.<name>.prominence          that figure carries more of the attention (less: rests)
 namespace composer {
 
 inline constexpr int PREFERENCES_VERSION = 1;

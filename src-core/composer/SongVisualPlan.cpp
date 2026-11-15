@@ -591,7 +591,7 @@ bool ParseVisualBrief(const std::string& text, const std::string& source, SongVi
             for (const json& c : root["colors"]) {
                 std::string hex = c.is_string() ? c.get<std::string>() : std::string();
                 std::transform(hex.begin(), hex.end(), hex.begin(), [](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
-                if (IsHex(hex) && out.colors.size() < 5) {
+                if (IsHex(hex) && out.colors.size() < 4) {
                     out.colors.push_back(hex);
                 } else {
                     out.warnings.push_back("color-dropped");
@@ -655,6 +655,30 @@ bool ParseVisualBrief(const std::string& text, const std::string& source, SongVi
         if (root.contains("contrast") && root["contrast"].is_string()) {
             out.contrast = root["contrast"].get<std::string>().substr(0, 280);
         }
+        if (root.contains("identity") && root["identity"].is_string()) {
+            out.identity = root["identity"].get<std::string>().substr(0, 200);
+        }
+        if (root.contains("intention") && root["intention"].is_string()) {
+            out.intention = root["intention"].get<std::string>().substr(0, 280);
+        }
+        for (const char* field : { "keep", "change" }) {
+            if (root.contains(field) && root[field].is_array()) {
+                std::vector<std::string>& list = std::string(field) == "keep" ? out.keep : out.change;
+                for (const json& part : root[field]) {
+                    std::string kind = part.is_string() ? part.get<std::string>() : std::string();
+                    if (kind == "interlude" || kind == "solo") {
+                        kind = "instrumental";
+                    }
+                    if (PARTS.contains(kind) && std::find(list.begin(), list.end(), kind) == list.end()) {
+                        list.push_back(kind);
+                    } else if (!kind.empty()) {
+                        out.warnings.push_back(std::string(field) + "-part-dropped");
+                    }
+                }
+            }
+        }
+        // A part cannot both keep its identity and change it: keeping wins.
+        std::erase_if(out.change, [&](const std::string& k) { return std::find(out.keep.begin(), out.keep.end(), k) != out.keep.end(); });
         // What only this program writes, read back from a stored answer.
         if (root.contains("received") && root["received"].is_array()) {
             for (const json& r : root["received"]) {
@@ -683,6 +707,7 @@ std::string ToJson(const SongVisualBrief& b) {
     }
     return json({ { "source", b.source }, { "mood", b.mood }, { "colors", b.colors }, { "imagery", b.imagery }, { "christmas", b.christmas }, { "energy", b.energy },
                   { "character", b.character }, { "arc", arc }, { "colorIntensity", b.colorIntensity }, { "warmth", b.warmth }, { "contrast", b.contrast },
+                  { "identity", b.identity }, { "keep", b.keep }, { "change", b.change }, { "intention", b.intention },
                   { "received", b.received }, { "analyzedAt", b.analyzedAt }, { "origin", b.origin }, { "warnings", b.warnings } })
         .dump(1);
 }

@@ -57,6 +57,7 @@ struct ColorSettings {
     bool enabled = false;
     std::string directorVersion;
     double variety = 0.5;
+    double style = 0.4;
     double contrast = 0.5;
     double accents = 0.5;
     double evolution = 0.5;

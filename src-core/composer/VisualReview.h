@@ -72,6 +72,22 @@ struct ReviewChecklist {
 // Version 2 added the evaluation of the whole show; version 1 files read as before.
 inline constexpr int VISUAL_REVIEW_VERSION = 2;
 
+// One thing a person noticed, with where: a scene (by its start), a figure, a note, and
+// where it came from. Some teach a taste (too many colours, a figure that should stand
+// out); others are decisions about this song only (keep this combination, bring this motif
+// back), applied to its colour plan when the person confirms, never learned for others.
+struct ArtisticObservation {
+    std::string kind; // ArtisticObservationKinds()
+    int sceneStartMS = -1;
+    std::string figure;
+    std::string note;
+    std::string source = "evaluation"; // "evaluation", "corrected-sequence"
+};
+
+[[nodiscard]] const std::vector<std::string>& ArtisticObservationKinds();
+// True for the kinds that are about this song only.
+[[nodiscard]] bool ObservationIsSongDecision(const ArtisticObservation& observation);
+
 // What a person thinks of the whole show, beside the clip by clip review. Only a person
 // fills it in; the measures are kept with it so the two can be compared, never mixed.
 // Criteria: musicality, variety, complexity, coordination, colour, direction,
@@ -84,11 +100,12 @@ struct ShowEvaluation {
     std::string notes;
     // The observations the person chose to turn into rules for the next shows.
     std::vector<std::string> rules; // "more-variety", "less-variety", "more-christmas", "more-song-colours", "keep-recipes"
+    std::vector<ArtisticObservation> observations; // with their scene, figure and source
     std::string reviewer;
     std::string at;
     std::map<std::string, double> measured; // the objective measures of the same show, for comparison
 
-    [[nodiscard]] bool Empty() const { return ratings.empty() && overall == 0 && tags.empty() && notes.empty() && rules.empty(); }
+    [[nodiscard]] bool Empty() const { return ratings.empty() && overall == 0 && tags.empty() && notes.empty() && rules.empty() && observations.empty(); }
 };
 
 [[nodiscard]] const std::vector<std::string>& EvaluationCriteria();

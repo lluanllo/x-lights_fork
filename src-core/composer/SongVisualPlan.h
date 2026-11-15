@@ -45,6 +45,12 @@ struct SongVisualBrief {
     double colorIntensity = -1; // 0 soft, 1 full; -1 unknown
     double warmth = -2;         // -1 cool, 1 warm; -2 unknown
     std::string contrast;       // a short sentence on how the parts differ
+    // Version 3: the song's emotional identity, the parts that should keep it and the ones
+    // that may change, and the colour intention in words. Directions, never colours to use.
+    std::string identity;
+    std::vector<std::string> keep;   // parts ("verse", "chorus"...) that keep the song's identity
+    std::vector<std::string> change; // parts that may turn to something else
+    std::string intention;
     // Set by this program, never by the service: what the service was given and when.
     std::vector<std::string> received; // "title", "lyrics", "acoustic-summary"
     std::string analyzedAt;            // ISO 8601, when the service answered
