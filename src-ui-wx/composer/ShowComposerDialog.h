@@ -297,10 +297,13 @@ public:
     void SetColorStyle(int style); // 0 contained - 100 expressive
     // How far the song's visual ideas are developed: "full", "motifs", "direction", "f19".
     void SetArtDirection(const std::string& id);
+    void SetAmbientLevel(double level); // 0.05-1
+    void MakeFinalRender(bool ask);       // the .fseq where xLights plays it, checked (a job: the window stays usable)
     [[nodiscard]] std::string ArtDirectionId() const;
     // Before the show goes out (step 5): the check, run apart from this window, and its report.
     void CheckProductionReadiness(bool show);
     [[nodiscard]] const composer::ProductionReport& LastProductionCheck() const { return _production; }
+    [[nodiscard]] wxString FinalRenderState() const;
     // The person's decision about each change of their corrected version.
     bool ApplyCorrectionDecisions(const std::vector<composer::ComparisonDecision>& decisions);
     [[nodiscard]] const std::vector<composer::StageLibraryEntry>& OfferedCompositions() const { return _offeredCompositions; }
@@ -548,6 +551,9 @@ private:
     wxSlider* _colorVariety = nullptr;
     wxSlider* _colorStyle = nullptr;
     wxChoice* _artDirection = nullptr;
+    wxStaticText* _directorVersion = nullptr;
+    wxSlider* _ambient = nullptr;
+    wxStaticText* _finalRenderState = nullptr;
     wxStaticText* _productionState = nullptr;
     composer::ProductionReport _production;
     bool _showProduction = false;

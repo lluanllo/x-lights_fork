@@ -52,19 +52,32 @@ bool WriteAll(const std::string& path, const std::string& text) {
     return out.good();
 }
 
+// A composition by its title, in the person's language; one of their own by its name.
+wxString CompositionTitle(const std::string& id) {
+    static const StageLibrary library = BuiltInStageLibrary();
+    if (const StageLibraryEntry* e = library.Find(id); e != nullptr) {
+        return T(e->title);
+    }
+    return U(id.rfind("composition:", 0) == 0 ? id.substr(12) : id);
+}
+
 } // namespace
 
 wxString ProductionStatusText(const ProductionReport& r) {
     const auto mark = [](bool ok) { return ok ? wxString::FromUTF8("\xE2\x9C\x93 ") : wxString::FromUTF8("\xE2\x9C\x97 "); };
     wxString out;
+    out += mark(r.status.generated) + _("Made by the composer") + "\n";
     out += mark(r.status.technical) + _("Technical generation correct") + "\n";
     out += mark(r.status.rendered) + _("Render correct") + "\n";
     out += mark(r.status.mediaComplete) + _("Pictures and videos complete") + "\n";
     out += mark(r.status.roundTrip) + _("Saved again by xLights and the same") + "\n";
+    out += mark(r.status.fseqFinal) + _("Final render where xLights plays it, checked") + "\n";
+    out += mark(r.status.packaged) + _("Production folder prepared") + "\n";
     out += (r.status.review == "approved" ? mark(true) : wxString("- ")) + _("Visual review") + ": " + T(ProductionReviewPhrase(r.status.review));
     if (r.status.review == "approved" && !r.status.reviewer.empty()) {
         out += " (" + U(r.status.reviewer) + ")";
     }
+    out += "\n" + mark(r.ReadyForInstallation()) + _("Ready for the real installation") + (r.ReadyForInstallation() ? wxString() : wxString(": ") + _("only once a person has approved it"));
     return out;
 }
 
@@ -173,7 +186,7 @@ MotifsDialog::MotifsDialog(wxWindow* parent, const GlobalStageScore& score, cons
     _motifs->AppendColumn(_("Scenes"), wxLIST_FORMAT_LEFT, 60);
     body->Add(_motifs, 0, wxEXPAND | wxRIGHT, 8);
     _uses = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(540, 220), wxLC_REPORT | wxLC_SINGLE_SEL);
-    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 60 }, { _("In the song"), 150 }, { _("What it does"), 210 }, { _("Figures"), 60 } }) {
+    for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("From"), 60 }, { _("In the song"), 130 }, { _("What it does"), 170 }, { _("Figures"), 55 }, { _("Composition"), 160 } }) {
         _uses->AppendColumn(label, wxLIST_FORMAT_LEFT, width);
     }
     body->Add(_uses, 1, wxEXPAND);
@@ -234,6 +247,11 @@ void MotifsDialog::ShowMotif(int index) {
         _uses->SetItem(row, 1, T(NarrativePhrase(v.narrative)));
         _uses->SetItem(row, 2, T(MotifOperationPhrase(v.operation)));
         _uses->SetItem(row, 3, wxString::Format("%d", static_cast<int>(v.figures.size())));
+        for (const StageScene& sc : _score.scenes) {
+            if (sc.id == v.scene && !sc.composition.empty()) {
+                _uses->SetItem(row, 4, CompositionTitle(sc.composition));
+            }
+        }
     }
     const auto names = [](const std::vector<std::string>& list, size_t most) {
         wxString out;
@@ -250,6 +268,9 @@ void MotifsDialog::ShowMotif(int index) {
         wxString e = T(m.explanation);
         e[0] = wxToupper(e[0]);
         out += e + ".\n";
+    }
+    if (!m.composition.empty()) {
+        out += wxString::Format(_("It was born with the composition \"%s\"; each scene below says which composition carries it there."), CompositionTitle(m.composition)) + "\n";
     }
     out += wxString::Format(_("It is carried by %s"), m.protagonist.empty() ? _("the figures below") : U(m.protagonist));
     out += m.companions.empty() ? wxString(".\n") : wxString::Format(_(", with %s.\n"), names(m.companions, 6));
