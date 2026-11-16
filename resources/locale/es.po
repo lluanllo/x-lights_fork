@@ -14676,3 +14676,786 @@ msgstr "movido, alargado o acortado"
 
 msgid "other colours, as many"
 msgstr "otros colores, los mismos en número"
+
+msgid "%d corrections to learn, %d general preferences, %d decisions for this song only, %d ignored, %d rejected."
+msgstr "%d correcciones para aprender, %d preferencias generales, %d decisiones solo para esta canción, %d ignoradas, %d rechazadas."
+
+msgid "%d could not be asked of the composer for this song."
+msgstr "%d no se le pueden pedir al compositor para esta canción."
+
+msgid "%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: choose what each one becomes. Nothing is learned unless you choose it."
+msgstr "%d efectos en el espectáculo generado, %d en el tuyo, %d se han quedado igual. No todo cambio es un gusto: elige qué hacer con cada uno. No se aprende nada que no elijas."
+
+msgid "%d figures"
+msgstr "%d figuras"
+
+msgid "%d things stop it, %d may make it wrong, %d to look at, %d artistic suggestions."
+msgstr "%d cosas lo impiden, %d pueden hacer que salga mal, %d para revisar, %d sugerencias artísticas."
+
+msgid "%d things stop this show from going out. Correct them and check it again."
+msgstr "%d cosas impiden sacar este espectáculo. Corrígelas y vuelve a comprobarlo."
+
+msgid "%s sings: no gesture goes over its face while it does."
+msgstr "%s canta: mientras lo hace, ningún gesto pasa por encima de su cara."
+
+msgid "%s was locked by you: it is left as it is."
+msgstr "%s lo bloqueaste tú: se deja como está."
+
+msgid "(nothing to learn for other songs)"
+msgstr "(no enseña nada para otras canciones)"
+
+msgid ", with %s.\n"
+msgstr ", con %s.\n"
+
+msgid "A few hits close together: one figure for each, across the house."
+msgstr "Unos pocos golpes seguidos: una figura para cada uno, cruzando la casa."
+
+msgid "A flash on the hit"
+msgstr "Un destello en el golpe"
+
+msgid "A single figure carries the moment; a dim field keeps the others company."
+msgstr "Una sola figura lleva el momento; un campo tenue acompaña a las demás."
+
+msgid "A tree turning"
+msgstr "Un árbol que gira"
+
+msgid "A tree's own spiral, kept for a figure that can show it."
+msgstr "La espiral propia de un árbol, solo para una figura que pueda mostrarla."
+
+msgid "A visual idea is who carries it, with which gesture, from where and in what order. The song presents it, develops it, transforms it, brings it back and closes it. Choose an idea to see every scene that uses it."
+msgstr "Una idea visual es quién la lleva, con qué gesto, desde dónde y en qué orden. La canción la presenta, la desarrolla, la transforma, la recupera y la cierra. Elige una idea para ver todas las escenas que la usan."
+
+msgid "An echo as the sound dies"
+msgstr "Un eco cuando el sonido se apaga"
+
+msgid "Apply My Decisions"
+msgstr "Aplicar mis decisiones"
+
+msgid "As in phase 19"
+msgstr "Como en la fase 19"
+
+msgid "At most how many figures (0: as many as the scene gives):"
+msgstr "Cuántas figuras como máximo (0: las que dé la escena):"
+
+msgid "At the peak, the light spreads from where the idea was born to the whole house."
+msgstr "En el punto culminante, la luz se extiende desde donde nació la idea hasta toda la casa."
+
+msgid "Brightness %d%%. Where it comes from: %s."
+msgstr "Brillo %d%%. De dónde viene: %s."
+
+msgid "Check the Show Before It Goes Out..."
+msgstr "Comprobar el espectáculo antes de sacarlo..."
+
+msgid "Checking the show: the audio, lyrics, layout, figures, pictures and videos, effects and a new render... (the window stays usable)"
+msgstr "Comprobando el espectáculo: el audio, la letra, el montaje, las figuras, las imágenes y vídeos, los efectos y un render nuevo... (la ventana se puede seguir usando)"
+
+msgid "Choose a composition first."
+msgstr "Elige primero una composición."
+
+msgid "Complete: present, develop, bring back and close the ideas (recommended)"
+msgstr "Completo: presentar, desarrollar, recuperar y cerrar las ideas (recomendado)"
+
+msgid "Composition of a group"
+msgstr "Composición de un grupo"
+
+msgid "Composition of one figure"
+msgstr "Composición de una figura"
+
+msgid "Composition of the whole house"
+msgstr "Composición de toda la casa"
+
+msgid "Decision"
+msgstr "Decisión"
+
+msgid "Development of the ideas:"
+msgstr "Desarrollo de las ideas:"
+
+msgid "From %d figures, as many as the scene gives."
+msgstr "Desde %d figuras, tantas como dé la escena."
+
+msgid "From %d to %d figures."
+msgstr "De %d a %d figuras."
+
+msgid "From one bulb, a wave reaches every figure when its distance says."
+msgstr "Desde una bombilla, una onda llega a cada figura cuando le toca por su distancia."
+
+msgid "General preference"
+msgstr "Preferencia general"
+
+msgid "Hits in turn"
+msgstr "Golpes por turnos"
+
+msgid "How bright it is, 10 to 100:"
+msgstr "Cuánto brilla, de 10 a 100:"
+
+msgid "Idea"
+msgstr "Idea"
+
+msgid "Idea %s: %s."
+msgstr "Idea %s: %s."
+
+msgid "Ideas that come back"
+msgstr "Ideas que vuelven"
+
+msgid "Ignored"
+msgstr "Ignorada"
+
+msgid "In the song"
+msgstr "En la canción"
+
+msgid "In the song, this scene %s."
+msgstr "En la canción, esta escena %s."
+
+msgid "In your version, %s work together (%s). Keep it as a composition of your own, to use in other songs?"
+msgstr "En tu versión, %s trabajan juntas (%s). ¿La guardo como composición tuya, para usarla en otras canciones?"
+
+msgid "It has no gesture of its own yet: it is carried by the figures' own effects."
+msgstr "Todavía no tiene gesto propio: la llevan los efectos de cada figura."
+
+msgid "It is carried by %s"
+msgstr "La lleva %s"
+
+msgid "It is dressed in the colour idea %s."
+msgstr "Va vestida con la idea de color %s."
+
+msgid "Its Values"
+msgstr "Sus valores"
+
+msgid "Its Values..."
+msgstr "Sus valores..."
+
+msgid "Its gesture: %s, %s"
+msgstr "Su gesto: %s, %s"
+
+msgid "Its gesture: %s, %s."
+msgstr "Su gesto: %s, %s."
+
+msgid "Keep This Idea as My Composition..."
+msgstr "Guardar esta idea como composición mía..."
+
+msgid "Keep the idea %s as a composition of your own? The director may then use it in other songs; you can exclude it again in \"Compositions and Gestures\"."
+msgstr "¿Guardar la idea %s como composición tuya? El director podrá usarla en otras canciones; puedes volver a excluirla en «Composiciones y gestos»."
+
+msgid "Kept in \"Compositions and Gestures\"."
+msgstr "Guardada en «Composiciones y gestos»."
+
+msgid "Learn it"
+msgstr "Aprenderla"
+
+msgid "Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Ignore: nothing. Reject: nothing, and it is not offered again."
+msgstr "Aprenderla: un gusto para los próximos espectáculos, cuando un segundo espectáculo lo confirme. Solo esta canción: se guarda como decisión de esta canción. Preferencia general: tu propio valor desde ya, para todos los espectáculos (se puede deshacer en «Lo que se ha aprendido»). Ignorar: nada. Rechazar: nada, y no se vuelve a proponer."
+
+msgid "Left and right do different things at once, like two voices."
+msgstr "La izquierda y la derecha hacen cosas distintas a la vez, como dos voces."
+
+msgid "Made with: %s."
+msgstr "Hecha con: %s."
+
+msgid "Neighbours answer"
+msgstr "Las vecinas responden"
+
+msgid "Not checked yet: the audio, lyrics, layout, figures, pictures and videos, effects and render are all checked, and nothing is approved by itself."
+msgstr "Aún sin comprobar: se revisan el audio, la letra, el montaje, las figuras, las imágenes y vídeos, los efectos y el render, y nada se aprueba solo."
+
+msgid "Nothing stops this show from going out. It still has to be seen in xLights before the lights go on."
+msgstr "Nada impide sacar este espectáculo. Aun así, hay que verlo en xLights antes de encender las luces."
+
+msgid "One figure starts and its neighbours answer, half a beat apart."
+msgstr "Una figura empieza y sus vecinas responden, con medio pulso de diferencia."
+
+msgid "One figure tells, the house listens"
+msgstr "Una figura cuenta, la casa escucha"
+
+msgid "One or two figures mark a strong hit and fall quiet again."
+msgstr "Una o dos figuras marcan un golpe fuerte y vuelven a quedarse en calma."
+
+msgid "Only this song"
+msgstr "Solo esta canción"
+
+msgid "Open in xLights"
+msgstr "Abrir en xLights"
+
+msgid "Pictures and videos complete"
+msgstr "Imágenes y vídeos completos"
+
+msgid "Prepare the Production Folder"
+msgstr "Preparar la carpeta de producción"
+
+msgid "Prepare the Show"
+msgstr "Preparar el espectáculo"
+
+msgid "Prepare the show"
+msgstr "Preparar el espectáculo"
+
+msgid "Production folder ready: %s (%d files copied, %d already where the show is)."
+msgstr "Carpeta de producción lista: %s (%d archivos copiados, %d que ya están donde está el espectáculo)."
+
+msgid "Render correct"
+msgstr "Render correcto"
+
+msgid "Saved again by xLights and the same"
+msgstr "Guardado de nuevo por xLights y sin cambios"
+
+msgid "Scene direction only"
+msgstr "Solo dirección de escena"
+
+msgid "Scenes"
+msgstr "Escenas"
+
+msgid "Technical generation correct"
+msgstr "Generación técnica correcta"
+
+msgid "The accents go to %s."
+msgstr "Los acentos van a %s."
+
+msgid "The changes chosen above:"
+msgstr "Los cambios elegidos arriba:"
+
+msgid "The check could not be started."
+msgstr "No se ha podido empezar la comprobación."
+
+msgid "The check opens the show without switching any controller on and changes none of its files. Nothing here approves the show: only you do, after seeing it in xLights."
+msgstr "La comprobación abre el espectáculo sin encender ningún controlador y no cambia ninguno de sus archivos. Nada de aquí aprueba el espectáculo: solo tú, después de verlo en xLights."
+
+msgid "The check was stopped before the end: check the show again before it goes out."
+msgstr "La comprobación se detuvo antes de terminar: vuelve a comprobar el espectáculo antes de sacarlo."
+
+msgid "The composition could not be kept."
+msgstr "No se ha podido guardar la composición."
+
+msgid "The house gathers back, figure by figure, to the one that began."
+msgstr "La casa se recoge, figura a figura, hacia la que empezó."
+
+msgid "The last gesture comes again, weaker, as the sound fades."
+msgstr "El último gesto vuelve, más débil, mientras el sonido se apaga."
+
+msgid "The light gathers to close"
+msgstr "La luz se recoge para cerrar"
+
+msgid "The light grows across"
+msgstr "La luz crece de lado a lado"
+
+msgid "The peak opens"
+msgstr "El punto culminante se abre"
+
+msgid "The show can go out, but %d things may make it look wrong. Look at them first."
+msgstr "El espectáculo puede salir, pero %d cosas pueden hacer que se vea mal. Revísalas antes."
+
+msgid "The show could not be checked."
+msgstr "No se ha podido comprobar el espectáculo."
+
+msgid "The voice calls and the figures answer it in turn."
+msgstr "La voz llama y las figuras le responden por turnos."
+
+msgid "This composition has no visual ideas yet: work it out on step 3 with the idea development on (step 1)."
+msgstr "Esta composición todavía no tiene ideas visuales: prepárala en el paso 3 con el desarrollo de las ideas activado (paso 1)."
+
+msgid "Two halves"
+msgstr "Dos mitades"
+
+msgid "Visual Ideas and How They Develop"
+msgstr "Ideas visuales y su desarrollo"
+
+msgid "Visual Ideas and How They Develop..."
+msgstr "Ideas visuales y su desarrollo..."
+
+msgid "Visual Ideas..."
+msgstr "Ideas visuales..."
+
+msgid "Visual idea %s (%s): %s."
+msgstr "Idea visual %s (%s): %s."
+
+msgid "Visual review"
+msgstr "Revisión visual"
+
+msgid "What changed"
+msgstr "Qué cambió"
+
+msgid "What changes: %s. How it goes on: %s."
+msgstr "Qué cambia: %s. Cómo sigue: %s."
+
+msgid "What each figure does when it is presented:"
+msgstr "Qué hace cada figura cuando se presenta:"
+
+msgid "What it says"
+msgstr "Qué dice"
+
+msgid "Where it suits: %s."
+msgstr "Dónde encaja: %s."
+
+msgid "While the music builds, a sweep crosses the house before the peak."
+msgstr "Mientras la música crece, un barrido cruza la casa antes del punto culminante."
+
+msgid "Work out the composition on step 3 first: the visual ideas come from it."
+msgstr "Prepara primero la composición en el paso 3: las ideas visuales salen de ella."
+
+msgid "a few figures"
+msgstr "unas pocas figuras"
+
+msgid "a gesture travelling across the house"
+msgstr "un gesto que recorre la casa"
+
+msgid "a matter of taste"
+msgstr "cuestión de gusto"
+
+msgid "a nudge in time"
+msgstr "un ajuste de tiempo"
+
+msgid "a person asked to keep the song's main colour here"
+msgstr "una persona pidió mantener aquí el color principal de la canción"
+
+msgid "a rest"
+msgstr "un descanso"
+
+msgid "all together"
+msgstr "todas a la vez"
+
+msgid "answering one another"
+msgstr "respondiéndose unas a otras"
+
+msgid "answers it"
+msgstr "le responde"
+
+msgid "anticipating what comes"
+msgstr "anticipando lo que viene"
+
+msgid "anywhere"
+msgstr "en cualquier parte"
+
+msgid "brings a contrasting idea"
+msgstr "trae una idea de contraste"
+
+msgid "brings it back"
+msgstr "la recupera"
+
+msgid "brings it back stronger"
+msgstr "la recupera con más fuerza"
+
+msgid "brought back by its own figures"
+msgstr "recuperada por sus propias figuras"
+
+msgid "closes the song"
+msgstr "cierra la canción"
+
+msgid "continuing what came before"
+msgstr "continuando lo anterior"
+
+msgid "developed: a couple more figures take it up"
+msgstr "desarrollada: un par de figuras más la retoman"
+
+msgid "develops it"
+msgstr "la desarrolla"
+
+msgid "ending figure by figure"
+msgstr "terminando figura a figura"
+
+msgid "intensified: everyone takes it up"
+msgstr "intensificada: todas la retoman"
+
+msgid "is the peak"
+msgstr "es el punto culminante"
+
+msgid "kept"
+msgstr "mantenida"
+
+msgid "not all at once: the nearest figures answer first, half a beat apart"
+msgstr "no todo a la vez: las figuras más cercanas responden primero, con medio pulso de diferencia"
+
+msgid "one after another"
+msgstr "una tras otra"
+
+msgid "one figure"
+msgstr "una figura"
+
+msgid "outwards from %s"
+msgstr "hacia fuera desde %s"
+
+msgid "overlapping"
+msgstr "solapándose"
+
+msgid "prepares the peak"
+msgstr "prepara el punto culminante"
+
+msgid "presented"
+msgstr "presentada"
+
+msgid "presents the idea"
+msgstr "presenta la idea"
+
+msgid "reduced to its protagonist, before the peak"
+msgstr "reducida a su protagonista, antes del punto culminante"
+
+msgid "resolved, quietly"
+msgstr "resuelta, con calma"
+
+msgid "something that should not light"
+msgstr "algo que no debía encenderse"
+
+msgid "split: some figures call, others answer"
+msgstr "repartida: unas figuras llaman y otras responden"
+
+msgid "the attention is on a few figures: the others rest"
+msgstr "la atención está en unas pocas figuras: las demás descansan"
+
+msgid "the figures below"
+msgstr "las figuras de abajo"
+
+msgid "the idea comes back stronger: the whole house joins"
+msgstr "la idea vuelve con más fuerza: se une toda la casa"
+
+msgid "the part keeps the song's identity: its main colour stays and a contrast joins it"
+msgstr "la parte mantiene la identidad de la canción: su color principal se queda y se le une un contraste"
+
+msgid "the peak opens from where the idea was born"
+msgstr "el punto culminante se abre desde donde nació la idea"
+
+msgid "the program"
+msgstr "el programa"
+
+msgid "the whole installation"
+msgstr "toda la instalación"
+
+msgid "transformed: the same idea travels another way"
+msgstr "transformada: la misma idea viaja de otra manera"
+
+msgid "transforms it"
+msgstr "la transforma"
+
+msgid "travelling from one to the next"
+msgstr "pasando de una a la siguiente"
+
+msgid "two figures"
+msgstr "dos figuras"
+
+msgid "you"
+msgstr "tú"
+
+msgid "your corrected version %s"
+msgstr "tu versión corregida %s"
+
+msgid "the song's idea"
+msgstr "la idea de la canción"
+
+msgid "the returning part's idea, answering the first"
+msgstr "la idea de la parte que vuelve, que responde a la primera"
+
+msgid "a new idea"
+msgstr "una idea nueva"
+
+msgid "presented first: the rest of the song develops, answers and brings it back"
+msgstr "se presenta primero: el resto de la canción la desarrolla, le responde y la recupera"
+
+msgid "presented where the song's returning part first plays: it comes back with it"
+msgstr "se presenta donde suena por primera vez la parte que vuelve: regresa con ella"
+
+msgid "the show begins"
+msgstr "empieza el espectáculo"
+
+msgid "the house rests"
+msgstr "la casa descansa"
+
+msgid "a new idea appears"
+msgstr "aparece una idea nueva"
+
+msgid "an earlier idea comes back"
+msgstr "vuelve una idea anterior"
+
+msgid "more figures join"
+msgstr "se unen más figuras"
+
+msgid "the light gathers on fewer figures"
+msgstr "la luz se concentra en menos figuras"
+
+msgid "the same idea carries on"
+msgstr "sigue la misma idea"
+
+msgid "the song ends"
+msgstr "la canción termina"
+
+msgid "it prepares the peak"
+msgstr "prepara el punto culminante"
+
+msgid "it fades into a rest"
+msgstr "se apaga hacia un descanso"
+
+msgid "the idea carries on"
+msgstr "la idea continúa"
+
+msgid "it hands over to another idea"
+msgstr "da paso a otra idea"
+
+msgid "it hands over to the next scene"
+msgstr "da paso a la escena siguiente"
+
+msgid "across the house"
+msgstr "de lado a lado de la casa"
+
+msgid "from one figure to its neighbours"
+msgstr "de una figura a sus vecinas"
+
+msgid "each figure on its own"
+msgstr "cada figura por su cuenta"
+
+msgid "it carries the idea it presented"
+msgstr "lleva la idea que presentó"
+
+msgid "it carries the scene's idea"
+msgstr "lleva la idea de la escena"
+
+msgid "the peak is near: the light grows towards it"
+msgstr "el punto culminante está cerca: la luz crece hacia él"
+
+msgid "the song closes: the light gathers back, figure by figure"
+msgstr "la canción se cierra: la luz se recoge, figura a figura"
+
+msgid "intro"
+msgstr "introducción"
+
+msgid "solo"
+msgstr "solista"
+
+msgid "accent"
+msgstr "acento"
+
+msgid "transition"
+msgstr "transición"
+
+msgid "no"
+msgstr "no"
+
+msgid "Show check"
+msgstr "Comprobación del espectáculo"
+
+msgid "Artistic suggestion"
+msgstr "Sugerencia artística"
+
+msgid "May make it wrong"
+msgstr "Puede hacer que salga mal"
+
+msgid "Stops the show"
+msgstr "Impide el espectáculo"
+
+msgid "To look at"
+msgstr "Para revisar"
+
+msgid "Locks"
+msgstr "Bloqueos"
+
+msgid "Render"
+msgstr "Render"
+
+msgid "Review"
+msgstr "Revisión"
+
+msgid "approved by a person"
+msgstr "aprobado por una persona"
+
+msgid "being reviewed"
+msgstr "en revisión"
+
+msgid "nobody has reviewed it yet"
+msgstr "nadie lo ha revisado todavía"
+
+msgid "The check was stopped before the end."
+msgstr "La comprobación se detuvo antes de terminar."
+
+msgid "No controller is switched on in this show folder: the lights will not come on until they are switched on in xLights (the composer never switches them on)"
+msgstr "En esta carpeta del espectáculo no hay ningún controlador encendido: las luces no se encenderán hasta que se activen en xLights (el compositor nunca los activa)"
+
+msgid "Nobody has approved this show yet: watch it in xLights before the lights go on"
+msgstr "Nadie ha aprobado todavía este espectáculo: míralo en xLights antes de encender las luces"
+
+msgid "Nobody has checked the song's parts and beats: if a change of light falls wrong, correct them in step 2"
+msgstr "Nadie ha revisado las partes y los pulsos de la canción: si un cambio de luz cae mal, corrígelos en el paso 2"
+
+msgid "Saved again by xLights, the sequence is not the same: open it in xLights and check it"
+msgstr "Al guardarla de nuevo en xLights, la secuencia no queda igual: ábrela en xLights y revísala"
+
+msgid "The approval was for another version of this show: it has to be seen again"
+msgstr "La aprobación era de otra versión de este espectáculo: hay que volver a verlo"
+
+msgid "The composer's notes for this sequence were not found: it is checked as any sequence"
+msgstr "No se han encontrado las notas del compositor para esta secuencia: se comprueba como cualquier secuencia"
+
+msgid "The layout changed after the show was made: some effects may light other lights. Generate it again or check it in xLights"
+msgstr "El montaje cambió después de hacer el espectáculo: algunos efectos pueden encender otras luces. Vuelve a generarlo o revísalo en xLights"
+
+msgid "The lyrics' times are approximate: watch the mouths once in xLights"
+msgstr "Los tiempos de la letra son aproximados: mira las bocas una vez en xLights"
+
+msgid "The native renderer could not render the sequence"
+msgstr "El renderizador de xLights no ha podido renderizar la secuencia"
+
+msgid "The render has {} problems: some effects do not light as planned"
+msgstr "El render tiene {} problemas: algunos efectos no se encienden como estaba previsto"
+
+msgid "The saved render (.fseq) is not the same as a new one: render it again in xLights before the show"
+msgstr "El render guardado (.fseq) no coincide con uno nuevo: vuelve a renderizarlo en xLights antes del espectáculo"
+
+msgid "The sequence has no song"
+msgstr "La secuencia no tiene canción"
+
+msgid "The sequence lasts {} s and the song {} s"
+msgstr "La secuencia dura {} s y la canción {} s"
+
+msgid "The sequence saved again by xLights cannot be read back"
+msgstr "La secuencia guardada de nuevo por xLights no se puede volver a leer"
+
+msgid "The sequence {} is not there"
+msgstr "La secuencia {} no está"
+
+msgid "The show folder {} has no layout xLights can read"
+msgstr "La carpeta del espectáculo {} no tiene un montaje que xLights pueda leer"
+
+msgid "The song file is not the one the show was made with: the lights may not follow it"
+msgstr "El archivo de la canción no es con el que se hizo el espectáculo: puede que las luces no la sigan"
+
+msgid "The song is outside the show folder: copy it into the show before moving it to another computer"
+msgstr "La canción está fuera de la carpeta del espectáculo: cópiala dentro antes de llevarlo a otro ordenador"
+
+msgid "The song {} is not there: the show would play in silence"
+msgstr "La canción {} no está: el espectáculo sonaría en silencio"
+
+msgid "There is no saved render (.fseq) beside the sequence: xLights will render it when the show is saved"
+msgstr "No hay un render guardado (.fseq) junto a la secuencia: xLights lo renderizará al guardar el espectáculo"
+
+msgid "a video is not there"
+msgstr "falta un vídeo"
+
+msgid "a video is outside the show folder"
+msgstr "hay un vídeo fuera de la carpeta del espectáculo"
+
+msgid "another file than the one the show was made with"
+msgstr "otro archivo distinto del que se usó para hacer el espectáculo"
+
+msgid "it does not render"
+msgstr "no se renderiza"
+
+msgid "made without recipes"
+msgstr "hecho sin recetas"
+
+msgid "no face sings in this show"
+msgstr "ninguna cara canta en este espectáculo"
+
+msgid "no song"
+msgstr "sin canción"
+
+msgid "not checked"
+msgstr "sin comprobar"
+
+msgid "renders with the native renderer"
+msgstr "se renderiza con el renderizador de xLights"
+
+msgid "renders with the native renderer, the same as the saved one"
+msgstr "se renderiza con el renderizador de xLights, igual que el guardado"
+
+msgid "the artistic director's recipes were used"
+msgstr "se usaron las recetas del director artístico"
+
+msgid "the layout cannot be read"
+msgstr "no se puede leer el montaje"
+
+msgid "the layout changed after the show was made"
+msgstr "el montaje cambió después de hacer el espectáculo"
+
+msgid "the lyrics are not synchronized"
+msgstr "la letra no está sincronizada"
+
+msgid "the sequence is not there"
+msgstr "la secuencia no está"
+
+msgid "the song is not there"
+msgstr "la canción no está"
+
+msgid "xLights cannot open the sequence"
+msgstr "xLights no puede abrir la secuencia"
+
+msgid "xLights could not save the sequence again: {}"
+msgstr "xLights no ha podido volver a guardar la secuencia: {}"
+
+msgid "{} ({} at {} s)"
+msgstr "{} ({} a los {} s)"
+
+msgid "{} ({} s)"
+msgstr "{} ({} s)"
+
+msgid "{} at {} s on {} is not there: it would show black"
+msgstr "{} a los {} s en {} no está: se vería en negro"
+
+msgid "{} controllers, none switched on"
+msgstr "{} controladores, ninguno encendido"
+
+msgid "{} controllers, {} switched on"
+msgstr "{} controladores, {} encendidos"
+
+msgid "{} decisions locked by a person, kept as they are"
+msgstr "{} decisiones bloqueadas por una persona, que se mantienen como están"
+
+msgid "{} effects go on after the song ends"
+msgstr "{} efectos siguen después de que termine la canción"
+
+msgid "{} effects; {} errors, {} after the end"
+msgstr "{} efectos; {} errores, {} después del final"
+
+msgid "{} faces sing but the lyrics are not synchronized: the mouths will not follow the voice"
+msgstr "{} caras cantan pero la letra no está sincronizada: las bocas no seguirán a la voz"
+
+msgid "{} gesture effects; {} visual ideas"
+msgstr "{} efectos de gesto; {} ideas visuales"
+
+msgid "{} is outside the show folder: it will not move with the show (the production folder copies it)"
+msgstr "{} está fuera de la carpeta del espectáculo: no viajará con él (la carpeta de producción lo copia)"
+
+msgid "{} models; the layout is the one the show was made for"
+msgstr "{} modelos; el montaje es el mismo para el que se hizo el espectáculo"
+
+msgid "{} pairs of figures share their lights (for example {}): what one shows, the other shows too"
+msgstr "{} pares de figuras comparten luces (por ejemplo {}): lo que muestra una lo muestra también la otra"
+
+msgid "{} pictures and videos, all in the show"
+msgstr "{} imágenes y vídeos, todos dentro del espectáculo"
+
+msgid "{} pictures and videos, {} not there"
+msgstr "{} imágenes y vídeos, {} no están"
+
+msgid "{} pictures and videos, {} outside the show folder"
+msgstr "{} imágenes y vídeos, {} fuera de la carpeta del espectáculo"
+
+msgid "{} problems in the render"
+msgstr "{} problemas en el render"
+
+msgid "{} videos"
+msgstr "{} vídeos"
+
+msgid "{} figures used; {} pairs share lights"
+msgstr "{} figuras usadas; {} pares comparten luces"
+
+msgid "{} timing tracks"
+msgstr "{} pistas de tiempo"
+
+msgid "{} effects, no error, {} notes"
+msgstr "{} efectos, ningún error, {} notas"
+
+msgid "{} pictures and videos"
+msgstr "{} imágenes y vídeos"
+
+msgid "{} different palettes; colour direction on"
+msgstr "{} paletas distintas; dirección cromática activada"
+
+msgid "{} different palettes; colour direction off"
+msgstr "{} paletas distintas; dirección cromática desactivada"
+
+msgid "Carried by: %s."
+msgstr "La llevan: %s."
+
+msgid "Ignore it"
+msgstr "Ignorarla"
+
+msgid "Reject it"
+msgstr "Rechazarla"
+
+msgid "lyrics synchronized; {} face effects"
+msgstr "letra sincronizada; {} efectos de cara"
+
+msgid "lyrics synchronized approximately"
+msgstr "letra sincronizada de forma aproximada"

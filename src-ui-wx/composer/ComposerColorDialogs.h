@@ -132,15 +132,22 @@ private:
 // the ones they tick become preferences (after two shows), the rest stay observations.
 class CorrectionsDialog : public wxDialog {
 public:
-    CorrectionsDialog(wxWindow* parent, const composer::SequenceComparison& comparison);
+    // `record`: the decisions kept before, so a rejected change is not offered again.
+    CorrectionsDialog(wxWindow* parent, const composer::SequenceComparison& comparison, const composer::ComparisonDecisions* record = nullptr);
     [[nodiscard]] int Rows() const;
-    void Pick(size_t index, bool picked);
-    [[nodiscard]] std::vector<size_t> Picked() const;
+    void Pick(size_t index, bool picked); // row `index`: learn it, or leave it
+    [[nodiscard]] std::vector<size_t> Picked() const; // the changes to learn
+    // A decision for the change at list row `index`: "learn", "song", "general", "ignore", "reject".
+    void Decide(size_t index, const std::string& choice);
+    [[nodiscard]] std::vector<composer::ComparisonDecision> Decisions() const;
 
 private:
+    void ShowDecision(size_t row);
+
     composer::SequenceComparison _comparison;
-    std::vector<size_t> _rows; // list row -> change
-    wxCheckListBox* _list = nullptr;
+    std::vector<size_t> _rows;           // list row -> change
+    std::vector<std::string> _choices;   // list row -> decision
+    wxListCtrl* _list = nullptr;
 };
 
 // "Observaciones con contexto": what a person noticed, in a scene or on a figure.

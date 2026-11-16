@@ -23,6 +23,17 @@ namespace composer {
 
 inline constexpr int STAGE_SCORE_SCHEMA_VERSION = 1;
 inline constexpr const char* STAGE_DIRECTOR_VERSION = "1.0.0";
+inline constexpr const char* STAGE_DIRECTOR_ART_VERSION = "2.0.0";
+
+// How far the director develops the song's visual ideas (phase 20). Each level adds to the
+// one before. F19 is the director as it was: an older show regenerates the same, and a
+// comparison can change only this.
+enum class ArtLevel {
+    F19 = 0,       // scenes chosen one by one
+    Direction = 1, // + a role in the song for each scene, figures that answer instead of all at once, gestures seen as much as they matter
+    Motifs = 2,    // + visual motifs: an idea (who, which gesture, from where, in what order) that comes back
+    Full = 3       // + the idea developed: participation that grows and shrinks, a peak prepared, an ending that closes
+};
 
 enum class StageMode {
     Protagonist,  // one figure has the attention
@@ -87,6 +98,49 @@ struct GlobalGesture {
     double confidence = 0;
     std::vector<std::string> reasons;
     bool manual = false;
+    // Phase 20 (ArtLevel Direction and above; empty before):
+    std::string relation; // how its figures follow in time: "unison", "answer", "propagation", "sequence", "overlap", "continuation", "anticipation", "progressive-end"
+    std::string presence; // how much it should be seen: "background", "response", "protagonist", "climax"
+    std::string motif;    // the visual motif it carries ("" none)
+};
+
+// One appearance of a visual motif: what a scene does with it.
+struct MotifVariant {
+    std::string scene;
+    int startMS = 0;
+    std::string operation; // "present", "hold", "develop", "intensify", "reduce", "transform", "split", "recall", "resolve"
+    std::string narrative; // the scene's role in the song
+    std::vector<std::string> figures;
+    std::string gesture;   // the gesture id that carries it here ("" none)
+    std::string kind;      // its gesture kind here
+    double level = 1;
+    std::string why;
+};
+
+// A visual idea, not a colour: who carries it, with which gesture, from where on the stage,
+// in what order in time, dressed in which colour motif, and every scene that brings it back,
+// develops it, transforms it or closes it.
+struct VisualMotif {
+    std::string id;          // "M1", "M2"...
+    std::string intent;      // what it says, plain words key
+    std::string origin;      // where it was born: "scene:<id>"
+    std::string composition; // the composition it was built from ("" none)
+    std::string protagonist;
+    std::vector<std::string> companions;
+    std::vector<std::string> figures;           // everyone carrying it when presented
+    std::map<std::string, std::string> recipes; // figure -> its lead effect when presented
+    std::string gestureKind; // the gesture that carries it ("" none yet)
+    std::string movement;    // the field it draws
+    std::string temporal;    // "unison", "answer", "propagation", "sequence", "overlap"
+    std::string anchor;      // where on the stage it starts
+    std::string spatial;     // plain words: "from Mega Tree outwards", "left to right"...
+    std::string colorMotif;  // the colour direction's motif dressing it
+    std::vector<std::string> triggers; // the moments of the music that start it
+    std::string entry;       // "from-one", "together", "grows"
+    std::string exit;        // "cut", "fades", "gathers"
+    std::vector<std::string> constraints;
+    std::vector<MotifVariant> variants;
+    std::string explanation;
 };
 
 // What each figure is in a scene.
@@ -113,6 +167,15 @@ struct StageScene {
     std::vector<std::string> reasons;
     double confidence = 0;
     bool manual = false;
+    // Phase 20 (ArtLevel Direction and above; empty before):
+    std::string narrative;   // its role in the song: "presentation", "development", "contrast", "answer", "preparation", "climax", "intensification", "rest", "transformation", "recovery", "resolution"
+    std::string attention;   // how many carry it: "one", "two", "few", "group", "all", "propagation", "rest"
+    std::string visualMotif; // the visual motif it uses ("" none)
+    std::string motifOperation;
+    std::string accentFigure; // who takes the accents
+    std::string changes;     // what changes from the scene before, plain words key
+    std::string leadsTo;     // how it connects with the next, plain words key
+    bool focus = false;      // the attention is on a few: the others' own effects rest
     [[nodiscard]] std::string RoleOf(const std::string& figure) const;
 };
 
@@ -141,9 +204,12 @@ struct GlobalStageScore {
     std::vector<StageLayer> layers; // identity layers of the figures composed whole
     std::vector<std::string> limits;
     std::vector<std::string> warnings;
+    int art = 0;                     // the ArtLevel it was directed with
+    std::vector<VisualMotif> motifs; // ArtLevel Motifs and above
 
     [[nodiscard]] const StageScene* SceneAt(int ms) const;
     [[nodiscard]] const GlobalGesture* Gesture(const std::string& id) const;
+    [[nodiscard]] const VisualMotif* Motif(const std::string& id) const;
 };
 
 // A person's changes to the score, kept per song and applied after every new score.
@@ -163,8 +229,8 @@ struct StageEdits {
 // The gestures a person can choose from, with their plain words; favourites are tried
 // first and excluded ones never chosen automatically.
 struct StageLibraryEntry {
-    std::string id;    // a gesture kind id, or "local:<name>" for a figure's own composition
-    std::string kind;  // "gesture", "local"
+    std::string id;    // a gesture kind id, "local:<name>" for a figure's own composition, "composition:<name>"
+    std::string kind;  // "gesture", "local", "composition"
     std::string title; // plain words (to translate)
     std::string description;
     std::vector<std::string> functions; // the fields it uses
@@ -172,7 +238,24 @@ struct StageLibraryEntry {
     bool favorite = false;
     bool excluded = false;
     bool custom = false; // made by a person
-    std::string source;  // "built-in", "person"
+    std::string source;  // "built-in", "person", "learned:<sequence>"
+    // A composition (phase 20): a whole idea a scene can be built on, from existing gestures
+    // and fields. Its contexts are where it suits, never where it must go.
+    std::string level;                 // "local" (one figure), "group" (several), "global" (the whole house)
+    std::vector<std::string> contexts; // "intro", "narration", "solo", "choir", "instrumental", "accent", "verse", "chorus", "pause", "climax", "transition", "ending"
+    std::string gesture;               // the gesture kind that carries it
+    std::string temporal;              // "unison", "answer", "propagation", "sequence", "overlap"
+    int minFigures = 1;
+    int maxFigures = 0;                // 0: as many as the scene gives
+    std::vector<std::string> regions;  // parts of a figure it needs ("" any)
+    std::vector<std::string> effects;  // native effects it needs (beyond Stage Field)
+    std::vector<std::string> palette;  // the palette roles it uses: "anchor", "accent"...
+    double level0 = 1;                 // how bright (0-1)
+    double speed = 0;                  // stage units a second; 0: from the music
+    int beats = 0;                     // how long, in beats; 0: from the music
+    std::vector<std::string> figures;  // the figures it was made with (learned or a person's)
+    std::vector<std::string> limits;   // plain words keys
+    std::string variantOf;             // the composition it varies ("" none)
 };
 
 struct StageLibrary {
@@ -193,6 +276,11 @@ struct StageDirectorInput {
     const Choreography* choreography = nullptr; // the colours of each scene
     const StageEdits* edits = nullptr;
     const StageLibrary* library = nullptr;
+    ArtLevel art = ArtLevel::F19;
+    // The interpretation's parts that keep the song's identity or may change (version 3):
+    // a direction for which scenes transform, never a rule.
+    const std::vector<std::string>* keepParts = nullptr;
+    const std::vector<std::string>* changeParts = nullptr;
 };
 
 [[nodiscard]] GlobalStageScore DirectStage(const StageDirectorInput& input);
@@ -219,6 +307,17 @@ int PutGroupsUnderStage(SequenceSpec& spec, const Choreography& choreography, co
 [[nodiscard]] std::string StageModePhrase(StageMode m);
 [[nodiscard]] std::string GestureKindPhrase(GestureKind k);
 [[nodiscard]] std::string SceneRolePhrase(const std::string& role);
+[[nodiscard]] const char* ArtLevelId(ArtLevel a);       // "f19", "direction", "motifs", "full"
+[[nodiscard]] bool ArtLevelFromId(const std::string& id, ArtLevel& a);
+[[nodiscard]] std::string NarrativePhrase(const std::string& narrative); // plain words (to translate)
+[[nodiscard]] std::string MotifOperationPhrase(const std::string& operation);
+[[nodiscard]] std::string AttentionPhrase(const std::string& attention);
+[[nodiscard]] std::string RelationPhrase(const std::string& relation);
+// The built-in compositions that suit a context, favourites first, excluded ones left out.
+[[nodiscard]] std::vector<const StageLibraryEntry*> CompositionsFor(const StageLibrary& library, const std::string& context);
+// A visual idea of a song kept as a person's own composition (only when they ask): its
+// figures, gesture, order in time and the kind of part it was born in.
+[[nodiscard]] StageLibraryEntry CompositionFromMotif(const VisualMotif& motif, const GlobalStageScore& score, const std::string& song);
 
 [[nodiscard]] StageLibrary BuiltInStageLibrary();
 // The built-in entries with a person's favourites, exclusions and own entries over them.

@@ -3,6 +3,7 @@
 #include "composer/ArtisticPreferences.h"
 #include "composer/ChromaticDirector.h"
 #include "composer/ComposerTypes.h"
+#include "composer/StageDirector.h"
 
 #include <string>
 #include <vector>
@@ -28,6 +29,9 @@ struct SequenceChange {
     std::string suggestion; // the preference it could teach ("color.cohesion", "figure.<name>.prominence"...; "" none)
     double sign = 0;
     std::string why;
+    // Phase 20: what kind of correction it looks like, and where its scene starts.
+    std::string category;  // "aesthetic" (a matter of taste), "technical" (a nudge in time), "necessary" (something that should not light)
+    int sceneStartMS = -1;
 };
 
 struct SequenceComparison {
@@ -47,6 +51,48 @@ struct SequenceComparison {
 // The changes a person picked become signals of their review of `sequence`; the others
 // are left as they were. Returns how many signals were added.
 int LearnFromComparison(ArtisticPreferences& prefs, const SequenceComparison& comparison, const std::vector<size_t>& picked, const std::string& sequence);
+
+// What a person decides about each change (phase 20). Nothing is learned unless chosen:
+//   "learn"   a taste signal, like a review (two shows before it acts);
+//   "song"    only this song: an edit of its stage or colours, kept with the song;
+//   "general" the person's own value for the preference, now (reversible);
+//   "ignore"  nothing; "reject" nothing, and never offered again for this sequence.
+struct ComparisonDecision {
+    size_t change = 0;
+    std::string choice;
+};
+
+struct ComparisonDecisions {
+    int schemaVersion = SEQUENCE_COMPARISON_SCHEMA_VERSION;
+    std::string sequence;
+    std::vector<ComparisonDecision> decisions;
+    std::vector<std::string> rejected; // ChangeKey of every change rejected, kept across comparisons
+};
+
+struct DecisionOutcome {
+    int learned = 0;
+    int general = 0;
+    int songEdits = 0;
+    int ignored = 0;
+    int rejected = 0;
+    std::vector<std::string> notes; // a change that could not be applied as asked, and why
+};
+
+// A stable key of a change, to remember a rejected one.
+[[nodiscard]] std::string ChangeKey(const SequenceChange& change);
+// The changes still offered: the rejected ones left out.
+[[nodiscard]] std::vector<size_t> OfferedChanges(const SequenceComparison& comparison, const ComparisonDecisions& decisions);
+DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits& stage, ChromaticEdits& colour, ComparisonDecisions& record, const SequenceComparison& comparison,
+                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence);
+
+// Figures a person made work together in the corrected show (several figures given the same
+// effect at nearly the same time where the show had none), offered as compositions to keep.
+// Nothing is saved: a person confirms each one.
+[[nodiscard]] std::vector<StageLibraryEntry> ProposeCompositions(const SequenceSpec& generated, const SequenceSpec& corrected, const ChromaticScore* score, const std::string& sequence);
+
+[[nodiscard]] std::string ToJson(const ComparisonDecisions& decisions);
+[[nodiscard]] bool FromJson(const std::string& text, ComparisonDecisions& decisions, std::string& error);
+[[nodiscard]] std::string ComparisonDecisionsPath(const std::string& showDir, const std::string& sequence);
 
 // The colours of a palette string, in slot order (a colour curve gives its first colour).
 [[nodiscard]] std::vector<std::string> PaletteColors(const std::string& palette);

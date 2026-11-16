@@ -39,6 +39,8 @@
 #include "ComposerScreens.h"
 #include "ComposerStageDialogs.h"
 #include "ComposerColorDialogs.h"
+#include "ComposerProductionDialogs.h"
+#include "composer/ProductionCheck.h"
 #include "composer/ColorCheck.h"
 #include "composer/SequenceComparison.h"
 #include "ComposerUnderstandingDialogs.h"
@@ -658,6 +660,10 @@ private:
                               _dialog->SetColorStyle(100);
                               Check(has(_dialog->GenerateArguments(), "--color-style", "1.00"), "and can go expressive");
                               _dialog->SetColorStyle(40);
+                              Check(has(_dialog->GenerateArguments(), "--art-direction", "full"), "the ideas are developed completely by default");
+                              _dialog->SetArtDirection("f19");
+                              Check(has(_dialog->GenerateArguments(), "--art-direction", "f19") && _dialog->ArtDirectionId() == "f19", "or directed as in phase 19, to compare");
+                              _dialog->SetArtDirection("full");
                               _dialog->ColorPanel()->SetDirectorOn(false);
                               Check(has(_dialog->GenerateArguments(), "--color-director", "off"), "or the colours as before, to compare");
                               _dialog->ColorPanel()->SetDirectorOn(true);
@@ -816,8 +822,30 @@ private:
                               library->Show();
                               Check(library->Toggle("cascade", false, true) && library->Library().Find("cascade")->excluded, "a gesture can be left out of what the director chooses");
                               Check(library->AddOwn("Mi brillo", "pulse") && library->Library().Find("own:Mi brillo") != nullptr, "and a composition of one's own added");
+                              int compositions = 0;
+                              std::set<std::string> levels;
+                              for (const StageLibraryEntry& e : library->Library().entries) {
+                                  if (e.kind == "composition") {
+                                      ++compositions;
+                                      levels.insert(e.level);
+                                  }
+                              }
+                              Check(compositions >= 12 && levels.size() == 3 && !library->About(*library->Library().Find("composition:wave-house")).IsEmpty(),
+                                    fmt::format("{} whole compositions, of one figure, a group and the whole house, each saying where it suits and who takes part", compositions));
+                              Check(library->SetValues("composition:wave-house", 0.6, 8) && std::abs(library->Library().Find("composition:wave-house")->level0 - 0.6) < 1e-9,
+                                    "a composition's own values can be changed");
                               Capture(library, "composiciones-y-gestos");
                               library->Destroy();
+                              const StageScene& shown = score.scenes[static_cast<size_t>(pick)];
+                              Check(score.art == 3 && !shown.narrative.empty() && !shown.attention.empty() && !shown.changes.empty(),
+                                    "each scene says what it does in the song, how many carry it and what changes");
+                              auto* ideas = new MotifsDialog(_dialog, score, _dialog->ShowFolder(), "prueba");
+                              ideas->Show();
+                              Check(ideas->Motifs() > 0 && ideas->SelectMotif(0) && !ideas->Detail().IsEmpty(),
+                                    fmt::format("the song's visual ideas are shown, where each appears and what each scene does with it ({} ideas)", ideas->Motifs()));
+                              Capture(ideas, "ideas-visuales");
+                              Check(ideas->KeepAsComposition().empty(), "an idea can be kept as a composition of one's own");
+                              ideas->Destroy();
                               return true;
                           },
                            60 });
@@ -1256,11 +1284,39 @@ private:
                               dialog->Show();
                               dialog->Pick(0, true);
                               Check(dialog->Rows() == 1 && dialog->Picked() == std::vector<size_t>({ 0 }), "each change can be ticked to become a taste, or left as it is");
+                              dialog->Decide(0, "song");
+                              Check(dialog->Decisions().size() == 1 && dialog->Decisions()[0].choice == "song" && dialog->Picked().empty(),
+                                    "or kept for this song only, made a general preference, ignored or rejected");
                               Capture(dialog, "version-corregida");
                               dialog->Destroy();
                               return true;
                           },
                            120 });
+        _steps.push_back({ "the show checked before it goes out", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->CheckProductionReadiness(false);
+                                  return false;
+                              }
+                              if (_dialog->AssistRunning() || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              const ProductionReport& r = _dialog->LastProductionCheck();
+                              Check(r.ran && !r.cancelled && r.CanGoOut() && r.status.technical && r.status.rendered && r.status.roundTrip,
+                                    fmt::format("the show is checked apart from the window: technically correct, rendered, saved again by xLights the same ({} risks, {} warnings)", r.Count("risk"),
+                                                r.Count("warning")));
+                              Check(r.status.review != "approved", "and nothing is approved by itself");
+                              auto* d = new ProductionDialog(_dialog, r, _dialog->ShowFolder());
+                              d->Show();
+                              const std::string problem = d->MakePackage();
+                              Check(problem.empty() && d->Package().ok && FileExists((fs::path(d->Package().folder) / "paquete.json").string()) && !d->Text().IsEmpty(),
+                                    "the production folder is prepared next to the show, never over another");
+                              Capture(d, "preparar-espectaculo");
+                              d->Destroy();
+                              return true;
+                          },
+                           900 });
         _steps.push_back({ "observations with their place", [this]() {
                               ColorDirectorPanel* panel = _dialog->ColorPanel();
                               if (panel == nullptr || panel->Score().scenes.empty()) {

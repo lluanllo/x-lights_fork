@@ -114,6 +114,7 @@ struct GestureChromaticProfile {
     // lighter), "accent" (the accent, kept for strong moments), "transform" (the next
     // scene's colour, preparing it) or "resolve" (back to the identity).
     std::string intent;
+    std::string presence; // phase 20: how much it should be seen ("background", "response", "protagonist", "climax"), from the stage
     std::string why;
 };
 
@@ -188,6 +189,9 @@ struct ChromaticOptions {
     double warmth = 0;       // -1 cooler, 1 warmer
     double gradual = 0.5;    // slower, softer transitions (1) or quicker (0)
     bool respectIdentity = false; // every figure with parts of its own colour keeps them
+    // Phase 20 (the stage's ArtLevel): from 1, "keep" in the interpretation keeps the main
+    // colour without freezing the scene, and a gesture's contrast follows its presence.
+    int art = 0;
     std::map<std::string, double> figureWeight; // figure -> -1 (rests) .. 1 (stands out), from what the maker taught
     std::vector<std::string> songColors; // the person's colours for the song; first the anchor
     uint64_t seed = 2026;
@@ -216,7 +220,8 @@ struct ChromaticScore {
 // A person's changes to the colours, kept per song and applied after every new score.
 struct ChromaticEdit {
     std::string action;    // "color", "accent", "lock-palette", "more-contrast", "less-contrast", "figure-color", "identity", "no-identity", "monochrome", "no-monochrome",
-                           // "keep-identity" (the scene keeps the one before's colours), "recall-motif" (value: a motif id), "fewer-colours", "fewer-accents"
+                           // "keep-identity" (the scene keeps the one before's colours), "recall-motif" (value: a motif id), "fewer-colours", "fewer-accents",
+                           // "keep-main-colour" (the song's main colour stays), "no-new-colours" (no more hue families than the scene before)
     int sceneStartMS = -1; // the scene, found again by its start (within 1.5 s); -1: every scene / the song
     std::string figure;    // figure-color, identity, no-identity
     std::string role;      // color: the palette role it replaces ("anchor", "secondary"...)

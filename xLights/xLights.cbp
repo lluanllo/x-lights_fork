@@ -484,6 +484,8 @@
 		<Unit filename="../src-ui-wx/composer/ComposerUnderstandingDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerStageDialogs.h" />
+		<Unit filename="../src-ui-wx/composer/ComposerProductionDialogs.cpp" />
+		<Unit filename="../src-ui-wx/composer/ComposerProductionDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerColorDialogs.cpp" />
 		<Unit filename="../src-ui-wx/composer/ComposerColorDialogs.h" />
 		<Unit filename="../src-ui-wx/composer/ComposerUITest.cpp" />
@@ -592,6 +594,8 @@
 		<Unit filename="../src-core/composer/StageSpace.h" />
 		<Unit filename="../src-core/composer/StageDirector.cpp" />
 		<Unit filename="../src-core/composer/StageDirector.h" />
+		<Unit filename="../src-core/composer/ProductionCheck.cpp" />
+		<Unit filename="../src-core/composer/ProductionCheck.h" />
 		<Unit filename="../src-core/composer/StageCheck.cpp" />
 		<Unit filename="../src-core/composer/StageCheck.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />

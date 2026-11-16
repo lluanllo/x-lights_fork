@@ -15,6 +15,8 @@
 #include "composer/VisualTest.h"
 #include "composer/TemplateLibrary.h"
 #include "composer/PlanTest.h"
+#include "composer/ProductionCheck.h"
+#include "composer/UnderstandingStore.h"
 #include "composer/SequenceWriter.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "composer/SyntheticAudio.h"
@@ -145,6 +147,7 @@ public:
         TestLrcFiles();
         TestVoices();
         TestMedia();
+        TestProduction();
         TestStoryboard();
         TestScreens();
         TestReviewLoop();
@@ -1473,6 +1476,167 @@ private:
         fs::rename(moved, fs::u8path(video->path), ec);
     }
 
+    // ------------------------------------------------------------ phase 20: before it goes out
+
+    void TestProduction() {
+        Title("A2e. Before the show goes out: everything it needs, checked; a production folder; nothing approved by itself");
+        const fs::path sequence = _show / "medios.xsq";
+        if (!FileExists(sequence.string())) {
+            Check(false, "the show with pictures and videos is there to check");
+            return;
+        }
+        const std::string before = Sha256OfFile(sequence.string());
+        ProductionInput in;
+        in.showDir = _show.string();
+        in.sequencePath = sequence.string();
+        in.workDir = (_root / "produccion-trabajo").string();
+        const ProductionReport r = CheckProduction(in);
+        printf("%s", ProductionText(r).c_str());
+        int areas = 0;
+        for (const ProductionCheckItem& c : r.checks) {
+            areas += c.status != "not-checked" ? 1 : 0;
+        }
+        Check(r.ran && !r.cancelled && areas == static_cast<int>(ProductionAreas().size()), fmt::format("every area is checked ({} of {})", areas, ProductionAreas().size()));
+        Check(r.CanGoOut() && r.status.technical && r.status.rendered && r.status.roundTrip,
+              fmt::format("the generated show can go out: technically correct, rendered by the native renderer, saved again by xLights and the same ({} risks, {} warnings)", r.Count("risk"),
+                          r.Count("warning")));
+        Check(r.status.review == "pending" && r.Count("warning") > 0 && std::any_of(r.issues.begin(), r.issues.end(), [](const ProductionIssue& i) { return i.code == "review-pending"; }),
+              "the check never approves: the review stays pending, and it says so");
+        bool outsideSaid = true;
+        int outside = 0;
+        for (const ProductionMedia& m : r.media) {
+            if (!m.resolved.empty() && !m.travels) {
+                ++outside;
+                outsideSaid = outsideSaid && std::any_of(r.issues.begin(), r.issues.end(), [&](const ProductionIssue& i) { return i.code == "media-outside" && !i.args.empty() && i.args[0] == fs::path(m.path).filename().string(); });
+            }
+        }
+        Check(!r.media.empty() && r.status.mediaComplete && outsideSaid, fmt::format("{} pictures and videos found; {} outside the show, each one said", r.media.size(), outside));
+        Check(std::any_of(r.issues.begin(), r.issues.end(), [](const ProductionIssue& i) { return i.code == "audio-outside"; }) && r.Count("blocker") == 0,
+              "a song outside the show folder is a warning, never a stop");
+        ProductionReport read;
+        std::string error;
+        Check(FromJson(ToJson(r), read, error) && ToJson(read) == ToJson(r), "the check is written and read back unchanged");
+
+        // A picture that is gone: the show is still made, and the check says which.
+        const ProductionMedia* inside = nullptr;
+        for (const ProductionMedia& m : r.media) {
+            if (m.travels && inside == nullptr) {
+                inside = &m;
+            }
+        }
+        if (inside != nullptr) {
+            const fs::path file = fs::u8path(inside->resolved);
+            const fs::path aside = file.string() + ".aparte";
+            std::error_code ec;
+            fs::rename(file, aside, ec);
+            ProductionInput quick = in;
+            quick.render = false;
+            quick.roundTrip = false;
+            const ProductionReport lost = CheckProduction(quick);
+            fs::rename(aside, file, ec);
+            Check(!ec && !lost.status.mediaComplete && lost.Check("media") != nullptr && lost.Check("media")->status == "problem" &&
+                      std::any_of(lost.issues.begin(), lost.issues.end(), [](const ProductionIssue& i) { return i.code == "media-missing" && i.level == "risk"; }),
+                  "a missing picture or video is found, and named as something that may make the show wrong");
+        } else {
+            Check(false, "a picture or video inside the show to take away");
+        }
+        // The song gone: it cannot go out; back again, it can.
+        {
+            const fs::path aside = _audio.string() + ".aparte";
+            std::error_code ec;
+            fs::rename(_audio, aside, ec);
+            ProductionInput quick = in;
+            quick.render = false;
+            quick.roundTrip = false;
+            const ProductionReport silent = CheckProduction(quick);
+            fs::rename(aside, _audio, ec);
+            const ProductionReport again = CheckProduction(quick);
+            Check(!ec && !silent.CanGoOut() && silent.Count("blocker") > 0 && again.CanGoOut(), "without its song the show cannot go out; with the song back, it can");
+        }
+        ProductionInput none = in;
+        none.sequencePath = (_show / "no-existe.xsq").string();
+        const ProductionReport missing = CheckProduction(none);
+        Check(missing.ran && !missing.CanGoOut() && missing.Count("blocker") == 1, "a sequence that is not there is said plainly, without a crash");
+        int steps = 0;
+        ProductionInput stopped = in;
+        stopped.progress = [&](const std::string&) { ++steps; };
+        stopped.cancel = [&]() { return steps >= 3; };
+        const ProductionReport cut = CheckProduction(stopped);
+        Check(cut.cancelled && !cut.CanGoOut(), fmt::format("stopped half way ({} steps): it says it stopped and nothing goes out", steps));
+
+        // The production folder: never over an earlier one, the originals untouched.
+        ProductionPackageInput pi;
+        pi.showDir = _show.string();
+        pi.sequencePath = sequence.string();
+        pi.destination = (_root / "produccion" / "medios").string();
+        pi.report = &r;
+        const ProductionPackage first = BuildProductionPackage(pi);
+        const ProductionPackage second = BuildProductionPackage(pi);
+        bool hashes = first.ok;
+        std::string info;
+        if (ReadTextFile((fs::path(first.folder) / "paquete.json").string(), info)) {
+            const nlohmann::json j = nlohmann::json::parse(info, nullptr, false);
+            for (const std::string& rel : first.copied) {
+                if (rel != "paquete.json") {
+                    hashes = hashes && j.is_object() && j["hashes"].value(rel, std::string()) == Sha256OfFile((fs::path(first.folder) / rel).string());
+                }
+            }
+        } else {
+            hashes = false;
+        }
+        const auto has = [](const ProductionPackage& p, const std::string& rel) { return std::find(p.copied.begin(), p.copied.end(), rel) != p.copied.end(); };
+        int copiedMedia = 0;
+        for (const std::string& c : first.copied) {
+            copiedMedia += c.rfind("media/", 0) == 0 ? 1 : 0;
+        }
+        Check(first.ok && has(first, "medios.xsq") && has(first, "comprobacion.json") && has(first, "comprobacion.txt") && hashes && copiedMedia == outside && !first.referred.empty(),
+              fmt::format("a production folder with the sequence, its notes, the check and every file's hash; the {} files outside the show copied, the rest only named", copiedMedia));
+        Check(second.ok && second.folder != first.folder && FileExists((fs::path(first.folder) / "medios.xsq").string()), "made again, it goes to a new folder: the first one is kept");
+        Check(Sha256OfFile(sequence.string()) == before, "the show's own sequence is never changed");
+        // A picture that lives outside the show folder would not move with it: the check says
+        // so, and the production folder carries a copy.
+        if (inside != nullptr) {
+            std::error_code ec;
+            const fs::path away = _root / "fuera de la casa";
+            fs::create_directories(away, ec);
+            const fs::path copy = away / fs::path(std::wstring(L"copia ") + fs::u8path(inside->resolved).filename().wstring());
+            fs::copy_file(fs::u8path(inside->resolved), copy, fs::copy_options::overwrite_existing, ec);
+            std::string xml;
+            const fs::path moved = _show / "medios-fuera.xsq";
+            bool replaced = false;
+            if (ReadTextFile(sequence.string(), xml)) {
+                const std::u8string u = copy.u8string();
+                const std::string target(u.begin(), u.end());
+                for (size_t at = xml.find(inside->path); at != std::string::npos; at = xml.find(inside->path, at + target.size())) {
+                    xml.replace(at, inside->path.size(), target);
+                    replaced = true;
+                }
+                std::ofstream(moved, std::ios::binary) << xml;
+            }
+            ProductionInput o = in;
+            o.sequencePath = moved.string();
+            o.render = false;
+            o.roundTrip = false;
+            const ProductionReport far = CheckProduction(o);
+            bool flagged = false;
+            for (const ProductionMedia& m : far.media) {
+                flagged = flagged || (!m.travels && !m.resolved.empty());
+            }
+            ProductionPackageInput po = pi;
+            po.sequencePath = moved.string();
+            po.destination = (_root / "produccion" / "fuera").string();
+            po.report = &far;
+            const ProductionPackage carried = BuildProductionPackage(po);
+            int copiedAway = 0;
+            for (const std::string& c : carried.copied) {
+                copiedAway += c.rfind("media/", 0) == 0 ? 1 : 0;
+            }
+            Check(replaced && flagged && std::any_of(far.issues.begin(), far.issues.end(), [](const ProductionIssue& i) { return i.code == "media-outside"; }) && copiedAway >= 1,
+                  fmt::format("a picture outside the show folder is said, and the production folder carries a copy of it ({} copied)", copiedAway));
+            fs::remove(moved, ec);
+        }
+    }
+
     void TestLrcFiles() {
         Title("A2b. LRC files: repaired when it is safe, refused when a time is wrong");
         // 20.037 s: the song does not end on a frame, and its last line is sung up to the end.
@@ -2090,6 +2254,9 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     r.stems = ParseStemList(o.stems);
     if (o.stageDirector == "on" || o.stageDirector == "off") {
         r.stageDirector = o.stageDirector == "on";
+    }
+    if (!o.artDirection.empty()) {
+        r.artDirection = o.artDirection;
     }
     if (o.colorDirector == "on" || o.colorDirector == "off") {
         r.colorDirector = o.colorDirector == "on";

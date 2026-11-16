@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <map>
 #include <set>
 
@@ -226,8 +227,200 @@ SequenceComparison CompareSequences(const SequenceSpec& generated, const Sequenc
     c.familiesBefore = mean(sceneGroupsBefore);
     c.familiesAfter = mean(sceneGroupsAfter);
     std::stable_sort(c.changes.begin(), c.changes.end(), [](const SequenceChange& a, const SequenceChange& b) { return a.startMS < b.startMS; });
+    // What kind of correction each looks like: a nudge in time is technical, a figure left
+    // dark is something that should not have lit, the rest is a matter of taste. A gesture
+    // (Stage Field) added or taken out is said as such and teaches nothing about the figure.
+    for (SequenceChange& ch : c.changes) {
+        const bool gesture = ch.before == "Stage Field" || ch.after == "Stage Field";
+        if (gesture && (ch.kind == "layer-removed" || ch.kind == "figure-removed")) {
+            ch.kind = "gesture-removed";
+            ch.suggestion.clear();
+            ch.sign = 0;
+            ch.why = "a gesture was taken out";
+        } else if (gesture && (ch.kind == "layer-added" || ch.kind == "figure-added" || (ch.kind == "effect" && ch.before.empty()))) {
+            ch.kind = "gesture-added";
+            ch.suggestion.clear();
+            ch.sign = 0;
+            ch.why = "a gesture was added";
+        }
+        ch.category = ch.kind == "timing" ? "technical" : ch.kind == "figure-removed" ? "necessary" : "aesthetic";
+        if (score != nullptr) {
+            if (const ChromaticScenePlan* s = score->SceneAt((ch.startMS + ch.endMS) / 2); s != nullptr) {
+                ch.sceneStartMS = s->startMS;
+            }
+        }
+    }
     c.ran = true;
     return c;
+}
+
+std::string ChangeKey(const SequenceChange& ch) {
+    return fmt::format("{}|{}|{}|{}|{}|{}", ch.kind, ch.figure, ch.layer, ch.startMS, ch.before, ch.after);
+}
+
+std::vector<size_t> OfferedChanges(const SequenceComparison& comparison, const ComparisonDecisions& decisions) {
+    const std::set<std::string> rejected(decisions.rejected.begin(), decisions.rejected.end());
+    std::vector<size_t> out;
+    for (size_t i = 0; i < comparison.changes.size(); ++i) {
+        if (!rejected.contains(ChangeKey(comparison.changes[i]))) {
+            out.push_back(i);
+        }
+    }
+    return out;
+}
+
+DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits& stage, ChromaticEdits& colour, ComparisonDecisions& record, const SequenceComparison& comparison,
+                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence) {
+    DecisionOutcome out;
+    record.sequence = sequence;
+    std::vector<size_t> learn;
+    const std::map<std::string, double> effective = EffectivePreferences(prefs);
+    for (const ComparisonDecision& d : decisions) {
+        if (d.change >= comparison.changes.size()) {
+            continue;
+        }
+        const SequenceChange& ch = comparison.changes[d.change];
+        if (d.choice == "learn") {
+            learn.push_back(d.change);
+        } else if (d.choice == "general") {
+            if (ch.suggestion.empty() || ch.sign == 0) {
+                out.notes.push_back(fmt::format("{} at {:.1f} s: it says nothing for other songs", ch.kind, ch.startMS / 1000.0));
+                continue;
+            }
+            const auto it = effective.find(ch.suggestion);
+            const double now = it == effective.end() ? 0 : it->second;
+            SetPreference(prefs, ch.suggestion, std::clamp(now + 0.3 * ch.sign, -1.0, 1.0));
+            ++out.general;
+        } else if (d.choice == "song") {
+            // Only this song: what the director can be told for it.
+            if (ch.kind == "figure-removed" || ch.kind == "figure-added") {
+                if (ch.sceneStartMS < 0) {
+                    out.notes.push_back(fmt::format("{} at {:.1f} s: its scene is not known", ch.figure, ch.startMS / 1000.0));
+                    continue;
+                }
+                stage.edits.push_back({ ch.kind == "figure-removed" ? "exclude" : "include", ch.sceneStartMS, -1, ch.figure, "from a corrected version" });
+                ++out.songEdits;
+            } else if (ch.kind == "gesture-removed") {
+                if (ch.sceneStartMS < 0) {
+                    out.notes.push_back(fmt::format("the gesture at {:.1f} s: its scene is not known", ch.startMS / 1000.0));
+                    continue;
+                }
+                stage.edits.push_back({ "no-gestures", ch.sceneStartMS, -1, "", "from a corrected version" });
+                ++out.songEdits;
+            } else if (ch.kind == "colour" && !ch.after.empty()) {
+                std::string value = ch.after;
+                std::replace(value.begin(), value.end(), ' ', ',');
+                colour.edits.push_back({ "figure-color", ch.sceneStartMS, ch.figure, "", value, "from a corrected version" });
+                ++out.songEdits;
+            } else {
+                out.notes.push_back(fmt::format("{} at {:.1f} s: the corrected version keeps it; the composer has no way to ask for it in this song", ch.kind, ch.startMS / 1000.0));
+            }
+        } else if (d.choice == "reject") {
+            const std::string key = ChangeKey(ch);
+            if (std::find(record.rejected.begin(), record.rejected.end(), key) == record.rejected.end()) {
+                record.rejected.push_back(key);
+            }
+            ++out.rejected;
+        } else {
+            ++out.ignored;
+        }
+    }
+    out.learned = learn.empty() ? 0 : LearnFromComparison(prefs, comparison, learn, sequence);
+    record.decisions = decisions;
+    return out;
+}
+
+std::vector<StageLibraryEntry> ProposeCompositions(const SequenceSpec& generated, const SequenceSpec& corrected, const ChromaticScore* score, const std::string& sequence) {
+    // An effect of the corrected show that the generated one did not have at that place.
+    const auto had = [&](const EffectSpec& k) {
+        for (const EffectSpec& g : generated.effects) {
+            if (g.target == k.target && g.effect == k.effect && std::min(g.endMS, k.endMS) - std::max(g.startMS, k.startMS) > (k.endMS - k.startMS) / 2) {
+                return true;
+            }
+        }
+        return false;
+    };
+    std::vector<const EffectSpec*> added;
+    for (const EffectSpec& k : corrected.effects) {
+        if (k.effect != "Faces" && k.effect != "Text" && !had(k)) {
+            added.push_back(&k);
+        }
+    }
+    std::stable_sort(added.begin(), added.end(), [](const EffectSpec* a, const EffectSpec* b) { return a->startMS < b->startMS; });
+    std::vector<StageLibraryEntry> out;
+    std::vector<char> taken(added.size(), 0);
+    for (size_t i = 0; i < added.size(); ++i) {
+        if (taken[i]) {
+            continue;
+        }
+        // The same effect started on other figures within a second: one idea.
+        std::vector<size_t> group = { i };
+        std::set<std::string> figures = { added[i]->target };
+        for (size_t j = i + 1; j < added.size() && added[j]->startMS - added[i]->startMS <= 1000; ++j) {
+            if (!taken[j] && added[j]->effect == added[i]->effect && !figures.contains(added[j]->target)) {
+                group.push_back(j);
+                figures.insert(added[j]->target);
+            }
+        }
+        if (figures.size() < 3) {
+            continue;
+        }
+        int spread = 0;
+        for (size_t k : group) {
+            taken[k] = 1;
+            spread = std::max(spread, added[k]->startMS - added[i]->startMS);
+        }
+        StageLibraryEntry e;
+        e.id = fmt::format("composition:learned-{}-{}", added[i]->effect, added[i]->startMS);
+        std::replace(e.id.begin(), e.id.end(), ' ', '-');
+        e.kind = "composition";
+        e.custom = true;
+        e.source = "learned:" + sequence;
+        e.level = figures.size() >= 6 ? "global" : "group";
+        e.title = fmt::format("{} on {} figures", added[i]->effect, figures.size());
+        e.description = fmt::format("Made by a person in the corrected show at {:.1f} s", added[i]->startMS / 1000.0);
+        e.effects = { added[i]->effect };
+        e.figures.assign(figures.begin(), figures.end());
+        e.minFigures = static_cast<int>(figures.size());
+        e.maxFigures = static_cast<int>(figures.size());
+        e.temporal = spread <= 100 ? "unison" : "sequence";
+        e.beats = 0;
+        if (score != nullptr) {
+            if (const ChromaticScenePlan* s = score->SceneAt(added[i]->startMS); s != nullptr && !s->sectionKind.empty()) {
+                e.contexts = { s->sectionKind };
+            }
+        }
+        e.palette = PaletteColors(added[i]->palette);
+        out.push_back(std::move(e));
+    }
+    return out;
+}
+
+std::string ToJson(const ComparisonDecisions& d) {
+    json list = json::array();
+    for (const ComparisonDecision& x : d.decisions) {
+        list.push_back({ { "change", x.change }, { "choice", x.choice } });
+    }
+    return json({ { "kind", "composer-comparison-decisions" }, { "schemaVersion", d.schemaVersion }, { "sequence", d.sequence }, { "decisions", list }, { "rejected", d.rejected } }).dump(1);
+}
+
+bool FromJson(const std::string& text, ComparisonDecisions& d, std::string& error) {
+    const json root = json::parse(text, nullptr, false);
+    if (!root.is_object() || root.value("kind", std::string()) != "composer-comparison-decisions") {
+        error = "not a file of decisions about a corrected version";
+        return false;
+    }
+    d = ComparisonDecisions();
+    d.sequence = root.value("sequence", std::string());
+    for (const json& x : root.value("decisions", json::array())) {
+        d.decisions.push_back({ x.value("change", static_cast<size_t>(0)), x.value("choice", std::string()) });
+    }
+    d.rejected = root.value("rejected", std::vector<std::string>());
+    return true;
+}
+
+std::string ComparisonDecisionsPath(const std::string& showDir, const std::string& sequence) {
+    return (std::filesystem::path(showDir) / "ShowComposer" / "corrections" / (std::filesystem::path(sequence).stem().string() + ".decisions.json")).string();
 }
 
 int LearnFromComparison(ArtisticPreferences& prefs, const SequenceComparison& comparison, const std::vector<size_t>& picked, const std::string& sequence) {
@@ -263,7 +456,8 @@ std::string ToJson(const SequenceComparison& c) {
     json changes = json::array();
     for (const SequenceChange& ch : c.changes) {
         changes.push_back({ { "kind", ch.kind }, { "figure", ch.figure }, { "layer", ch.layer }, { "startMS", ch.startMS }, { "endMS", ch.endMS }, { "scene", ch.scene },
-                            { "before", ch.before }, { "after", ch.after }, { "suggestion", ch.suggestion }, { "sign", ch.sign }, { "why", ch.why } });
+                            { "before", ch.before }, { "after", ch.after }, { "suggestion", ch.suggestion }, { "sign", ch.sign }, { "why", ch.why }, { "category", ch.category },
+                            { "sceneStartMS", ch.sceneStartMS } });
     }
     return json({ { "kind", "composer-sequence-comparison" }, { "schemaVersion", c.schemaVersion }, { "ran", c.ran }, { "problem", c.problem },
                   { "generatedEffects", c.generatedEffects }, { "correctedEffects", c.correctedEffects }, { "matched", c.matched }, { "familiesBefore", c.familiesBefore },
@@ -287,7 +481,8 @@ bool FromJson(const std::string& text, SequenceComparison& c, std::string& error
     c.familiesAfter = root.value("familiesAfter", 0.0);
     for (const json& j : root.value("changes", json::array())) {
         c.changes.push_back({ j.value("kind", std::string()), j.value("figure", std::string()), j.value("layer", 0), j.value("startMS", 0), j.value("endMS", 0), j.value("scene", std::string()),
-                              j.value("before", std::string()), j.value("after", std::string()), j.value("suggestion", std::string()), j.value("sign", 0.0), j.value("why", std::string()) });
+                              j.value("before", std::string()), j.value("after", std::string()), j.value("suggestion", std::string()), j.value("sign", 0.0), j.value("why", std::string()),
+                              j.value("category", std::string()), j.value("sceneStartMS", -1) });
     }
     return true;
 }
