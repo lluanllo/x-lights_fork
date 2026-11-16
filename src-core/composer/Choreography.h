@@ -48,6 +48,9 @@ struct ChoreographyEvent {
     // Per palette slot, a native colour curve ("Active=TRUE|Id=ID_BUTTON_Palette<n>|Values=..."):
     // the slot's colour changing over the effect's time. "" or missing: the plain colour.
     std::vector<std::string> colorCurves;
+    // The effect's own brightness (xLights' colour brightness, 100 as it is): the stage dims a
+    // figure kept as a quiet glow with it.
+    int brightness = 100;
     double intensity = 0;
     std::string transitionIn;
     int fadeInMS = 0;

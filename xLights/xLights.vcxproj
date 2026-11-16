@@ -1011,6 +1011,8 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClCompile Include="..\src-core\composer\StageSpace.cpp" />
     <ClCompile Include="..\src-core\composer\StageDirector.cpp" />
     <ClCompile Include="..\src-core\composer\ProductionCheck.cpp" />
+    <ClCompile Include="..\src-core\composer\CompositionSelector.cpp" />
+    <ClCompile Include="..\src-core\composer\StagePresence.cpp" />
     <ClCompile Include="..\src-core\composer\StageCheck.cpp" />
     <ClCompile Include="..\src-core\composer\StageTest.cpp" />
     <ClCompile Include="..\src-core\composer\ColorSpace.cpp" />
@@ -1771,6 +1773,8 @@ xcopy /Y /S /I "$(SolutionDir)..\resources\meshobjects\*" "$(TargetDir)meshobjec
     <ClInclude Include="..\src-core\composer\StageSpace.h" />
     <ClInclude Include="..\src-core\composer\StageDirector.h" />
     <ClInclude Include="..\src-core\composer\ProductionCheck.h" />
+    <ClInclude Include="..\src-core\composer\CompositionSelector.h" />
+    <ClInclude Include="..\src-core\composer\StagePresence.h" />
     <ClInclude Include="..\src-core\composer\StageCheck.h" />
     <ClInclude Include="..\src-core\composer\StageTest.h" />
     <ClInclude Include="..\src-core\composer\ColorSpace.h" />

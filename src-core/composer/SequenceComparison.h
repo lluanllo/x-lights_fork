@@ -32,6 +32,9 @@ struct SequenceChange {
     // Phase 20: what kind of correction it looks like, and where its scene starts.
     std::string category;  // "aesthetic" (a matter of taste), "technical" (a nudge in time), "necessary" (something that should not light)
     int sceneStartMS = -1;
+    // Phase 21: who plays in a scene ("presence-reduced", "presence-grown", "composition-grown",
+    // "responders", "composition-recalled"): the figures concerned.
+    std::vector<std::string> figures;
 };
 
 struct SequenceComparison {
@@ -56,7 +59,8 @@ int LearnFromComparison(ArtisticPreferences& prefs, const SequenceComparison& co
 //   "learn"   a taste signal, like a review (two shows before it acts);
 //   "song"    only this song: an edit of its stage or colours, kept with the song;
 //   "general" the person's own value for the preference, now (reversible);
-//   "ignore"  nothing; "reject" nothing, and never offered again for this sequence.
+//   "ignore"  nothing; "reject" nothing, and never offered again for this sequence;
+//   "composition" (phase 21) the figures of a change kept as a composition of the person's own.
 struct ComparisonDecision {
     size_t change = 0;
     std::string choice;
@@ -75,6 +79,7 @@ struct DecisionOutcome {
     int songEdits = 0;
     int ignored = 0;
     int rejected = 0;
+    int compositions = 0;
     std::vector<std::string> notes; // a change that could not be applied as asked, and why
 };
 
@@ -83,7 +88,17 @@ struct DecisionOutcome {
 // The changes still offered: the rejected ones left out.
 [[nodiscard]] std::vector<size_t> OfferedChanges(const SequenceComparison& comparison, const ComparisonDecisions& decisions);
 DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits& stage, ChromaticEdits& colour, ComparisonDecisions& record, const SequenceComparison& comparison,
-                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence);
+                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence, StageLibrary* library = nullptr);
+
+// Who plays in each scene of the corrected show against the generated one (phase 21), read
+// scene by scene against the stage score: figures a person quietened or took out, figures
+// they brought in, figures they made answer one another, a scene that brings back the
+// figures of an earlier one, one figure's idea turned into a group's. `groups` gives each
+// xLights group's figures (a group's effect lights them all). Observations only.
+[[nodiscard]] std::vector<SequenceChange> PresenceChanges(const SequenceSpec& generated, const SequenceSpec& corrected, const GlobalStageScore& stage,
+                                                          const std::map<std::string, std::vector<std::string>>& groups);
+// Whether a change speaks of who plays (it can be kept as a composition).
+[[nodiscard]] bool IsPresenceChange(const SequenceChange& change);
 
 // Figures a person made work together in the corrected show (several figures given the same
 // effect at nearly the same time where the show had none), offered as compositions to keep.

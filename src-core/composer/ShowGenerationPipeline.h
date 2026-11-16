@@ -140,8 +140,12 @@ struct GenerationRequest {
     // previous show's; false generates as before, to compare.
     std::optional<bool> stageDirector;
     // How far the stage director develops the song's ideas (ArtLevel, StageDirector.h): "f19"
-    // as in phase 19, "direction", "motifs" or "full". Default: full, or the previous show's.
+    // as in phase 19, "direction", "motifs", "full" (phase 20), "compositions", "presence" or
+    // "orchestra" (phase 21). Default: orchestra, or the previous show's.
     std::optional<std::string> artDirection;
+    // How bright the figures the scene keeps as a quiet glow are (0.05-1; ArtLevel presence and
+    // above). Default: the previous show's, else 0.4.
+    std::optional<double> ambientLevel;
     // The colour direction: a family of colours with a hierarchy, a palette per scene, a
     // colour role per figure and gestures that stand out from what is lit. Default: on,
     // or the previous show's; false keeps the colours as before, to compare. The sliders

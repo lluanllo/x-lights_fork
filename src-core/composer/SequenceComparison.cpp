@@ -269,8 +269,162 @@ std::vector<size_t> OfferedChanges(const SequenceComparison& comparison, const C
     return out;
 }
 
+bool IsPresenceChange(const SequenceChange& ch) {
+    return ch.kind == "presence-reduced" || ch.kind == "presence-grown" || ch.kind == "composition-grown" || ch.kind == "responders" || ch.kind == "composition-recalled";
+}
+
+std::vector<SequenceChange> PresenceChanges(const SequenceSpec& generated, const SequenceSpec& corrected, const GlobalStageScore& stage,
+                                            const std::map<std::string, std::vector<std::string>>& groups) {
+    std::vector<SequenceChange> out;
+    std::set<std::string> figures;
+    for (const StageScene& sc : stage.scenes) {
+        for (const SceneRole& r : sc.roles) {
+            figures.insert(r.figure);
+        }
+    }
+    // Who an effect lights: itself, a submodel's figure, a group's figures.
+    const auto reached = [&](const EffectSpec& e) {
+        std::vector<std::string> r;
+        const auto g = groups.find(e.target);
+        if (g != groups.end()) {
+            r = g->second;
+        } else {
+            r.push_back(e.target);
+        }
+        return r;
+    };
+    struct Play {
+        std::map<std::string, int> covered; // figure -> ms of its own light in the scene
+        std::map<std::string, int> first;   // figure -> when its first new effect starts
+        std::map<std::string, double> bright;
+    };
+    const auto play = [&](const SequenceSpec& spec, int a, int b) {
+        Play p;
+        for (const EffectSpec& e : spec.effects) {
+            if (e.effect == "Faces" || e.effect == "Text" || e.endMS <= a || e.startMS >= b) {
+                continue;
+            }
+            const int o = std::min(b, e.endMS) - std::max(a, e.startMS);
+            double level = 100;
+            for (const auto& [k, v] : e.settings) {
+                if (k == "C_SLIDER_Brightness") {
+                    level = std::strtod(v.c_str(), nullptr);
+                }
+            }
+            const size_t at = e.palette.find("C_SLIDER_Brightness=");
+            if (at != std::string::npos) {
+                level = std::strtod(e.palette.c_str() + at + 20, nullptr);
+            }
+            for (const std::string& f : reached(e)) {
+                if (!figures.contains(f)) {
+                    continue;
+                }
+                p.covered[f] += o;
+                p.bright[f] = std::max(p.bright[f], level);
+                if (e.startMS >= a && (!p.first.contains(f) || e.startMS < p.first[f])) {
+                    p.first[f] = e.startMS;
+                }
+            }
+        }
+        return p;
+    };
+    const auto active = [](const Play& p, int span) {
+        std::set<std::string> s;
+        for (const auto& [f, ms] : p.covered) {
+            const auto b = p.bright.find(f);
+            if (ms * 10 >= span * 3 && (b == p.bright.end() || b->second > 60)) {
+                s.insert(f);
+            }
+        }
+        return s;
+    };
+    std::vector<std::pair<const StageScene*, std::set<std::string>>> history; // corrected, per scene
+    std::vector<std::set<std::string>> generatedHistory;
+    for (const StageScene& sc : stage.scenes) {
+        const int span = sc.endMS - sc.startMS;
+        if (span <= 0 || sc.mode == StageMode::Rest) {
+            continue;
+        }
+        const Play pg = play(generated, sc.startMS, sc.endMS);
+        const Play pc = play(corrected, sc.startMS, sc.endMS);
+        const std::set<std::string> ag = active(pg, span);
+        const std::set<std::string> ac = active(pc, span);
+        std::vector<std::string> gone, came;
+        std::set_difference(ag.begin(), ag.end(), ac.begin(), ac.end(), std::back_inserter(gone));
+        std::set_difference(ac.begin(), ac.end(), ag.begin(), ag.end(), std::back_inserter(came));
+        const auto change = [&](const char* kind, std::vector<std::string> who, const std::string& before, const std::string& after, const char* suggestion, double sign, const char* why) {
+            SequenceChange c;
+            c.kind = kind;
+            c.figure = who.size() == 1 ? who.front() : std::string();
+            c.startMS = sc.startMS;
+            c.endMS = sc.endMS;
+            c.scene = sc.id;
+            c.sceneStartMS = sc.startMS;
+            c.before = before;
+            c.after = after;
+            c.suggestion = suggestion;
+            c.sign = sign;
+            c.why = why;
+            c.category = "aesthetic";
+            c.figures = std::move(who);
+            out.push_back(std::move(c));
+        };
+        if (gone.size() >= 2) {
+            // Were they the scene's quiet company, or did they carry it?
+            int quiet = 0;
+            for (const std::string& f : gone) {
+                const std::string role = sc.RoleOf(f);
+                quiet += role == "background" || role == "rest" ? 1 : 0;
+            }
+            change("presence-reduced", gone, std::to_string(ag.size()), std::to_string(ac.size()), quiet * 2 >= static_cast<int>(gone.size()) ? "stage.ambience" : "stage.participation", -1,
+                   quiet * 2 >= static_cast<int>(gone.size()) ? "less activity in the background of this scene" : "fewer figures carry this scene");
+        }
+        if (came.size() >= 3) {
+            // Brought in one after another, a little apart: they answer.
+            std::vector<int> starts;
+            for (const std::string& f : came) {
+                if (pc.first.contains(f)) {
+                    starts.push_back(pc.first.at(f));
+                }
+            }
+            std::sort(starts.begin(), starts.end());
+            bool staggered = starts.size() >= 3;
+            for (size_t k = 1; staggered && k < starts.size(); ++k) {
+                const int gap = starts[k] - starts[k - 1];
+                staggered = gap >= 100 && gap <= 1500;
+            }
+            if (staggered) {
+                change("responders", came, std::to_string(ag.size()), std::to_string(ac.size()), "stage.answers", 1, "several figures answer one another here");
+            } else if (ag.size() <= 2) {
+                change("composition-grown", came, std::to_string(ag.size()), std::to_string(ac.size()), "stage.participation", 1, "one figure's idea turned into a group's");
+            } else {
+                change("presence-grown", came, std::to_string(ag.size()), std::to_string(ac.size()), "stage.participation", 1, "more figures play in this scene");
+            }
+        }
+        // The figures of an earlier scene brought back where the show had others.
+        if (ac.size() >= 3) {
+            for (size_t k = 0; k < history.size(); ++k) {
+                const std::set<std::string>& earlier = history[k].second;
+                std::vector<std::string> both;
+                std::set_intersection(earlier.begin(), earlier.end(), ac.begin(), ac.end(), std::back_inserter(both));
+                const size_t unionSize = earlier.size() + ac.size() - both.size();
+                std::vector<std::string> bothGenerated;
+                std::set_intersection(generatedHistory[k].begin(), generatedHistory[k].end(), ag.begin(), ag.end(), std::back_inserter(bothGenerated));
+                const size_t unionGenerated = generatedHistory[k].size() + ag.size() - bothGenerated.size();
+                if (unionSize > 0 && both.size() * 5 >= unionSize * 4 && (unionGenerated == 0 || bothGenerated.size() * 5 < unionGenerated * 4)) {
+                    change("composition-recalled", std::vector<std::string>(ac.begin(), ac.end()), history[k].first->id, sc.id, "", 0, "it brings back the figures of an earlier scene");
+                    break;
+                }
+            }
+        }
+        history.push_back({ &sc, ac });
+        generatedHistory.push_back(ag);
+    }
+    return out;
+}
+
 DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits& stage, ChromaticEdits& colour, ComparisonDecisions& record, const SequenceComparison& comparison,
-                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence) {
+                                         const std::vector<ComparisonDecision>& decisions, const std::string& sequence, StageLibrary* library) {
     DecisionOutcome out;
     record.sequence = sequence;
     std::vector<size_t> learn;
@@ -307,6 +461,16 @@ DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits&
                 }
                 stage.edits.push_back({ "no-gestures", ch.sceneStartMS, -1, "", "from a corrected version" });
                 ++out.songEdits;
+            } else if (IsPresenceChange(ch) && ch.kind != "composition-recalled") {
+                if (ch.sceneStartMS < 0 || ch.figures.empty()) {
+                    out.notes.push_back(fmt::format("{} at {:.1f} s: its scene is not known", ch.kind, ch.startMS / 1000.0));
+                    continue;
+                }
+                // Who plays in that scene, as the person left it.
+                for (const std::string& f : ch.figures) {
+                    stage.edits.push_back({ ch.kind == "presence-reduced" ? "exclude" : "include", ch.sceneStartMS, -1, f, "from a corrected version" });
+                }
+                ++out.songEdits;
             } else if (ch.kind == "colour" && !ch.after.empty()) {
                 std::string value = ch.after;
                 std::replace(value.begin(), value.end(), ' ', ',');
@@ -315,6 +479,41 @@ DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits&
             } else {
                 out.notes.push_back(fmt::format("{} at {:.1f} s: the corrected version keeps it; the composer has no way to ask for it in this song", ch.kind, ch.startMS / 1000.0));
             }
+        } else if (d.choice == "composition") {
+            if (!IsPresenceChange(ch) || ch.figures.size() < 2) {
+                out.notes.push_back(fmt::format("{} at {:.1f} s: it is not a group of figures to keep", ch.kind, ch.startMS / 1000.0));
+                continue;
+            }
+            if (library == nullptr) {
+                out.notes.push_back(fmt::format("{} at {:.1f} s: no library to keep it in", ch.kind, ch.startMS / 1000.0));
+                continue;
+            }
+            StageLibraryEntry e;
+            e.id = fmt::format("composition:learned-{}-{}", ch.kind, ch.startMS);
+            e.kind = "composition";
+            e.custom = true;
+            e.source = "learned:" + sequence;
+            e.title = fmt::format("{} figures from a corrected version", ch.figures.size());
+            e.description = fmt::format("Made by a person in the corrected show at {:.1f} s", ch.startMS / 1000.0);
+            e.level = ch.figures.size() >= 6 ? "global" : "group";
+            e.gesture = ch.kind == "responders" ? "local-waves" : "joint-pulse";
+            e.temporal = ch.kind == "responders" ? "answer" : "unison";
+            e.figures = ch.figures;
+            e.minFigures = std::max(2, static_cast<int>(ch.figures.size()) - 1);
+            e.maxFigures = static_cast<int>(ch.figures.size());
+            e.functions = { ch.kind == "responders" ? "ripple" : "pulse" };
+            e.palette = { "anchor" };
+            bool known = false;
+            for (StageLibraryEntry& x : library->entries) {
+                if (x.id == e.id) {
+                    x = e;
+                    known = true;
+                }
+            }
+            if (!known) {
+                library->entries.push_back(e);
+            }
+            ++out.compositions;
         } else if (d.choice == "reject") {
             const std::string key = ChangeKey(ch);
             if (std::find(record.rejected.begin(), record.rejected.end(), key) == record.rejected.end()) {
@@ -457,7 +656,7 @@ std::string ToJson(const SequenceComparison& c) {
     for (const SequenceChange& ch : c.changes) {
         changes.push_back({ { "kind", ch.kind }, { "figure", ch.figure }, { "layer", ch.layer }, { "startMS", ch.startMS }, { "endMS", ch.endMS }, { "scene", ch.scene },
                             { "before", ch.before }, { "after", ch.after }, { "suggestion", ch.suggestion }, { "sign", ch.sign }, { "why", ch.why }, { "category", ch.category },
-                            { "sceneStartMS", ch.sceneStartMS } });
+                            { "sceneStartMS", ch.sceneStartMS }, { "figures", ch.figures } });
     }
     return json({ { "kind", "composer-sequence-comparison" }, { "schemaVersion", c.schemaVersion }, { "ran", c.ran }, { "problem", c.problem },
                   { "generatedEffects", c.generatedEffects }, { "correctedEffects", c.correctedEffects }, { "matched", c.matched }, { "familiesBefore", c.familiesBefore },
@@ -482,7 +681,7 @@ bool FromJson(const std::string& text, SequenceComparison& c, std::string& error
     for (const json& j : root.value("changes", json::array())) {
         c.changes.push_back({ j.value("kind", std::string()), j.value("figure", std::string()), j.value("layer", 0), j.value("startMS", 0), j.value("endMS", 0), j.value("scene", std::string()),
                               j.value("before", std::string()), j.value("after", std::string()), j.value("suggestion", std::string()), j.value("sign", 0.0), j.value("why", std::string()),
-                              j.value("category", std::string()), j.value("sceneStartMS", -1) });
+                              j.value("category", std::string()), j.value("sceneStartMS", -1), j.value("figures", std::vector<std::string>()) });
     }
     return true;
 }

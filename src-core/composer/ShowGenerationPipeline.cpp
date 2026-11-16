@@ -1,6 +1,7 @@
 #include "composer/ShowGenerationPipeline.h"
 
 #include "composer/ArtisticPreferences.h"
+#include "composer/StagePresence.h"
 #include "composer/MusicStructure.h"
 
 #include "composer/SequenceWriter.h"
@@ -417,6 +418,9 @@ GenerationSidecar MakeSidecar(const GenerationRun& run) {
     s.stage.gestures = static_cast<int>(run.stageScore.gestures.size());
     s.stage.edits = run.stageEdits;
     s.stage.art = ArtLevelId(static_cast<ArtLevel>(run.artLevel));
+    if (run.stageScore.art >= static_cast<int>(ArtLevel::Presence)) {
+        s.stage.ambient = run.stageScore.ambientLevel;
+    }
     s.stage.motifs = static_cast<int>(run.stageScore.motifs.size());
     s.color.decided = true;
     s.color.enabled = run.colorWanted;
@@ -1518,11 +1522,11 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
         on = run.previous.stage.enabled;
     }
     // How far the song's ideas are developed: asked for, else the previous show's, else all of it.
-    ArtLevel art = ArtLevel::Full;
+    ArtLevel art = ArtLevel::Orchestra;
     if (r.artDirection.has_value()) {
         if (!ArtLevelFromId(*r.artDirection, art)) {
-            Note(run, S, "art-direction-unknown", *r.artDirection + ": full");
-            art = ArtLevel::Full;
+            Note(run, S, "art-direction-unknown", *r.artDirection + ": orchestra");
+            art = ArtLevel::Orchestra;
         }
     } else if (run.hasPrevious && !run.previous.stage.art.empty()) {
         (void)ArtLevelFromId(run.previous.stage.art, art);
@@ -1579,6 +1583,21 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     in.edits = edits.edits.empty() ? nullptr : &edits;
     in.library = &library;
     in.art = static_cast<ArtLevel>(run.artLevel);
+    // The quiet glow's brightness: asked for, else what the maker's corrections taught (a person
+    // who quietens the background again and again), else the previous show's, else 0.4.
+    double ambient = run.hasPrevious && run.previous.stage.ambient > 0 ? run.previous.stage.ambient : 0.4;
+    if (r.learning && !r.showDir.empty()) {
+        ArtisticPreferences prefs;
+        std::string perr;
+        if (ReadPreferences(PreferencesPath(r.showDir), prefs, perr)) {
+            const std::map<std::string, double> taught = EffectivePreferences(prefs);
+            if (const auto it = taught.find("stage.ambience"); it != taught.end()) {
+                ambient = std::clamp(0.4 + 0.25 * it->second, 0.1, 0.8);
+                Note(run, S, "stage-taught", fmt::format("stage.ambience {:+.2f} from the maker's corrections: the quiet glow at {:.0f}%", it->second, ambient * 100));
+            }
+        }
+    }
+    in.ambientLevel = r.ambientLevel.value_or(ambient);
     if (!run.brief.Empty()) {
         in.keepParts = &run.brief.keep;
         in.changeParts = &run.brief.change;
@@ -1591,6 +1610,16 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     }
     DirectTheColors(run, S);
     in.choreography = nullptr; // the colours are read; from here the choreography is changed
+    if (run.stageScore.art >= static_cast<int>(ArtLevel::Presence)) {
+        for (const std::string& n : ApplyStagePresence(run.stageScore, in, run.choreography)) {
+            Note(run, S, "stage-presence", n);
+        }
+        if (run.stageScore.art >= static_cast<int>(ArtLevel::Orchestra)) {
+            for (const std::string& n : LinkCompositions(run.stageScore, in, run.choreography)) {
+                Note(run, S, "stage-transitions", n);
+            }
+        }
+    }
     for (const std::string& n : RealizeStage(run.stageScore, in, run.choreography)) {
         Note(run, S, "stage-realized", n);
     }

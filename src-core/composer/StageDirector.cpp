@@ -1,6 +1,7 @@
 #include "composer/StageDirector.h"
 
 #include "composer/AudioUnderstanding.h"
+#include "composer/CompositionSelector.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/VocalUnderstanding.h"
 
@@ -94,6 +95,9 @@ public:
             score.version = STAGE_DIRECTOR_ART_VERSION;
             Arc();
         }
+        if (Art(ArtLevel::Compositions)) {
+            score.version = STAGE_DIRECTOR_ORCHESTRA_VERSION;
+        }
         for (const PlanSegment& s : _in.plan->segments) {
             score.scenes.push_back(Scene(s, score));
         }
@@ -101,6 +105,12 @@ public:
         Identity(score);
         if (Art(ArtLevel::Direction)) {
             Connect(score);
+        }
+        if (Art(ArtLevel::Presence)) {
+            score.ambientLevel = std::clamp(_in.ambientLevel, 0.05, 1.0);
+            for (StageScene& sc : score.scenes) {
+                Presence(sc, score);
+            }
         }
         return score;
     }
@@ -367,6 +377,10 @@ private:
         }
         if (Art(ArtLevel::Motifs)) {
             PickMotif(sc, seg, score);
+        }
+        _comp = nullptr;
+        if (Art(ArtLevel::Compositions)) {
+            Compose(sc, seg, faces, voices, score);
         }
         // The attention a scene can spend: a quiet scene little, a peak all of it.
         sc.budget = sc.mode == StageMode::Rest ? 0.5 : climax ? 1e9 : seg.priority >= 2 ? 6.0 : sc.mode == StageMode::Protagonist ? 3.0 : 4.5;
@@ -804,6 +818,7 @@ private:
                     }
                 }
             }
+            m->composition = sc.composition;
             m->entry = "from-one";
             m->exit = "fades";
             for (const std::string& f : on) {
@@ -928,6 +943,327 @@ private:
         }
     }
 
+    // ------------------------------------------------------------- compositions (phase 21)
+    // The strong hits of a stretch, and whether a short burst of them stands alone (the
+    // cascade's own test).
+    std::vector<Moment> StrongAccents(int a, int b) const {
+        std::vector<Moment> out;
+        for (const Moment& m : MomentsIn(a, b)) {
+            if (m.kind == "accent" && m.weight >= 0.45) {
+                out.push_back(m);
+            }
+        }
+        return out;
+    }
+
+    bool Burst(const StageScene& sc) const {
+        const std::vector<Moment> accents = StrongAccents(sc.startMS, sc.endMS);
+        for (size_t i = 0; i < accents.size();) {
+            size_t j = i + 1;
+            int widest = 0;
+            while (j < accents.size() && accents[j].ms - accents[j - 1].ms >= 120 && accents[j].ms - accents[j - 1].ms <= 700) {
+                widest = std::max(widest, accents[j].ms - accents[j - 1].ms);
+                ++j;
+            }
+            const size_t count = j - i;
+            const int before = i == 0 ? accents[i].ms - sc.startMS : accents[i].ms - accents[i - 1].ms;
+            const int after = j == accents.size() ? sc.endMS - accents[j - 1].ms : accents[j].ms - accents[j - 1].ms;
+            bool strongEach = true;
+            for (size_t k = i; k < j; ++k) {
+                strongEach = strongEach && accents[k].weight >= 0.55;
+            }
+            if (count >= 3 && count <= 5 && strongEach && before >= widest * 3 / 2 && after >= widest * 3 / 2) {
+                return true;
+            }
+            i = j;
+        }
+        return false;
+    }
+
+    // The figures a composition can use here: on the stage, not locked by a person, not
+    // only a face, not left out of the scene by a person.
+    std::vector<const Figure*> Usable() const {
+        std::vector<const Figure*> out;
+        for (const Figure& f : _figures) {
+            if (!f.allFace && !_locked.contains(f.stage->name) && !_excludedHere.contains(f.stage->name)) {
+                out.push_back(&f);
+            }
+        }
+        return out;
+    }
+
+    // The composition the scene is built on, chosen from the library for the whole of its
+    // circumstances, and the scene fitted to it: how many figures take part, who leads, how
+    // the house is used. Its gesture becomes the scene's main gesture.
+    void Compose(StageScene& sc, const PlanSegment& seg, const std::vector<std::string>& faces, const std::set<std::string>& voices, const GlobalStageScore& score) {
+        if (_in.library == nullptr) {
+            sc.compositionFallback = "no library of compositions";
+            return;
+        }
+        SelectorScene s;
+        s.context = sc.context;
+        s.sectionKind = seg.sectionKind;
+        s.narrative = sc.narrative;
+        s.motifOperation = sc.motifOperation;
+        if (const VisualMotif* m = score.Motif(sc.visualMotif); m != nullptr) {
+            s.motifComposition = m->composition;
+        }
+        s.motifGesture = _hasMotifKind ? GestureKindId(_motifKind) : std::string();
+        s.mode = sc.mode;
+        s.modeByPerson = sc.manual;
+        for (const StageEdit* e : EditsFor(seg)) {
+            if (e->action == "composition") {
+                s.personChoice = e->value;
+            }
+        }
+        s.previous = _lastComposition;
+        s.previousRun = _compRun;
+        s.used = _compUsed;
+        s.priority = seg.priority;
+        s.durationMS = sc.endMS - sc.startMS;
+        s.beat = Beat(sc.startMS);
+        const std::vector<const Figure*> usable = Usable();
+        s.available = static_cast<int>(usable.size());
+        for (const Figure* f : usable) {
+            s.topologies[f->stage->topology]++;
+        }
+        s.faces = static_cast<int>(faces.size());
+        s.voices = static_cast<int>(voices.size());
+        s.accentRun = Burst(sc);
+        s.beforePeak = Art(ArtLevel::Full) && BeforePeak();
+        // Before the peak its last two bars are kept for the light that grows towards it: only the
+        // hits before them can start the scene's own gesture.
+        const int usableEnd = s.beforePeak ? sc.endMS - static_cast<int>(Beat(sc.startMS) * 8000) : sc.endMS;
+        s.strongHits = static_cast<int>(StrongAccents(sc.startMS, std::max(sc.startMS, usableEnd)).size());
+        for (const Moment& m : MomentsIn(sc.startMS, sc.endMS)) {
+            s.tail = s.tail || m.kind == "tail";
+            s.drop = s.drop || m.kind == "drop";
+        }
+        const bool peak = sc.narrative == "climax" || (sc.narrative == "intensification" && sc.mode == StageMode::FullEnsemble);
+        s.peakBegins = peak && (_sceneIndex == 0 || (_narrative[_sceneIndex - 1] != "climax" && _narrative[_sceneIndex - 1] != "intensification"));
+        s.lastScene = sc.narrative == "resolution";
+        s.target = _target;
+        const CompositionChoice choice = SelectComposition(*_in.library, s);
+        sc.candidates = choice.candidates;
+        if (choice.entry == nullptr) {
+            sc.compositionFallback = choice.fallback;
+            _lastComposition.clear();
+            _compRun = 0;
+            return;
+        }
+        const StageLibraryEntry& e = *choice.entry;
+        GestureKind kind = GestureKind::JointPulse;
+        (void)GestureKindFromId(e.gesture, kind);
+        _comp = &e;
+        _compKind = kind;
+        sc.composition = e.id;
+        sc.compositionReasons = choice.reasons;
+        sc.compositionAdapted = choice.adapted;
+        _compUsed[e.id]++;
+        _compRun = _lastComposition == e.id ? _compRun + 1 : 1;
+        _lastComposition = e.id;
+        // How the house is used follows the composition (a person's choice of mode stays).
+        if (!sc.manual) {
+            const StageMode before = sc.mode;
+            if (kind == GestureKind::AmbientField) {
+                sc.mode = StageMode::Protagonist;
+            } else if (kind == GestureKind::CallResponse) {
+                sc.mode = StageMode::CallResponse;
+            } else if (kind == GestureKind::Counterpoint) {
+                sc.mode = StageMode::Counterpoint;
+            } else if (e.level == "global" && kind == GestureKind::PropagatedWave && sc.mode != StageMode::FullEnsemble) {
+                sc.mode = StageMode::Propagation;
+            } else if (e.level == "group" && (sc.mode == StageMode::Protagonist || sc.mode == StageMode::Duo)) {
+                sc.mode = StageMode::Group;
+            }
+            if (sc.mode != before) {
+                sc.reasons.push_back("the composition chosen sets how the house is used");
+            }
+        }
+        // How many take part: the composition's own count, fitted to this house. One telling
+        // with the house listening keeps a few quiet companions round it (by the budget).
+        if (kind == GestureKind::AmbientField) {
+            // One figure tells; a few quiet companions round it (more as the idea grows).
+            const std::string& n = sc.narrative;
+            _target = 1 + (n == "presentation" || n == "preparation" || n == "resolution" || sc.context == "narration" ? 3 : 6);
+            sc.focus = true;
+        } else if (e.level == "global" && kind != GestureKind::Contraction) {
+            _target = static_cast<int>(_figures.size()); // the whole house, faces too
+        } else if (kind == GestureKind::Contraction) {
+            _target = _target > 0 ? _target : std::max(1, choice.figures); // the light gathers onto the few that close
+            sc.focus = true;
+        } else {
+            _target = std::max(1, choice.figures);
+            if (e.level == "local") {
+                sc.focus = true;
+            }
+        }
+        // The figures it was made with, or one of the shape it is made for, lead when no voice does.
+        std::vector<std::string> lead;
+        for (const std::string& f : e.figures) {
+            if (const Figure* fig = Find(f); fig != nullptr && std::find(usable.begin(), usable.end(), fig) != usable.end()) {
+                lead.push_back(f);
+            }
+        }
+        if (lead.empty() && !e.fits.empty() && faces.empty()) {
+            for (const Figure* f : ByRest({})) {
+                if (std::find(usable.begin(), usable.end(), f) != usable.end() && std::find(e.fits.begin(), e.fits.end(), f->stage->topology) != e.fits.end()) {
+                    lead.push_back(f->stage->name);
+                    break;
+                }
+            }
+        }
+        if (!lead.empty()) {
+            for (const std::string& f : _prefer) {
+                if (std::find(lead.begin(), lead.end(), f) == lead.end()) {
+                    lead.push_back(f);
+                }
+            }
+            _prefer = lead;
+        }
+    }
+
+    // ------------------------------------------------------------- presence (phase 21)
+    // How much of the house a scene keeps as a quiet glow beyond the figures taking part:
+    // nothing where the attention is on one or a few, some where an idea develops, all of it
+    // where the whole house plays.
+    static double Ambience(const StageScene& sc) {
+        const std::string& n = sc.narrative;
+        if (sc.mode == StageMode::Rest || n == "rest") {
+            return 0;
+        }
+        if (n == "presentation" || n == "resolution") {
+            return 0;
+        }
+        if (n == "preparation") {
+            return 0.15;
+        }
+        if (sc.context == "narration") {
+            return 0.2;
+        }
+        if (n == "climax" || n == "intensification" || n == "transformation") {
+            return 1;
+        }
+        if (n == "contrast") {
+            return 0.25;
+        }
+        return 0.35; // an idea that develops, answers or comes back
+    }
+
+    // The figures that have light of their own in a scene: effects of theirs (or of a group
+    // holding them) adding up to a second of it, or a fifth of a shorter scene (a few beats'
+    // accents count); a gesture of the scene; or their identity layer.
+    std::set<std::string> Lit(const StageScene& sc, const GlobalStageScore& score) const {
+        std::set<std::string> out;
+        const int need = std::max(1, std::min(1000, (sc.endMS - sc.startMS) / 5));
+        if (_in.choreography != nullptr) {
+            std::map<std::string, int> covered;
+            for (const ChoreographyEvent& e : _in.choreography->events) {
+                const int o = std::min(e.endMS, sc.endMS) - std::max(e.startMS, sc.startMS);
+                if (o <= 0) {
+                    continue;
+                }
+                const TargetInfo* t = _in.capabilities != nullptr ? _in.capabilities->Find(e.target) : nullptr;
+                if (t != nullptr && t->type == TargetType::Group) {
+                    for (const std::string& m : t->flatModels) {
+                        covered[m] += o;
+                    }
+                } else {
+                    const size_t slash = e.target.find('/');
+                    covered[slash == std::string::npos ? e.target : e.target.substr(0, slash)] += o;
+                }
+            }
+            for (const auto& [f, ms] : covered) {
+                if (ms >= need) {
+                    out.insert(f);
+                }
+            }
+        }
+        for (const std::string& id : sc.gestures) {
+            if (const GlobalGesture* g = score.Gesture(id); g != nullptr) {
+                for (const GestureParticipant& p : g->participants) {
+                    out.insert(p.figure);
+                }
+            }
+        }
+        for (const StageLayer& l : score.layers) {
+            if (l.startMS < sc.endMS && sc.startMS < l.endMS) {
+                out.insert(l.figure);
+            }
+        }
+        return out;
+    }
+
+    // What each figure is asked to do in the scene, and how much of its own activity it keeps.
+    // A figure with nothing of its own to show there is said to rest: the score says what the
+    // render will show.
+    void Presence(StageScene& sc, const GlobalStageScore& score) const {
+        sc.ambience = Ambience(sc);
+        sc.presence.clear();
+        const bool silent = sc.mode == StageMode::Rest || sc.narrative == "rest";
+        const std::set<std::string> lit = Lit(sc, score);
+        std::vector<const Figure*> idle; // not taking part: kept as a glow or rested
+        for (const Figure& f : _figures) {
+            const std::string& name = f.stage->name;
+            const std::string role = sc.RoleOf(name);
+            FigurePresence p;
+            p.figure = name;
+            if (_locked.contains(name)) {
+                p.state = "protected";
+                p.policy = "protected";
+                p.why = "a person locked its effects";
+            } else if (role == "protagonist") {
+                p.state = "protagonist";
+                p.policy = "normal";
+                p.why = "it carries the scene";
+            } else if (role != "protagonist" && role != "rest" && !lit.contains(name)) {
+                p.state = "rest";
+                p.policy = "suspended";
+                p.why = "nothing of its own to show in this scene";
+            } else if (role == "complement") {
+                p.state = "complement";
+                p.policy = "normal";
+                p.why = "it backs the protagonist";
+            } else if (role == "responder" || role == "accent") {
+                p.state = "response";
+                p.policy = "normal";
+                p.why = "it answers at its moment";
+            } else if (role == "background" && !silent) {
+                p.state = "ambient";
+                p.policy = "reduced";
+                p.why = "it keeps the scene company, quietly";
+            } else {
+                p.state = "rest";
+                p.policy = "suspended";
+                p.why = "the attention is elsewhere";
+                if (lit.contains(name)) {
+                    idle.push_back(&f); // only a figure with light of its own can keep a glow
+                }
+            }
+            sc.presence.push_back(std::move(p));
+        }
+        // The glow: the largest figures first (they hold the house together), never a face
+        // (a face that is not singing is quiet).
+        std::stable_sort(idle.begin(), idle.end(), [](const Figure* a, const Figure* b) { return a->stage->lights > b->stage->lights; });
+        int glow = static_cast<int>(std::lround(sc.ambience * static_cast<double>(idle.size())));
+        for (const Figure* f : idle) {
+            if (glow <= 0) {
+                break;
+            }
+            if (f->face) {
+                continue;
+            }
+            for (FigurePresence& p : sc.presence) {
+                if (p.figure == f->stage->name) {
+                    p.state = "ambient";
+                    p.policy = "reduced";
+                    p.why = "it keeps a quiet glow so the house is not dark";
+                }
+            }
+            --glow;
+        }
+    }
+
     // The edits that belong to a scene: those whose remembered start is nearest this one.
     std::vector<const StageEdit*> EditsFor(const PlanSegment& seg) const {
         std::vector<const StageEdit*> out;
@@ -1031,6 +1367,17 @@ private:
         for (const std::string& f : _prefer) {
             if (const Figure* fig = Find(f); fig != nullptr) {
                 order.push_back(fig);
+            }
+        }
+        // From ArtLevel Compositions the score commands the figures' own effects: the figures
+        // the plan gave this scene's accents take part first, so the accents it planned are seen.
+        if (Art(ArtLevel::Compositions)) {
+            for (const PlanAssignment& a : seg.assignments) {
+                const Figure* fig = Find(a.target);
+                if (a.prominence == Prominence::Accent && fig != nullptr && !taken.contains(a.target) && !_avoid.contains(a.target) &&
+                    std::find(order.begin(), order.end(), fig) == order.end()) {
+                    order.push_back(fig);
+                }
             }
         }
         for (const Figure* f : ByRest(taken)) {
@@ -1156,7 +1503,10 @@ private:
             for (size_t k = i; k < j; ++k) {
                 strongEach = strongEach && accents[k].weight >= 0.55;
             }
-            if (count >= 3 && count <= 5 && strongEach && before >= widest * 3 / 2 && after >= widest * 3 / 2 && roomFor(accents[i].ms, accents[j - 1].ms) && sc.mode != StageMode::Protagonist) {
+            // A composition chosen for the scene makes its own gesture: a burst does not take its place.
+            const bool composedElse = _comp != nullptr && _compKind != GestureKind::Cascade;
+            if (count >= 3 && count <= 5 && strongEach && before >= widest * 3 / 2 && after >= widest * 3 / 2 && roomFor(accents[i].ms, accents[j - 1].ms) && sc.mode != StageMode::Protagonist &&
+                !composedElse) {
                 std::vector<Moment> run(accents.begin() + static_cast<long>(i), accents.begin() + static_cast<long>(j));
                 if (Cascade(sc, run, score)) {
                     ++made;
@@ -1201,9 +1551,22 @@ private:
             if (carry && _hasMotifKind && Allowed(_motifKind)) {
                 kind = _motifKind;
             }
+            const GestureKind ideaKind = kind;
+            // The scene's composition sets its main gesture (one the music shapes, a sweep or an
+            // opening or a gathering, is made where its moment is).
+            const bool composed = _comp != nullptr && _compKind != GestureKind::SpatialSweep && _compKind != GestureKind::Expansion && _compKind != GestureKind::Contraction &&
+                                  _compKind != GestureKind::Echo && _compKind != GestureKind::Cascade;
+            if (composed) {
+                kind = _compKind;
+            }
             _carrying = carry;
+            _composing = composed;
             bool ok = Make(sc, seg, kind, m, faces, score);
-            if (!ok && carry && kind != modeKind) {
+            _composing = false;
+            if (!ok && composed && kind != ideaKind) {
+                ok = Make(sc, seg, ideaKind, m, faces, score); // the composition's gesture does not fit this hit: the idea's carries it
+            }
+            if (!ok && carry && ideaKind != modeKind) {
                 ok = Make(sc, seg, modeKind, m, faces, score); // the idea's gesture does not fit here: the scene's own carries it
             }
             _carrying = false;
@@ -1415,14 +1778,16 @@ private:
         case GestureKind::JointPulse: {
             // Each figure on its own, all on the same hit; few of them.
             // Few of them; when the idea is intensified, everyone takes it up.
-            const size_t count = _carrying && op == "intensify" ? active.size() : std::min<size_t>(active.size(), kind == GestureKind::LocalWaves ? 4 : 6);
+            // A composition's own gesture takes the figures the composition gave the scene.
+            const size_t count = _composing || (_carrying && op == "intensify") ? active.size() : std::min<size_t>(active.size(), kind == GestureKind::LocalWaves ? 4 : 6);
             g.endMS = std::min(sc.endMS, g.startMS + static_cast<int>(std::max(0.6, beat * 2) * 1000));
             g.reasons.push_back(kind == GestureKind::LocalWaves ? "a hit: several figures each make a small wave of their own, together"
                                                                 : "a hit: several figures flash together");
             for (size_t k = 0; k < count; ++k) {
                 g.participants.push_back({ active[k], "accent", 0, 1.0, kind == GestureKind::LocalWaves ? "ripple" : "pulse", "the same hit, in its own shape" });
             }
-            if (Art(ArtLevel::Direction) && !Unison(sc) && g.participants.size() >= 2) {
+            const bool answer = _composing ? _comp->temporal == "answer" : Art(ArtLevel::Direction) && !Unison(sc);
+            if (answer && g.participants.size() >= 2) {
                 Answering(sc, g, beat);
             }
             break;
@@ -1507,6 +1872,34 @@ private:
         std::erase_if(g.participants, [&](const GestureParticipant& p) { return Sings(p.figure, g.startMS + p.delayMS - 100, g.endMS + 400) || _locked.contains(p.figure); });
         if (g.participants.empty() || g.endMS <= g.startMS) {
             return false;
+        }
+        // The scene's composition, when this is its gesture: its brightness, and the speed and
+        // length a person may have set for it.
+        if (_comp != nullptr && kind == _compKind) {
+            g.composition = _comp->id;
+            if (_comp->speed > 0.05 && g.speed > 0.05 &&
+                (kind == GestureKind::PropagatedWave || kind == GestureKind::Expansion || kind == GestureKind::Contraction || kind == GestureKind::Echo || kind == GestureKind::SpatialSweep)) {
+                int last = 0;
+                for (GestureParticipant& p : g.participants) {
+                    p.delayMS = static_cast<int>(p.delayMS * g.speed / _comp->speed);
+                    last = std::max(last, p.delayMS);
+                }
+                g.speed = _comp->speed;
+                g.endMS = std::min(sc.endMS, std::max(g.endMS, g.startMS + last + 600));
+            }
+            if (_comp->beats > 0) {
+                g.endMS = std::min(sc.endMS, g.startMS + static_cast<int>(_comp->beats * beat * 1000));
+            }
+            if (_comp->level0 < 1) {
+                g.level = std::min(g.level, _comp->level0);
+                for (GestureParticipant& p : g.participants) {
+                    p.level = std::min(p.level, _comp->level0);
+                }
+            }
+            std::erase_if(g.participants, [&](const GestureParticipant& p) { return g.startMS + p.delayMS + 300 > g.endMS; });
+            if (g.participants.empty() || g.endMS <= g.startMS) {
+                return false;
+            }
         }
         g.id = fmt::format("{}@{}", GestureKindId(kind), g.startMS);
         if (Art(ArtLevel::Direction) && std::find(sc.gestures.begin(), sc.gestures.end(), g.id) != sc.gestures.end()) {
@@ -1631,6 +2024,9 @@ private:
             g.participants.push_back({ chosen[k], k == 0 ? "source" : "receiver", run[k].ms - g.startMS, 1.0, "pulse", fmt::format("hit {} of {}", k + 1, run.size()) });
         }
         g.reasons.push_back("a few hits close together: one figure for each, in turn across the house");
+        if (_comp != nullptr && _compKind == GestureKind::Cascade) {
+            g.composition = _comp->id;
+        }
         g.id = fmt::format("{}@{}", GestureKindId(GestureKind::Cascade), g.startMS);
         if (Art(ArtLevel::Direction)) {
             Describe(sc, g, "accents");
@@ -1646,8 +2042,8 @@ private:
             return;
         }
         for (const StageEdit& e : _in.edits->edits) {
-            if (e.action == "identity" || e.action == "no-identity" || e.action == "gesture") {
-                continue; // decided with the scenes' layers and gestures
+            if (e.action == "identity" || e.action == "no-identity" || e.action == "gesture" || e.action == "priority") {
+                continue; // decided with the scenes' layers and gestures, or where the presence is applied
             }
             StageScene* sc = nullptr;
             for (StageScene& s : score.scenes) {
@@ -1660,7 +2056,7 @@ private:
                 continue;
             }
             sc->manual = true;
-            if (e.action == "mode") {
+            if (e.action == "mode" || e.action == "composition") {
                 continue; // decided with the scene, before its roles and gestures
             } else if (e.action == "include" || e.action == "exclude") {
                 for (SceneRole& r : sc->roles) {
@@ -1852,6 +2248,13 @@ private:
     std::set<size_t> _peak;  // scenes of the peak the song does not mark itself
     std::map<int, std::vector<std::string>> _groupFigures; // repeat group -> the figures its first time had
     std::map<std::string, int> _developed;                 // motif -> how many times it developed
+    // Phase 21
+    const StageLibraryEntry* _comp = nullptr; // this scene's composition
+    GestureKind _compKind = GestureKind::JointPulse;
+    bool _composing = false;                  // the gesture being made is the composition's own
+    std::string _lastComposition;
+    int _compRun = 0;
+    std::map<std::string, int> _compUsed;
 };
 
 std::vector<int> ProtectedNodes(const FigureSemantics* semantics, const std::string& figure) {
@@ -1879,6 +2282,15 @@ std::string StageScene::RoleOf(const std::string& figure) const {
         }
     }
     return "rest";
+}
+
+const FigurePresence* StageScene::PresenceOf(const std::string& figure) const {
+    for (const FigurePresence& p : presence) {
+        if (p.figure == figure) {
+            return &p;
+        }
+    }
+    return nullptr;
 }
 
 const StageScene* GlobalStageScore::SceneAt(int ms) const {
@@ -2032,7 +2444,12 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     }
     // Resting figures: in a scene that gives the attention to a few, the others' own
     // effects stop (their faces, words and pictures stay).
+    // From ArtLevel Presence every figure's effects follow its presence (ApplyStagePresence),
+    // applied before this.
     for (const StageScene& sc : score.scenes) {
+        if (score.art >= static_cast<int>(ArtLevel::Presence)) {
+            break;
+        }
         if (sc.mode != StageMode::Protagonist && sc.mode != StageMode::Duo && sc.mode != StageMode::Rest && sc.mode != StageMode::CallResponse && !sc.focus) {
             continue;
         }
@@ -2320,12 +2737,15 @@ const char* ArtLevelId(ArtLevel a) {
     case ArtLevel::Direction: return "direction";
     case ArtLevel::Motifs: return "motifs";
     case ArtLevel::Full: return "full";
+    case ArtLevel::Compositions: return "compositions";
+    case ArtLevel::Presence: return "presence";
+    case ArtLevel::Orchestra: return "orchestra";
     }
-    return "full";
+    return "orchestra";
 }
 
 bool ArtLevelFromId(const std::string& id, ArtLevel& a) {
-    for (ArtLevel l : { ArtLevel::F19, ArtLevel::Direction, ArtLevel::Motifs, ArtLevel::Full }) {
+    for (ArtLevel l : { ArtLevel::F19, ArtLevel::Direction, ArtLevel::Motifs, ArtLevel::Full, ArtLevel::Compositions, ArtLevel::Presence, ArtLevel::Orchestra }) {
         if (id == ArtLevelId(l)) {
             a = l;
             return true;
@@ -2543,6 +2963,12 @@ json GestureJson(const GlobalGesture& g) {
              { "reasons", g.reasons }, { "manual", g.manual }, { "relation", g.relation }, { "presence", g.presence }, { "motif", g.motif } };
 }
 
+void AddPhase21(json& j, const GlobalGesture& g) {
+    if (!g.composition.empty()) {
+        j["composition"] = g.composition;
+    }
+}
+
 json MotifJson(const VisualMotif& m) {
     json variants = json::array();
     for (const MotifVariant& v : m.variants) {
@@ -2568,10 +2994,32 @@ std::string ToJson(const GlobalStageScore& s) {
                            { "reasons", sc.reasons }, { "confidence", sc.confidence }, { "manual", sc.manual }, { "narrative", sc.narrative }, { "attention", sc.attention },
                            { "visualMotif", sc.visualMotif }, { "motifOperation", sc.motifOperation }, { "accentFigure", sc.accentFigure }, { "changes", sc.changes },
                            { "leadsTo", sc.leadsTo }, { "focus", sc.focus } });
+        json& j = scenes.back();
+        if (!sc.composition.empty() || !sc.compositionFallback.empty() || !sc.candidates.empty()) {
+            j["composition"] = sc.composition;
+            j["compositionReasons"] = sc.compositionReasons;
+            j["compositionFallback"] = sc.compositionFallback;
+            j["compositionAdapted"] = sc.compositionAdapted;
+            json cands = json::array();
+            for (const CompositionCandidate& c : sc.candidates) {
+                cands.push_back({ { "id", c.id }, { "score", c.score }, { "verdict", c.verdict }, { "reasons", c.reasons }, { "figures", c.figures } });
+            }
+            j["candidates"] = std::move(cands);
+        }
+        if (!sc.presence.empty()) {
+            j["ambience"] = sc.ambience;
+            json ps = json::array();
+            for (const FigurePresence& p : sc.presence) {
+                ps.push_back({ { "figure", p.figure }, { "state", p.state }, { "policy", p.policy }, { "why", p.why } });
+            }
+            j["presence"] = std::move(ps);
+        }
     }
     json gestures = json::array();
     for (const GlobalGesture& g : s.gestures) {
-        gestures.push_back(GestureJson(g));
+        json gj = GestureJson(g);
+        AddPhase21(gj, g);
+        gestures.push_back(std::move(gj));
     }
     json layers = json::array();
     for (const StageLayer& l : s.layers) {
@@ -2582,10 +3030,26 @@ std::string ToJson(const GlobalStageScore& s) {
     for (const VisualMotif& m : s.motifs) {
         motifs.push_back(MotifJson(m));
     }
-    return json({ { "kind", "composer-stage-score" }, { "schemaVersion", s.schemaVersion }, { "version", s.version }, { "durationMS", s.durationMS }, { "scenes", scenes },
+    json root({ { "kind", "composer-stage-score" }, { "schemaVersion", s.schemaVersion }, { "version", s.version }, { "durationMS", s.durationMS }, { "scenes", scenes },
                   { "gestures", gestures }, { "layers", layers }, { "limits", s.limits }, { "warnings", s.warnings }, { "art", ArtLevelId(static_cast<ArtLevel>(s.art)) },
-                  { "motifs", motifs } })
-        .dump(1);
+                  { "motifs", motifs } });
+    if (s.art >= static_cast<int>(ArtLevel::Presence)) {
+        root["ambientLevel"] = s.ambientLevel;
+        json ts = json::array();
+        for (const CompositionTransition& t : s.transitions) {
+            ts.push_back({ { "from", t.from }, { "to", t.to }, { "atMS", t.atMS }, { "kind", t.kind }, { "why", t.why }, { "joining", t.joining }, { "leaving", t.leaving },
+                           { "softened", t.softened }, { "checks", t.checks } });
+        }
+        root["transitions"] = std::move(ts);
+        json sl = json::array();
+        for (const SharedLights& x : s.sharedLights) {
+            sl.push_back({ { "a", x.a }, { "b", x.b }, { "lights", x.lights }, { "relation", x.relation }, { "priority", x.priority }, { "prioritySource", x.prioritySource },
+                           { "scenesBothLit", x.scenesBothLit }, { "scenesResolved", x.scenesResolved }, { "note", x.note } });
+        }
+        root["sharedLights"] = std::move(sl);
+        root["presenceNotes"] = s.presenceNotes;
+    }
+    return root.dump(1);
 }
 
 bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error) {
@@ -2624,6 +3088,18 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
             sc.changes = j.value("changes", std::string());
             sc.leadsTo = j.value("leadsTo", std::string());
             sc.focus = j.value("focus", false);
+            sc.composition = j.value("composition", std::string());
+            sc.compositionReasons = j.value("compositionReasons", std::vector<std::string>());
+            sc.compositionFallback = j.value("compositionFallback", std::string());
+            sc.compositionAdapted = j.value("compositionAdapted", std::string());
+            for (const json& c : j.value("candidates", json::array())) {
+                sc.candidates.push_back({ c.value("id", std::string()), c.value("score", 0.0), c.value("verdict", std::string()), c.value("reasons", std::vector<std::string>()),
+                                          c.value("figures", 0) });
+            }
+            sc.ambience = j.value("ambience", 0.0);
+            for (const json& p : j.value("presence", json::array())) {
+                sc.presence.push_back({ p.value("figure", std::string()), p.value("state", std::string()), p.value("policy", std::string()), p.value("why", std::string()) });
+            }
             s.scenes.push_back(std::move(sc));
         }
         for (const json& j : root.value("gestures", json::array())) {
@@ -2658,6 +3134,7 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
             g.relation = j.value("relation", std::string());
             g.presence = j.value("presence", std::string());
             g.motif = j.value("motif", std::string());
+            g.composition = j.value("composition", std::string());
             s.gestures.push_back(std::move(g));
         }
         for (const json& j : root.value("layers", json::array())) {
@@ -2717,6 +3194,34 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
             }
             s.motifs.push_back(std::move(m));
         }
+        s.ambientLevel = root.value("ambientLevel", 0.4);
+        for (const json& t : root.value("transitions", json::array())) {
+            CompositionTransition x;
+            x.from = t.value("from", std::string());
+            x.to = t.value("to", std::string());
+            x.atMS = t.value("atMS", 0);
+            x.kind = t.value("kind", std::string());
+            x.why = t.value("why", std::string());
+            x.joining = t.value("joining", std::vector<std::string>());
+            x.leaving = t.value("leaving", std::vector<std::string>());
+            x.softened = t.value("softened", 0);
+            x.checks = t.value("checks", std::vector<std::string>());
+            s.transitions.push_back(std::move(x));
+        }
+        for (const json& t : root.value("sharedLights", json::array())) {
+            SharedLights x;
+            x.a = t.value("a", std::string());
+            x.b = t.value("b", std::string());
+            x.lights = t.value("lights", 0);
+            x.relation = t.value("relation", std::string());
+            x.priority = t.value("priority", std::string());
+            x.prioritySource = t.value("prioritySource", std::string());
+            x.scenesBothLit = t.value("scenesBothLit", 0);
+            x.scenesResolved = t.value("scenesResolved", 0);
+            x.note = t.value("note", std::string());
+            s.sharedLights.push_back(std::move(x));
+        }
+        s.presenceNotes = root.value("presenceNotes", std::vector<std::string>());
         out = std::move(s);
     } catch (const json::exception& e) {
         error = std::string("stage score: ") + e.what();

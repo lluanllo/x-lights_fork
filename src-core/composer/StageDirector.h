@@ -24,15 +24,19 @@ namespace composer {
 inline constexpr int STAGE_SCORE_SCHEMA_VERSION = 1;
 inline constexpr const char* STAGE_DIRECTOR_VERSION = "1.0.0";
 inline constexpr const char* STAGE_DIRECTOR_ART_VERSION = "2.0.0";
+inline constexpr const char* STAGE_DIRECTOR_ORCHESTRA_VERSION = "3.0.0";
 
-// How far the director develops the song's visual ideas (phase 20). Each level adds to the
-// one before. F19 is the director as it was: an older show regenerates the same, and a
-// comparison can change only this.
+// How far the director develops the song's visual ideas (phase 20) and how much of the
+// installation it really commands (phase 21). Each level adds to the one before. F19 is the
+// director as it was: an older show regenerates the same, and a comparison can change only this.
 enum class ArtLevel {
-    F19 = 0,       // scenes chosen one by one
-    Direction = 1, // + a role in the song for each scene, figures that answer instead of all at once, gestures seen as much as they matter
-    Motifs = 2,    // + visual motifs: an idea (who, which gesture, from where, in what order) that comes back
-    Full = 3       // + the idea developed: participation that grows and shrinks, a peak prepared, an ending that closes
+    F19 = 0,          // scenes chosen one by one
+    Direction = 1,    // + a role in the song for each scene, figures that answer instead of all at once, gestures seen as much as they matter
+    Motifs = 2,       // + visual motifs: an idea (who, which gesture, from where, in what order) that comes back
+    Full = 3,         // + the idea developed: participation that grows and shrinks, a peak prepared, an ending that closes
+    Compositions = 4, // + each scene built on a composition of the library, chosen for the whole of its circumstances
+    Presence = 5,     // + every figure's own effects follow what the scene asks of it: lead, accompany, answer, glow or rest
+    Orchestra = 6     // + the compositions linked: figures join, gather and fade at the joins instead of cutting
 };
 
 enum class StageMode {
@@ -102,6 +106,8 @@ struct GlobalGesture {
     std::string relation; // how its figures follow in time: "unison", "answer", "propagation", "sequence", "overlap", "continuation", "anticipation", "progressive-end"
     std::string presence; // how much it should be seen: "background", "response", "protagonist", "climax"
     std::string motif;    // the visual motif it carries ("" none)
+    // Phase 21 (ArtLevel Compositions and above):
+    std::string composition; // the library composition it realises ("" none)
 };
 
 // One appearance of a visual motif: what a scene does with it.
@@ -150,6 +156,49 @@ struct SceneRole {
     std::string why;
 };
 
+// A composition the selector weighed for a scene, and what it found (phase 21).
+struct CompositionCandidate {
+    std::string id;
+    double score = 0;
+    std::string verdict;              // "chosen", "possible", "rejected"
+    std::vector<std::string> reasons; // plain-words keys: "+<why>" counted for, "-<why>" against, "x<why>" rules it out
+    int figures = 0;                  // how many figures it would use here
+};
+
+// What a figure does in a scene, and how much of its own activity the scene lets it keep.
+// The state is what the score asks of it; the policy is what is done to its effects.
+struct FigurePresence {
+    std::string figure;
+    std::string state;  // "protagonist", "complement", "response", "ambient", "rest", "protected"
+    std::string policy; // "normal", "reduced", "suspended", "protected"
+    std::string why;    // plain-words key
+};
+
+// How one composition hands over to the next (phase 21, ArtLevel Orchestra).
+struct CompositionTransition {
+    std::string from; // scene ids
+    std::string to;
+    int atMS = 0;
+    std::string kind; // "continuation", "variation", "response", "propagation", "gathering", "transformation", "resolution", "cut"
+    std::string why;  // plain-words key
+    std::vector<std::string> joining; // figures that come in here
+    std::vector<std::string> leaving; // figures that go out here
+    int softened = 0;                 // effects given a fade or a staggered start/end
+    std::vector<std::string> checks;  // what the join was checked for: "abrupt-cut:<n>", "level-jump", ...
+};
+
+// Two figures wired to the same lights: what one shows, the other shows too.
+struct SharedLights {
+    std::string a, b;
+    int lights = 0;          // lights in common
+    std::string relation;    // "a-inside-b", "b-inside-a", "same", "partial"
+    std::string priority;    // the figure whose decision wins on the shared lights ("" none chosen)
+    std::string prioritySource; // "person", "presence", ""
+    int scenesBothLit = 0;   // scenes where both would light their own effects
+    int scenesResolved = 0;  // of those, scenes where one gave way
+    std::string note;        // plain-words key
+};
+
 struct StageScene {
     std::string id; // the plan segment's id
     int startMS = 0;
@@ -176,7 +225,16 @@ struct StageScene {
     std::string changes;     // what changes from the scene before, plain words key
     std::string leadsTo;     // how it connects with the next, plain words key
     bool focus = false;      // the attention is on a few: the others' own effects rest
+    // Phase 21 (ArtLevel Compositions and above; empty before):
+    std::string composition;                      // the library composition the scene is built on ("" the director's own way)
+    std::vector<std::string> compositionReasons;  // why, plain-words keys
+    std::string compositionFallback;              // why none was used ("" one was)
+    std::string compositionAdapted;               // how it was fitted to the figures there ("" as it is)
+    std::vector<CompositionCandidate> candidates; // every composition weighed
+    double ambience = 0;                          // ArtLevel Presence: share of the figures not taking part kept as a quiet glow
+    std::vector<FigurePresence> presence;         // ArtLevel Presence: every figure on the stage
     [[nodiscard]] std::string RoleOf(const std::string& figure) const;
+    [[nodiscard]] const FigurePresence* PresenceOf(const std::string& figure) const;
 };
 
 // A layer of a figure's own composition: its colours kept while other layers move.
@@ -206,6 +264,11 @@ struct GlobalStageScore {
     std::vector<std::string> warnings;
     int art = 0;                     // the ArtLevel it was directed with
     std::vector<VisualMotif> motifs; // ArtLevel Motifs and above
+    // Phase 21:
+    double ambientLevel = 0.4;                      // how bright the quiet glow of figures not taking part is (0-1)
+    std::vector<CompositionTransition> transitions; // ArtLevel Orchestra
+    std::vector<SharedLights> sharedLights;         // ArtLevel Presence
+    std::vector<std::string> presenceNotes;         // what applying the presence did, for the report
 
     [[nodiscard]] const StageScene* SceneAt(int ms) const;
     [[nodiscard]] const GlobalGesture* Gesture(const std::string& id) const;
@@ -214,7 +277,10 @@ struct GlobalStageScore {
 
 // A person's changes to the score, kept per song and applied after every new score.
 struct StageEdit {
-    std::string action; // "mode", "include", "exclude", "no-gestures", "gesture", "origin", "speed", "identity", "no-identity"
+    // "mode", "include", "exclude", "no-gestures", "gesture", "origin", "speed", "identity", "no-identity";
+    // phase 21: "composition" (value: a composition id for the scene, "none" the director's own way),
+    // "priority" (value "<figure>|<other>": on lights they share, the first one's decision wins; sceneStartMS -1)
+    std::string action;
     int sceneStartMS = -1; // the scene, found again by its start (within 1.5 s)
     int atMS = -1;         // a gesture's start, for "gesture" (a new one), "origin", "speed"
     std::string value;     // a mode id, a figure, a gesture kind id, an anchor id, a speed; identity: a figure (sceneStartMS -1: every scene)
@@ -281,6 +347,8 @@ struct StageDirectorInput {
     // a direction for which scenes transform, never a rule.
     const std::vector<std::string>* keepParts = nullptr;
     const std::vector<std::string>* changeParts = nullptr;
+    // ArtLevel Presence: how bright the figures kept as a quiet glow are (0.05-1); a person's choice.
+    double ambientLevel = 0.4;
 };
 
 [[nodiscard]] GlobalStageScore DirectStage(const StageDirectorInput& input);
