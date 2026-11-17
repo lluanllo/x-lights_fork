@@ -192,6 +192,8 @@ private:
     void AskMode();
     void AskFigure(bool exclude);
     void AskGesture();
+    void AskComposition();
+    void AskPriority();
     void ChangeSpeed(double factor);
     void OpenMap();
     void OpenLayers();

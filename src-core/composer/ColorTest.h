@@ -21,6 +21,8 @@ namespace composer {
 // xLights, both in the show folder (a copy with every controller inactive), read with xLights'
 // own reader. `chromaPath` (a color-score.json) places the changes in their scenes. Writes
 // sequence-comparison.json to `outDir`. Returns 0 written, 1 failed, 2 refused.
-[[nodiscard]] int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir);
+// With a stage score (phase 21) it also reads who plays in each scene.
+[[nodiscard]] int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir,
+                                     const std::string& stagePath = {});
 
 } // namespace composer

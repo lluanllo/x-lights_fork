@@ -1213,7 +1213,10 @@ wxString SceneCompareDialog::Text() const {
 wxString ChangeWords(const std::string& kind) {
     static const std::map<std::string, wxString> W = { { "colour", _("Colours changed") }, { "effect", _("Effect replaced or added") }, { "layer-added", _("Layer added") },
                                                        { "layer-removed", _("Effect taken out") }, { "intensity", _("Brighter or dimmer") }, { "timing", _("Moved in time") },
-                                                       { "figure-added", _("Figure brought in") }, { "figure-removed", _("Figure left dark") } };
+                                                       { "figure-added", _("Figure brought in") }, { "figure-removed", _("Figure left dark") },
+                                                       { "presence-reduced", _("Less activity") }, { "presence-grown", _("More figures play") },
+                                                       { "composition-grown", _("From one figure to a group") }, { "responders", _("Figures that answer") },
+                                                       { "composition-recalled", _("An earlier composition brought back") } };
     const auto it = W.find(kind);
     return it != W.end() ? it->second : U(kind);
 }
@@ -1252,6 +1255,23 @@ wxString ChangeReasonWords(const SequenceChange& c) {
     if (c.kind == "figure-added") {
         return wxString::Format(_("%s, where the show left it dark"), U(c.after));
     }
+    const int n = static_cast<int>(c.figures.size());
+    if (c.kind == "presence-reduced") {
+        return c.suggestion == "stage.ambience" ? wxString::Format(_("you reduced the activity of %d figures in the background of this scene"), n)
+                                                : wxString::Format(_("you left %d of the figures that carried this scene quiet"), n);
+    }
+    if (c.kind == "responders") {
+        return wxString::Format(_("you used %d figures to answer one another here"), n);
+    }
+    if (c.kind == "composition-grown") {
+        return wxString::Format(_("you turned one figure's idea into a group of %d"), n);
+    }
+    if (c.kind == "presence-grown") {
+        return wxString::Format(_("you brought %d more figures into this scene"), n);
+    }
+    if (c.kind == "composition-recalled") {
+        return _("you brought back the figures of an earlier scene");
+    }
     return U(c.why);
 }
 
@@ -1278,6 +1298,7 @@ wxString DecisionWords(const std::string& d) {
     if (d == "song") return _("Only this song");
     if (d == "general") return _("General preference");
     if (d == "reject") return _("Reject it");
+    if (d == "composition") return _("Keep it as a composition");
     return _("Ignore it");
 }
 
@@ -1290,7 +1311,7 @@ CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison&
     sizer->Add(Muted(this, wxString::Format(_("%d effects in the generated show, %d in yours, %d kept as they were. Not every change is a taste: choose what each one becomes. Nothing is learned unless you choose it."),
                                             comparison.generatedEffects, comparison.correctedEffects, comparison.matched)),
                0, wxALL, 8);
-    sizer->Add(Muted(this, _("Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Ignore: nothing. Reject: nothing, and it is not offered again.")),
+    sizer->Add(Muted(this, _("Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Keep it as a composition: the figures you made play together, to use in other songs. Ignore: nothing. Reject: nothing, and it is not offered again.")),
                0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
     _list = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 400), wxLC_REPORT);
     for (const auto& [label, width] : std::vector<std::pair<wxString, int>>{ { _("When"), 60 }, { _("Figure"), 150 }, { _("What changed"), 340 }, { _("Kind"), 170 }, { _("Decision"), 140 } }) {
@@ -1303,7 +1324,7 @@ CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison&
         }
         const SequenceChange& c = comparison.changes[i];
         const long row = _list->InsertItem(_list->GetItemCount(), ClockText(c.startMS));
-        _list->SetItem(row, 1, U(c.figure));
+        _list->SetItem(row, 1, c.figure.empty() && !c.figures.empty() ? wxString::Format(_("%d figures"), static_cast<int>(c.figures.size())) : U(c.figure));
         _list->SetItem(row, 2, wxString::Format("%s: %s%s", ChangeWords(c.kind), ChangeReasonWords(c), c.suggestion.empty() ? wxString(" ") + _("(nothing to learn for other songs)") : wxString()));
         _list->SetItem(row, 3, CategoryWords(c.category));
         _rows.push_back(i);
@@ -1313,7 +1334,7 @@ CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison&
     sizer->Add(_list, 1, wxEXPAND | wxLEFT | wxRIGHT, 8);
     auto* choose = new wxBoxSizer(wxHORIZONTAL);
     choose->Add(new wxStaticText(this, wxID_ANY, _("The changes chosen above:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    for (const char* d : { "learn", "song", "general", "ignore", "reject" }) {
+    for (const char* d : { "learn", "song", "general", "composition", "ignore", "reject" }) {
         auto* b = new wxButton(this, wxID_ANY, DecisionWords(d));
         choose->Add(b, 0, wxRIGHT, 4);
         const std::string choice = d;

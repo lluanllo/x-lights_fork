@@ -1162,7 +1162,7 @@ bool xLightsApp::OnInit()
     bool headlessArg = false;
     for (int i = 1; i < argc; ++i) {
         const wxString a(argv[i]);
-        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure" || a == "--composer-color-test" || a == "--composer-color-measure" || a == "--composer-compare" || a == "--composer-production") {
+        if (a == "--headless" || a == "-hl" || a == "--composer-writer-test" || a == "--composer-validate" || a == "--composer-validator-test" || a == "--composer-analyze-song" || a == "--composer-analyzer-test" || a == "--composer-analyzer-bench" || a == "--composer-lyrics-test" || a == "--composer-assist-test" || a == "--composer-media-test" || a == "--composer-visual-test" || a == "--composer-media-eval" || a == "--composer-learning-test" || a == "--composer-review" || a == "--composer-faces-test" || a == "--composer-model-capabilities" || a == "--composer-plan-test" || a == "--composer-choreography-test" || a == "--composer-generate" || a == "--composer-pipeline-test" || a == "--composer-snapshots" || a == "--composer-reference-study" || a == "--composer-reference-profile" || a == "--composer-assist" || a == "--composer-recipe-extract" || a == "--composer-recipe-test" || a == "--composer-understanding-test" || a == "--composer-understand" || a == "--composer-figures" || a == "--composer-stage-test" || a == "--composer-stage-measure" || a == "--composer-color-test" || a == "--composer-color-measure" || a == "--composer-compare" || a == "--composer-production" || a == "--composer-final-render") {
             headlessArg = true;
             break;
         }
@@ -1343,7 +1343,8 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "color-evolution", "with --composer-generate: 0-1, how far the palette moves from scene to scene" },
         { wxCMD_LINE_OPTION, "", "song-colors", "with --composer-generate: the song's colours, #RRGGBB separated by commas (none: clear them)" },
         { wxCMD_LINE_OPTION, "", "stage-director", "with --composer-generate: on or off, whether the whole installation is directed as one stage (default: on, or the previous show's)" },
-        { wxCMD_LINE_OPTION, "", "art-direction", "with --composer-generate: f19, direction, motifs or full, how far the stage director develops the song's visual ideas (default: full, or the previous show's)" },
+        { wxCMD_LINE_OPTION, "", "art-direction", "with --composer-generate: f19, direction, motifs, full, compositions, presence or orchestra, how far the stage director develops the song's visual ideas and commands the house (default: orchestra, or the previous show's)" },
+        { wxCMD_LINE_OPTION, "", "ambient-level", "with --composer-generate: 0.05-1, how bright the figures a scene keeps as a quiet glow are (default: 0.4, or the previous show's)" },
         { wxCMD_LINE_OPTION, "", "understanding", "with --composer-generate: on or off, whether the voices and figures heard in the recording are used (default: on when the song was understood)" },
         { wxCMD_LINE_SWITCH, "", "no-color-engine", "with --composer-generate: the theme's colours, not the ones made from the song" },
         { wxCMD_LINE_OPTION, "", "christmas", "with --composer-generate: 0-100, how far the song's colours go towards the Christmas ones (50)" },
@@ -1353,7 +1354,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "package", "with --composer-recipe-extract: the show's name, for provenance" },
         { wxCMD_LINE_OPTION, "", "authorship", "with --composer-recipe-extract: who made the source" },
         { wxCMD_LINE_SWITCH, "", "composer-stage-measure", "internal tool: what the rendered --fseq of the show (-s, controllers inactive) did with the installation, with an optional --stage-score, into --out, and exit" },
-        { wxCMD_LINE_OPTION, "", "stage-score", "with --composer-stage-measure: a stage-score.json, to measure scenes and gestures" },
+        { wxCMD_LINE_OPTION, "", "stage-score", "with --composer-stage-measure: a stage-score.json, to measure scenes and gestures; with --composer-compare: the generated show's score, to read who plays in each scene" },
         { wxCMD_LINE_SWITCH, "", "composer-compare", "internal tool: the --generated sequence against the --corrected one of the show (-s, controllers inactive), with an optional --color-score, into --out, and exit" },
         { wxCMD_LINE_OPTION, "", "generated", "with --composer-compare: the sequence the composer made" },
         { wxCMD_LINE_OPTION, "", "corrected", "with --composer-compare: the same sequence after a person corrected it in xLights" },
@@ -1374,6 +1375,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "no-render", "with --composer-generate: publish without the headless render check" },
         { wxCMD_LINE_SWITCH, "", "composer-production", "internal tool: checks the --sequence of the show (-s, controllers inactive) before it goes out, into --out; with --production-package <folder> also prepares the production folder; and exit" },
         { wxCMD_LINE_OPTION, "", "production-package", "with --composer-production: where to prepare the production folder (never over an existing one)" },
+        { wxCMD_LINE_SWITCH, "", "composer-final-render", "internal tool: renders the --sequence of the show (-s, controllers inactive) with the native renderer where xLights plays it from, checks it frame by frame against the sequence (an earlier render is kept aside), writes the check into --out, and exit" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-study", "internal tool: measure a finished --sequence on its show (-s, a copy with all controllers inactive), render it and draw the whole display at chosen --times (or its own changes), to --out, and exit" },
@@ -2315,6 +2317,9 @@ bool xLightsApp::OnInit()
         if (parser.Found("art-direction", &value)) {
             command.artDirection = value.ToStdString(wxConvUTF8);
         }
+        if (parser.Found("ambient-level", &value)) {
+            command.ambientLevel = value.ToStdString(wxConvUTF8);
+        }
         if (parser.Found("color-director", &value)) {
             command.colorDirector = value.ToStdString(wxConvUTF8);
         }
@@ -2439,17 +2444,18 @@ bool xLightsApp::OnInit()
     }
 
     if (parser.Found("composer-compare")) {
-        wxString out, generated, corrected, chroma;
+        wxString out, generated, corrected, chroma, stage;
         if (showDir.IsEmpty() || !parser.Found("out", &out) || !parser.Found("generated", &generated) || !parser.Found("corrected", &corrected)) {
             spdlog::error("--composer-compare requires -s <dir>, --generated <xsq>, --corrected <xsq> and --out <folder>");
             std::exit(2);
         }
         (void)parser.Found("color-score", &chroma);
+        (void)parser.Found("stage-score", &stage);
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunSequenceCompare(showDir.ToStdString(wxConvUTF8), generated.ToStdString(wxConvUTF8), corrected.ToStdString(wxConvUTF8), chroma.ToStdString(wxConvUTF8),
-                                               out.ToStdString(wxConvUTF8)));
+                                               out.ToStdString(wxConvUTF8), stage.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-production")) {
@@ -2464,6 +2470,18 @@ bool xLightsApp::OnInit()
         RegisterPlatformTextDrawingContext();
         std::exit(composer::RunProductionCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8), package.ToStdString(wxConvUTF8),
                                                  !parser.Found("no-render")));
+    }
+
+    if (parser.Found("composer-final-render")) {
+        wxString out, sequence;
+        if (showDir.IsEmpty() || !parser.Found("out", &out) || !parser.Found("sequence", &sequence)) {
+            spdlog::error("--composer-final-render requires -s <dir>, --sequence <xsq> and --out <folder>");
+            std::exit(2);
+        }
+        wxInitAllImageHandlers();
+        wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
+        RegisterPlatformTextDrawingContext();
+        std::exit(composer::RunFinalRenderCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
     }
 
     if (parser.Found("composer-color-test")) {

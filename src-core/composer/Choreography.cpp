@@ -1472,6 +1472,14 @@ json EventJson(const ChoreographyEvent& e) {
              { "needsReview", e.needsReview } };
 }
 
+json EventJsonWithBrightness(const ChoreographyEvent& e) {
+    json j = EventJson(e);
+    if (e.brightness != 100) {
+        j["brightness"] = e.brightness;
+    }
+    return j;
+}
+
 template <typename E, size_t N>
 E EnumFrom(const char* const (&ids)[N], const std::string& id, E fallback) {
     for (size_t i = 0; i < N; ++i) {
@@ -1504,6 +1512,7 @@ ChoreographyEvent EventFrom(const json& j) {
     e.paletteId = j.value("palette", std::string());
     e.colors = j.value("colors", std::vector<std::string>());
     e.colorCurves = j.value("colorCurves", std::vector<std::string>());
+    e.brightness = j.value("brightness", 100);
     e.intensity = j.value("intensity", 0.0);
     e.transitionIn = j.value("transitionIn", std::string());
     e.fadeInMS = j.value("fadeInMS", 0);
@@ -1532,6 +1541,9 @@ std::string ChoreographyEvent::PaletteString() const {
     }
     for (size_t i = 0; i < colors.size() && i < 8; ++i) {
         out += fmt::format(",C_CHECKBOX_Palette{}=1", i + 1);
+    }
+    if (brightness != 100) {
+        out += fmt::format("{}C_SLIDER_Brightness={}", out.empty() ? "" : ",", std::clamp(brightness, 0, 400));
     }
     return out;
 }
@@ -1679,7 +1691,7 @@ std::string ToJson(const Choreography& c) {
     root["warnings"] = c.warnings;
     json events = json::array();
     for (const ChoreographyEvent& e : c.events) {
-        events.push_back(EventJson(e));
+        events.push_back(EventJsonWithBrightness(e));
     }
     root["events"] = std::move(events);
     json cues = json::array();

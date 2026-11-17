@@ -660,10 +660,17 @@ private:
                               _dialog->SetColorStyle(100);
                               Check(has(_dialog->GenerateArguments(), "--color-style", "1.00"), "and can go expressive");
                               _dialog->SetColorStyle(40);
-                              Check(has(_dialog->GenerateArguments(), "--art-direction", "full"), "the ideas are developed completely by default");
+                              Check(has(_dialog->GenerateArguments(), "--art-direction", "orchestra") && has(_dialog->GenerateArguments(), "--ambient-level", "0.40"),
+                                    "by default the director commands the whole house, the figures not taking part kept as a quiet glow at 40%");
+                              _dialog->SetAmbientLevel(0.7);
+                              Check(has(_dialog->GenerateArguments(), "--ambient-level", "0.70"), "the quiet glow can be made brighter");
+                              _dialog->SetAmbientLevel(0.4);
+                              _dialog->SetArtDirection("full");
+                              Check(has(_dialog->GenerateArguments(), "--art-direction", "full") && !has(_dialog->GenerateArguments(), "--ambient-level", "0.40"),
+                                    "or the ideas developed as in phase 20, with no glow to set");
                               _dialog->SetArtDirection("f19");
                               Check(has(_dialog->GenerateArguments(), "--art-direction", "f19") && _dialog->ArtDirectionId() == "f19", "or directed as in phase 19, to compare");
-                              _dialog->SetArtDirection("full");
+                              _dialog->SetArtDirection("orchestra");
                               _dialog->ColorPanel()->SetDirectorOn(false);
                               Check(has(_dialog->GenerateArguments(), "--color-director", "off"), "or the colours as before, to compare");
                               _dialog->ColorPanel()->SetDirectorOn(true);
@@ -837,8 +844,46 @@ private:
                               Capture(library, "composiciones-y-gestos");
                               library->Destroy();
                               const StageScene& shown = score.scenes[static_cast<size_t>(pick)];
-                              Check(score.art == 3 && !shown.narrative.empty() && !shown.attention.empty() && !shown.changes.empty(),
+                              Check(score.art == 6 && !shown.narrative.empty() && !shown.attention.empty() && !shown.changes.empty(),
                                     "each scene says what it does in the song, how many carry it and what changes");
+                              // Phase 21: the orchestration of the installation.
+                              int composedScenes = 0, withPresence = 0;
+                              int composedAt = -1;
+                              for (size_t i = 0; i < score.scenes.size(); ++i) {
+                                  composedScenes += score.scenes[i].composition.empty() ? 0 : 1;
+                                  withPresence += score.scenes[i].presence.empty() ? 0 : 1;
+                                  if (composedAt < 0 && !score.scenes[i].composition.empty()) {
+                                      composedAt = static_cast<int>(i);
+                                  }
+                              }
+                              Check(composedScenes > 0 && withPresence == static_cast<int>(score.scenes.size()),
+                                    fmt::format("step 4 shows the orchestration: {} scenes built on a composition, who plays, glows and rests in every scene", composedScenes));
+                              if (composedAt >= 0 && panel->SelectScene(composedAt)) {
+                                  const StageLibrary builtIn = BuiltInStageLibrary();
+                                  const StageLibraryEntry* used = builtIn.Find(score.scenes[static_cast<size_t>(composedAt)].composition);
+                                  Check(used != nullptr && panel->Detail().Contains(wxGetTranslation(wxString::FromUTF8(used->title))) && !score.scenes[static_cast<size_t>(composedAt)].compositionReasons.empty(),
+                                        "a scene says which composition it is built on, why, and what else was possible");
+                                  Capture(_dialog, "orquestacion");
+                                  const int pending = panel->PendingEdits();
+                                  const int at = score.scenes[static_cast<size_t>(composedAt)].startMS;
+                                  Check(panel->Edit({ "composition", at, -1, "composition:wave-house", "" }).empty() && panel->Edit({ "composition", at, -1, "none", "" }).empty() &&
+                                            panel->PendingEdits() == pending + 1,
+                                        "a scene's composition can be changed (a new choice replaces the last), to apply when composed again");
+                                  (void)panel->Undo();
+                                  (void)panel->Undo();
+                                  Check(panel->PendingEdits() == pending, "and undone");
+                              }
+                              if (!score.sharedLights.empty()) {
+                                  const SharedLights& x = score.sharedLights.front();
+                                  const int pending = panel->PendingEdits();
+                                  Check(panel->Edit({ "priority", -1, -1, x.a + "|" + x.b, "" }).empty() && panel->Edit({ "priority", -1, -1, x.b + "|" + x.a, "" }).empty() &&
+                                            panel->PendingEdits() == pending + 1,
+                                        "which of two figures sharing lights wins can be chosen (the last choice for the pair stays)");
+                                  (void)panel->Undo();
+                                  (void)panel->Undo();
+                              } else {
+                                  Check(true, "no two figures of this show share their lights: nothing to choose");
+                              }
                               auto* ideas = new MotifsDialog(_dialog, score, _dialog->ShowFolder(), "prueba");
                               ideas->Show();
                               Check(ideas->Motifs() > 0 && ideas->SelectMotif(0) && !ideas->Detail().IsEmpty(),
@@ -1314,6 +1359,23 @@ private:
                                     "the production folder is prepared next to the show, never over another");
                               Capture(d, "preparar-espectaculo");
                               d->Destroy();
+                              return true;
+                          },
+                           900 });
+        _steps.push_back({ "the final render", [this]() {
+                              if (!_started) {
+                                  _started = true;
+                                  _dialog->MakeFinalRender(false);
+                                  return false;
+                              }
+                              if (_dialog->AssistRunning() || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              const std::string fseq = (fs::path(_frame->GetShowDirectory()) / (fs::path(_dialog->ResultSequence()).stem().string() + ".fseq")).string();
+                              Check(FileExists(fseq) && !_dialog->FinalRenderState().IsEmpty(),
+                                    "the final render is made apart from the window, where xLights plays it from, and checked frame by frame");
+                              Capture(_dialog, "render-definitivo");
                               return true;
                           },
                            900 });

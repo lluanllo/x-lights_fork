@@ -11,7 +11,9 @@
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
 #include "composer/SequenceWriter.h"
+#include "composer/CompositionSelector.h"
 #include "composer/StageCheck.h"
+#include "composer/StagePresence.h"
 #include "composer/StageDirector.h"
 #include "composer/UnderstandingStore.h"
 #include "composer/WriterTest.h"
@@ -905,6 +907,8 @@ private:
 
         TestArt(song, score);
         TestRealize(song, score);
+        TestSelector();
+        TestOrchestra(song);
     }
 
     // ------------------------------------------------------------- phase 20
@@ -1113,6 +1117,496 @@ private:
     }
 
     // The score into effects, rendered by xLights: each figure lights when the score says.
+    // ------------------------------------------------------------- phase 21
+
+    static SelectorScene Facts(const char* context, const char* narrative, int available, int durationMS, int strongHits) {
+        SelectorScene s;
+        s.context = context;
+        s.sectionKind = "verse";
+        s.narrative = narrative;
+        s.available = available;
+        s.durationMS = durationMS;
+        s.strongHits = strongHits;
+        s.beat = 0.5;
+        s.priority = 1;
+        s.topologies["tree"] = 1;
+        s.topologies["matrix"] = available - 1;
+        return s;
+    }
+
+    static const CompositionCandidate* Candidate(const CompositionChoice& c, const std::string& id) {
+        for (const CompositionCandidate& x : c.candidates) {
+            if (x.id == id) {
+                return &x;
+            }
+        }
+        return nullptr;
+    }
+
+    static bool Says(const CompositionCandidate* c, const std::string& reason) {
+        if (c == nullptr) {
+            return false;
+        }
+        for (const std::string& r : c->reasons) {
+            if (r.find(reason) != std::string::npos) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void TestSelector() {
+        Title("Phase 21: the composition each scene is built on, chosen for all its circumstances");
+        const StageLibrary library = BuiltInStageLibrary();
+        // A voice tells the story, one strong hit, plenty of figures: one figure tells, the house listens.
+        SelectorScene told = Facts("narration", "presentation", 6, 8000, 1);
+        told.faces = 1;
+        const CompositionChoice a = SelectComposition(library, told);
+        Check(a.entry != nullptr && a.entry->id == "composition:protagonist-glow" && !a.reasons.empty(),
+              fmt::format("a narration that presents the idea: '{}', with its reasons", a.entry != nullptr ? a.entry->id : "none"));
+        Check(a.candidates.size() == 12, fmt::format("all 12 compositions weighed and kept with their verdict ({})", a.candidates.size()));
+        const CompositionChoice again = SelectComposition(library, told);
+        bool same = again.entry == a.entry && again.candidates.size() == a.candidates.size();
+        for (size_t i = 0; same && i < a.candidates.size(); ++i) {
+            same = a.candidates[i].id == again.candidates[i].id && a.candidates[i].score == again.candidates[i].score && a.candidates[i].verdict == again.candidates[i].verdict;
+        }
+        Check(same, "the same scene always gets the same composition and the same reasons");
+        // Not enough figures: a group composition is ruled out, and says why.
+        SelectorScene few = Facts("solo", "development", 2, 8000, 2);
+        const CompositionChoice b = SelectComposition(library, few);
+        const CompositionCandidate* neighbours = Candidate(b, "composition:neighbours-answer");
+        Check(neighbours != nullptr && neighbours->verdict == "rejected" && Says(neighbours, "not enough figures"), "with two figures, 'neighbours answer' (3 or more) is ruled out, and it says why");
+        // Too short: nothing that needs time fits a second and a half.
+        SelectorScene shortScene = Facts("solo", "development", 6, 1500, 2);
+        const CompositionChoice c = SelectComposition(library, shortScene);
+        const CompositionCandidate* call = Candidate(c, "composition:call-and-answer");
+        Check(call != nullptr && call->verdict == "rejected" && Says(call, "too short"), "a scene too short for a call and its answers rules it out");
+        // The music rests: no composition at all, and the director's own way, with the reason.
+        SelectorScene silent = Facts("silence", "rest", 6, 8000, 0);
+        silent.mode = StageMode::Rest;
+        const CompositionChoice d = SelectComposition(library, silent);
+        Check(d.entry == nullptr && !d.fallback.empty(), fmt::format("where the music rests no composition is used: '{}'", d.fallback));
+        // No hit, no peak, nothing closing: every composition needs something the scene lacks.
+        SelectorScene nothing = Facts("solo", "development", 6, 8000, 0);
+        const CompositionChoice e = SelectComposition(library, nothing);
+        Check(e.entry == nullptr && e.fallback == "no composition can be done here", "a scene with no moment for any composition keeps the director's own way, and says why");
+        // A person chose the mode: a composition using another amount of the house is ruled out.
+        SelectorScene byPerson = Facts("climax", "climax", 6, 8000, 2);
+        byPerson.mode = StageMode::Protagonist;
+        byPerson.modeByPerson = true;
+        byPerson.peakBegins = true;
+        const CompositionChoice f = SelectComposition(library, byPerson);
+        const CompositionCandidate* wave = Candidate(f, "composition:wave-house");
+        Check(wave != nullptr && wave->verdict == "rejected" && Says(wave, "a person chose another way") && (f.entry == nullptr || f.entry->level == "local"),
+              "a mode a person chose wins: the whole-house wave is ruled out in a scene they gave to one figure");
+        // The idea comes back: its own composition is preferred.
+        SelectorScene back = Facts("solo", "recovery", 6, 8000, 2);
+        back.motifComposition = "composition:neighbours-answer";
+        back.motifOperation = "recall";
+        const CompositionChoice g = SelectComposition(library, back);
+        Check(g.entry != nullptr && g.entry->id == "composition:neighbours-answer" && Says(Candidate(g, g.entry->id), "born with"),
+              "an idea that comes back brings back the composition it was born with");
+        // Developed, it grows to more figures.
+        SelectorScene grown = back;
+        grown.motifComposition = "composition:protagonist-glow";
+        grown.motifOperation = "develop";
+        grown.narrative = "development";
+        const CompositionChoice h = SelectComposition(library, grown);
+        Check(h.entry != nullptr && h.entry->level == "group" && Says(Candidate(h, h.entry->id), "grows"), fmt::format("an idea developed grows from one figure to a group ('{}')", h.entry != nullptr ? h.entry->id : "none"));
+        // A person's choice wins, and their 'none' too; an impossible choice is not made.
+        SelectorScene asked = Facts("solo", "development", 6, 8000, 2);
+        asked.personChoice = "composition:wave-house";
+        const CompositionChoice i = SelectComposition(library, asked);
+        Check(i.entry != nullptr && i.entry->id == "composition:wave-house" && Says(Candidate(i, "composition:wave-house"), "chosen by a person"), "a composition a person chose for the scene is used");
+        asked.personChoice = "none";
+        Check(SelectComposition(library, asked).entry == nullptr, "a person can ask for the director's own way");
+        SelectorScene impossible = Facts("solo", "development", 2, 8000, 2);
+        impossible.personChoice = "composition:neighbours-answer";
+        const CompositionChoice j = SelectComposition(library, impossible);
+        Check(j.entry == nullptr || j.entry->id != "composition:neighbours-answer", "a composition a person chose that cannot be done here is not forced");
+        // Excluded by a person: never chosen.
+        StageLibrary personal;
+        StageLibraryEntry off;
+        off.id = "composition:protagonist-glow";
+        off.kind = "composition";
+        off.excluded = true;
+        personal.entries.push_back(off);
+        const StageLibrary merged = MergeStageLibrary(personal);
+        const CompositionChoice k = SelectComposition(merged, told);
+        Check(k.entry == nullptr || k.entry->id != "composition:protagonist-glow", "a composition a person excluded is never chosen");
+        // Fitted to the house: a group composition of 3-4 figures with only 3 there.
+        SelectorScene three = Facts("solo", "development", 3, 8000, 2);
+        three.target = 6;
+        const CompositionChoice l = SelectComposition(library, three);
+        Check(l.entry != nullptr && l.figures <= 3 && l.figures >= l.entry->minFigures && !l.adapted.empty(),
+              fmt::format("fitted to the figures there: '{}' with {} figures ({})", l.entry != nullptr ? l.entry->id : "none", l.figures, l.adapted));
+    }
+
+    void TestOrchestra(const Song& base) {
+        Title("Phase 21: the director commands the whole house");
+        // The song with an ending after its peak, so the peak is a peak and not the close.
+        Song song = base;
+        song.plan.segments[5].endMS = 22000;
+        song.plan.segments.push_back(Segment("s6.0", 22000, 30000, 1, { "ending" }));
+        song.plan.durationMS = 30000;
+        song.analysis.durationMS = 30000;
+        MusicalEvent hit;
+        hit.type = MusicalEventType::Onset;
+        hit.timeMS = 22500;
+        hit.intensity = 0.9;
+        hit.confidence = 0.9;
+        song.analysis.events.push_back(hit);
+        // As in a real show, every figure has effects of its own from the other engines.
+        for (const StageFigure& f : _space.figures) {
+            if (f.placed && _geometry.Find(f.name) != nullptr) {
+                ChoreographyEvent e;
+                e.id = "own/" + f.name;
+                e.target = f.name;
+                e.effect = "On";
+                e.intent = "accompany";
+                e.startMS = 3000;
+                e.endMS = 30000;
+                e.colors = { "#20A040" };
+                song.faces.events.push_back(e);
+            }
+        }
+        StageDirectorInput in = Input(song);
+        const StageLibrary library = BuiltInStageLibrary();
+        in.library = &library;
+        in.art = ArtLevel::Full;
+        const GlobalStageScore f20 = DirectStage(in);
+        bool untouched = true;
+        for (const StageScene& sc : f20.scenes) {
+            untouched = untouched && sc.composition.empty() && sc.candidates.empty() && sc.presence.empty();
+        }
+        Check(untouched && f20.version == STAGE_DIRECTOR_ART_VERSION, "at the phase 20 level nothing of phase 21 is decided: it generates as before");
+        in.art = ArtLevel::Orchestra;
+        GlobalStageScore score = DirectStage(in);
+        Check(ToJson(DirectStage(in)) == ToJson(score), "the same song, layout and choices always give the same orchestra");
+        int composed = 0, realised = 0, explained = 0;
+        for (const StageScene& sc : score.scenes) {
+            if (sc.composition.empty()) {
+                explained += sc.compositionFallback.empty() ? 0 : 1;
+                continue;
+            }
+            ++composed;
+            explained += sc.compositionReasons.empty() ? 0 : 1;
+            std::string kinds;
+            for (const GlobalGesture* g : GesturesOf(score, &sc)) {
+                kinds += fmt::format(" {}[{}]", g->id, g->composition);
+            }
+            for (const CompositionCandidate& c : sc.candidates) {
+                if (c.verdict != "rejected") {
+                    kinds += fmt::format(" | {} {:.0f}", c.id.substr(12), c.score);
+                }
+            }
+            printf("    %s %s (%s, %s): %s\n", sc.id.c_str(), sc.composition.c_str(), sc.narrative.c_str(), StageModeId(sc.mode), kinds.c_str());
+            for (const GlobalGesture* g : GesturesOf(score, &sc)) {
+                if (g->composition == sc.composition) {
+                    ++realised;
+                    break;
+                }
+            }
+        }
+        Check(composed >= 3, fmt::format("the director builds scenes on the library's compositions: {} of {} scenes", composed, score.scenes.size()));
+        Check(realised * 2 >= composed, fmt::format("the composition chosen is made: its gesture is in the scene ({} of {})", realised, composed));
+        Check(explained == static_cast<int>(score.scenes.size()), "every scene says why it uses its composition, or why none");
+        GlobalStageScore back;
+        std::string error;
+        Check(FromJson(ToJson(score), back, error) && ToJson(back) == ToJson(score), "compositions, candidates and presence are written and read back unchanged");
+        // A person's composition for a scene.
+        StageEdits edits;
+        const StageScene* climax = SceneOf(score, "s5.0");
+        edits.edits.push_back({ "composition", 3000, -1, "composition:accent-flash", "" });
+        StageDirectorInput withEdit = in;
+        withEdit.edits = &edits;
+        const GlobalStageScore asked = DirectStage(withEdit);
+        const StageScene* s1 = SceneOf(asked, "s1.0");
+        Check(s1 != nullptr && s1->composition == "composition:accent-flash", fmt::format("a composition a person chose for a scene is used ('{}')", s1 != nullptr ? s1->composition : ""));
+        // Presence: every figure on the stage has a state and a policy in every scene.
+        bool complete = true, rested = false, glow = false;
+        for (const StageScene& sc : score.scenes) {
+            complete = complete && sc.presence.size() == static_cast<size_t>(std::count_if(_space.figures.begin(), _space.figures.end(), [&](const StageFigure& f) {
+                           return f.placed && f.lights > 0 && !f.noController && _geometry.Find(f.name) != nullptr;
+                       }));
+            for (const FigurePresence& p : sc.presence) {
+                rested = rested || p.policy == "suspended";
+                glow = glow || p.policy == "reduced";
+            }
+        }
+        Check(complete && rested && glow, "every figure gets a presence in every scene: some lead, some glow, some rest");
+        const StageScene* peak = climax;
+        bool allPlay = peak != nullptr;
+        int playing = 0;
+        for (const FigurePresence& p : peak != nullptr ? peak->presence : std::vector<FigurePresence>()) {
+            // A figure with nothing of its own to show there is said to rest: the score says what the render shows.
+            allPlay = allPlay && (p.policy == "normal" || p.why == "nothing of its own to show in this scene");
+            playing += p.policy == "normal" ? 1 : 0;
+        }
+        allPlay = allPlay && playing >= 5;
+        for (const FigurePresence& p : peak != nullptr ? peak->presence : std::vector<FigurePresence>()) {
+            if (p.policy != "normal") {
+                printf("    at the peak %s: %s / %s (%s)\n", p.figure.c_str(), p.state.c_str(), p.policy.c_str(), p.why.c_str());
+            }
+        }
+        Check(allPlay, fmt::format("at the peak the whole house plays: every figure with light of its own ({} figures)", playing));
+        TestPresence(song, score);
+    }
+
+    void TestPresence(const Song& song, GlobalStageScore score) {
+        Title("Phase 21: what the score asks is what the effects do");
+        StageDirectorInput in = Input(song);
+        const StageLibrary library = BuiltInStageLibrary();
+        in.library = &library;
+        in.art = ArtLevel::Orchestra;
+        // A scene with one lead, a figure glowing and a figure resting.
+        const StageScene* scene = nullptr;
+        std::string lead, glowing, resting;
+        for (const StageScene& sc : score.scenes) {
+            std::string l, g, r;
+            for (const FigurePresence& p : sc.presence) {
+                if (p.state == "protagonist" && l.empty()) l = p.figure;
+                if (p.policy == "reduced" && g.empty()) g = p.figure;
+                if (p.policy == "suspended" && r.empty() && _geometry.Find(p.figure) != nullptr) r = p.figure;
+            }
+            if (!l.empty() && !g.empty() && !r.empty()) {
+                scene = &sc;
+                lead = l;
+                glowing = g;
+                resting = r;
+                break;
+            }
+        }
+        if (scene == nullptr) {
+            Check(false, "a scene with a lead, a glow and a rest");
+            return;
+        }
+        const int a = scene->startMS, b = scene->endMS;
+        Choreography c;
+        c.durationMS = 24000;
+        c.frameMS = FRAME;
+        const auto event = [&](const std::string& id, const std::string& target, const char* effect, const char* intent, TargetType type, int layer = 0) {
+            ChoreographyEvent e;
+            e.id = id;
+            e.target = target;
+            e.type = type;
+            e.effect = effect;
+            e.intent = intent;
+            e.layer = layer;
+            e.startMS = a;
+            e.endMS = b;
+            e.colors = { "#2040FF" };
+            c.events.push_back(e);
+            return &c.events.back();
+        };
+        event("lead", lead, "On", "accompany", TargetType::Model);
+        event("glow", glowing, "On", "accompany", TargetType::Model);
+        event("rest", resting, "On", "accompany", TargetType::Model);
+        event("rest-text", resting, "Text", "lyric-text", TargetType::Model, 1);
+        event("rest-face", resting, "Faces", "face-sing", TargetType::Model, 2);
+        event("rest-video", resting, "Video", "media", TargetType::Model, 3);
+        event("rest-locked", resting, "On", "accompany", TargetType::Model, 4)->state = DecisionState::Locked;
+        // A group holding figures the scene asks different things of.
+        const TargetInfo* group = _caps.Find("Grupo Todo");
+        event("group", "Grupo Todo", "On", "accompany", TargetType::Group);
+        c.events.back().settings = { { "B_CHOICE_BufferStyle", "Per Model Default" }, { "T_CHOICE_In_Transition_Type", "Fade" }, { "T_TEXTCTRL_Fadein", "0.50" } };
+        const std::vector<std::string> notes = ApplyStagePresence(score, in, c);
+        for (const std::string& n : notes) {
+            printf("    %s\n", n.c_str());
+        }
+        const auto find = [&](const std::string& id) -> const ChoreographyEvent* {
+            for (const ChoreographyEvent& e : c.events) {
+                if (e.id == id) {
+                    return &e;
+                }
+            }
+            return nullptr;
+        };
+        Check(find("lead") != nullptr && find("lead")->brightness == 100, "the lead keeps its effect whole");
+        const int glowLevel = static_cast<int>(std::lround(score.ambientLevel * 100));
+        Check(find("glow") != nullptr && find("glow")->brightness == glowLevel && find("glow")->PaletteString().find(fmt::format("C_SLIDER_Brightness={}", glowLevel)) != std::string::npos,
+              fmt::format("a figure kept as a glow is dimmed with xLights' own brightness ({}%)", glowLevel));
+        Check(find("rest") == nullptr, "a resting figure's own effect stops for the scene");
+        Check(find("rest-text") != nullptr && find("rest-face") != nullptr && find("rest-video") != nullptr, "its words, its singing face and its video stay: they are never touched");
+        Check(find("rest-locked") != nullptr && find("rest-locked")->layer == 4, "an effect a person locked stays exactly as it was");
+        int members = 0, restingLit = 0, dimmed = 0, groupLeft = 0;
+        bool noGroupStyle = true, noFade = true;
+        for (const ChoreographyEvent& e : c.events) {
+            if (e.target == "Grupo Todo") {
+                ++groupLeft;
+            }
+            if (e.id.rfind("group/", 0) == 0) {
+                ++members;
+                restingLit += e.target == resting ? 1 : 0;
+                dimmed += e.brightness < 100 ? 1 : 0;
+                for (const auto& [k, v] : e.settings) {
+                    noGroupStyle = noGroupStyle && k != "B_CHOICE_BufferStyle";
+                    noFade = noFade && k != "T_TEXTCTRL_Fadein";
+                }
+            }
+        }
+        const FigurePresence* gp = nullptr;
+        int groupFiguresPlaying = 0;
+        for (const std::string& m : group != nullptr ? group->flatModels : std::vector<std::string>()) {
+            gp = scene->PresenceOf(m);
+            groupFiguresPlaying += gp == nullptr || gp->policy != "suspended" ? 1 : 0;
+        }
+        Check(group != nullptr && groupLeft == 0 && members == groupFiguresPlaying && restingLit == 0,
+              fmt::format("a group effect over figures asked different things is split: {} figure effects for the {} that play, none for the resting one", members, groupFiguresPlaying));
+        Check(dimmed > 0 && noGroupStyle && noFade, "the split pieces keep the glow's dimming and drop the group's own layout and fades");
+        bool overlap = false;
+        for (size_t i = 0; i < c.events.size(); ++i) {
+            for (size_t j = i + 1; j < c.events.size(); ++j) {
+                const ChoreographyEvent& x = c.events[i];
+                const ChoreographyEvent& y = c.events[j];
+                overlap = overlap || (x.target == y.target && x.layer == y.layer && x.startMS < y.endMS && y.startMS < x.endMS);
+            }
+        }
+        Check(!overlap, "no two effects share a layer of a figure at the same time");
+        // The joins between compositions.
+        Choreography joined = c;
+        // An effect on the resting figure in the scene after: it comes in there.
+        const StageScene* next = nullptr;
+        for (size_t i = 0; i + 1 < score.scenes.size(); ++i) {
+            if (&score.scenes[i] == scene) {
+                next = &score.scenes[i + 1];
+            }
+        }
+        const std::vector<std::string> linked = LinkCompositions(score, in, joined);
+        for (const std::string& n : linked) {
+            printf("    %s\n", n.c_str());
+        }
+        bool kinds = !score.transitions.empty();
+        for (const CompositionTransition& t : score.transitions) {
+            kinds = kinds && !t.kind.empty() && !t.why.empty() && !t.checks.empty();
+        }
+        Check(kinds && score.transitions.size() + 1 == score.scenes.size(), fmt::format("every join between scenes has a kind and a reason ({} joins)", score.transitions.size()));
+        (void)next;
+        // The presence written and read back, and the same again.
+        GlobalStageScore back;
+        std::string error;
+        Check(FromJson(ToJson(score), back, error) && ToJson(back) == ToJson(score) && back.transitions.size() == score.transitions.size(),
+              "the presence, the shared lights and the joins are written and read back unchanged");
+        // Rendered: the light follows the score.
+        Choreography whole;
+        whole.durationMS = 30000;
+        whole.frameMS = FRAME;
+        for (const StageFigure& f : _space.figures) {
+            if (!f.placed || _geometry.Find(f.name) == nullptr) {
+                continue;
+            }
+            ChoreographyEvent e;
+            e.id = "own/" + f.name;
+            e.target = f.name;
+            e.effect = "On";
+            e.intent = "accompany";
+            e.startMS = 3000;
+            e.endMS = 19000;
+            e.colors = { "#20A040" };
+            whole.events.push_back(e);
+        }
+        ChoreographyEvent g;
+        g.id = "house";
+        g.target = "Grupo Todo";
+        g.type = TargetType::Group;
+        g.effect = "On";
+        g.layer = 0;
+        g.startMS = 3000;
+        g.endMS = 19000;
+        g.colors = { "#A02020" };
+        whole.events.push_back(g);
+        GlobalStageScore rendered = score;
+        (void)ApplyStagePresence(rendered, in, whole);
+        (void)RealizeStage(rendered, in, whole);
+        const SequenceSpec spec = ToSequenceSpec(whole, {});
+        std::string fseq;
+        Check(Render(spec, "presencia", fseq), "the whole house's effects, after the score, written and rendered");
+        const StageCheck check = CheckStage(fseq, _geometry, _space, &rendered);
+        int restLit = 0, judged = 0;
+        for (const SceneLight& s : check.scenes) {
+            if (s.startMS >= 3000 && s.endMS <= 19000) {
+                restLit += s.restButLit - s.restLitByShared;
+                judged += static_cast<int>(s.activity.size());
+            }
+        }
+        Check(check.ran && judged > 0 && restLit == 0, fmt::format("in the render no figure the score rests is lit by its own or a group's effect ({} figure x scene measured)", judged));
+        Check(check.agreement >= 0.9, fmt::format("the render agrees with the score for {:.0f}% of figure x scene", check.agreement * 100));
+        int readings = 0;
+        for (const GestureReading& r : check.readings) {
+            readings += r.participants > 0 && r.peak >= r.before ? 1 : 0;
+        }
+        Check(!check.readings.empty() && readings == static_cast<int>(check.readings.size()), fmt::format("every gesture read in time and on the stage ({} readings)", check.readings.size()));
+        // Figures wired to the same lights: found, and one gives way.
+        ModelCapabilities caps = _caps;
+        std::vector<std::string> names;
+        for (const StageFigure& f : _space.figures) {
+            if (_geometry.Find(f.name) != nullptr) {
+                names.push_back(f.name);
+            }
+        }
+        std::sort(names.begin(), names.end());
+        TargetInfo* x = nullptr;
+        TargetInfo* y = nullptr;
+        for (TargetInfo& t : caps.targets) {
+            if (names.size() >= 2 && t.name == names[0]) x = &t;
+            if (names.size() >= 2 && t.name == names[1]) y = &t;
+        }
+        if (x == nullptr || y == nullptr) {
+            Check(false, "two figures to wire together");
+            return;
+        }
+        x->firstChannel = 1;
+        x->lastChannel = 300;
+        y->firstChannel = 100;
+        y->lastChannel = 200;
+        x->channelsPerNode = y->channelsPerNode = 3;
+        const std::vector<SharedLights> pairs = FindSharedLights(caps, names);
+        bool found = false;
+        for (const SharedLights& s : pairs) {
+            found = found || (s.a == names[0] && s.b == names[1] && s.relation == "b-inside-a" && s.lights == 34);
+        }
+        Check(found, "two figures wired to the same lights are found, one inside the other, with the lights they share");
+        StageDirectorInput shared = in;
+        shared.capabilities = &caps;
+        GlobalStageScore both = score;
+        for (StageScene& sc : both.scenes) {
+            for (FigurePresence& p : sc.presence) {
+                if (p.figure == names[0] || p.figure == names[1]) {
+                    p.state = p.figure == names[0] ? "protagonist" : "response";
+                    p.policy = "normal";
+                }
+            }
+        }
+        Choreography none;
+        none.frameMS = FRAME;
+        (void)ApplyStagePresence(both, shared, none);
+        bool gaveWay = !both.scenes.empty();
+        for (const StageScene& sc : both.scenes) {
+            const FigurePresence* inner = sc.PresenceOf(names[1]);
+            gaveWay = gaveWay && (inner == nullptr || inner->policy == "suspended");
+        }
+        Check(gaveWay, "where both would play, the one inside the other gives way to the one that carries more");
+        StageEdits priority;
+        priority.edits.push_back({ "priority", -1, -1, names[1] + "|" + names[0], "" });
+        shared.edits = &priority;
+        GlobalStageScore chosen = score;
+        for (StageScene& sc : chosen.scenes) {
+            for (FigurePresence& p : sc.presence) {
+                if (p.figure == names[0] || p.figure == names[1]) {
+                    p.state = "complement";
+                    p.policy = "normal";
+                }
+            }
+        }
+        (void)ApplyStagePresence(chosen, shared, none);
+        bool personWins = !chosen.scenes.empty();
+        for (const StageScene& sc : chosen.scenes) {
+            const FigurePresence* outer = sc.PresenceOf(names[0]);
+            personWins = personWins && (outer == nullptr || outer->policy == "suspended");
+        }
+        Check(personWins && !chosen.sharedLights.empty() && chosen.sharedLights.front().prioritySource == "person", "a person's choice of which one wins on the shared lights is kept");
+    }
+
     void TestRealize(const Song& song, const GlobalStageScore& score) {
         Title("The score as native effects: rendered, every figure on time");
         StageDirectorInput in = Input(song);

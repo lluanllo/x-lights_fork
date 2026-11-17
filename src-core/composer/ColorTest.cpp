@@ -193,6 +193,7 @@ public:
             TestApply();
             TestArtDirection();
             TestCorrections();
+            TestPresenceCorrections();
             TestRender();
             TestMeasure();
         }
@@ -1299,6 +1300,112 @@ private:
         return DeltaE(ToHex(Rgb { rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0 }), hex);
     }
 
+    // Phase 21. A SIMULATED correction: no version corrected by the show's maker exists yet, so
+    // what is tested here is the flow, never a real person's taste.
+    void TestPresenceCorrections() {
+        Title("Who plays in each scene, from a corrected version (simulated correction: no real one yet)");
+        GlobalStageScore stage;
+        const auto scene = [&](const char* id, int a, int b, std::vector<std::pair<std::string, std::string>> roles) {
+            StageScene sc;
+            sc.id = id;
+            sc.startMS = a;
+            sc.endMS = b;
+            sc.mode = StageMode::Group;
+            for (const auto& [f, r] : roles) {
+                sc.roles.push_back({ f, r, "" });
+            }
+            stage.scenes.push_back(sc);
+        };
+        const std::vector<std::string> all = { "A", "B", "C", "D", "E", "F", "G" };
+        const auto roles = [&](std::vector<std::string> play) {
+            std::vector<std::pair<std::string, std::string>> out;
+            for (const std::string& f : all) {
+                out.push_back({ f, std::find(play.begin(), play.end(), f) != play.end() ? "accent" : "background" });
+            }
+            return out;
+        };
+        scene("s1", 0, 10000, roles({ "A" }));
+        scene("s2", 10000, 20000, roles({ "A" }));
+        scene("s3", 20000, 30000, roles({ "A", "B" }));
+        const auto effect = [](const std::string& target, int a, int b) {
+            EffectSpec e;
+            e.target = target;
+            e.effect = "On";
+            e.palette = "C_BUTTON_Palette1=#FF0000,C_CHECKBOX_Palette1=1";
+            e.startMS = a;
+            e.endMS = b;
+            return e;
+        };
+        SequenceSpec made, fixed;
+        // The show: A leads everywhere; a group of the background figures plays under it in s1.
+        for (int a : { 0, 10000, 20000 }) {
+            made.effects.push_back(effect("A", a, a + 10000));
+            fixed.effects.push_back(effect("A", a, a + 10000));
+        }
+        made.effects.push_back(effect("Fondo", 0, 10000));
+        made.effects.push_back(effect("B", 20000, 30000));
+        // The person: quiet background in s1 (the group taken out), four figures answering in s2,
+        // and in s3 the figures of s2 again.
+        int at = 10500;
+        for (const char* f : { "C", "D", "E", "F" }) {
+            fixed.effects.push_back(effect(f, at, 20000));
+            fixed.effects.push_back(effect(f, 20000, 30000));
+            at += 400;
+        }
+        const std::map<std::string, std::vector<std::string>> groups = { { "Fondo", { "B", "C", "D", "E" } } };
+        const std::vector<SequenceChange> changes = PresenceChanges(made, fixed, stage, groups);
+        const auto find = [&](const char* kind, const char* scene) -> const SequenceChange* {
+            for (const SequenceChange& c : changes) {
+                if (c.kind == kind && c.scene == scene) {
+                    return &c;
+                }
+            }
+            return nullptr;
+        };
+        for (const SequenceChange& c : changes) {
+            printf("    %s in %s: %zu figures (%s -> %s) %s %+.0f\n", c.kind.c_str(), c.scene.c_str(), c.figures.size(), c.before.c_str(), c.after.c_str(), c.suggestion.c_str(), c.sign);
+        }
+        const SequenceChange* quiet = find("presence-reduced", "s1");
+        Check(quiet != nullptr && quiet->figures.size() == 4 && quiet->suggestion == "stage.ambience" && quiet->sign < 0,
+              "a group's background taken out of a scene: 'less activity in the background', four figures (through the group)");
+        const SequenceChange* answer = find("responders", "s2");
+        Check(answer != nullptr && answer->figures.size() == 4 && answer->suggestion == "stage.answers", "four figures brought in a little apart: they answer one another");
+        const SequenceChange* recalled = find("composition-recalled", "s3");
+        Check(recalled != nullptr && recalled->before == "s2", "a scene that brings back the figures of an earlier one is seen as a composition recalled");
+        Check(find("presence-reduced", "s2") == nullptr && find("responders", "s1") == nullptr, "nothing is seen where nothing changed");
+        // What the person decides.
+        SequenceComparison c;
+        c.ran = true;
+        c.changes = changes;
+        std::vector<ComparisonDecision> decisions;
+        for (size_t i = 0; i < c.changes.size(); ++i) {
+            const std::string& k = c.changes[i].kind;
+            decisions.push_back({ i, k == "presence-reduced" ? "song" : k == "responders" ? "composition" : k == "composition-recalled" ? "reject" : "ignore" });
+        }
+        ArtisticPreferences prefs;
+        StageEdits songStage;
+        ChromaticEdits songColour;
+        ComparisonDecisions record;
+        StageLibrary kept;
+        const DecisionOutcome done = ApplyComparisonDecisions(prefs, songStage, songColour, record, c, decisions, "simulada.xsq", &kept);
+        int excluded = 0;
+        for (const StageEdit& e : songStage.edits) {
+            excluded += e.action == "exclude" && e.sceneStartMS == 0 ? 1 : 0;
+        }
+        Check(done.songEdits == 1 && excluded == 4, "only this song: the four figures rest in that scene when it is made again");
+        Check(done.compositions == 1 && kept.entries.size() == 1 && kept.entries[0].temporal == "answer" && kept.entries[0].figures.size() == 4 && kept.entries[0].custom,
+              "kept as a composition: four figures that answer one another, a person's own");
+        Check(done.rejected == 1 && OfferedChanges(c, record).size() == c.changes.size() - 1, "a rejected change is not offered again");
+        Check(prefs.signals.empty(), "nothing is learned as a taste unless the person chooses it");
+        std::vector<ComparisonDecision> learn = { { static_cast<size_t>(quiet - changes.data()), "learn" } };
+        ArtisticPreferences taught;
+        (void)ApplyComparisonDecisions(taught, songStage, songColour, record, c, learn, "simulada.xsq", &kept);
+        Check(taught.signals.size() == 1 && taught.signals[0].key == "stage.ambience" && taught.signals[0].sign < 0, "chosen to learn: a signal for a quieter background (it acts after two shows agree)");
+        SequenceComparison back;
+        std::string error;
+        Check(FromJson(ToJson(c), back, error) && back.changes.size() == c.changes.size() && back.changes[0].figures == c.changes[0].figures, "the figures of each change are written and read back");
+    }
+
     void TestRender() {
         Title("Rendered by xLights: a wave that changes colour as it travels, and a colour curve");
         // A slow sweep from the left across the whole stage, red at the start, blue at the far end.
@@ -1493,7 +1600,8 @@ int RunColorMeasure(const std::string& showDir, const std::string& fseqPath, con
     return check.ran && ok ? 0 : 1;
 }
 
-int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir) {
+int RunSequenceCompare(const std::string& showDir, const std::string& generated, const std::string& corrected, const std::string& chromaPath, const std::string& outDir,
+                       const std::string& stagePath) {
     std::string refused;
     if (!ControllersAreInactive(showDir, refused)) {
         printf("composer-compare: REFUSED: %s\n", refused.c_str());
@@ -1520,7 +1628,21 @@ int RunSequenceCompare(const std::string& showDir, const std::string& generated,
     ChromaticScore chroma;
     std::string text, error;
     const bool hasChroma = !chromaPath.empty() && ReadTextFile(chromaPath, text) && FromJson(text, chroma, error);
-    const SequenceComparison c = CompareSequences(before, after, hasChroma ? &chroma : nullptr);
+    SequenceComparison c = CompareSequences(before, after, hasChroma ? &chroma : nullptr);
+    GlobalStageScore stage;
+    std::string stageText, stageError;
+    if (!stagePath.empty() && ReadTextFile(stagePath, stageText) && FromJson(stageText, stage, stageError)) {
+        const ModelCapabilities caps = ExtractCapabilities(ctx, nullptr);
+        std::map<std::string, std::vector<std::string>> groups;
+        for (const TargetInfo& t : caps.targets) {
+            if (t.type == TargetType::Group) {
+                groups[t.name] = t.flatModels;
+            }
+        }
+        for (SequenceChange& ch : PresenceChanges(before, after, stage, groups)) {
+            c.changes.push_back(std::move(ch));
+        }
+    }
     std::error_code ec;
     fs::create_directories(fs::path(outDir), ec);
     const bool ok = WriteText(fs::path(outDir) / "sequence-comparison.json", ToJson(c));

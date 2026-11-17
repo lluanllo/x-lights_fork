@@ -43,13 +43,27 @@ struct ProductionMedia {
     bool travels = false; // inside the show folder or a media folder: it moves with the show
 };
 
+// Two figures wired to the same lights, as the show uses them (phase 21).
+struct ProductionSharedLights {
+    std::string a, b;
+    int lights = 0;            // lights in common
+    std::string relation;      // "a-inside-b", "b-inside-a", "same", "partial"
+    int bothLitMS = 0;         // how long both get effects at once (their own, or through a group)
+    std::string drawnLast;     // the one whose row xLights draws later: it shows on the shared lights
+    std::string priority;      // the one a person chose to win ("" none)
+    bool complementary = false; // never lit at once: no conflict, they take turns
+};
+
 // What a person can rely on, kept apart: the machine's checks never become an approval.
 struct ProductionStatus {
+    bool generated = false;     // made by the composer (its notes are there)
     bool technical = false;     // opened, validated, nothing that stops it
     bool rendered = false;      // the native renderer made it, with no error
     bool renderMatches = false; // and the same as the .fseq saved with it
     bool mediaComplete = false; // every picture and video found
     bool roundTrip = false;     // saved again by xLights and read back the same
+    bool fseqFinal = false;     // a render (.fseq) where xLights plays it from, checked frame by frame against the sequence
+    bool packaged = false;      // a production folder was made
     std::string review = "pending"; // the person's: "pending", "in-progress", "approved"
     std::string reviewer;
     std::string reviewedAt;
@@ -70,7 +84,9 @@ struct ProductionReport {
     std::vector<ProductionCheckItem> checks;
     std::vector<ProductionIssue> issues;
     std::vector<ProductionMedia> media;
+    std::vector<ProductionSharedLights> sharedLights;
     std::map<std::string, std::string> hashes; // file -> SHA-256
+    int channels = 0;        // the layout's channels
     int models = 0;
     int controllers = 0;
     int controllersActive = 0;
@@ -78,6 +94,11 @@ struct ProductionReport {
 
     [[nodiscard]] int Count(const std::string& level) const;
     [[nodiscard]] bool CanGoOut() const { return ran && !cancelled && Count("blocker") == 0; }
+    // Ready for the real installation: only when a person approved it, and the checked render,
+    // media and technical checks are all there. Passing the checks alone never makes it ready.
+    [[nodiscard]] bool ReadyForInstallation() const {
+        return CanGoOut() && status.review == "approved" && status.technical && status.fseqFinal && status.mediaComplete;
+    }
     [[nodiscard]] const ProductionCheckItem* Check(const std::string& area) const;
 };
 
@@ -120,6 +141,41 @@ struct ProductionPackage {
 };
 
 [[nodiscard]] ProductionPackage BuildProductionPackage(const ProductionPackageInput& input);
+
+// The final render (phase 21): the sequence opened as xLights opens it, rendered by the native
+// renderer and written where xLights plays it from (the show's render folder, as the desktop
+// saves it), then read back and checked: its header, channels, frames, frame time, length and
+// audio against the sequence and the layout, and every frame against what was rendered. An
+// earlier render there is kept aside (never overwritten); a render that fails a check is not
+// left in its place. No controller is switched on.
+struct FinalRenderInput {
+    std::string showDir;
+    std::string sequencePath;
+    std::string destination; // "" : where xLights saves it (the show's render folder)
+    int renderTimeoutMS = 0;
+    CancelCheck cancel;
+    std::function<void(const std::string& what)> progress;
+};
+
+struct FinalRender {
+    bool ok = false;
+    std::string fseq;     // where it is
+    std::string previous; // where an earlier render was kept ("" there was none)
+    std::string sha256;
+    int channels = 0, layoutChannels = 0;
+    int frames = 0, frameMS = 0, durationMS = 0, sequenceDurationMS = 0;
+    std::string media, sequenceMedia;
+    std::string specHash;
+    bool channelsMatch = false, timingMatches = false, framesMatch = false, mediaMatches = false;
+    std::vector<std::string> problems; // plain words keys ("{}" from problemArgs)
+};
+
+[[nodiscard]] FinalRender RenderFinal(const FinalRenderInput& input);
+[[nodiscard]] std::string ToJson(const FinalRender& render);
+// Whether two renders hold the same light, frame by frame (their files may differ in what they embed).
+[[nodiscard]] bool SameFrames(const std::string& fseqA, const std::string& fseqB, std::string& why);
+// --composer-final-render
+[[nodiscard]] int RunFinalRenderCommand(const std::string& showDir, const std::string& sequencePath, const std::string& outDir);
 
 using ProductionTranslate = std::function<std::string(const char* msgid)>;
 // The template filled with its arguments, translated first when `translate` is given.

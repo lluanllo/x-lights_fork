@@ -3,9 +3,12 @@
 #include "composer/GenerationSidecar.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "composer/SongAnalysis.h"
+#include "composer/StageDirector.h"
 #include "models/Model.h"
+#include "models/ModelGroup.h"
 #include "outputs/Controller.h"
 #include "outputs/OutputManager.h"
+#include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
 #include "utils/ExternalHooks.h"
 #include "utils/FileUtils.h"
@@ -17,9 +20,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <regex>
 #include <set>
 #include <sstream>
 
@@ -130,6 +136,8 @@ public:
             RoundTrip();
         }
         Hashes();
+        r.channels = static_cast<int>(_ctx.GetSeqData().NumChannels());
+        r.status.generated = _hasSidecar;
         r.status.technical = r.Count("blocker") == 0 && _validationErrors == 0;
         r.ran = true;
         return r;
@@ -299,15 +307,103 @@ private:
         }
         int shared = 0, unwired = 0;
         std::string example;
+        // When each model gets effects: its own rows and the groups that hold it.
+        std::map<std::string, std::vector<std::pair<int, int>>> lit;
+        std::map<std::string, size_t> row; // where xLights first draws a model's light
+        for (size_t i = 0; i < _spec.effects.size(); ++i) {
+            const EffectSpec& e = _spec.effects[i];
+            const Model* m = _ctx.AllModels[e.target];
+            std::vector<std::string> reached;
+            if (const ModelGroup* g = dynamic_cast<const ModelGroup*>(m); g != nullptr) {
+                for (const Model* x : g->GetFlatModels(true, false)) {
+                    reached.push_back(x->GetName());
+                }
+            } else {
+                reached.push_back(e.target);
+            }
+            for (const std::string& r : reached) {
+                lit[r].push_back({ e.startMS, e.endMS });
+                row.emplace(r, i);
+            }
+        }
+        const auto both = [&](const std::string& a, const std::string& b) {
+            // The time both have light at once (each list merged first).
+            const auto merged = [&](const std::string& n) {
+                std::vector<std::pair<int, int>> v = lit[n];
+                std::sort(v.begin(), v.end());
+                std::vector<std::pair<int, int>> out;
+                for (const auto& x : v) {
+                    if (!out.empty() && x.first <= out.back().second) {
+                        out.back().second = std::max(out.back().second, x.second);
+                    } else {
+                        out.push_back(x);
+                    }
+                }
+                return out;
+            };
+            const auto va = merged(a), vb = merged(b);
+            int total = 0;
+            size_t i = 0, j = 0;
+            while (i < va.size() && j < vb.size()) {
+                total += std::max(0, std::min(va[i].second, vb[j].second) - std::max(va[i].first, vb[j].first));
+                (va[i].second < vb[j].second ? i : j)++;
+            }
+            return total;
+        };
+        // A person's choice of which one wins, kept with the song's stage edits.
+        std::set<std::pair<std::string, std::string>> chosen;
+        if (_hasSidecar && !_sc.audioHash.empty()) {
+            std::string text, error;
+            StageEdits edits;
+            std::ifstream f(StageEditsPath(_in.showDir, _sc.audioHash));
+            if (f) {
+                std::stringstream ss;
+                ss << f.rdbuf();
+                if (FromJson(ss.str(), edits, error)) {
+                    for (const StageEdit& e : edits.edits) {
+                        const size_t bar = e.value.find('|');
+                        if (e.action == "priority" && bar != std::string::npos) {
+                            chosen.insert({ e.value.substr(0, bar), e.value.substr(bar + 1) });
+                        }
+                    }
+                }
+            }
+        }
         for (size_t i = 0; i < models.size(); ++i) {
             for (size_t j = i + 1; j < models.size(); ++j) {
                 const Model* a = models[i];
                 const Model* b = models[j];
-                if (a->GetFirstChannel() <= b->GetLastChannel() && b->GetFirstChannel() <= a->GetLastChannel() && (used.contains(a->GetName()) || used.contains(b->GetName()))) {
+                if (a->GetFirstChannel() <= b->GetLastChannel() && b->GetFirstChannel() <= a->GetLastChannel() && (used.contains(a->GetName()) || used.contains(b->GetName()) || lit.contains(a->GetName()) || lit.contains(b->GetName()))) {
                     ++shared;
                     if (example.empty()) {
                         example = a->GetName() + " / " + b->GetName();
                     }
+                    ProductionSharedLights s;
+                    s.a = a->GetName();
+                    s.b = b->GetName();
+                    const uint32_t lo = std::max(a->GetFirstChannel(), b->GetFirstChannel());
+                    const uint32_t hi = std::min(a->GetLastChannel(), b->GetLastChannel());
+                    const uint32_t per = std::max<uint32_t>(1, static_cast<uint32_t>(a->GetChanCountPerNode()));
+                    s.lights = static_cast<int>((hi - lo + per) / per);
+                    const bool aInB = a->GetFirstChannel() >= b->GetFirstChannel() && a->GetLastChannel() <= b->GetLastChannel();
+                    const bool bInA = b->GetFirstChannel() >= a->GetFirstChannel() && b->GetLastChannel() <= a->GetLastChannel();
+                    s.relation = aInB && bInA ? "same" : aInB ? "a-inside-b" : bInA ? "b-inside-a" : "partial";
+                    s.bothLitMS = both(s.a, s.b);
+                    s.complementary = s.bothLitMS == 0;
+                    if (row.contains(s.a) && row.contains(s.b)) {
+                        s.drawnLast = row[s.a] > row[s.b] ? s.a : s.b;
+                    }
+                    s.priority = chosen.contains({ s.a, s.b }) ? s.a : chosen.contains({ s.b, s.a }) ? s.b : std::string();
+                    if (s.complementary) {
+                        Issue("artistic", "figures", "shared-lights-turns", "{} and {} share {} lights and take turns: no conflict", { s.a, s.b, std::to_string(s.lights) });
+                    } else if (!s.priority.empty()) {
+                        Issue("warning", "figures", "shared-lights-priority", "{} and {} share {} lights; both play for {} s and {} wins, as a person chose", { s.a, s.b, std::to_string(s.lights),
+                                                                                                                                                     fmt::format("{:.1f}", s.bothLitMS / 1000.0), s.priority });
+                    } else {
+                        Issue("warning", "figures", "shared-lights-conflict", "{} and {} share {} lights and both play for {} s: on those lights {} shows. Choose which one wins in step 4", { s.a, s.b,
+                              std::to_string(s.lights), fmt::format("{:.1f}", s.bothLitMS / 1000.0), s.drawnLast.empty() ? s.a : s.drawnLast });
+                    }
+                    _r.sharedLights.push_back(std::move(s));
                 }
             }
         }
@@ -316,9 +412,7 @@ private:
                 ++unwired;
             }
         }
-        if (shared > 0) {
-            Issue("warning", "figures", "shared-lights", "{} pairs of figures share their lights (for example {}): what one shows, the other shows too", { std::to_string(shared), example });
-        }
+        (void)example;
         Set("figures", shared > 0 ? "warning" : "ok", "{} figures used; {} pairs share lights", { std::to_string(used.size()), std::to_string(shared) });
         (void)unwired;
     }
@@ -451,7 +545,8 @@ private:
         _r.status.rendered = v.ErrorCount() == 0 && !v.cancelled;
         std::string saved = _in.fseqPath;
         if (saved.empty()) {
-            for (const fs::path& p : { fs::path(_in.sequencePath).replace_extension(".fseq"), fs::path(_in.showDir) / (fs::path(_in.sequencePath).stem().string() + ".fseq") }) {
+            const std::string name = fs::path(_in.sequencePath).stem().string() + ".fseq";
+            for (const fs::path& p : { fs::path(_in.sequencePath).replace_extension(".fseq"), fs::path(_ctx.GetFseqDirectory()) / name, fs::path(_in.showDir) / name }) {
                 if (FileExists(p.string())) {
                     saved = p.string();
                     break;
@@ -460,12 +555,14 @@ private:
         }
         _r.fseq = saved;
         if (!saved.empty() && FileExists(saved)) {
-            _r.status.renderMatches = Sha256OfFile(saved) == Sha256OfFile(fseq);
+            std::string why;
+            _r.status.renderMatches = SameFrames(saved, fseq, why);
+            _r.status.fseqFinal = _r.status.renderMatches;
             if (!_r.status.renderMatches) {
                 Issue("warning", "render", "render-differs", "The saved render (.fseq) is not the same as a new one: render it again in xLights before the show");
             }
         } else {
-            Issue("warning", "render", "render-not-saved", "There is no saved render (.fseq) beside the sequence: xLights will render it when the show is saved");
+            Issue("warning", "render", "render-not-saved", "There is no saved render (.fseq) where xLights plays it from: make the final render in step 5, or save the sequence in xLights");
         }
         if (v.ErrorCount() > 0) {
             Issue("risk", "render", "render-errors", "The render has {} problems: some effects do not light as planned", { std::to_string(v.ErrorCount()) });
@@ -624,15 +721,19 @@ std::string ProductionText(const ProductionReport& r, const ProductionTranslate&
     o << T("Show check") << ": " << fs::path(r.sequence).filename().string() << "\n";
     o << "xLights " << r.xlightsVersion << "\n\n";
     const auto yes = [&](bool b) { return b ? T("yes") : T("no"); };
+    o << T("Made by the composer") << ": " << yes(r.status.generated) << "\n";
     o << T("Technical generation correct") << ": " << yes(r.status.technical) << "\n";
     o << T("Render correct") << ": " << yes(r.status.rendered) << "\n";
     o << T("Pictures and videos complete") << ": " << yes(r.status.mediaComplete) << "\n";
     o << T("Saved again by xLights and the same") << ": " << yes(r.status.roundTrip) << "\n";
+    o << T("Final render where xLights plays it, checked") << ": " << yes(r.status.fseqFinal) << "\n";
+    o << T("Production folder prepared") << ": " << yes(r.status.packaged) << "\n";
     o << T("Visual review") << ": " << T(ProductionReviewPhrase(r.status.review));
     if (r.status.review == "approved" && !r.status.reviewer.empty()) {
         o << " (" << r.status.reviewer << (r.status.reviewedAt.empty() ? "" : ", " + r.status.reviewedAt) << ")";
     }
-    o << "\n\n";
+    o << "\n";
+    o << T("Ready for the real installation") << ": " << (r.ReadyForInstallation() ? T("yes") : T("no: only once a person has approved it")) << "\n\n";
     for (const ProductionCheckItem& c : r.checks) {
         o << "- " << T(ProductionAreaPhrase(c.area)) << ": " << FillProductionText(c.summary, c.args, translate) << "\n";
     }
@@ -668,6 +769,11 @@ std::string ToJson(const ProductionReport& r) {
     for (const ProductionMedia& m : r.media) {
         media.push_back({ { "setting", m.setting }, { "target", m.target }, { "startMS", m.startMS }, { "path", m.path }, { "resolved", m.resolved }, { "travels", m.travels } });
     }
+    json shared = json::array();
+    for (const ProductionSharedLights& s : r.sharedLights) {
+        shared.push_back({ { "a", s.a }, { "b", s.b }, { "lights", s.lights }, { "relation", s.relation }, { "bothLitMS", s.bothLitMS }, { "drawnLast", s.drawnLast },
+                           { "priority", s.priority }, { "complementary", s.complementary } });
+    }
     return json({ { "kind", "composer-production-check" },
                   { "schemaVersion", r.schemaVersion },
                   { "ran", r.ran },
@@ -686,10 +792,16 @@ std::string ToJson(const ProductionReport& r) {
                   { "checks", checks },
                   { "issues", issues },
                   { "media", media },
+                  { "sharedLights", shared },
+                  { "channels", r.channels },
+                  { "readyForInstallation", r.ReadyForInstallation() },
                   { "hashes", r.hashes },
                   { "counts", { { "blocker", r.Count("blocker") }, { "risk", r.Count("risk") }, { "warning", r.Count("warning") }, { "artistic", r.Count("artistic") } } },
                   { "status",
-                    { { "technical", r.status.technical },
+                    { { "generated", r.status.generated },
+                      { "fseqFinal", r.status.fseqFinal },
+                      { "packaged", r.status.packaged },
+                      { "technical", r.status.technical },
                       { "rendered", r.status.rendered },
                       { "renderMatches", r.status.renderMatches },
                       { "mediaComplete", r.status.mediaComplete },
@@ -737,6 +849,14 @@ bool FromJson(const std::string& text, ProductionReport& out, std::string& error
         }
         r.hashes = root.value("hashes", std::map<std::string, std::string>());
         const json st = root.value("status", json::object());
+        r.status.generated = st.value("generated", false);
+        r.status.fseqFinal = st.value("fseqFinal", false);
+        r.status.packaged = st.value("packaged", false);
+        r.channels = root.value("channels", 0);
+        for (const json& s : root.value("sharedLights", json::array())) {
+            r.sharedLights.push_back({ s.value("a", std::string()), s.value("b", std::string()), s.value("lights", 0), s.value("relation", std::string()), s.value("bothLitMS", 0),
+                                       s.value("drawnLast", std::string()), s.value("priority", std::string()), s.value("complementary", false) });
+        }
         r.status.technical = st.value("technical", false);
         r.status.rendered = st.value("rendered", false);
         r.status.renderMatches = st.value("renderMatches", false);
@@ -834,8 +954,19 @@ ProductionPackage BuildProductionPackage(const ProductionPackageInput& in) {
         info["models"] = in.report->models;
         info["controllers"] = in.report->controllers;
         info["controllersActive"] = in.report->controllersActive;
-        info["status"] = { { "technical", in.report->status.technical }, { "rendered", in.report->status.rendered }, { "mediaComplete", in.report->status.mediaComplete },
-                           { "roundTrip", in.report->status.roundTrip } };
+        info["status"] = { { "generated", in.report->status.generated }, { "technical", in.report->status.technical }, { "rendered", in.report->status.rendered },
+                           { "mediaComplete", in.report->status.mediaComplete }, { "roundTrip", in.report->status.roundTrip }, { "fseqFinal", in.report->status.fseqFinal },
+                           { "packaged", true }, { "review", in.report->status.review }, { "readyForInstallation", in.report->ReadyForInstallation() } };
+        // What the show was made for, without the layout itself.
+        json pairs = json::array();
+        for (const ProductionSharedLights& s : in.report->sharedLights) {
+            pairs.push_back({ { "a", s.a }, { "b", s.b }, { "lights", s.lights }, { "relation", s.relation }, { "priority", s.priority }, { "complementary", s.complementary } });
+        }
+        info["layout"] = { { "fingerprint", in.report->layoutFingerprint }, { "models", in.report->models }, { "channels", in.report->channels },
+                           { "controllers", in.report->controllers }, { "controllersActive", in.report->controllersActive }, { "sharedLights", pairs } };
+        if (!in.report->fseq.empty() && in.report->status.fseqFinal) {
+            info["fseq"] = { { "file", fs::path(in.report->fseq).filename().string() }, { "checkedAgainstSequence", true } };
+        }
     }
     json hashes = json::object();
     for (const std::string& rel : p.copied) {
@@ -846,6 +977,203 @@ ProductionPackage BuildProductionPackage(const ProductionPackageInput& in) {
     p.copied.push_back("paquete.json");
     p.ok = p.problems.empty();
     return p;
+}
+
+bool SameFrames(const std::string& a, const std::string& b, std::string& why) {
+    std::unique_ptr<FSEQFile> fa(FSEQFile::openFSEQFile(a));
+    std::unique_ptr<FSEQFile> fb(FSEQFile::openFSEQFile(b));
+    if (fa == nullptr || fb == nullptr) {
+        why = "unreadable";
+        return false;
+    }
+    if (fa->getNumFrames() != fb->getNumFrames() || fa->getStepTime() != fb->getStepTime() || fa->getMaxChannel() != fb->getMaxChannel()) {
+        why = "header";
+        return false;
+    }
+    const uint32_t channels = static_cast<uint32_t>(fa->getMaxChannel());
+    fa->prepareRead({ { 0, channels } });
+    fb->prepareRead({ { 0, channels } });
+    std::vector<uint8_t> da(channels), db(channels);
+    for (uint32_t f = 0; f < fa->getNumFrames(); ++f) {
+        std::fill(da.begin(), da.end(), 0);
+        std::fill(db.begin(), db.end(), 0);
+        std::unique_ptr<FSEQFile::FrameData> x(fa->getFrame(f));
+        std::unique_ptr<FSEQFile::FrameData> y(fb->getFrame(f));
+        if (x == nullptr || y == nullptr || !x->readFrame(da.data(), channels) || !y->readFrame(db.data(), channels) || da != db) {
+            why = fmt::format("frame {}", f);
+            return false;
+        }
+    }
+    return true;
+}
+
+FinalRender RenderFinal(const FinalRenderInput& in) {
+    FinalRender out;
+    const auto step = [&](const std::string& what) {
+        if (in.progress) {
+            in.progress(what);
+        }
+    };
+    const auto cancelled = [&]() { return in.cancel && in.cancel(); };
+    if (in.sequencePath.empty() || !FileExists(in.sequencePath)) {
+        out.problems.push_back("the sequence is not there");
+        return out;
+    }
+    HeadlessRenderContext ctx;
+    step("the show and its layout");
+    if (!ctx.LoadShowFolder(in.showDir) || !ctx.OpenSequence(in.sequencePath)) {
+        out.problems.push_back("xLights cannot open the sequence");
+        return out;
+    }
+    out.specHash = SpecHash(SpecFromSequence(ctx));
+    const SequenceData& data = ctx.GetSeqData();
+    out.layoutChannels = static_cast<int>(data.NumChannels());
+    if (cancelled()) {
+        out.problems.push_back("stopped");
+        return out;
+    }
+    step("the render");
+    if (!ctx.RenderAndWait(in.renderTimeoutMS)) {
+        out.problems.push_back("the native renderer could not render it");
+        return out;
+    }
+    const fs::path seq(in.sequencePath);
+    const fs::path folder = in.destination.empty() ? fs::path(ctx.GetFseqDirectory().empty() ? in.showDir : ctx.GetFseqDirectory()) : fs::path(in.destination);
+    const fs::path target = folder / (seq.stem().string() + ".fseq");
+    const fs::path temporary = folder / (seq.stem().string() + ".composer-new.fseq");
+    std::error_code ec;
+    fs::create_directories(folder, ec);
+    step("writing the render");
+    if (!ctx.WriteFseq(temporary.string())) {
+        out.problems.push_back("the render could not be written");
+        return out;
+    }
+    // Read back and checked before it takes the place of anything.
+    step("checking the render against the sequence");
+    std::unique_ptr<FSEQFile> file(FSEQFile::openFSEQFile(temporary.string()));
+    if (file == nullptr) {
+        out.problems.push_back("the render written cannot be read back");
+        fs::remove(temporary, ec);
+        return out;
+    }
+    out.channels = static_cast<int>(file->getMaxChannel()); // its last channel: a render may leave out ranges no model uses
+    out.frames = static_cast<int>(file->getNumFrames());
+    out.frameMS = file->getStepTime();
+    out.durationMS = static_cast<int>(file->getTotalTimeMS());
+    // A render may leave out channels no model uses (as the desktop does); none it leaves out may hold light.
+    out.channelsMatch = out.channels > 0 && out.channels <= out.layoutChannels;
+    out.sequenceDurationMS = static_cast<int>(data.NumFrames() * data.FrameTime());
+    out.timingMatches = out.frames == static_cast<int>(data.NumFrames()) && out.frameMS == static_cast<int>(data.FrameTime());
+    out.media = fs::path(file->getMediaFilename()).filename().string();
+    {
+        std::ifstream x(in.sequencePath);
+        std::stringstream ss;
+        ss << x.rdbuf();
+        std::smatch m;
+        const std::string text = ss.str();
+        if (std::regex_search(text, m, std::regex("<mediaFile>([^<]*)</mediaFile>"))) {
+            std::string media = m[1].str();
+            std::replace(media.begin(), media.end(), '\\', '/');
+            out.sequenceMedia = fs::path(media).filename().string();
+        }
+    }
+    out.mediaMatches = out.sequenceMedia.empty() || out.media == out.sequenceMedia;
+    bool same = out.timingMatches;
+    if (same) {
+        const uint32_t channels = std::min<uint32_t>(static_cast<uint32_t>(file->getMaxChannel()), data.NumChannels());
+        file->prepareRead({ { 0, channels } });
+        std::vector<uint8_t> frame(channels);
+        for (uint32_t f = 0; f < data.NumFrames() && same; ++f) {
+            std::fill(frame.begin(), frame.end(), 0);
+            std::unique_ptr<FSEQFile::FrameData> fd(file->getFrame(f));
+            if (fd == nullptr || !fd->readFrame(frame.data(), channels) || std::memcmp(frame.data(), data[f][0], channels) != 0) {
+                same = false;
+            }
+            const unsigned char* rest = data[f][0];
+            for (uint32_t ch = channels; ch < data.NumChannels() && out.channelsMatch; ++ch) {
+                out.channelsMatch = rest[ch] == 0;
+            }
+        }
+    }
+    out.framesMatch = same;
+    file.reset();
+    if (!out.channelsMatch) {
+        out.problems.push_back("the render leaves out channels that hold light");
+    }
+    if (!out.timingMatches) {
+        out.problems.push_back("the render's frames or frame time are not the sequence's");
+    }
+    if (!out.framesMatch) {
+        out.problems.push_back("the render read back is not what was rendered");
+    }
+    if (!out.mediaMatches) {
+        out.problems.push_back("the render names another song than the sequence");
+    }
+    if (!out.problems.empty()) {
+        fs::remove(temporary, ec);
+        return out;
+    }
+    // An earlier render of this sequence is kept aside, never written over.
+    if (FileExists(target.string())) {
+        const fs::path keep = fs::path(in.showDir) / "ShowComposer" / "renders-anteriores";
+        fs::create_directories(keep, ec);
+        std::string stamp = Now();
+        std::replace(stamp.begin(), stamp.end(), ':', '-');
+        fs::path aside = keep / (seq.stem().string() + "-" + stamp + ".fseq");
+        for (int n = 2; fs::exists(aside, ec) && n < 1000; ++n) {
+            aside = keep / (seq.stem().string() + "-" + stamp + "-" + std::to_string(n) + ".fseq");
+        }
+        fs::rename(target, aside, ec);
+        if (ec) {
+            fs::copy_file(target, aside, ec);
+            if (ec) {
+                out.problems.push_back("the earlier render could not be kept aside: nothing was changed");
+                fs::remove(temporary, ec);
+                return out;
+            }
+        }
+        out.previous = aside.string();
+    }
+    fs::rename(temporary, target, ec);
+    if (ec) {
+        out.problems.push_back("the render could not be put in its place: " + ec.message());
+        return out;
+    }
+    out.fseq = target.string();
+    out.sha256 = Sha256OfFile(out.fseq);
+    out.ok = true;
+    return out;
+}
+
+std::string ToJson(const FinalRender& r) {
+    return json({ { "kind", "composer-final-render" }, { "ok", r.ok }, { "fseq", r.fseq }, { "previous", r.previous }, { "sha256", r.sha256 }, { "channels", r.channels },
+                  { "layoutChannels", r.layoutChannels }, { "frames", r.frames }, { "frameMS", r.frameMS }, { "durationMS", r.durationMS }, { "sequenceDurationMS", r.sequenceDurationMS },
+                  { "media", r.media }, { "sequenceMedia", r.sequenceMedia }, { "specHash", r.specHash }, { "channelsMatch", r.channelsMatch }, { "timingMatches", r.timingMatches },
+                  { "framesMatch", r.framesMatch }, { "mediaMatches", r.mediaMatches }, { "problems", r.problems } })
+        .dump(1);
+}
+
+int RunFinalRenderCommand(const std::string& showDir, const std::string& sequencePath, const std::string& outDir) {
+    ObtainAccessToURL(showDir, true);
+    ObtainAccessToURL(outDir, true);
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    const auto say = [](const std::string& line) {
+        printf("composer-final-render: %s\n", line.c_str());
+        fflush(stdout);
+    };
+    FinalRenderInput in;
+    in.showDir = showDir;
+    in.sequencePath = sequencePath;
+    in.progress = say;
+    const FinalRender r = RenderFinal(in);
+    std::ofstream(fs::path(outDir) / "final-render.json") << ToJson(r);
+    say(fmt::format("{}: {} frames of {} ms, {} channels (layout {}), frames {}, song {}{}", r.ok ? "written" : "NOT WRITTEN", r.frames, r.frameMS, r.channels, r.layoutChannels,
+                    r.framesMatch ? "the same as rendered" : "NOT the same", r.mediaMatches ? "the sequence's" : "NOT the sequence's", r.previous.empty() ? "" : "; the earlier render kept aside"));
+    for (const std::string& p : r.problems) {
+        say("    " + p);
+    }
+    return r.ok ? 0 : 1;
 }
 
 int RunProductionCommand(const std::string& showDir, const std::string& sequencePath, const std::string& outDir, const std::string& packageDir, bool render) {
@@ -877,7 +1205,8 @@ int RunProductionCommand(const std::string& showDir, const std::string& sequence
         pi.destination = packageDir;
         pi.report = &r;
         const ProductionPackage p = BuildProductionPackage(pi);
-        say(fmt::format("package {} in {}: {} files copied, {} referred, {} problems", p.ok ? "made" : "INCOMPLETE", p.folder, p.copied.size(), p.referred.size(), p.problems.size()));
+        say(fmt::format("package {} in {}: {} files copied, {} referred, {} problems; final render included {}", p.ok ? "made" : "INCOMPLETE", p.folder, p.copied.size(), p.referred.size(),
+                        p.problems.size(), r.status.fseqFinal ? "yes" : "no"));
         for (const std::string& x : p.problems) {
             say("    " + x);
         }

@@ -143,11 +143,13 @@ public:
             return 1;
         }
         TestComplete();
+        TestOrchestraPipeline();
         TestLyrics();
         TestLrcFiles();
         TestVoices();
         TestMedia();
         TestProduction();
+        TestFinalRender();
         TestStoryboard();
         TestScreens();
         TestReviewLoop();
@@ -1637,6 +1639,138 @@ private:
         }
     }
 
+    void TestOrchestraPipeline() {
+        Title("A1b. Phase 21: the generated show does what its score asks of every figure");
+        if (!_base.ok) {
+            Check(false, "the complete show was made");
+            return;
+        }
+        const GlobalStageScore& score = _base.stageScore;
+        int composed = 0, scenes = 0;
+        for (const StageScene& sc : score.scenes) {
+            composed += sc.composition.empty() ? 0 : 1;
+            scenes += sc.presence.empty() ? 0 : 1;
+        }
+        Check(score.art == static_cast<int>(ArtLevel::Orchestra) && scenes == static_cast<int>(score.scenes.size()),
+              fmt::format("by default the director commands the whole house: every scene has its figures' presence ({} scenes, {} built on a composition)", scenes, composed));
+        // Every effect in the published file, against every scene: a figure the scene rests
+        // gets none of its own, nor any through a group (faces, words, pictures and the score's
+        // own gestures apart; a figure leaving may fade into the next scene for a moment).
+        const SequenceSpec read = Reopen(_base);
+        std::map<std::string, std::vector<std::string>> groups;
+        for (const TargetInfo& t : _base.capabilities.targets) {
+            if (t.type == TargetType::Group) {
+                groups[t.name] = t.flatModels;
+            }
+        }
+        int checked = 0, lit = 0;
+        std::string example;
+        for (const StageScene& sc : score.scenes) {
+            for (const FigurePresence& p : sc.presence) {
+                if (p.policy != "suspended") {
+                    continue;
+                }
+                ++checked;
+                for (const EffectSpec& e : read.effects) {
+                    if (e.effect == "Faces" || e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.effect == "Stage Field") {
+                        continue;
+                    }
+                    const auto g = groups.find(e.target);
+                    const bool reaches = e.target == p.figure || (g != groups.end() && std::find(g->second.begin(), g->second.end(), p.figure) != g->second.end());
+                    const int overlap = std::min(e.endMS, sc.endMS) - std::max(e.startMS, sc.startMS);
+                    if (reaches && overlap > 1500) {
+                        ++lit;
+                        if (example.empty()) {
+                            example = fmt::format("{} by {} on {} in {}", p.figure, e.effect, e.target, sc.id);
+                        }
+                    }
+                }
+            }
+        }
+        Check(checked > 0 && lit == 0, fmt::format("{} figure x scene asked to rest, none lit by its own or a group's effect{}", checked, example.empty() ? "" : " (" + example + ")"));
+        int dimmed = 0;
+        for (const EffectSpec& e : read.effects) {
+            dimmed += e.palette.find("C_SLIDER_Brightness=") != std::string::npos ? 1 : 0;
+        }
+        Check(dimmed > 0, fmt::format("the figures kept as a quiet glow are dimmed in the file itself ({} effects)", dimmed));
+        Check(_base.stageCheck.ran && _base.stageCheck.agreement >= 0.8,
+              fmt::format("measured in the render, the light agrees with the score for {:.0f}% of figure x scene ({} asked to rest were lit, {} of them through shared lights)",
+                          _base.stageCheck.agreement * 100, _base.stageCheck.restButLit, _base.stageCheck.restLitByShared));
+        // The phase 20 level makes the same song without any of it.
+        GenerationRequest older = Request("completo-f20");
+        older.artDirection = "full";
+        const GenerationRun f20 = Generate(older);
+        bool none = f20.ok;
+        for (const StageScene& sc : f20.stageScore.scenes) {
+            none = none && sc.presence.empty() && sc.composition.empty();
+        }
+        Check(none && f20.stageScore.art == static_cast<int>(ArtLevel::Full), "asked for the phase 20 level, the director decides as it did then");
+    }
+
+    void TestFinalRender() {
+        Title("A2f. Phase 21: the final render where xLights plays it from, checked frame by frame");
+        const fs::path sequence = _show / "medios.xsq";
+        if (!FileExists(sequence.string())) {
+            Check(false, "the show with pictures and videos is there to render");
+            return;
+        }
+        const std::string before = Sha256OfFile(sequence.string());
+        FinalRenderInput in;
+        in.showDir = _show.string();
+        in.sequencePath = sequence.string();
+        const FinalRender first = RenderFinal(in);
+        for (const std::string& p : first.problems) {
+            printf("    %s\n", p.c_str());
+        }
+        Check(first.ok && FileExists(first.fseq) && fs::path(first.fseq).filename() == "medios.fseq",
+              fmt::format("rendered by the native renderer and written where xLights plays it from: {}", first.fseq));
+        Check(first.framesMatch && first.timingMatches && first.channelsMatch && first.mediaMatches,
+              fmt::format("read back: {} frames of {} ms, {} channels for a layout of {}, the same song, every frame what was rendered", first.frames, first.frameMS, first.channels,
+                          first.layoutChannels));
+        Check(first.durationMS == first.sequenceDurationMS && first.previous.empty() && !first.sha256.empty(), "its length is the sequence's; nothing was there before; its hash is kept");
+        const FinalRender second = RenderFinal(in);
+        std::string why;
+        Check(second.ok && !second.previous.empty() && FileExists(second.previous) && SameFrames(second.previous, second.fseq, why),
+              "made again, the earlier render is kept aside, never written over (and it holds the same light)");
+        std::unique_ptr<FSEQFile> reopened(FSEQFile::openFSEQFile(second.fseq));
+        Check(reopened != nullptr && static_cast<int>(reopened->getNumFrames()) == second.frames, "the render opens again as any .fseq");
+        reopened.reset();
+        ProductionInput check;
+        check.showDir = _show.string();
+        check.sequencePath = sequence.string();
+        check.workDir = (_root / "produccion-final").string();
+        check.roundTrip = false;
+        const ProductionReport r = CheckProduction(check);
+        Check(r.status.renderMatches && r.status.fseqFinal && r.fseq == second.fseq, "the show check finds that render and finds it the same as a new one");
+        Check(!r.ReadyForInstallation(), "every check passed, and still not ready for the real installation: nobody has approved it");
+        ProductionReport approved = r;
+        approved.status.review = "approved";
+        Check(approved.ReadyForInstallation(), "only a person's approval, with the checks, makes it ready");
+        ProductionPackageInput pi;
+        pi.showDir = _show.string();
+        pi.sequencePath = sequence.string();
+        pi.destination = (_root / "produccion" / "final").string();
+        pi.report = &r;
+        const ProductionPackage p = BuildProductionPackage(pi);
+        std::string info;
+        bool carried = false;
+        if (ReadTextFile((fs::path(p.folder) / "paquete.json").string(), info)) {
+            const nlohmann::json j = nlohmann::json::parse(info, nullptr, false);
+            carried = j.is_object() && j.contains("fseq") && j["fseq"].value("checkedAgainstSequence", false) && j.contains("layout") && j["layout"].value("channels", 0) > 0 &&
+                      j["status"].value("readyForInstallation", true) == false;
+        }
+        Check(p.ok && std::find(p.copied.begin(), p.copied.end(), "medios.fseq") != p.copied.end() && carried,
+              "the production folder carries the checked render, the layout's description and the review state (not ready: not approved)");
+        FinalRenderInput missing = in;
+        missing.sequencePath = (_show / "no-existe.xsq").string();
+        const FinalRender none = RenderFinal(missing);
+        Check(!none.ok && !none.problems.empty(), "a sequence that is not there: nothing written, and it says why");
+        Check(Sha256OfFile(sequence.string()) == before, "the sequence itself is never changed");
+        std::error_code ec;
+        fs::remove(second.fseq, ec);
+        fs::remove_all(_show / "ShowComposer" / "renders-anteriores", ec);
+    }
+
     void TestLrcFiles() {
         Title("A2b. LRC files: repaired when it is safe, refused when a time is wrong");
         // 20.037 s: the song does not end on a frame, and its last line is sung up to the end.
@@ -2257,6 +2391,12 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     }
     if (!o.artDirection.empty()) {
         r.artDirection = o.artDirection;
+    }
+    if (!o.ambientLevel.empty()) {
+        const double v = std::strtod(o.ambientLevel.c_str(), nullptr);
+        if (v > 0) {
+            r.ambientLevel = std::clamp(v, 0.05, 1.0);
+        }
     }
     if (o.colorDirector == "on" || o.colorDirector == "off") {
         r.colorDirector = o.colorDirector == "on";

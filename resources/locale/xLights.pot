@@ -14675,8 +14675,6 @@ msgstr ""
 msgid "other colours, as many"
 msgstr ""
 
-msgid "%d corrections to learn, %d general preferences, %d decisions for this song only, %d ignored, %d rejected."
-msgstr ""
 
 msgid "%d could not be asked of the composer for this song."
 msgstr ""
@@ -14750,8 +14748,6 @@ msgstr ""
 msgid "Choose a composition first."
 msgstr ""
 
-msgid "Complete: present, develop, bring back and close the ideas (recommended)"
-msgstr ""
 
 msgid "Composition of a group"
 msgstr ""
@@ -14840,8 +14836,6 @@ msgstr ""
 msgid "Learn it"
 msgstr ""
 
-msgid "Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Ignore: nothing. Reject: nothing, and it is not offered again."
-msgstr ""
 
 msgid "Left and right do different things at once, like two voices."
 msgstr ""
@@ -15314,8 +15308,6 @@ msgstr ""
 msgid "The song {} is not there: the show would play in silence"
 msgstr ""
 
-msgid "There is no saved render (.fseq) beside the sequence: xLights will render it when the show is saved"
-msgstr ""
 
 msgid "a video is not there"
 msgstr ""
@@ -15407,8 +15399,6 @@ msgstr ""
 msgid "{} models; the layout is the one the show was made for"
 msgstr ""
 
-msgid "{} pairs of figures share their lights (for example {}): what one shows, the other shows too"
-msgstr ""
 
 msgid "{} pictures and videos, all in the show"
 msgstr ""
@@ -15456,4 +15446,445 @@ msgid "lyrics synchronized; {} face effects"
 msgstr ""
 
 msgid "lyrics synchronized approximately"
+msgstr ""
+
+msgid "%d compositions do not fit this scene."
+msgstr ""
+
+msgid "%d corrections to learn, %d general preferences, %d decisions for this song only, %d kept as compositions, %d ignored, %d rejected."
+msgstr ""
+
+msgid "%d figures come in, %d go out."
+msgstr ""
+
+msgid "%d figures rest: their own effects stop in this scene."
+msgstr ""
+
+msgid "%d play"
+msgstr ""
+
+msgid "%d play, %d glow"
+msgstr ""
+
+msgid "%s and %s (%d lights in common)"
+msgstr ""
+
+msgid "%s and %s share lights: here %s gives way."
+msgstr ""
+
+msgid "%s wins"
+msgstr ""
+
+msgid "Also possible: %s."
+msgstr ""
+
+msgid "An earlier composition brought back"
+msgstr ""
+
+msgid "Built on the composition \"%s\"."
+msgstr ""
+
+msgid "Change the Composition..."
+msgstr ""
+
+msgid "Complete: the director commands the whole house, with compositions and smooth joins (recommended)"
+msgstr ""
+
+msgid "Composition"
+msgstr ""
+
+msgid "Compositions chosen by the director"
+msgstr ""
+
+msgid "Compositions, and every figure follows what its scene asks"
+msgstr ""
+
+msgid "Figures Sharing Lights..."
+msgstr ""
+
+msgid "Figures that answer"
+msgstr ""
+
+msgid "Final Render"
+msgstr ""
+
+msgid "Final render made: %s, %d frames, checked frame by frame against the sequence."
+msgstr ""
+
+msgid "Final render where xLights plays it, checked"
+msgstr ""
+
+msgid "From one figure to a group"
+msgstr ""
+
+msgid "From the scene before, the idea %s: %s."
+msgstr ""
+
+msgid "Ideas developed (as in phase 20)"
+msgstr ""
+
+msgid "It was born with the composition \"%s\"; each scene below says which composition carries it there."
+msgstr ""
+
+msgid "Keep it as a composition"
+msgstr ""
+
+msgid "Kept as a person left it"
+msgstr ""
+
+msgid "Leads"
+msgstr ""
+
+msgid "Learn it: a taste for the next shows, once a second show agrees. Only this song: kept as a decision of this song. General preference: your own value now, for every show (it can be undone in \"What Has Been Learned\"). Keep it as a composition: the figures you made play together, to use in other songs. Ignore: nothing. Reject: nothing, and it is not offered again."
+msgstr ""
+
+msgid "Less activity"
+msgstr ""
+
+msgid "Make the Final Render..."
+msgstr ""
+
+msgid "More figures play"
+msgstr ""
+
+msgid "No composition of the library: %s. The director's own way is used."
+msgstr ""
+
+msgid "No two figures of this show share their lights."
+msgstr ""
+
+msgid "Production folder prepared"
+msgstr ""
+
+msgid "Quiet glow"
+msgstr ""
+
+msgid "Quiet glow of the figures that do not take part:"
+msgstr ""
+
+msgid "Ready for the real installation"
+msgstr ""
+
+msgid "Rendering the show with xLights' own renderer and checking it... (the window stays usable)"
+msgstr ""
+
+msgid "The director's own way, without a composition"
+msgstr ""
+
+msgid "The earlier render was kept aside in ShowComposer/renders-anteriores."
+msgstr ""
+
+msgid "The final render could not be made."
+msgstr ""
+
+msgid "The final render could not be started."
+msgstr ""
+
+msgid "The final render was not put in place: %s. Nothing was changed."
+msgstr ""
+
+msgid "The render (.fseq) xLights plays: made with xLights' own renderer, where xLights keeps it, and checked frame by frame against the sequence."
+msgstr ""
+
+msgid "The render is written where xLights plays it from, as xLights does when the sequence is saved. An earlier render of this sequence is kept aside, never written over. No controller is switched on. Make it now?"
+msgstr ""
+
+msgid "There is no saved render (.fseq) where xLights plays it from: make the final render in step 5, or save the sequence in xLights"
+msgstr ""
+
+msgid "These figures are wired to the same lights: what one shows, the other shows too. Which pair?"
+msgstr ""
+
+msgid "When both would play, which one should the shared lights follow? The other one rests in those scenes."
+msgstr ""
+
+msgid "Which composition should this scene be built on?"
+msgstr ""
+
+msgid "Who plays"
+msgstr ""
+
+msgid "a few hits close together, one for each figure"
+msgstr ""
+
+msgid "a figure here has the shape it is made for"
+msgstr ""
+
+msgid "a person asked for the director's own way here"
+msgstr ""
+
+msgid "a person chose another way to use the house"
+msgstr ""
+
+msgid "a person excluded it"
+msgstr ""
+
+msgid "a person's favourite"
+msgstr ""
+
+msgid "a person's own composition"
+msgstr ""
+
+msgid "a quiet part: one figure is enough"
+msgstr ""
+
+msgid "a strong part: the whole house can carry it"
+msgstr ""
+
+msgid "after the rest the light comes back from where the scene starts"
+msgstr ""
+
+msgid "already used many times in the song"
+msgstr ""
+
+msgid "answers"
+msgstr ""
+
+msgid "bright"
+msgstr ""
+
+msgid "carries on"
+msgstr ""
+
+msgid "changes its shape"
+msgstr ""
+
+msgid "chosen by a person for this scene"
+msgstr ""
+
+msgid "closes"
+msgstr ""
+
+msgid "cuts"
+msgstr ""
+
+msgid "does not fit here"
+msgstr ""
+
+msgid "faint"
+msgstr ""
+
+msgid "fewer figures carry the next idea: the others leave from the farthest in"
+msgstr ""
+
+msgid "fits"
+msgstr ""
+
+msgid "fitted to the figures this house has"
+msgstr ""
+
+msgid "fitted to the number of figures it allows"
+msgstr ""
+
+msgid "gathers onto fewer figures"
+msgstr ""
+
+msgid "it is the composition the scene's idea was born with"
+msgstr ""
+
+msgid "it keeps the idea's own composition"
+msgstr ""
+
+msgid "it moves the way the scene's idea moves here"
+msgstr ""
+
+msgid "it needs a few hits close together"
+msgstr ""
+
+msgid "it suits the scene's role in the song"
+msgstr ""
+
+msgid "it suits this kind of part of the song"
+msgstr ""
+
+msgid "it suits what the voice or the instruments do here"
+msgstr ""
+
+msgid "it uses as much of the house as the scene asks"
+msgstr ""
+
+msgid "it uses far more or far less of the house than the scene asks"
+msgstr ""
+
+msgid "it varies the composition the scene's idea was born with"
+msgstr ""
+
+msgid "its gesture is not one the director can make"
+msgstr ""
+
+msgid "more figures join: they come in from where the next idea starts"
+msgstr ""
+
+msgid "no composition can be done here"
+msgstr ""
+
+msgid "no composition fits the scene well enough"
+msgstr ""
+
+msgid "no figure of the shape it needs"
+msgstr ""
+
+msgid "no figure to keep the protagonist company"
+msgstr ""
+
+msgid "no hit strong enough to start it"
+msgstr ""
+
+msgid "no peak opens here"
+msgstr ""
+
+msgid "no sound dies away here"
+msgstr ""
+
+msgid "no voice calls here"
+msgstr ""
+
+msgid "no: only once a person has approved it"
+msgstr ""
+
+msgid "not enough figures can take part"
+msgstr ""
+
+msgid "nothing closes or drops here"
+msgstr ""
+
+msgid "nothing grows towards a peak here"
+msgstr ""
+
+msgid "one is drawn inside the other on the same lights"
+msgstr ""
+
+msgid "only once a person has approved it"
+msgstr ""
+
+msgid "part of their lights are wired to both and both play at once: the row drawn later shows on those lights"
+msgstr ""
+
+msgid "part of their lights are wired to both: check the layout"
+msgstr ""
+
+msgid "spreads to more figures"
+msgstr ""
+
+msgid "stage director %s"
+msgstr ""
+
+msgid "stopped"
+msgstr ""
+
+msgid "the composition a person chose cannot be done here"
+msgstr ""
+
+msgid "the composition chosen sets how the house is used"
+msgstr ""
+
+msgid "the director's choice"
+msgstr ""
+
+msgid "the director's own way"
+msgstr ""
+
+msgid "the earlier render could not be kept aside: nothing was changed"
+msgstr ""
+
+msgid "the idea changes its shape: the figures that change fade"
+msgstr ""
+
+msgid "the idea comes back stronger: the whole house carries it"
+msgstr ""
+
+msgid "the idea gathers onto fewer figures"
+msgstr ""
+
+msgid "the idea grows: more figures take it up"
+msgstr ""
+
+msgid "the idea turns into another movement: it spreads from where it was"
+msgstr ""
+
+msgid "the music rests here"
+msgstr ""
+
+msgid "the music rests: the light fades out"
+msgstr ""
+
+msgid "the native renderer could not render it"
+msgstr ""
+
+msgid "the next scene answers this one"
+msgstr ""
+
+msgid "the peak begins here"
+msgstr ""
+
+msgid "the peak comes next: the light grows towards it"
+msgstr ""
+
+msgid "the render could not be written"
+msgstr ""
+
+msgid "the render leaves out channels that hold light"
+msgstr ""
+
+msgid "the render names another song than the sequence"
+msgstr ""
+
+msgid "the render read back is not what was rendered"
+msgstr ""
+
+msgid "the render written cannot be read back"
+msgstr ""
+
+msgid "the render's frames or frame time are not the sequence's"
+msgstr ""
+
+msgid "the same composition several scenes running: the idea needs another shape"
+msgstr ""
+
+msgid "the scene before used it: the song needs variety"
+msgstr ""
+
+msgid "the scene has hits to mark"
+msgstr ""
+
+msgid "the scene is too short for it"
+msgstr ""
+
+msgid "the song closes here"
+msgstr ""
+
+msgid "the song closes: the light gathers towards the figure that ends it"
+msgstr ""
+
+msgid "turns into another movement"
+msgstr ""
+
+msgid "voices answer each other here"
+msgstr ""
+
+msgid "you brought %d more figures into this scene"
+msgstr ""
+
+msgid "you brought back the figures of an earlier scene"
+msgstr ""
+
+msgid "you left %d of the figures that carried this scene quiet"
+msgstr ""
+
+msgid "you reduced the activity of %d figures in the background of this scene"
+msgstr ""
+
+msgid "you turned one figure's idea into a group of %d"
+msgstr ""
+
+msgid "you used %d figures to answer one another here"
+msgstr ""
+
+msgid "{} and {} share {} lights and both play for {} s: on those lights {} shows. Choose which one wins in step 4"
+msgstr ""
+
+msgid "{} and {} share {} lights and take turns: no conflict"
+msgstr ""
+
+msgid "{} and {} share {} lights; both play for {} s and {} wins, as a person chose"
 msgstr ""

@@ -594,8 +594,12 @@
 		<Unit filename="../src-core/composer/StageSpace.h" />
 		<Unit filename="../src-core/composer/StageDirector.cpp" />
 		<Unit filename="../src-core/composer/StageDirector.h" />
+		<Unit filename="../src-core/composer/CompositionSelector.cpp" />
+		<Unit filename="../src-core/composer/CompositionSelector.h" />
 		<Unit filename="../src-core/composer/ProductionCheck.cpp" />
 		<Unit filename="../src-core/composer/ProductionCheck.h" />
+		<Unit filename="../src-core/composer/StagePresence.cpp" />
+		<Unit filename="../src-core/composer/StagePresence.h" />
 		<Unit filename="../src-core/composer/StageCheck.cpp" />
 		<Unit filename="../src-core/composer/StageCheck.h" />
 		<Unit filename="../src-core/composer/StageTest.cpp" />
