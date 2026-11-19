@@ -91,6 +91,17 @@ Para cada una se compara, luz a luz:
 **Regla.** Nunca se enciende una figura que debe descansar para conservar la forma. Si el render dice que
 la forma no se conserva, no se afirma que se conserve.
 
+**La prueba en grupos reales** (`--composer-group-fidelity --controlled`) hace lo mismo sobre los grupos de
+un layout, con una escena controlada:
+- elige los grupos por una regla, nunca por nombre: de 5 a 8 figuras con luces y sitio, ninguna con luces
+  compartidas;
+- en cada grupo, la última figura descansa, la penúltima queda en ambiente y las demás tocan;
+- prueba Shockwave, Pinwheel, Bars y Wave con un movimiento claro;
+- un caso donde el dibujo no enciende o no se mueve en las figuras que tocan se informa como no medible, no
+  como aprobado;
+- un grupo con una cara comprueba que una cara que canta, un vídeo y un efecto bloqueado se ven igual que
+  solos.
+
 Las máscaras llevan la intención `presence-mask` y la procedencia `stage:presence-mask`. El validador no
 las cuenta como efectos sin luz. La cobertura y la comprobación de color las dejan aparte.
 

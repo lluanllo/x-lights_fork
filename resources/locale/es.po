@@ -15474,8 +15474,6 @@ msgstr "%s y %s (%d luces en común)"
 msgid "%s and %s share lights: here %s gives way."
 msgstr "%s y %s comparten luces: aquí cede %s."
 
-msgid "%s wins"
-msgstr "gana %s"
 
 msgid "Also possible: %s."
 msgstr "También eran posibles: %s."
@@ -15990,8 +15988,6 @@ msgstr "efecto"
 msgid "it brings the idea back with the composition it was born with"
 msgstr "recupera la idea con la composición con la que nació"
 
-msgid "meant so"
-msgstr "intencionado"
 
 msgid "musical timing"
 msgstr "tiempo musical"
@@ -16043,3 +16039,24 @@ msgstr "has hecho que %d figuras toquen juntas"
 
 msgid "Plan for the whole song: \"%s\" (%.0f points here); \"%s\" scored more in this scene alone (%.0f), but the song as a whole is better with variety."
 msgstr "Plan para toda la canción: «%s» (%.0f puntos aquí); «%s» puntuaba más en esta escena sola (%.0f), pero la canción entera es mejor con variedad."
+
+msgid "%s wins, as you chose"
+msgstr "gana %s, como elegiste"
+
+msgid "%s wins, as you chose (in %d scenes where both play)"
+msgstr "gana %s, como elegiste (en %d escenas donde suenan las dos)"
+
+msgid "A priority only decides what is generated: it does not fix the wiring or the channels. Until the lights are checked in the installation, this pair stays a risk for the real show."
+msgstr "Una prioridad solo decide lo que se genera: no corrige el cableado ni los canales. Mientras no se revisen las luces en la instalación, esta pareja sigue siendo un riesgo para el espectáculo real."
+
+msgid "Now:"
+msgstr "Ahora:"
+
+msgid "meant so, as you confirmed"
+msgstr "intencionado, como confirmaste"
+
+msgid "not decided by you: the director lets %s win where the scene asks more of it"
+msgstr "sin decidir por ti: el director deja ganar a %s donde la escena le pide más"
+
+msgid "not decided: where both play, the figure drawn later shows on those lights"
+msgstr "sin decidir: donde suenan las dos, en esas luces se ve la figura que se dibuja después"

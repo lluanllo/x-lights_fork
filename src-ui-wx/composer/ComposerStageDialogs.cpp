@@ -69,6 +69,21 @@ wxString Words(const std::string& coreText) {
 wxString CompositionWords(const std::string& id, const wxString& none);
 
 // Why the plan for the whole song gave this scene its composition, and what else it weighed.
+// Who wins on a pair of figures sharing lights, and whose decision it is.
+wxString SharedDecisionWords(const SharedLights& x) {
+    if (x.confirmed) {
+        return _("meant so, as you confirmed");
+    }
+    if (!x.priority.empty() && x.prioritySource == "person") {
+        return x.scenesOwned > 0 ? wxString::Format(_("%s wins, as you chose (in %d scenes where both play)"), U(x.priority), x.scenesOwned)
+                                 : wxString::Format(_("%s wins, as you chose"), U(x.priority));
+    }
+    if (!x.priority.empty()) {
+        return wxString::Format(_("not decided by you: the director lets %s win where the scene asks more of it"), U(x.priority));
+    }
+    return _("not decided: where both play, the figure drawn later shows on those lights");
+}
+
 wxString PlanWords(const StageScene& s) {
     wxString out;
     const wxString chosen = CompositionWords(s.composition, _("the director's own way"));
@@ -1265,11 +1280,7 @@ void StageDirectorPanel::AskPriority() {
         if (!x.kind.empty()) {
             line += ": " + Words(SharedKindPhrase(x.kind));
         }
-        if (x.confirmed) {
-            line += " - " + _("meant so");
-        } else if (!x.priority.empty() && x.prioritySource == "person") {
-            line += " - " + wxString::Format(_("%s wins"), U(x.priority));
-        }
+        line += " - " + SharedDecisionWords(x);
         pairs.Add(line);
     }
     const int pick = wxGetSingleChoiceIndex(_("These figures are wired to the same lights: what one shows, the other shows too. Which pair?"), _("Stage Director"), pairs, this);
@@ -1281,6 +1292,10 @@ void StageDirectorPanel::AskPriority() {
                                       U(x.nodesA), U(x.a), U(x.nodesB), U(x.b), U(x.a), x.exclusiveA, U(x.b), x.exclusiveB);
     if (!x.kind.empty()) {
         about += "\n" + Words(SharedKindPhrase(x.kind)) + ".";
+    }
+    about += "\n" + _("Now:") + " " + SharedDecisionWords(x) + ".";
+    if (x.kind != "containment" && x.kind != "duplicate") {
+        about += "\n" + _("A priority only decides what is generated: it does not fix the wiring or the channels. Until the lights are checked in the installation, this pair stays a risk for the real show.");
     }
     about += "\n" + _("While generating: where both would play, the one that gives way keeps its own lights and is darkened only on the shared ones, drawn before the other; in the render, the shared lights show the one that wins.");
     wxArrayString what;

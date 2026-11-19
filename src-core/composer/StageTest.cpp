@@ -11,6 +11,8 @@
 #include "composer/PlanTest.h"
 #include "composer/ProceduralField.h"
 #include "composer/SequenceWriter.h"
+#include "composer/SequenceComparison.h"
+#include "composer/ArtisticPreferences.h"
 #include "composer/CompositionSelector.h"
 #include "composer/StageCheck.h"
 #include "composer/StagePresence.h"
@@ -18,6 +20,7 @@
 #include "composer/UnderstandingStore.h"
 #include "composer/WriterTest.h"
 #include "composer/StageSpace.h"
+#include "composer/SongAnalysis.h"
 #include "composer/VocalUnderstanding.h"
 #include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
@@ -34,6 +37,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <set>
 #include <tuple>
 
 namespace fs = std::filesystem;
@@ -1731,6 +1735,53 @@ private:
             none = none && sc.planKind.empty();
         }
         Check(none && sceneByScene.compositionPlan == "local", "asked scene by scene, the director chooses as in phase 21");
+        // The whole learning loop, with a simulated correction (no real one yet): a person made the
+        // figures of a scene answer one another; kept for this song, the next show of the song does it.
+        const StageScene* target = nullptr;
+        for (const StageScene& sc : planned.scenes) {
+            const bool answers = sc.composition == "composition:call-and-answer" || sc.composition == "composition:neighbours-answer";
+            bool possible = false;
+            for (const CompositionCandidate& c : sc.candidates) {
+                possible = possible || (c.id == "composition:neighbours-answer" && c.verdict != "rejected");
+            }
+            if (!sc.composition.empty() && !answers && possible && target == nullptr) {
+                target = &sc;
+            }
+        }
+        if (target == nullptr) {
+            Check(false, "a scene to correct into an answer (simulated correction)");
+            return;
+        }
+        SequenceComparison comparison;
+        comparison.ran = true;
+        SequenceChange change;
+        change.kind = "composition-changed";
+        change.before = target->composition;
+        change.after = "answer";
+        change.category = "aesthetic";
+        change.sceneStartMS = target->startMS;
+        change.startMS = target->startMS;
+        change.endMS = target->endMS;
+        for (const FigurePresence& p : target->presence) {
+            if (p.policy == "normal" && change.figures.size() < 4) {
+                change.figures.push_back(p.figure);
+            }
+        }
+        change.nature = ChangeNature(change);
+        comparison.changes.push_back(change);
+        ArtisticPreferences prefs;
+        StageEdits learned;
+        ChromaticEdits colours;
+        ComparisonDecisions record;
+        const DecisionOutcome outcome = ApplyComparisonDecisions(prefs, learned, colours, record, comparison, { { 0, "song" } }, "simulada.xsq");
+        StageDirectorInput next = in;
+        next.edits = &learned;
+        const GlobalStageScore again = DirectStage(next);
+        const StageScene* after = again.SceneAt(target->startMS + 1);
+        const bool answers = after != nullptr && (after->composition == "composition:neighbours-answer" || after->composition == "composition:call-and-answer");
+        Check(outcome.songEdits >= 1 && answers && after->planKind == "person",
+              fmt::format("simulated correction, the whole loop: compared, explained, kept for this song, and the next show of the song makes that scene answer ({} -> {}, chosen by the person)",
+                          target->composition, after != nullptr ? after->composition : std::string("-")));
     }
 
     // A group effect over figures asked different things, rendered three ways: alone (as drawn on
@@ -2421,6 +2472,413 @@ int RunGroupFidelity(const std::string& showDir, const std::string& reportDir, c
     (void)WriteText(fs::path(outDir) / "group-fidelity.json", report.dump(1));
     printf("composer-group-fidelity: %zu group effects compared; nothing here was judged by a person\n", report.size());
     return failures == 0 && !report.empty() ? 0 : 1;
+}
+
+// Real groups of the layout under a controlled presence: in one scene, three figures of a group
+// play, one glows and one rests, while an effect is drawn on the whole group. Rendered by xLights
+// as the group's effect alone, split per figure and kept whole with masks, and compared light by
+// light. A second case puts a singing face on a resting figure, a video on a playing one and a
+// locked effect on a glowing one, and checks they still show exactly as they would alone.
+// Groups are chosen by a rule (members with lights and a place), never by name.
+int RunGroupFidelityControlled(const std::string& showDir, const std::string& outDir) {
+    std::string refused;
+    if (!ControllersAreInactive(showDir, refused)) {
+        printf("composer-group-fidelity: REFUSED: %s\n", refused.c_str());
+        return 2;
+    }
+    HeadlessRenderContext ctx;
+    if (!ctx.LoadShowFolder(showDir)) {
+        printf("composer-group-fidelity: the show could not be loaded\n");
+        return 1;
+    }
+    const ModelCapabilities caps = ExtractCapabilities(ctx, nullptr);
+    const FigureCatalog geometry = DescribeFigures(ctx, caps, true);
+    const StageSpace space = BuildStageSpace(geometry, nullptr);
+    const int frameMS = 25, from = 1000, to = 7000, length = 8000;
+    // A group's figures with lights and a place, in the group's order.
+    const auto usable = [&](const TargetInfo& g) {
+        std::vector<std::string> out;
+        for (const std::string& m : g.flatModels) {
+            const StageFigure* f = space.Find(m);
+            const FigureGeometry* fg = geometry.Find(m);
+            if (f != nullptr && f->placed && fg != nullptr && fg->nodeMap.size() >= 8 && std::find(out.begin(), out.end(), m) == out.end()) {
+                out.push_back(m);
+            }
+        }
+        return out;
+    };
+    std::vector<const TargetInfo*> groups;
+    for (const TargetInfo& t : caps.targets) {
+        if (t.type == TargetType::Group) {
+            groups.push_back(&t);
+        }
+    }
+    std::sort(groups.begin(), groups.end(), [](const TargetInfo* a, const TargetInfo* b) { return a->name < b->name; });
+    // Groups of five to eight such figures, each set of figures used once; groups with a figure
+    // that shares lights with another left out (those are split on purpose, see the shared lights).
+    std::set<std::string> sharing;
+    std::vector<std::string> names;
+    for (const StageFigure& f : space.figures) {
+        names.push_back(f.name);
+    }
+    for (const SharedLights& s : FindSharedLights(caps, names, &geometry)) {
+        sharing.insert(s.a);
+        sharing.insert(s.b);
+    }
+    std::vector<std::pair<const TargetInfo*, std::vector<std::string>>> fives;
+    std::set<std::set<std::string>> seen;
+    for (const TargetInfo* g : groups) {
+        const std::vector<std::string> m = usable(*g);
+        const std::set<std::string> key(m.begin(), m.end());
+        const bool shares = std::any_of(m.begin(), m.end(), [&](const std::string& x) { return sharing.contains(x); });
+        if (m.size() >= 5 && m.size() <= 8 && !shares && !seen.contains(key)) {
+            seen.insert(key);
+            fives.push_back({ g, m });
+        }
+    }
+    struct Case {
+        std::string kind, effect;
+        const TargetInfo* group = nullptr;
+        std::vector<std::string> members;
+        bool extras = false;
+    };
+    std::vector<Case> cases;
+    const std::vector<std::pair<std::string, std::string>> wanted = { { "radial", "Shockwave" }, { "radial", "Pinwheel" }, { "movement", "Bars" }, { "movement", "Wave" } };
+    for (const auto& [kind, effect] : wanted) {
+        for (const auto& [g, m] : fives) {
+            cases.push_back({ kind, effect, g, m, false });
+        }
+    }
+    std::map<std::string, bool> proven; // effect -> shown, lit and moving, on at least one real group
+    // The protected case: a group with a face, the face resting.
+    for (const TargetInfo* g : groups) {
+        std::vector<std::string> m = usable(*g);
+        const auto face = std::find_if(m.begin(), m.end(), [&](const std::string& x) {
+            const TargetInfo* t = caps.Find(x);
+            return t != nullptr && !t->faces.empty();
+        });
+        if (m.size() >= 3 && face != m.end() && !std::any_of(m.begin(), m.end(), [&](const std::string& x) { return sharing.contains(x); })) {
+            std::rotate(m.begin(), face, face + 1); // the face last: it rests
+            std::rotate(m.begin(), m.begin() + 1, m.end());
+            cases.push_back({ "protected", "Bars", g, m, true });
+            break;
+        }
+    }
+    std::string video;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(fs::path(showDir) / "Videos", ec)) {
+        // As xLights keeps it: relative to the show folder.
+        const std::string rel = "Videos/" + entry.path().filename().string();
+        if (entry.path().extension() == ".mp4" && (video.empty() || rel < video)) {
+            video = rel;
+        }
+    }
+    fs::create_directories(outDir, ec);
+    nlohmann::json report = nlohmann::json::array();
+    int failures = 0, checked = 0, passed = 0;
+    const auto verdict = [&](bool ok, const std::string& what) {
+        ++checked;
+        passed += ok ? 1 : 0;
+        printf("  %s %s\n", ok ? "OK    " : "FAILED", what.c_str());
+    };
+    for (size_t ci = 0; ci < cases.size(); ++ci) {
+        const Case& cs = cases[ci];
+        // Presence: the last member rests, the one before glows, the others play.
+        const std::string resting = cs.members.back(), glowing = cs.members[cs.members.size() - 2];
+        GlobalStageScore score;
+        score.art = static_cast<int>(ArtLevel::Calibrated);
+        score.ambientLevel = 0.4;
+        score.durationMS = length;
+        StageScene sc;
+        sc.id = "controlled";
+        sc.startMS = 0;
+        sc.endMS = length;
+        for (const StageFigure& f : space.figures) {
+            const std::string policy = f.name == resting ? "suspended" : f.name == glowing ? "reduced" : "normal";
+            sc.presence.push_back({ f.name, policy == "suspended" ? "rest" : policy == "reduced" ? "ambient" : "complement", policy, "controlled test" });
+        }
+        score.scenes.push_back(sc);
+        StageDirectorInput in;
+        in.capabilities = &caps;
+        in.geometry = &geometry;
+        in.space = &space;
+        ChoreographyEvent group;
+        group.id = "group";
+        group.target = cs.group->name;
+        group.type = TargetType::Group;
+        group.effect = cs.effect;
+        group.intent = "accompany";
+        group.startMS = from;
+        group.endMS = to;
+        group.colors = { "#FF8020", "#2080FF" };
+        // Clearly moving, so a drawing restarted on each figure would show.
+        if (cs.effect == "Bars") {
+            group.settings = { { "E_TEXTCTRL_Bars_Cycles", "3.0" }, { "E_SLIDER_Bars_BarCount", "2" } };
+        } else if (cs.effect == "Shockwave") {
+            group.settings = { { "E_SLIDER_Shockwave_Cycles", "3" }, { "E_SLIDER_Shockwave_Start_Radius", "1" }, { "E_SLIDER_Shockwave_End_Radius", "120" } };
+        } else if (cs.effect == "Wave") {
+            group.settings = { { "E_TEXTCTRL_Wave_Speed", "40.00" } };
+        } else if (cs.effect == "Pinwheel") {
+            group.settings = { { "E_SLIDER_Pinwheel_Speed", "25" }, { "E_SLIDER_Pinwheel_Arms", "6" }, { "E_SLIDER_Pinwheel_Thickness", "60" }, { "E_SLIDER_Pinwheel_ArmSize", "300" } };
+        }
+        std::vector<ChoreographyEvent> extras;
+        if (cs.extras) {
+            const TargetInfo* t = caps.Find(resting);
+            ChoreographyEvent face;
+            face.id = "face";
+            face.target = resting;
+            face.type = TargetType::Model;
+            face.effect = "Faces";
+            face.intent = "face-sing";
+            face.startMS = from;
+            face.endMS = to;
+            face.layer = 1;
+            face.colors = { "#FFFFFF" };
+            face.settings = { { "E_CHOICE_Faces_FaceDefinition", t->faces.front() }, { "E_CHOICE_Faces_TimingTrack", "Letra de prueba" } };
+            extras.push_back(face);
+            if (!video.empty()) {
+                ChoreographyEvent v = face;
+                v.id = "video";
+                v.target = cs.members.front();
+                v.effect = "Video";
+                v.intent = "media";
+                v.settings = { { "E_FILEPICKERCTRL_Video_Filename", video } };
+                extras.push_back(v);
+            }
+            ChoreographyEvent locked = face;
+            locked.id = "locked";
+            locked.target = glowing;
+            locked.effect = "On";
+            locked.intent = "stage-identity";
+            locked.state = DecisionState::Locked;
+            locked.startMS = 2000;
+            locked.endMS = 4000;
+            locked.layer = 2;
+            locked.colors = { "#20FF40" };
+            locked.settings = {};
+            extras.push_back(locked);
+        }
+        // The face sings a phrase of mouth shapes, as from a lyrics track.
+        TimingTrackSpec lyrics;
+        lyrics.name = "Letra de prueba";
+        lyrics.layers.resize(3);
+        lyrics.layers[0].push_back({ "la la la", from, to });
+        const char* shapes[] = { "AI", "O", "E", "MBP", "U", "AI", "etc", "O", "E", "rest", "AI", "MBP" };
+        for (int k = 0; k < 12; ++k) {
+            const int a = from + k * 500, b = a + 500;
+            if (k % 3 == 0) {
+                lyrics.layers[1].push_back({ "la", a, std::min(to, a + 1500) });
+            }
+            lyrics.layers[2].push_back({ shapes[k], a, b });
+        }
+        // 0 the group alone, 1 split, 2 masked; with extras 3 masked with them, 4 the extras alone.
+        const int count = cs.extras ? 5 : 3;
+        std::vector<std::string> fseqs;
+        std::vector<Choreography> versions;
+        GlobalStageScore maskedScore;
+        for (int v = 0; v < count; ++v) {
+            Choreography c;
+            c.durationMS = length;
+            c.frameMS = frameMS;
+            if (v != 4) {
+                c.events.push_back(group);
+            }
+            if (v >= 3) {
+                c.events.insert(c.events.end(), extras.begin(), extras.end());
+            }
+            if (v >= 1 && v <= 3) {
+                GlobalStageScore s = score;
+                in.groupPresence = v == 1 ? 0 : 1;
+                (void)ApplyStagePresence(s, in, c);
+                if (v == 2) {
+                    maskedScore = s;
+                }
+            }
+            SequenceSpec spec = ToSequenceSpec(c, cs.extras ? std::vector<TimingTrackSpec>{ lyrics } : std::vector<TimingTrackSpec>{});
+            spec.durationMS = length;
+            spec.mediaFile.clear();
+            (void)PutGroupsUnderStage(spec, c, caps);
+            const std::string name = fmt::format("controlada-{}-{}-{}-{}.xsq", ci, cs.kind, cs.effect, v);
+            const WriteResult written = WriteSequenceSafely(showDir, spec, name);
+            const std::string fseq = (fs::path(outDir) / fmt::format("controlada-{}-{}-{}-{}.fseq", ci, cs.kind, cs.effect, v)).string();
+            if (!written.ok || !ctx.OpenSequence(written.finalPath) || !ctx.RenderAndWait() || !ctx.WriteFseq(fseq)) {
+                printf("composer-group-fidelity: %s %s version %d could not be rendered\n", cs.kind.c_str(), cs.effect.c_str(), v);
+                for (const ValidationIssue& i : written.validation.issues) {
+                    if (i.severity == IssueSeverity::Error) {
+                        std::string args;
+                        for (const auto& [k, x] : i.args) {
+                            args += " " + k + "=" + x;
+                        }
+                        printf("    %s %s %s%s\n", i.code.c_str(), i.model.c_str(), i.effect.c_str(), args.c_str());
+                    }
+                }
+                ++failures;
+                break;
+            }
+            (void)ctx.CloseSequence();
+            fs::remove(written.finalPath, ec);
+            fseqs.push_back(fseq);
+            versions.push_back(c);
+        }
+        if (static_cast<int>(fseqs.size()) != count) {
+            continue;
+        }
+        Frames a(fseqs[0]), b(fseqs[1]), m(fseqs[2]);
+        const int f0 = from / frameMS + 2, f1 = to / frameMS - 2;
+        long total = 0, sameSplit = 0, sameMask = 0, moving = 0, lit = 0;
+        int restSplit = 0, restMask = 0;
+        double glowRatio = 0;
+        int glowN = 0;
+        std::vector<double> go, gs, gk;
+        nlohmann::json perFigure = nlohmann::json::array();
+        for (const std::string& name : cs.members) {
+            const FigureGeometry* fg = geometry.Find(name);
+            const std::string pol = name == resting ? "suspended" : name == glowing ? "reduced" : "normal";
+            long figTotal = 0, figSplit = 0, figMask = 0;
+            for (int f = f0; f < f1 && f < a.Count(); ++f) {
+                for (const FigureNode& n : fg->nodeMap) {
+                    const auto o = a.Light(f, n.channel), s = b.Light(f, n.channel), k = m.Light(f, n.channel);
+                    if (pol == "suspended") {
+                        restSplit = std::max({ restSplit, s[0], s[1], s[2] });
+                        restMask = std::max({ restMask, k[0], k[1], k[2] });
+                    } else if (pol == "reduced") {
+                        const int lit = std::max({ o[0], o[1], o[2] });
+                        if (lit > 40) {
+                            glowRatio += static_cast<double>(std::max({ k[0], k[1], k[2] })) / lit;
+                            ++glowN;
+                        }
+                        go.push_back(o[0] + o[1] + o[2]);
+                        gs.push_back(s[0] + s[1] + s[2]);
+                        gk.push_back(k[0] + k[1] + k[2]);
+                    } else {
+                        ++total;
+                        ++figTotal;
+                        lit += std::max({ o[0], o[1], o[2] }) > 20 ? 1 : 0;
+                        const bool sSame = std::abs(o[0] - s[0]) + std::abs(o[1] - s[1]) + std::abs(o[2] - s[2]) <= 3;
+                        const bool kSame = std::abs(o[0] - k[0]) + std::abs(o[1] - k[1]) + std::abs(o[2] - k[2]) <= 3;
+                        sameSplit += sSame ? 1 : 0;
+                        sameMask += kSame ? 1 : 0;
+                        figSplit += sSame ? 1 : 0;
+                        figMask += kSame ? 1 : 0;
+                        if (f >= f0 + 8) {
+                            const auto p = a.Light(f - 8, n.channel); // 200 ms before
+                            moving += std::abs(o[0] - p[0]) + std::abs(o[1] - p[1]) + std::abs(o[2] - p[2]) > 3 ? 1 : 0;
+                        }
+                    }
+                }
+            }
+            perFigure.push_back({ { "policy", pol }, { "lights", fg->nodeMap.size() }, { "keptSplit", figTotal > 0 ? 100.0 * figSplit / figTotal : -1.0 },
+                                  { "keptMasked", figTotal > 0 ? 100.0 * figMask / figTotal : -1.0 } });
+        }
+        const auto pearson = [](const std::vector<double>& x, const std::vector<double>& y) {
+            if (x.size() < 2) {
+                return -2.0;
+            }
+            double mx = 0, my = 0;
+            for (size_t i = 0; i < x.size(); ++i) {
+                mx += x[i] / x.size();
+                my += y[i] / y.size();
+            }
+            double sxy = 0, sxx = 0, syy = 0;
+            for (size_t i = 0; i < x.size(); ++i) {
+                sxy += (x[i] - mx) * (y[i] - my);
+                sxx += (x[i] - mx) * (x[i] - mx);
+                syy += (y[i] - my) * (y[i] - my);
+            }
+            // Flat within rounding: two flat series have the same shape; one flat cannot be compared.
+            const double flat = 1e-6 * static_cast<double>(x.size());
+            if (sxx <= flat || syy <= flat) {
+                return sxx <= flat && syy <= flat ? 1.0 : -2.0;
+            }
+            return sxy / std::sqrt(sxx * syy);
+        };
+        const double keptSplit = total > 0 ? 100.0 * sameSplit / total : 0, keptMask = total > 0 ? 100.0 * sameMask / total : 0;
+        const double ratio = glowN > 0 ? glowRatio / glowN : -1.0, shapeSplit = pearson(go, gs), shapeMask = pearson(go, gk);
+        double meanO = 0, meanK = 0;
+        for (size_t i = 0; i < go.size(); ++i) {
+            meanO += go[i] / go.size();
+            meanK += gk[i] / gk.size();
+        }
+        printf("    the glowing figure: %zu light x frame samples, %d of them lit in the group's drawing; mean light %.1f in the drawing, %.1f masked\n", go.size(), glowN, meanO, meanK);
+        int masks = 0;
+        bool whole = false;
+        for (const ChoreographyEvent& e : versions[2].events) {
+            masks += e.intent == "presence-mask" ? 1 : 0;
+            whole = whole || (e.target == cs.group->name && e.effect == cs.effect && e.startMS == from && e.endMS == to);
+        }
+        printf("composer-group-fidelity: controlled %s %s on the real group \"%s\" of %zu figures (%zu play, 1 glows, 1 rests): the playing figures' lights as the group drew them: split %.1f%%, masked %.1f%% (%.0f%% of them changing within 200 ms); resting max %d split / %d masked; glow %.2f of the group's light, its drawing alike %.3f split / %.3f masked\n",
+               cs.kind.c_str(), cs.effect.c_str(), cs.group->name.c_str(), cs.members.size(), cs.members.size() - 2, keptSplit, keptMask, total > 0 ? 100.0 * moving / total : 0.0, restSplit, restMask, ratio, shapeSplit, shapeMask);
+        verdict(whole && masks == 2 && maskedScore.groupsMasked >= 1 && maskedScore.groupsSplit == 0, fmt::format("{} {}: the group's effect stays whole, one mask on the resting figure and one on the glowing one", cs.kind, cs.effect));
+        // Only a drawing that lights and moves on the playing figures can show it is not restarted.
+        const double litShare = total > 0 ? 1.0 * lit / total : 0, movingShare = total > 0 ? 1.0 * moving / total : 0;
+        const bool measurable = litShare >= 0.05 && movingShare >= 0.05;
+        if (measurable) {
+            verdict(keptMask >= 99.0, fmt::format("{} {}: the playing figures show the group's own drawing, not restarted per figure ({:.1f}%; split per figure {:.1f}%; {:.0f}% lit, {:.0f}% moving)", cs.kind, cs.effect,
+                                                  keptMask, keptSplit, 100 * litShare, 100 * movingShare));
+            proven[cs.effect] = proven[cs.effect] || keptMask >= 99.0;
+        } else {
+            printf("  (not measurable here: on these figures the drawing is %.0f%% lit and %.0f%% moving)\n", 100 * litShare, 100 * movingShare);
+        }
+        verdict(restMask == 0, fmt::format("{} {}: the resting figure stays dark (max {})", cs.kind, cs.effect, restMask));
+        if (glowN > 0) {
+            verdict(std::abs(ratio - 0.4) < 0.08 && shapeMask > 0.95, fmt::format("{} {}: the glowing figure keeps the drawing at {:.0f}% (alike {:.3f})", cs.kind, cs.effect, 100 * ratio, shapeMask));
+        } else {
+            verdict(true, fmt::format("{} {}: the group's drawing never reaches the glowing figure in this window: nothing to dim", cs.kind, cs.effect));
+        }
+        nlohmann::json row = { { "kind", cs.kind }, { "effect", cs.effect }, { "lit", litShare }, { "measurable", measurable }, { "group", cs.group->name }, { "members", cs.members }, { "resting", resting }, { "glowing", glowing }, { "figures", cs.members.size() }, { "keptSplit", keptSplit }, { "keptMasked", keptMask },
+                               { "moving", total > 0 ? 1.0 * moving / total : 0.0 }, { "restLitSplit", restSplit }, { "restLitMasked", restMask }, { "glowRatio", ratio },
+                               { "glowShapeSplit", shapeSplit }, { "glowShapeMasked", shapeMask }, { "masks", masks }, { "perFigure", perFigure } };
+        if (cs.extras) {
+            // The protected effects, against the same effects rendered alone.
+            Frames with(fseqs[3]), alone(fseqs[4]);
+            const auto shown = [&](const std::string& figure, int a0, int a1) {
+                long lit = 0, same = 0;
+                for (int f = a0 / frameMS + 2; f < a1 / frameMS - 2; ++f) {
+                    for (const FigureNode& n : geometry.Find(figure)->nodeMap) {
+                        const auto x = alone.Light(f, n.channel), y = with.Light(f, n.channel);
+                        if (std::max({ x[0], x[1], x[2] }) > 20) {
+                            ++lit;
+                            same += std::abs(x[0] - y[0]) + std::abs(x[1] - y[1]) + std::abs(x[2] - y[2]) <= 3 ? 1 : 0;
+                        }
+                    }
+                }
+                return std::pair<long, long>(lit, same);
+            };
+            const auto [faceLit, faceSame] = shown(resting, from, to);
+            verdict(faceLit > 0 && faceSame == faceLit, fmt::format("protected: the face on the resting figure sings as it would alone ({} of {} lights the same)", faceSame, faceLit));
+            row["faceLit"] = faceLit;
+            row["faceSame"] = faceSame;
+            if (!video.empty()) {
+                const auto [videoLit, videoSame] = shown(cs.members.front(), from, to);
+                verdict(videoLit > 0 && videoSame == videoLit, fmt::format("protected: the video on a playing figure shows as it would alone ({} of {} lights the same)", videoSame, videoLit));
+                row["videoLit"] = videoLit;
+                row["videoSame"] = videoSame;
+            } else {
+                printf("  (no video in the show's Videos folder: the video case was not tried)\n");
+            }
+            const auto [lockLit, lockSame] = shown(glowing, 2000, 4000);
+            bool lockKept = false;
+            for (const ChoreographyEvent& e : versions[3].events) {
+                lockKept = lockKept || (e.id == "locked" && e.layer == 2 && e.startMS == 2000 && e.endMS == 4000 && e.effect == "On" && e.state == DecisionState::Locked);
+            }
+            verdict(lockKept && lockLit > 0 && lockSame == lockLit, fmt::format("protected: the effect a person locked on the glowing figure is left as it was and shows as it would alone ({} of {} lights)", lockSame, lockLit));
+            row["lockedLit"] = lockLit;
+            row["lockedSame"] = lockSame;
+        }
+        std::vector<std::string> hashes;
+        for (const std::string& f : fseqs) {
+            hashes.push_back(Sha256OfFile(f).substr(0, 16));
+        }
+        row["fseqSha256"] = hashes;
+        report.push_back(row);
+        fflush(stdout);
+    }
+    for (const auto& [kind, effect] : wanted) {
+        verdict(proven[effect], fmt::format("{}: shown lit and moving on at least one real group, never restarted per figure", effect));
+    }
+    (void)WriteText(fs::path(outDir) / "group-fidelity-controlled.json", report.dump(1));
+    printf("composer-group-fidelity: controlled: %zu real groups, %d checks passed, %d failed; nothing here was judged by a person\n", report.size(), passed, checked - passed);
+    return failures == 0 && checked > 0 && passed == checked && report.size() == cases.size() && cases.size() >= 5 ? 0 : 1;
 }
 
 int RunStageMeasure(const std::string& showDir, const std::string& fseqPath, const std::string& scorePath, const std::string& outDir) {

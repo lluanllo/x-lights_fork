@@ -766,4 +766,5 @@ Un `.xsq` generado **no contiene referencias rotas**, porque un recurso solo se 
 - Línea de órdenes:
   - `--composition-plan song|local` y `--group-presence mask|split`;
   - `--keep-outside <secuencia anterior>` junto con `--only-scene <desdeMS>-<hastaMS>`;
-  - `--composer-group-fidelity -s <show> --report <carpeta> --out <carpeta>`, que escribe `group-fidelity.json`.
+  - `--composer-group-fidelity -s <show> --report <carpeta> --out <carpeta>`, que escribe `group-fidelity.json`;
+  - `--composer-group-fidelity --controlled -s <show> --out <carpeta>`, sobre grupos reales del layout con una presencia controlada, que escribe `group-fidelity-controlled.json`.

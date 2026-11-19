@@ -15472,8 +15472,6 @@ msgstr ""
 msgid "%s and %s share lights: here %s gives way."
 msgstr ""
 
-msgid "%s wins"
-msgstr ""
 
 msgid "Also possible: %s."
 msgstr ""
@@ -15988,8 +15986,6 @@ msgstr ""
 msgid "it brings the idea back with the composition it was born with"
 msgstr ""
 
-msgid "meant so"
-msgstr ""
 
 msgid "musical timing"
 msgstr ""
@@ -16040,4 +16036,25 @@ msgid "you made %d figures play together"
 msgstr ""
 
 msgid "Plan for the whole song: \"%s\" (%.0f points here); \"%s\" scored more in this scene alone (%.0f), but the song as a whole is better with variety."
+msgstr ""
+
+msgid "%s wins, as you chose"
+msgstr ""
+
+msgid "%s wins, as you chose (in %d scenes where both play)"
+msgstr ""
+
+msgid "A priority only decides what is generated: it does not fix the wiring or the channels. Until the lights are checked in the installation, this pair stays a risk for the real show."
+msgstr ""
+
+msgid "Now:"
+msgstr ""
+
+msgid "meant so, as you confirmed"
+msgstr ""
+
+msgid "not decided by you: the director lets %s win where the scene asks more of it"
+msgstr ""
+
+msgid "not decided: where both play, the figure drawn later shows on those lights"
 msgstr ""

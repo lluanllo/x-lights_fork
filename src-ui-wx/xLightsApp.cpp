@@ -1380,6 +1380,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_SWITCH, "", "composer-production", "internal tool: checks the --sequence of the show (-s, controllers inactive) before it goes out, into --out; with --production-package <folder> also prepares the production folder; and exit" },
         { wxCMD_LINE_OPTION, "", "production-package", "with --composer-production: where to prepare the production folder (never over an existing one)" },
         { wxCMD_LINE_SWITCH, "", "composer-group-fidelity", "internal tool: real group effects of a generated show (--report, its report folder) rendered on its layout (-s, controllers inactive) whole, split and masked, compared light by light into --out, and exit" },
+        { wxCMD_LINE_SWITCH, "", "controlled", "with --composer-group-fidelity: instead of a show, real groups of the layout under a controlled presence (no --report)" },
         { wxCMD_LINE_SWITCH, "", "composer-final-render", "internal tool: renders the --sequence of the show (-s, controllers inactive) with the native renderer where xLights plays it from, checks it frame by frame against the sequence (an earlier render is kept aside), writes the check into --out, and exit" },
         { wxCMD_LINE_SWITCH, "cpl", "composer-pipeline-test", "internal test: run the generation pipeline cases under --out, also every level on the show (-s) with --audio, and exit" },
         { wxCMD_LINE_OPTION, "", "audio", "with --composer-pipeline-test and --composer-ui-test: a song for the runs on the show (-s)" },
@@ -2435,13 +2436,17 @@ bool xLightsApp::OnInit()
 
     if (parser.Found("composer-group-fidelity")) {
         wxString out, report;
-        if (showDir.IsEmpty() || !parser.Found("out", &out) || !parser.Found("report", &report)) {
-            spdlog::error("--composer-group-fidelity requires -s <dir>, --report <folder> and --out <folder>");
+        const bool controlled = parser.Found("controlled");
+        if (showDir.IsEmpty() || !parser.Found("out", &out) || (!controlled && !parser.Found("report", &report))) {
+            spdlog::error("--composer-group-fidelity requires -s <dir>, --out <folder> and --report <folder> (or --controlled)");
             std::exit(2);
         }
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        if (controlled) {
+            std::exit(composer::RunGroupFidelityControlled(showDir.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
+        }
         std::exit(composer::RunGroupFidelity(showDir.ToStdString(wxConvUTF8), report.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
     }
 
