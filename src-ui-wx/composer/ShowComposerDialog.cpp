@@ -739,7 +739,8 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     auto* ideas = new wxBoxSizer(wxHORIZONTAL);
     ideas->Add(new wxStaticText(style->GetStaticBox(), wxID_ANY, _("Development of the ideas:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
     wxArrayString artChoices;
-    artChoices.Add(_("Complete: the director commands the whole house, with compositions and smooth joins (recommended)"));
+    artChoices.Add(_("Calibrated: the compositions planned for the whole song, and groups kept whole (recommended)"));
+    artChoices.Add(_("The director commands the whole house, with compositions and smooth joins (as in phase 21)"));
     artChoices.Add(_("Compositions, and every figure follows what its scene asks"));
     artChoices.Add(_("Compositions chosen by the director"));
     artChoices.Add(_("Ideas developed (as in phase 20)"));
@@ -764,8 +765,11 @@ wxWindow* ShowComposerDialog::BuildCreatePage(wxWindow* parent) {
     const auto showVersion = [this]() {
         const std::string id = ArtDirectionId();
         const bool orchestra = id == "orchestra" || id == "presence" || id == "compositions";
-        _directorVersion->SetLabel(wxString::Format(_("stage director %s"), orchestra ? STAGE_DIRECTOR_ORCHESTRA_VERSION : id == "f19" ? STAGE_DIRECTOR_VERSION : STAGE_DIRECTOR_ART_VERSION));
-        _ambient->Enable(id == "orchestra" || id == "presence");
+        _directorVersion->SetLabel(wxString::Format(_("stage director %s"), id == "calibrated" ? STAGE_DIRECTOR_CALIBRATED_VERSION
+                                                                             : orchestra        ? STAGE_DIRECTOR_ORCHESTRA_VERSION
+                                                                             : id == "f19"      ? STAGE_DIRECTOR_VERSION
+                                                                                                : STAGE_DIRECTOR_ART_VERSION));
+        _ambient->Enable(id == "calibrated" || id == "orchestra" || id == "presence");
     };
     showVersion();
     _artDirection->Bind(wxEVT_CHOICE, [this, showVersion](wxCommandEvent&) {
@@ -1422,6 +1426,7 @@ wxWindow* ShowComposerDialog::BuildGeneratePage(wxWindow* parent) {
     auto* stage = new wxStaticBoxSizer(wxVERTICAL, page, _("Stage director: the whole installation"));
     _stagePanel = new StageDirectorPanel(stage->GetStaticBox());
     _stagePanel->onRecompose = [this]() { StartComposition(); };
+    _stagePanel->onRegenerateScene = [this](int a, int b) { (void)RegenerateScene(a, b); };
     _stagePanel->onDirectorChanged = [this]() { RefreshAll(); };
     stage->Add(_stagePanel, 1, wxEXPAND | wxALL, 4);
     sizer->Add(stage, 0, wxEXPAND | wxBOTTOM, 8);
@@ -1754,8 +1759,8 @@ std::string ShowComposerDialog::ResultFseq() const {
 }
 
 namespace {
-const char* const ART_IDS[] = { "orchestra", "presence", "compositions", "full", "motifs", "direction", "f19" };
-constexpr int ART_COUNT = 7;
+const char* const ART_IDS[] = { "calibrated", "orchestra", "presence", "compositions", "full", "motifs", "direction", "f19" };
+constexpr int ART_COUNT = 8;
 } // namespace
 
 std::string ShowComposerDialog::ArtDirectionId() const {
@@ -2657,7 +2662,7 @@ std::vector<std::string> ShowComposerDialog::Arguments(const std::string& stopAf
     }
     add("--stage-director", _stagePanel == nullptr || _stagePanel->DirectorOn() ? "on" : "off");
     add("--art-direction", ArtDirectionId());
-    if (_ambient != nullptr && (ArtDirectionId() == "orchestra" || ArtDirectionId() == "presence")) {
+    if (_ambient != nullptr && (ArtDirectionId() == "calibrated" || ArtDirectionId() == "orchestra" || ArtDirectionId() == "presence")) {
         add("--ambient-level", fmt::format("{:.2f}", _ambient->GetValue() / 100.0));
     }
     add("--color-director", _colorPanel == nullptr || _colorPanel->DirectorOn() ? "on" : "off");
@@ -2802,11 +2807,49 @@ void ShowComposerDialog::StartGeneration() {
     _resultReportDir = dir.string();
     _result = ReportFolder();
     _resultSequence.clear();
+    _generatingName = _sequenceName;
     _queue.push_back({ Purpose::Generation, Arguments("", _resultReportDir, _sequenceName, -1) });
     _queueDirs.push_back(_resultReportDir);
     _queueLevels.push_back(-1);
     GoTo(Step::Generate);
     RunNext();
+}
+
+bool ShowComposerDialog::RegenerateScene(int startMS, int endMS) {
+    if (_resultSequence.empty() || !FileExists(_resultSequence)) {
+        ShowError(_("Generate the show first: only then can one scene be made again."), wxString());
+        return false;
+    }
+    if (_job.Running() || endMS <= startMS) {
+        return false;
+    }
+    // A new sequence beside the one already made: nothing is written over.
+    const fs::path made(_resultSequence);
+    std::string name = fmt::format("{}-escena-{:03d}.xsq", made.stem().string(), startMS / 1000);
+    for (int n = 2; FileExists((fs::path(_showDir) / name).string()); ++n) {
+        name = fmt::format("{}-escena-{:03d}-{}.xsq", made.stem().string(), startMS / 1000, n);
+    }
+    fs::path dir = fs::path(_showDir) / "ShowComposer" / "reports" / fs::path(name).stem();
+    for (int n = 2; fs::exists(dir); ++n) {
+        dir = fs::path(_showDir) / "ShowComposer" / "reports" / (fs::path(name).stem().string() + "-" + std::to_string(n));
+    }
+    std::error_code ec;
+    fs::create_directories(dir.parent_path(), ec);
+    std::vector<std::string> args = Arguments("", dir.string(), name, -1);
+    args.push_back("--keep-outside");
+    args.push_back(_resultSequence);
+    args.push_back("--only-scene");
+    args.push_back(fmt::format("{}-{}", startMS, endMS));
+    _resultReportDir = dir.string();
+    _result = ReportFolder();
+    _resultSequence.clear();
+    _generatingName = name;
+    _queue.push_back({ Purpose::Generation, args });
+    _queueDirs.push_back(_resultReportDir);
+    _queueLevels.push_back(-1);
+    GoTo(Step::Generate);
+    RunNext();
+    return true;
 }
 
 void ShowComposerDialog::CancelJob() {
@@ -2924,7 +2967,7 @@ void ShowComposerDialog::JobFinished(int exitCode) {
         PendingLoad load;
         load.purpose = purpose;
         load.level = _jobLevel;
-        load.sequenceName = _sequenceName;
+        load.sequenceName = _generatingName.empty() ? _sequenceName : _generatingName;
         load.report = std::make_shared<ReportFolder>();
         load.done = std::async(std::launch::async, [dir = _jobDir, report = load.report]() {
             std::string error;
@@ -2959,6 +3002,9 @@ void ShowComposerDialog::CollectLoads() {
         }
         if (!_closeWhenDone) {
             ApplyReport(purpose, level, name, std::move(report));
+            // One result per tick: the three levels often finish together, and applying them
+            // all at once (each refreshing every step) kept the window from answering.
+            break;
         }
     }
     if (_closeWhenDone && !Busy()) {
@@ -2967,6 +3013,7 @@ void ShowComposerDialog::CollectLoads() {
 }
 
 void ShowComposerDialog::ApplyReport(Purpose purpose, int level, const std::string& sequenceName, ReportFolder report) {
+    const SlowLog slow("ApplyReport");
     switch (purpose) {
     case Purpose::Layout:
         _capabilities = report.capabilities;

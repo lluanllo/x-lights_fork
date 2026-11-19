@@ -15489,8 +15489,6 @@ msgstr "Construida sobre la composición «%s»."
 msgid "Change the Composition..."
 msgstr "Cambiar la composición..."
 
-msgid "Complete: the director commands the whole house, with compositions and smooth joins (recommended)"
-msgstr "Completo: el director coordina toda la casa, con composiciones y enlaces suaves (recomendado)"
 
 msgid "Composition"
 msgstr "Composición"
@@ -15597,8 +15595,6 @@ msgstr "No hay ningún render guardado (.fseq) donde xLights lo reproduce: haz e
 msgid "These figures are wired to the same lights: what one shows, the other shows too. Which pair?"
 msgstr "Estas figuras están conectadas a las mismas luces: lo que muestra una, lo muestra también la otra. ¿Qué pareja?"
 
-msgid "When both would play, which one should the shared lights follow? The other one rests in those scenes."
-msgstr "Cuando las dos fueran a tocar, ¿a cuál deben seguir las luces compartidas? La otra descansa en esas escenas."
 
 msgid "Which composition should this scene be built on?"
 msgstr "¿Sobre qué composición se construye esta escena?"
@@ -15890,3 +15886,160 @@ msgstr "{} y {} comparten {} luces y se turnan: no hay conflicto"
 
 msgid "{} and {} share {} lights; both play for {} s and {} wins, as a person chose"
 msgstr "{} y {} comparten {} luces; las dos tocan durante {} s y gana {}, como eligió una persona"
+
+msgid "%s and %s share channels %s: %d lights (%s of %s, %s of %s). %s has %d lights of its own, %s %d."
+msgstr "%s y %s comparten los canales %s: %d luces (%s de %s, %s de %s). %s tiene %d luces propias; %s, %d."
+
+msgid "%s leads this scene now, instead of %s"
+msgstr "%s protagoniza ahora esta escena, en lugar de %s"
+
+msgid "%s wins, in the whole song"
+msgstr "Gana %s, en toda la canción"
+
+msgid "%s wins, only in the chosen scene"
+msgstr "Gana %s, solo en la escena elegida"
+
+msgid "Also weighed, with their points in the song here: %s."
+msgstr "También se valoraron, con sus puntos en la canción aquí: %s."
+
+msgid "An answer added"
+msgstr "Respuesta añadida"
+
+msgid "Another protagonist"
+msgstr "Otro protagonista"
+
+msgid "Calibrated: the compositions planned for the whole song, and groups kept whole (recommended)"
+msgstr "Calibrado: las composiciones planificadas para toda la canción y los grupos conservados enteros (recomendado)"
+
+msgid "Composition changed"
+msgstr "Composición cambiada"
+
+msgid "Figures Sharing Lights"
+msgstr "Figuras que comparten luces"
+
+msgid "Generate the show first: only then can one scene be made again."
+msgstr "Genera primero el espectáculo: solo entonces se puede rehacer una escena."
+
+msgid "Groups of xLights in this show: %d effects divided by figure (as in phase 21)."
+msgstr "Grupos de xLights en este espectáculo: %d efectos divididos por figura (como en la fase 21)."
+
+msgid "Groups of xLights in this show: %d effects kept whole with their resting figures masked, %d divided by figure."
+msgstr "Grupos de xLights en este espectáculo: %d efectos conservados enteros con sus figuras en reposo enmascaradas, %d divididos por figura."
+
+msgid "In this song it carries the scenes at %s."
+msgstr "En esta canción lleva las escenas de %s."
+
+msgid "In this song it was not chosen."
+msgstr "En esta canción no se ha elegido."
+
+msgid "It is made with xLights' own effects: the Stage Field gesture over the figures that take part; on a group of xLights the group's own effect stays whole, and the figures that rest are masked on their own row."
+msgstr "Se hace con los efectos propios de xLights: el gesto Stage Field sobre las figuras que participan; en un grupo de xLights, el efecto del propio grupo se conserva entero y las figuras que descansan se enmascaran en su propia fila."
+
+msgid "It was possible in %d other scenes and did not fit %d."
+msgstr "Era posible en otras %d escenas y no encajaba en %d."
+
+msgid "Make Only This Scene Again"
+msgstr "Rehacer solo esta escena"
+
+msgid "Only this scene is made again with your changes; everything else stays exactly as in the show already made. A new sequence is saved beside it, checked and rendered like any other. Continue?"
+msgstr "Solo se rehace esta escena con tus cambios; todo lo demás queda exactamente como en el espectáculo ya hecho. Se guarda una secuencia nueva a su lado, comprobada y renderizada como cualquier otra. ¿Continuar?"
+
+
+msgid "Plan for the whole song: \"%s\" brings the scene's idea back with the composition it was born with."
+msgstr "Plan para toda la canción: «%s» recupera la idea de la escena con la composición con la que nació."
+
+msgid "Plan for the whole song: \"%s\" is also the best for this scene on its own (%.0f points)."
+msgstr "Plan para toda la canción: «%s» es también la mejor para esta escena por sí sola (%.0f puntos)."
+
+msgid "Plan for the whole song: \"%s\" is the only composition that suits this scene."
+msgstr "Plan para toda la canción: «%s» es la única composición que encaja en esta escena."
+
+msgid "Plan for the whole song: \"%s\", chosen by you."
+msgstr "Plan para toda la canción: «%s», elegida por ti."
+
+msgid "The director commands the whole house, with compositions and smooth joins (as in phase 21)"
+msgstr "El director manda en toda la casa, con composiciones y uniones suaves (como en la fase 21)"
+
+msgid "They share these lights on purpose (nothing to fix)"
+msgstr "Comparten estas luces a propósito (no hay nada que arreglar)"
+
+msgid "What should happen?"
+msgstr "¿Qué debe pasar?"
+
+msgid "While generating: where both would play, the one that gives way keeps its own lights and is darkened only on the shared ones, drawn before the other; in the render, the shared lights show the one that wins."
+msgstr "Al generar: donde las dos sonarían, la que cede conserva sus propias luces y solo se oscurece en las compartidas, dibujada antes que la otra; en el render, las luces compartidas muestran la que gana."
+
+msgid "already used in the song without bringing an idea back"
+msgstr "ya se usó en la canción sin recuperar ninguna idea"
+
+msgid "another composition scored more in this scene alone, but the song as a whole is better with this one"
+msgstr "otra composición puntuaba más en esta escena sola, pero la canción entera es mejor con esta"
+
+msgid "chosen in the plan for the whole song"
+msgstr "elegida en el plan para toda la canción"
+
+msgid "colour"
+msgstr "color"
+
+msgid "composition"
+msgstr "composición"
+
+msgid "effect"
+msgstr "efecto"
+
+msgid "it brings the idea back with the composition it was born with"
+msgstr "recupera la idea con la composición con la que nació"
+
+msgid "meant so"
+msgstr "intencionado"
+
+msgid "musical timing"
+msgstr "tiempo musical"
+
+msgid "not known: the layout does not say where their lights are"
+msgstr "desconocido: el layout no dice dónde están sus luces"
+
+msgid "one is drawn inside the other on purpose"
+msgstr "una está dibujada dentro de la otra a propósito"
+
+msgid "part of their lights in common, in the same place"
+msgstr "parte de sus luces en común, en el mismo sitio"
+
+msgid "protagonist"
+msgstr "protagonista"
+
+msgid "technical"
+msgstr "técnico"
+
+msgid "the idea comes back again right away with the same composition: another shape keeps it alive"
+msgstr "la idea vuelve enseguida con la misma composición: otra forma la mantiene viva"
+
+msgid "the only composition that suits this scene"
+msgstr "la única composición que encaja en esta escena"
+
+msgid "the priority would cover a face that sings or words: that figure keeps its lights there"
+msgstr "la prioridad taparía una cara que canta o un texto: esa figura conserva allí sus luces"
+
+msgid "the same channels drawn in two different places: probably a wiring or start-channel mistake"
+msgstr "los mismos canales dibujados en dos sitios distintos: probablemente un error de cableado o de canal inicial"
+
+msgid "the same lights described twice"
+msgstr "las mismas luces descritas dos veces"
+
+msgid "the scene before used a composition of the same structure"
+msgstr "la escena anterior usó una composición de la misma estructura"
+
+msgid "who plays"
+msgstr "quién toca"
+
+msgid "you added an answer of %s"
+msgstr "has añadido una respuesta de %s"
+
+msgid "you made %d figures answer one another"
+msgstr "has hecho que %d figuras se respondan"
+
+msgid "you made %d figures play together"
+msgstr "has hecho que %d figuras toquen juntas"
+
+msgid "Plan for the whole song: \"%s\" (%.0f points here); \"%s\" scored more in this scene alone (%.0f), but the song as a whole is better with variety."
+msgstr "Plan para toda la canción: «%s» (%.0f puntos aquí); «%s» puntuaba más en esta escena sola (%.0f), pero la canción entera es mejor con variedad."

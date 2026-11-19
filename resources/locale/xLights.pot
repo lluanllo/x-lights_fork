@@ -15487,8 +15487,6 @@ msgstr ""
 msgid "Change the Composition..."
 msgstr ""
 
-msgid "Complete: the director commands the whole house, with compositions and smooth joins (recommended)"
-msgstr ""
 
 msgid "Composition"
 msgstr ""
@@ -15595,8 +15593,6 @@ msgstr ""
 msgid "These figures are wired to the same lights: what one shows, the other shows too. Which pair?"
 msgstr ""
 
-msgid "When both would play, which one should the shared lights follow? The other one rests in those scenes."
-msgstr ""
 
 msgid "Which composition should this scene be built on?"
 msgstr ""
@@ -15887,4 +15883,161 @@ msgid "{} and {} share {} lights and take turns: no conflict"
 msgstr ""
 
 msgid "{} and {} share {} lights; both play for {} s and {} wins, as a person chose"
+msgstr ""
+
+msgid "%s and %s share channels %s: %d lights (%s of %s, %s of %s). %s has %d lights of its own, %s %d."
+msgstr ""
+
+msgid "%s leads this scene now, instead of %s"
+msgstr ""
+
+msgid "%s wins, in the whole song"
+msgstr ""
+
+msgid "%s wins, only in the chosen scene"
+msgstr ""
+
+msgid "Also weighed, with their points in the song here: %s."
+msgstr ""
+
+msgid "An answer added"
+msgstr ""
+
+msgid "Another protagonist"
+msgstr ""
+
+msgid "Calibrated: the compositions planned for the whole song, and groups kept whole (recommended)"
+msgstr ""
+
+msgid "Composition changed"
+msgstr ""
+
+msgid "Figures Sharing Lights"
+msgstr ""
+
+msgid "Generate the show first: only then can one scene be made again."
+msgstr ""
+
+msgid "Groups of xLights in this show: %d effects divided by figure (as in phase 21)."
+msgstr ""
+
+msgid "Groups of xLights in this show: %d effects kept whole with their resting figures masked, %d divided by figure."
+msgstr ""
+
+msgid "In this song it carries the scenes at %s."
+msgstr ""
+
+msgid "In this song it was not chosen."
+msgstr ""
+
+msgid "It is made with xLights' own effects: the Stage Field gesture over the figures that take part; on a group of xLights the group's own effect stays whole, and the figures that rest are masked on their own row."
+msgstr ""
+
+msgid "It was possible in %d other scenes and did not fit %d."
+msgstr ""
+
+msgid "Make Only This Scene Again"
+msgstr ""
+
+msgid "Only this scene is made again with your changes; everything else stays exactly as in the show already made. A new sequence is saved beside it, checked and rendered like any other. Continue?"
+msgstr ""
+
+
+msgid "Plan for the whole song: \"%s\" brings the scene's idea back with the composition it was born with."
+msgstr ""
+
+msgid "Plan for the whole song: \"%s\" is also the best for this scene on its own (%.0f points)."
+msgstr ""
+
+msgid "Plan for the whole song: \"%s\" is the only composition that suits this scene."
+msgstr ""
+
+msgid "Plan for the whole song: \"%s\", chosen by you."
+msgstr ""
+
+msgid "The director commands the whole house, with compositions and smooth joins (as in phase 21)"
+msgstr ""
+
+msgid "They share these lights on purpose (nothing to fix)"
+msgstr ""
+
+msgid "What should happen?"
+msgstr ""
+
+msgid "While generating: where both would play, the one that gives way keeps its own lights and is darkened only on the shared ones, drawn before the other; in the render, the shared lights show the one that wins."
+msgstr ""
+
+msgid "already used in the song without bringing an idea back"
+msgstr ""
+
+msgid "another composition scored more in this scene alone, but the song as a whole is better with this one"
+msgstr ""
+
+msgid "chosen in the plan for the whole song"
+msgstr ""
+
+msgid "colour"
+msgstr ""
+
+msgid "composition"
+msgstr ""
+
+msgid "effect"
+msgstr ""
+
+msgid "it brings the idea back with the composition it was born with"
+msgstr ""
+
+msgid "meant so"
+msgstr ""
+
+msgid "musical timing"
+msgstr ""
+
+msgid "not known: the layout does not say where their lights are"
+msgstr ""
+
+msgid "one is drawn inside the other on purpose"
+msgstr ""
+
+msgid "part of their lights in common, in the same place"
+msgstr ""
+
+msgid "protagonist"
+msgstr ""
+
+msgid "technical"
+msgstr ""
+
+msgid "the idea comes back again right away with the same composition: another shape keeps it alive"
+msgstr ""
+
+msgid "the only composition that suits this scene"
+msgstr ""
+
+msgid "the priority would cover a face that sings or words: that figure keeps its lights there"
+msgstr ""
+
+msgid "the same channels drawn in two different places: probably a wiring or start-channel mistake"
+msgstr ""
+
+msgid "the same lights described twice"
+msgstr ""
+
+msgid "the scene before used a composition of the same structure"
+msgstr ""
+
+msgid "who plays"
+msgstr ""
+
+msgid "you added an answer of %s"
+msgstr ""
+
+msgid "you made %d figures answer one another"
+msgstr ""
+
+msgid "you made %d figures play together"
+msgstr ""
+
+msgid "Plan for the whole song: \"%s\" (%.0f points here); \"%s\" scored more in this scene alone (%.0f), but the song as a whole is better with variety."
 msgstr ""
