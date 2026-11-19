@@ -9,6 +9,7 @@
 
 #include "composer/ComposerReview.h"
 #include "composer/GenerationSidecar.h"
+#include "composer/GenerationValidator.h"
 #include "composer/MediaAnalysis.h"
 #include "composer/MediaLibrary.h"
 #include "composer/MediaTest.h"
@@ -144,6 +145,7 @@ public:
         }
         TestComplete();
         TestOrchestraPipeline();
+        TestLocalRegeneration();
         TestLyrics();
         TestLrcFiles();
         TestVoices();
@@ -1651,8 +1653,9 @@ private:
             composed += sc.composition.empty() ? 0 : 1;
             scenes += sc.presence.empty() ? 0 : 1;
         }
-        Check(score.art == static_cast<int>(ArtLevel::Orchestra) && scenes == static_cast<int>(score.scenes.size()),
-              fmt::format("by default the director commands the whole house: every scene has its figures' presence ({} scenes, {} built on a composition)", scenes, composed));
+        Check(score.art == static_cast<int>(ArtLevel::Calibrated) && score.compositionPlan == "song" && score.groupPresence == "mask" && scenes == static_cast<int>(score.scenes.size()),
+              fmt::format("by default the director commands the whole house, with the compositions planned for the whole song and groups kept whole: every scene has its figures' presence ({} scenes, {} built on a composition)",
+                          scenes, composed));
         // Every effect in the published file, against every scene: a figure the scene rests
         // gets none of its own, nor any through a group (faces, words, pictures and the score's
         // own gestures apart; a figure leaving may fade into the next scene for a moment).
@@ -1663,7 +1666,26 @@ private:
                 groups[t.name] = t.flatModels;
             }
         }
-        int checked = 0, lit = 0;
+        // Phase 22: a group's effect kept whole may reach a resting figure only where the
+        // figure's own row masks it ("1 is Mask"); the render below measures that it stays dark.
+        const auto maskedFor = [&](const std::string& figure, int a, int b) {
+            std::vector<std::pair<int, int>> spans;
+            for (const EffectSpec& m : read.effects) {
+                if (m.target == figure && m.subModel.empty() && Setting(m, "T_CHOICE_LayerMethod") == "1 is Mask" && m.endMS > a && m.startMS < b) {
+                    spans.push_back({ std::max(a, m.startMS), std::min(b, m.endMS) });
+                }
+            }
+            std::sort(spans.begin(), spans.end());
+            int covered = 0, upTo = a;
+            for (const auto& [x, y] : spans) {
+                if (y > upTo) {
+                    covered += y - std::max(x, upTo);
+                    upTo = y;
+                }
+            }
+            return covered;
+        };
+        int checked = 0, lit = 0, maskedUnderGroups = 0;
         std::string example;
         for (const StageScene& sc : score.scenes) {
             for (const FigurePresence& p : sc.presence) {
@@ -1672,22 +1694,30 @@ private:
                 }
                 ++checked;
                 for (const EffectSpec& e : read.effects) {
-                    if (e.effect == "Faces" || e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.effect == "Stage Field") {
-                        continue;
+                    if (e.effect == "Faces" || e.effect == "Text" || e.effect == "Pictures" || e.effect == "Video" || e.effect == "Stage Field" || MasksWhatIsBelow(e)) {
+                        continue; // a mask lights nothing
                     }
                     const auto g = groups.find(e.target);
                     const bool reaches = e.target == p.figure || (g != groups.end() && std::find(g->second.begin(), g->second.end(), p.figure) != g->second.end());
-                    const int overlap = std::min(e.endMS, sc.endMS) - std::max(e.startMS, sc.startMS);
-                    if (reaches && overlap > 1500) {
+                    const int a = std::max(e.startMS, sc.startMS), b = std::min(e.endMS, sc.endMS);
+                    const int overlap = b - a;
+                    if (!reaches || overlap <= 1500) {
+                        continue;
+                    }
+                    const int masked = e.target == p.figure ? 0 : maskedFor(p.figure, a, b);
+                    if (overlap - masked > 1500) {
                         ++lit;
                         if (example.empty()) {
                             example = fmt::format("{} by {} on {} in {}", p.figure, e.effect, e.target, sc.id);
                         }
+                    } else if (masked > 0) {
+                        ++maskedUnderGroups;
                     }
                 }
             }
         }
-        Check(checked > 0 && lit == 0, fmt::format("{} figure x scene asked to rest, none lit by its own or a group's effect{}", checked, example.empty() ? "" : " (" + example + ")"));
+        Check(checked > 0 && lit == 0, fmt::format("{} figure x scene asked to rest, none lit by its own or a group's effect ({} times a group's effect kept whole over it, masked on its own row){}", checked,
+                                                   maskedUnderGroups, example.empty() ? "" : " (" + example + ")"));
         int dimmed = 0;
         for (const EffectSpec& e : read.effects) {
             dimmed += e.palette.find("C_SLIDER_Brightness=") != std::string::npos ? 1 : 0;
@@ -1705,6 +1735,89 @@ private:
             none = none && sc.presence.empty() && sc.composition.empty();
         }
         Check(none && f20.stageScore.art == static_cast<int>(ArtLevel::Full), "asked for the phase 20 level, the director decides as it did then");
+    }
+
+    void TestLocalRegeneration() {
+        Title("A1c. Phase 22: one scene made again, everything else kept as it was");
+        if (!_base.ok) {
+            Check(false, "the complete show was made");
+            return;
+        }
+        const StageScene* scene = nullptr;
+        for (const StageScene& sc : _base.stageScore.scenes) {
+            if (!sc.composition.empty() && sc.startMS > 0 && (scene == nullptr || sc.endMS - sc.startMS > scene->endMS - scene->startMS)) {
+                scene = &sc;
+            }
+        }
+        if (scene == nullptr) {
+            Check(false, "a scene built on a composition to make again");
+            return;
+        }
+        const int from = scene->startMS, to = scene->endMS;
+        const std::string before = Sha256OfFile(_base.sequencePath);
+        // The change: another seed and expressive colours, so the scene made again differs.
+        GenerationRequest whole = Request("completo-colores");
+        whole.colorStyle = 1.0;
+        whole.seed = 8;
+        const GenerationRun all = Generate(whole);
+        GenerationRequest local = Request("completo-escena");
+        local.colorStyle = 1.0;
+        local.seed = 8;
+        local.keepOutside = _base.sequencePath;
+        local.onlyScenes = { { from, to } };
+        const GenerationRun one = Generate(local);
+        Check(all.ok && one.ok && one.renderValidation.ErrorCount() == 0 && one.write.validation.ErrorCount() == 0 && one.render.ran,
+              fmt::format("only the scene at {:.1f}-{:.1f} s made again: published, validated and rendered like any show", from / 1000.0, to / 1000.0));
+        if (!all.ok || !one.ok) {
+            return;
+        }
+        const SequenceSpec kept = Reopen(_base), fresh = Reopen(all), spliced = Reopen(one);
+        const auto settings = [](const EffectSpec& e) {
+            std::string out;
+            for (const auto& [k, v] : e.settings) {
+                out += k + "=" + v + ",";
+            }
+            return out;
+        };
+        // Every effect as a line, the part inside or outside the scene.
+        const auto lines = [&](const SequenceSpec& spec, bool insideScene) {
+            std::multiset<std::string> out;
+            for (const EffectSpec& e : spec.effects) {
+                const int a = insideScene ? std::max(e.startMS, from) : e.startMS, b = insideScene ? std::min(e.endMS, to) : e.endMS;
+                if (insideScene && b <= a) {
+                    continue;
+                }
+                if (!insideScene) {
+                    // the parts outside: before and after the scene
+                    if (a < from) {
+                        out.insert(fmt::format("{}|{}|{}|{}|{}|{}|{}", FullName(e), e.layer, e.effect, a, std::min(b, from), e.palette, settings(e)));
+                    }
+                    if (b > to) {
+                        out.insert(fmt::format("{}|{}|{}|{}|{}|{}|{}", FullName(e), e.layer, e.effect, std::max(a, to), b, e.palette, settings(e)));
+                    }
+                    continue;
+                }
+                out.insert(fmt::format("{}|{}|{}|{}|{}|{}|{}", FullName(e), e.layer, e.effect, a, b, e.palette, settings(e)));
+            }
+            return out;
+        };
+        const auto outsideKept = lines(kept, false), outsideNow = lines(spliced, false);
+        const auto insideFresh = lines(fresh, true), insideNow = lines(spliced, true);
+        Check(!outsideKept.empty() && outsideKept == outsideNow, fmt::format("outside the scene every effect is the earlier show's, exactly ({} pieces)", outsideNow.size()));
+        Check(!insideFresh.empty() && insideFresh == insideNow, fmt::format("inside it, the new show's effects, exactly ({} pieces)", insideNow.size()));
+        Check(lines(kept, true) != insideNow, "and the scene did change");
+        Check(Sha256OfFile(_base.sequencePath) == before && one.sequencePath != _base.sequencePath, "the earlier sequence is never changed: the scene made again is a new sequence");
+        GenerationRequest gone = Request("completo-escena-sin");
+        gone.keepOutside = (_show / "no-existe.xsq").string();
+        gone.onlyScenes = { { from, to } };
+        const GenerationRun safe = Generate(gone);
+        bool said = false;
+        for (const StageOutcome& st : safe.stages) {
+            for (const std::string& n : st.notes) {
+                said = said || n.find("local-regeneration-refused") != std::string::npos;
+            }
+        }
+        Check(safe.ok && said, "when the earlier sequence cannot be read, the whole show is made, and it says so");
     }
 
     void TestFinalRender() {
@@ -2107,8 +2220,12 @@ private:
               fmt::format("on by default: a colour plan of {} scenes in the report", _base.chromatic.scenes.size()));
         Check(_base.colorCheck.ran && FileExists((report / "color-check.json").string()) && ReadText((report / "color-check.json").string()).find("\"review\": \"not-reviewed\"") != std::string::npos,
               fmt::format("the render's colours are measured ({:.1f} families, {:.0f}% in one colour), and nothing is approved", _base.colorCheck.effectiveColors, _base.colorCheck.monotoneShare * 100));
-        int roled = 0, coloured = 0;
+        int roled = 0, coloured = 0, masks = 0;
         for (const ChoreographyEvent& e : _base.choreography.events) {
+            if (e.intent == "presence-mask" || e.intent == "shared-mask") {
+                ++masks; // white or grey: how much of what is below shows, not a colour
+                continue;
+            }
             if (e.colors.empty() || e.intent == "stage-gesture" || e.intent == "stage-identity") {
                 continue; // a gesture carries its own colours; a figure's own colours are its own
             }
@@ -2117,7 +2234,7 @@ private:
                 roled += r.code == "color-role" ? 1 : 0;
             }
         }
-        Check(roled > 0 && roled == coloured, fmt::format("every coloured effect that is not a gesture took its figure's colour role ({} of {})", roled, coloured));
+        Check(roled > 0 && roled == coloured, fmt::format("every coloured effect that is not a gesture took its figure's colour role ({} of {}; {} masks apart)", roled, coloured, masks));
         GenerationSidecar sidecar;
         std::string error;
         Check(ReadSidecar(_base.sidecarPath, sidecar, error) == SidecarStatus::Ok && sidecar.schemaVersion == SIDECAR_SCHEMA_VERSION && sidecar.color.decided && sidecar.color.enabled &&
@@ -2391,6 +2508,21 @@ int RunGenerateCommand(const GenerateCommandOptions& o) {
     }
     if (!o.artDirection.empty()) {
         r.artDirection = o.artDirection;
+    }
+    if (!o.keepOutside.empty() && !o.onlyScene.empty()) {
+        const size_t dash = o.onlyScene.find('-');
+        const int from = static_cast<int>(std::strtol(o.onlyScene.c_str(), nullptr, 10));
+        const int to = dash == std::string::npos ? 0 : static_cast<int>(std::strtol(o.onlyScene.c_str() + dash + 1, nullptr, 10));
+        if (to > from) {
+            r.keepOutside = o.keepOutside;
+            r.onlyScenes = { { from, to } };
+        }
+    }
+    if (o.compositionPlan == "song" || o.compositionPlan == "local") {
+        r.compositionPlan = o.compositionPlan;
+    }
+    if (o.groupPresence == "mask" || o.groupPresence == "split") {
+        r.groupPresence = o.groupPresence;
     }
     if (!o.ambientLevel.empty()) {
         const double v = std::strtod(o.ambientLevel.c_str(), nullptr);

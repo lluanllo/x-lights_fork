@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <set>
 
 #define COMPOSER_TEXT(text) text
@@ -186,7 +187,15 @@ CompositionChoice SelectComposition(const StageLibrary& library, const SelectorS
             rule(COMPOSER_TEXT("a person chose another way to use the house"));
         }
         // What counts for it.
-        const auto has = [&](const std::string& t) { return !t.empty() && std::find(e.contexts.begin(), e.contexts.end(), t) != e.contexts.end(); };
+        const auto has = [&](const std::string& t) {
+            if (t.empty()) {
+                return false;
+            }
+            if (std::find(e.contexts.begin(), e.contexts.end(), t) != e.contexts.end()) {
+                return true;
+            }
+            return s.calibration >= 1 && e.source == "built-in" && e.id == "composition:neighbours-answer" && t == "solo";
+        };
         if (has(fromContext)) {
             plus(3, COMPOSER_TEXT("it suits what the voice or the instruments do here"));
         }
@@ -270,6 +279,12 @@ CompositionChoice SelectComposition(const StageLibrary& library, const SelectorS
         if (e.custom && !e.figures.empty()) {
             plus(1, COMPOSER_TEXT("a person's own composition"));
         }
+        // The plan for the whole song, when there is one: its choice comes before the scene's own
+        // best (a person's choice still comes first).
+        if (!s.planned.empty() && s.planned == e.id && out_.empty()) {
+            c.score += 50;
+            c.reasons.insert(c.reasons.begin(), std::string("+") + COMPOSER_TEXT("chosen in the plan for the whole song"));
+        }
         // A person's choice for this scene wins, unless it cannot be done here.
         if (!s.personChoice.empty() && s.personChoice == e.id) {
             if (out_.empty()) {
@@ -332,11 +347,214 @@ CompositionChoice SelectComposition(const StageLibrary& library, const SelectorS
     } else if (bestEntry->maxFigures > 0 && s.available < bestEntry->maxFigures && out.figures == s.available) {
         out.adapted = COMPOSER_TEXT("fitted to the figures this house has");
     }
+    if (!s.planned.empty() && bestEntry->id == s.planned) {
+        for (const std::string& r : s.plannedReasons) {
+            out.reasons.push_back(r);
+        }
+    }
     if (!out.fallback.empty() && !s.personChoice.empty()) {
         out.reasons.push_back(out.fallback); // the person's choice could not be done: said with the one used
         out.fallback.clear();
     }
     return out;
+}
+
+
+namespace {
+
+// A composition's score in one scene on its own: what the scenes around it chose left out.
+struct LocalScores {
+    std::map<std::string, double> feasible; // id -> score, only those good enough
+    std::string best;
+    double bestScore = 0;
+    bool personNone = false;
+};
+
+LocalScores ScoreAlone(const StageLibrary& library, const SelectorScene& facts, const std::string& motifComposition) {
+    SelectorScene f = facts;
+    f.previous.clear();
+    f.previousRun = 0;
+    f.used.clear();
+    f.planned.clear();
+    f.plannedReasons.clear();
+    f.motifComposition = motifComposition;
+    const CompositionChoice c = SelectComposition(library, f);
+    LocalScores out;
+    out.personNone = facts.personChoice == "none";
+    constexpr double enough = 4;
+    for (const CompositionCandidate& x : c.candidates) {
+        if (x.verdict == "rejected" || x.score < enough) {
+            continue;
+        }
+        out.feasible[x.id] = x.score;
+        if (out.best.empty() || x.score > out.bestScore + 1e-9) {
+            out.best = x.id;
+            out.bestScore = x.score;
+        }
+    }
+    return out;
+}
+
+struct Plan {
+    std::vector<std::string> picks;
+    std::vector<int> order; // each pick's place in the library (for ties)
+    std::vector<double> local, song;
+    std::vector<std::vector<std::string>> reasons;
+    std::map<std::string, int> loose; // uses that bring no idea back
+    double total = 0;
+};
+
+bool BringsBack(const std::string& op) {
+    return op == "recall" || op == "hold" || op == "split";
+}
+
+} // namespace
+
+CompositionPlanResult PlanCompositions(const StageLibrary& library, const std::vector<PlanScene>& scenes) {
+    CompositionPlanResult result;
+    std::map<std::string, int> place;
+    std::map<std::string, std::string> gesture;
+    int k = 0;
+    for (const StageLibraryEntry& e : library.entries) {
+        if (e.kind == "composition") {
+            place[e.id] = k++;
+            gesture[e.id] = e.gesture;
+        }
+    }
+    std::map<std::pair<size_t, std::string>, LocalScores> cache;
+    const auto alone = [&](size_t i, const std::string& motifComposition) -> const LocalScores& {
+        const auto key = std::make_pair(i, motifComposition);
+        auto it = cache.find(key);
+        if (it == cache.end()) {
+            it = cache.emplace(key, ScoreAlone(library, scenes[i].facts, motifComposition)).first;
+        }
+        return it->second;
+    };
+    constexpr size_t BEAM = 256;
+    std::vector<Plan> beams(1);
+    // What the song adds to or takes from choosing `c` after the plan `b` so far.
+    const auto songTerms = [&](const Plan& b, size_t i, const std::string& c, std::vector<std::string>& why) {
+        double adj = 0;
+        if (c.empty()) {
+            return adj;
+        }
+        const PlanScene& sc = scenes[i];
+        const bool back = sc.origin >= 0 && static_cast<size_t>(sc.origin) < i && b.picks[static_cast<size_t>(sc.origin)] == c && BringsBack(sc.facts.motifOperation);
+        if (back) {
+            why.push_back(COMPOSER_TEXT("it brings the idea back with the composition it was born with"));
+            // Brought back again right away with the same composition: continuity the first time,
+            // repetition after; another shape keeps the idea alive.
+            int run = 0;
+            for (size_t j = i; j-- > 0 && b.picks[j] == c;) {
+                ++run;
+            }
+            if (run >= 1) {
+                adj -= 1.5 * run;
+                why.push_back(COMPOSER_TEXT("the idea comes back again right away with the same composition: another shape keeps it alive"));
+            }
+            return adj;
+        }
+        const std::string last = i > 0 ? b.picks[i - 1] : std::string();
+        if (!last.empty() && last == c) {
+            adj -= 3;
+            why.push_back(COMPOSER_TEXT("the scene before used it: the song needs variety"));
+        } else if (!last.empty() && gesture[last] == gesture[c]) {
+            adj -= 1;
+            why.push_back(COMPOSER_TEXT("the scene before used a composition of the same structure"));
+        }
+        const auto n = b.loose.find(c);
+        if (n != b.loose.end() && n->second > 0) {
+            adj -= 1.5 * n->second;
+            why.push_back(COMPOSER_TEXT("already used in the song without bringing an idea back"));
+        }
+        return adj;
+    };
+    for (size_t i = 0; i < scenes.size(); ++i) {
+        std::vector<Plan> next;
+        for (const Plan& b : beams) {
+            const PlanScene& sc = scenes[i];
+            const std::string born = sc.origin >= 0 && static_cast<size_t>(sc.origin) < i ? b.picks[static_cast<size_t>(sc.origin)] : sc.facts.motifComposition;
+            const LocalScores& ls = alone(i, born);
+            std::vector<std::string> options;
+            if (!ls.personNone) {
+                for (const auto& [id, score] : ls.feasible) {
+                    options.push_back(id);
+                }
+                std::sort(options.begin(), options.end(), [&](const std::string& a, const std::string& c) { return place[a] < place[c]; });
+            }
+            if (options.empty()) {
+                options.push_back(std::string());
+            }
+            for (const std::string& c : options) {
+                Plan p = b;
+                std::vector<std::string> why;
+                const double local = c.empty() ? 0.0 : ls.feasible.at(c);
+                const double adj = songTerms(b, i, c, why);
+                const bool back = std::find(why.begin(), why.end(), std::string(COMPOSER_TEXT("it brings the idea back with the composition it was born with"))) != why.end();
+                p.picks.push_back(c);
+                p.order.push_back(c.empty() ? 999 : place[c]);
+                p.local.push_back(local);
+                p.song.push_back(adj);
+                p.reasons.push_back(why);
+                if (!c.empty() && !back) {
+                    p.loose[c]++;
+                }
+                p.total += local + adj;
+                next.push_back(std::move(p));
+            }
+        }
+        result.explored += static_cast<int>(next.size());
+        std::stable_sort(next.begin(), next.end(), [](const Plan& a, const Plan& b) { return a.total > b.total + 1e-9 || (std::abs(a.total - b.total) <= 1e-9 && a.order < b.order); });
+        if (next.size() > BEAM) {
+            next.resize(BEAM);
+        }
+        beams = std::move(next);
+    }
+    if (beams.empty()) {
+        return result;
+    }
+    const Plan& best = beams.front();
+    result.total = best.total;
+    Plan prefix;
+    for (size_t i = 0; i < scenes.size(); ++i) {
+        const PlanScene& sc = scenes[i];
+        const std::string born = sc.origin >= 0 && static_cast<size_t>(sc.origin) < i ? best.picks[static_cast<size_t>(sc.origin)] : sc.facts.motifComposition;
+        const LocalScores& ls = alone(i, born);
+        PlannedComposition pc;
+        pc.scene = sc.scene;
+        pc.id = best.picks[i];
+        pc.local = best.local[i];
+        pc.song = best.song[i];
+        pc.reasons = best.reasons[i];
+        pc.localBest = ls.best;
+        pc.localBestScore = ls.bestScore;
+        for (const auto& [id, score] : ls.feasible) {
+            if (id == pc.id) {
+                continue;
+            }
+            std::vector<std::string> why;
+            pc.alternatives.push_back({ id, score + songTerms(prefix, i, id, why) });
+        }
+        std::stable_sort(pc.alternatives.begin(), pc.alternatives.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+        const bool back = std::find(pc.reasons.begin(), pc.reasons.end(), std::string(COMPOSER_TEXT("it brings the idea back with the composition it was born with"))) != pc.reasons.end();
+        pc.kind = pc.id.empty()                                        ? "none"
+                : !sc.facts.personChoice.empty() && sc.facts.personChoice == pc.id ? "person"
+                : back                                                 ? "recall"
+                : ls.feasible.size() == 1                              ? "only"
+                : pc.id == ls.best || pc.local >= ls.bestScore - 1e-9  ? "best" // a tie is no sacrifice
+                                                                       : "song";
+        if (pc.kind == "song") {
+            pc.reasons.push_back(COMPOSER_TEXT("another composition scored more in this scene alone, but the song as a whole is better with this one"));
+        } else if (pc.kind == "only") {
+            pc.reasons.push_back(COMPOSER_TEXT("the only composition that suits this scene"));
+        }
+        prefix.picks.push_back(pc.id);
+        if (!pc.id.empty() && !back) {
+            prefix.loose[pc.id]++;
+        }
+        result.scenes.push_back(std::move(pc));
+    }
+    return result;
 }
 
 } // namespace composer

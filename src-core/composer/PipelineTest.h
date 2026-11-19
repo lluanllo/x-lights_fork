@@ -54,6 +54,10 @@ struct GenerateCommandOptions {
     std::string stageDirector; // "on", "off"; empty: on, or the previous show's
     std::string artDirection;  // "f19", "direction", "motifs", "full", "compositions", "presence", "orchestra"; empty: orchestra, or the previous show's
     std::string ambientLevel;  // 0.05-1; empty: 0.4, or the previous show's
+    std::string compositionPlan; // "song" or "local"; empty: as the level says
+    std::string groupPresence;   // "mask" or "split"; empty: as the level says
+    std::string keepOutside;     // an earlier sequence: only `onlyScene` is made again
+    std::string onlyScene;       // "<fromMS>-<toMS>"
     std::string colorDirector; // "on", "off"; empty: on, or the previous show's
     std::string colorVariety;  // 0-1; empty: the previous show's or the middle
     std::string colorStyle;    // 0 contained - 1 expressive; empty: the previous show's or 0.4

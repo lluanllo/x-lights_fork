@@ -3,7 +3,10 @@
 #include "composer/GenerationSidecar.h"
 #include "composer/ShowGenerationPipeline.h"
 #include "composer/SongAnalysis.h"
+#include "composer/FigureGeometry.h"
+#include "composer/ModelCapabilities.h"
 #include "composer/StageDirector.h"
+#include "composer/StagePresence.h"
 #include "models/Model.h"
 #include "models/ModelGroup.h"
 #include "outputs/Controller.h"
@@ -350,8 +353,9 @@ private:
             }
             return total;
         };
-        // A person's choice of which one wins, kept with the song's stage edits.
-        std::set<std::pair<std::string, std::string>> chosen;
+        // A person's choice of which one wins, kept with the song's stage edits; and the pairs they
+        // confirmed share lights on purpose.
+        std::set<std::pair<std::string, std::string>> chosen, confirmed;
         if (_hasSidecar && !_sc.audioHash.empty()) {
             std::string text, error;
             StageEdits edits;
@@ -364,10 +368,24 @@ private:
                         const size_t bar = e.value.find('|');
                         if (e.action == "priority" && bar != std::string::npos) {
                             chosen.insert({ e.value.substr(0, bar), e.value.substr(bar + 1) });
+                        } else if (e.action == "shared-ok" && bar != std::string::npos) {
+                            confirmed.insert({ e.value.substr(0, bar), e.value.substr(bar + 1) });
+                            confirmed.insert({ e.value.substr(bar + 1), e.value.substr(0, bar) });
                         }
                     }
                 }
             }
+        }
+        // What the layout says of each pair, light by light.
+        std::vector<SharedLights> inventory;
+        const ModelCapabilities caps = ExtractCapabilities(_ctx, nullptr);
+        {
+            std::vector<std::string> names;
+            for (const Model* m : models) {
+                names.push_back(m->GetName());
+            }
+            const FigureCatalog geometry = DescribeFigures(_ctx, caps, true);
+            inventory = FindSharedLights(caps, names, &geometry);
         }
         for (size_t i = 0; i < models.size(); ++i) {
             for (size_t j = i + 1; j < models.size(); ++j) {
@@ -394,7 +412,23 @@ private:
                         s.drawnLast = row[s.a] > row[s.b] ? s.a : s.b;
                     }
                     s.priority = chosen.contains({ s.a, s.b }) ? s.a : chosen.contains({ s.b, s.a }) ? s.b : std::string();
-                    if (s.complementary) {
+                    s.confirmed = confirmed.contains({ s.a, s.b });
+                    for (const SharedLights& x : inventory) {
+                        if ((x.a == s.a && x.b == s.b) || (x.a == s.b && x.b == s.a)) {
+                            s.kind = x.kind;
+                            s.place = x.place;
+                        }
+                    }
+                    if (s.confirmed) {
+                        Issue("artistic", "figures", "shared-lights-confirmed", "{} and {} share {} lights on purpose, as a person confirmed", { s.a, s.b, std::to_string(s.lights) });
+                    } else if (s.kind == "misconfigured") {
+                        Issue(s.complementary ? "warning" : "risk", "figures", "shared-lights-misconfigured",
+                              "{} and {} use the same {} channels but sit in different places of the layout: probably a wrong start channel or wiring. Check it in xLights's layout (the composer never changes it), or confirm it is meant so in step 4",
+                              { s.a, s.b, std::to_string(s.lights) });
+                    }
+                    if (s.confirmed) {
+                        // nothing more: meant so
+                    } else if (s.complementary) {
                         Issue("artistic", "figures", "shared-lights-turns", "{} and {} share {} lights and take turns: no conflict", { s.a, s.b, std::to_string(s.lights) });
                     } else if (!s.priority.empty()) {
                         Issue("warning", "figures", "shared-lights-priority", "{} and {} share {} lights; both play for {} s and {} wins, as a person chose", { s.a, s.b, std::to_string(s.lights),
@@ -408,13 +442,48 @@ private:
             }
         }
         for (const Model* m : models) {
-            if (used.contains(m->GetName()) && m->GetControllerName().empty() && !m->IsControllerConnectionValid() && m->GetControllerName() != "No Controller") {
+            const TargetInfo* t = caps.Find(m->GetName());
+            if ((used.contains(m->GetName()) || lit.contains(m->GetName())) && t != nullptr && t->noController) {
                 ++unwired;
             }
         }
+        _r.unwired = unwired;
+        if (unwired > 0) {
+            Issue("warning", "controllers", "figures-unwired", "{} figures with effects have no controller: they will not light in the real installation", { std::to_string(unwired) });
+        }
+        int unassigned = 0;
+        for (const ProductionSharedLights& s : _r.sharedLights) {
+            unassigned += !s.confirmed && !s.complementary && s.priority.empty() ? 1 : 0;
+        }
         (void)example;
-        Set("figures", shared > 0 ? "warning" : "ok", "{} figures used; {} pairs share lights", { std::to_string(used.size()), std::to_string(shared) });
-        (void)unwired;
+        Set("figures", shared > 0 ? "warning" : "ok", "{} figures used; {} pairs share lights, {} still need a decision", { std::to_string(used.size()), std::to_string(shared), std::to_string(unassigned) });
+        // Phase 22: a mask under a group only works if the group is drawn before the masked figure.
+        std::map<std::string, size_t> firstRow;
+        for (size_t i = 0; i < _spec.effects.size(); ++i) {
+            firstRow.emplace(_spec.effects[i].target, i);
+        }
+        for (const EffectSpec& m : _spec.effects) {
+            if (!MasksWhatIsBelow(m) || !m.subModel.empty()) {
+                continue;
+            }
+            ++_r.presenceMasks;
+            for (const EffectSpec& g : _spec.effects) {
+                const ModelGroup* group = dynamic_cast<const ModelGroup*>(_ctx.AllModels[g.target]);
+                if (group == nullptr || g.endMS <= m.startMS || g.startMS >= m.endMS) {
+                    continue;
+                }
+                bool holds = false;
+                for (const Model* x : group->GetFlatModels(true, false)) {
+                    holds = holds || x->GetName() == m.target;
+                }
+                if (holds && firstRow[g.target] > firstRow[m.target]) {
+                    ++_r.maskLeaks;
+                }
+            }
+        }
+        if (_r.maskLeaks > 0) {
+            Issue("risk", "effects", "group-mask-order", "{} group effects are drawn after a figure they should leave dark: that figure would light. Generate the show again", { std::to_string(_r.maskLeaks) });
+        }
     }
 
     void Media() {
@@ -772,7 +841,7 @@ std::string ToJson(const ProductionReport& r) {
     json shared = json::array();
     for (const ProductionSharedLights& s : r.sharedLights) {
         shared.push_back({ { "a", s.a }, { "b", s.b }, { "lights", s.lights }, { "relation", s.relation }, { "bothLitMS", s.bothLitMS }, { "drawnLast", s.drawnLast },
-                           { "priority", s.priority }, { "complementary", s.complementary } });
+                           { "priority", s.priority }, { "complementary", s.complementary }, { "kind", s.kind }, { "place", s.place }, { "confirmed", s.confirmed } });
     }
     return json({ { "kind", "composer-production-check" },
                   { "schemaVersion", r.schemaVersion },
@@ -794,6 +863,9 @@ std::string ToJson(const ProductionReport& r) {
                   { "media", media },
                   { "sharedLights", shared },
                   { "channels", r.channels },
+                  { "unwired", r.unwired },
+                  { "presenceMasks", r.presenceMasks },
+                  { "maskLeaks", r.maskLeaks },
                   { "readyForInstallation", r.ReadyForInstallation() },
                   { "hashes", r.hashes },
                   { "counts", { { "blocker", r.Count("blocker") }, { "risk", r.Count("risk") }, { "warning", r.Count("warning") }, { "artistic", r.Count("artistic") } } },
@@ -855,8 +927,12 @@ bool FromJson(const std::string& text, ProductionReport& out, std::string& error
         r.channels = root.value("channels", 0);
         for (const json& s : root.value("sharedLights", json::array())) {
             r.sharedLights.push_back({ s.value("a", std::string()), s.value("b", std::string()), s.value("lights", 0), s.value("relation", std::string()), s.value("bothLitMS", 0),
-                                       s.value("drawnLast", std::string()), s.value("priority", std::string()), s.value("complementary", false) });
+                                       s.value("drawnLast", std::string()), s.value("priority", std::string()), s.value("complementary", false), s.value("kind", std::string()),
+                                       s.value("place", std::string()), s.value("confirmed", false) });
         }
+        r.unwired = root.value("unwired", 0);
+        r.presenceMasks = root.value("presenceMasks", 0);
+        r.maskLeaks = root.value("maskLeaks", 0);
         r.status.technical = st.value("technical", false);
         r.status.rendered = st.value("rendered", false);
         r.status.renderMatches = st.value("renderMatches", false);
