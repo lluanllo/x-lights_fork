@@ -1899,7 +1899,9 @@ ValidationReport ValidateRender(xLightsShowContext& ctx, const std::string& fseq
         const EffectSpec& effect = *probe.effect;
         report.metrics.push_back({ FullTarget(effect), effect.effect, effect.startMS, effect.endMS, probe.framesWithLight, static_cast<int>(probe.distinct.size()), probe.maxLit, static_cast<int>(probe.target.channels.size()) });
         if (probe.framesWithLight == 0) {
-            RaiseFor(report, effect, issue::RenderTargetSilent, strict, IssueCategory::Render, { { "channels", std::to_string(probe.target.channels.size()) } });
+            if (!MasksWhatIsBelow(effect)) {
+                RaiseFor(report, effect, issue::RenderTargetSilent, strict, IssueCategory::Render, { { "channels", std::to_string(probe.target.channels.size()) } });
+            }
             continue;
         }
         if (probe.placeholderFrames == probe.endFrame - probe.firstFrame) {
@@ -2170,6 +2172,16 @@ const char* StatusName(CheckStatus status) {
         return "CANCELLED";
     }
     return "NOT_RUN";
+}
+
+
+bool MasksWhatIsBelow(const EffectSpec& effect) {
+    for (const auto& [k, v] : effect.settings) {
+        if (k == "T_CHOICE_LayerMethod") {
+            return v == "1 is Mask" || v == "Brightness";
+        }
+    }
+    return false;
 }
 
 } // namespace composer

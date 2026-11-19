@@ -35,6 +35,11 @@ struct SequenceChange {
     // Phase 21: who plays in a scene ("presence-reduced", "presence-grown", "composition-grown",
     // "responders", "composition-recalled"): the figures concerned.
     std::vector<std::string> figures;
+    // Phase 22: what kind of correction it is: "technical", "musical", "chromatic", "composition",
+    // "presence", "protagonism", "recipe" (a correction is not a taste until the person says so).
+    // New kinds: "protagonist-changed" (before: the figure that led, after: the one that leads now),
+    // "composition-changed" (before: the composition, after: "answer" or "unison"), "response-added".
+    std::string nature;
 };
 
 struct SequenceComparison {
@@ -99,6 +104,8 @@ DecisionOutcome ApplyComparisonDecisions(ArtisticPreferences& prefs, StageEdits&
                                                           const std::map<std::string, std::vector<std::string>>& groups);
 // Whether a change speaks of who plays (it can be kept as a composition).
 [[nodiscard]] bool IsPresenceChange(const SequenceChange& change);
+// The nature of a change from its kind (phase 22).
+[[nodiscard]] std::string ChangeNature(const SequenceChange& change);
 
 // Figures a person made work together in the corrected show (several figures given the same
 // effect at nearly the same time where the show had none), offered as compositions to keep.

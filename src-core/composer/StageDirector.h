@@ -25,6 +25,7 @@ inline constexpr int STAGE_SCORE_SCHEMA_VERSION = 1;
 inline constexpr const char* STAGE_DIRECTOR_VERSION = "1.0.0";
 inline constexpr const char* STAGE_DIRECTOR_ART_VERSION = "2.0.0";
 inline constexpr const char* STAGE_DIRECTOR_ORCHESTRA_VERSION = "3.0.0";
+inline constexpr const char* STAGE_DIRECTOR_CALIBRATED_VERSION = "4.0.0";
 
 // How far the director develops the song's visual ideas (phase 20) and how much of the
 // installation it really commands (phase 21). Each level adds to the one before. F19 is the
@@ -36,7 +37,8 @@ enum class ArtLevel {
     Full = 3,         // + the idea developed: participation that grows and shrinks, a peak prepared, an ending that closes
     Compositions = 4, // + each scene built on a composition of the library, chosen for the whole of its circumstances
     Presence = 5,     // + every figure's own effects follow what the scene asks of it: lead, accompany, answer, glow or rest
-    Orchestra = 6     // + the compositions linked: figures join, gather and fade at the joins instead of cutting
+    Orchestra = 6,    // + the compositions linked: figures join, gather and fade at the joins instead of cutting
+    Calibrated = 7    // + the compositions planned for the whole song, and group effects kept whole with each member's presence on its own row
 };
 
 enum class StageMode {
@@ -197,6 +199,17 @@ struct SharedLights {
     int scenesBothLit = 0;   // scenes where both would light their own effects
     int scenesResolved = 0;  // of those, scenes where one gave way
     std::string note;        // plain-words key
+    // Phase 22: the lights themselves.
+    std::string channels;            // the channels they share, "first-last" (1-based)
+    std::string controllerA, controllerB;
+    int lightsA = 0, lightsB = 0;    // each figure's lights
+    std::string nodesA, nodesB;      // the shared lights as each figure numbers them (0-based ranges)
+    int exclusiveA = 0, exclusiveB = 0; // lights only that figure has
+    std::string place;               // "same" (the shared lights sit in the same place in both), "apart", "unknown"
+    double apart = -1;               // median distance between a shared light's two places, in the layout's lights (-1 unknown)
+    std::string kind;                // "containment", "duplicate", "partial", "misconfigured", "unknown"
+    bool confirmed = false;          // a person said it is meant so
+    int scenesOwned = 0;             // scenes where the shared lights followed the priority light by light
 };
 
 struct StageScene {
@@ -233,6 +246,13 @@ struct StageScene {
     std::vector<CompositionCandidate> candidates; // every composition weighed
     double ambience = 0;                          // ArtLevel Presence: share of the figures not taking part kept as a quiet glow
     std::vector<FigurePresence> presence;         // ArtLevel Presence: every figure on the stage
+    // Phase 22 (the plan for the whole song):
+    std::string planKind;                         // "recall", "only", "best", "song", "person", "none" ("" no plan)
+    std::vector<std::string> planReasons;         // why, for the whole song
+    std::string planLocalBest;                    // the best on its own in this scene
+    double planLocal = 0, planSong = 0;           // its score here on its own, and what the song added or took
+    double planLocalBestScore = 0;                // the score of the best on its own
+    std::vector<std::pair<std::string, double>> planAlternatives; // others possible, with their score in the song here
     [[nodiscard]] std::string RoleOf(const std::string& figure) const;
     [[nodiscard]] const FigurePresence* PresenceOf(const std::string& figure) const;
 };
@@ -269,6 +289,11 @@ struct GlobalStageScore {
     std::vector<CompositionTransition> transitions; // ArtLevel Orchestra
     std::vector<SharedLights> sharedLights;         // ArtLevel Presence
     std::vector<std::string> presenceNotes;         // what applying the presence did, for the report
+    // Phase 22:
+    std::string compositionPlan; // "song" (planned for the whole song) or "local" (scene by scene); "" before compositions
+    std::string groupPresence;   // "mask" (group effects kept whole, members masked on their rows) or "split"; "" before presence
+    int groupsKept = 0, groupsMasked = 0, groupsSplit = 0; // group effects over figures asked different things: kept, masked, split
+    std::vector<std::string> groupNotes; // what was lost where a group had to be split, and why
 
     [[nodiscard]] const StageScene* SceneAt(int ms) const;
     [[nodiscard]] const GlobalGesture* Gesture(const std::string& id) const;
@@ -279,7 +304,8 @@ struct GlobalStageScore {
 struct StageEdit {
     // "mode", "include", "exclude", "no-gestures", "gesture", "origin", "speed", "identity", "no-identity";
     // phase 21: "composition" (value: a composition id for the scene, "none" the director's own way),
-    // "priority" (value "<figure>|<other>": on lights they share, the first one's decision wins; sceneStartMS -1)
+    // "priority" (value "<figure>|<other>": on lights they share, the first one's decision wins; sceneStartMS -1 the
+    // whole song, or a scene); phase 22: "shared-ok" (value "<figure>|<other>": a person confirmed they share lights on purpose)
     std::string action;
     int sceneStartMS = -1; // the scene, found again by its start (within 1.5 s)
     int atMS = -1;         // a gesture's start, for "gesture" (a new one), "origin", "speed"
@@ -349,6 +375,9 @@ struct StageDirectorInput {
     const std::vector<std::string>* changeParts = nullptr;
     // ArtLevel Presence: how bright the figures kept as a quiet glow are (0.05-1); a person's choice.
     double ambientLevel = 0.4;
+    // Phase 22, each -1 to follow the level (Calibrated on, below it off), to compare one at a time:
+    int compositionPlan = -1; // 1: the compositions planned for the whole song; 0: scene by scene
+    int groupPresence = -1;   // 1: group effects kept whole and members masked; 0: split per figure
 };
 
 [[nodiscard]] GlobalStageScore DirectStage(const StageDirectorInput& input);

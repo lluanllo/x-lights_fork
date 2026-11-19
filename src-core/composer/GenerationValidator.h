@@ -146,6 +146,10 @@ enum class Strictness {
 };
 
 // Stage 1: the plan against the loaded layout, before anything is built.
+// An effect whose layer method masks or scales what lies below it ("1 is Mask", "Brightness"):
+// it lights nothing of its own, so it is never expected to (phase 22's presence masks).
+[[nodiscard]] bool MasksWhatIsBelow(const EffectSpec& effect);
+
 [[nodiscard]] ValidationReport ValidatePlan(xLightsShowContext& ctx, const SequenceSpec& spec, const CancelCheck& cancel = {});
 
 // Stage 2: the objects SequenceWriter left in the context's sequence elements.

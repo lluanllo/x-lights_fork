@@ -8,6 +8,7 @@
 #include "composer/MediaFraming.h"
 #include "composer/VisualModel.h"
 #include "effects/EffectManager.h"
+#include "effects/RenderableEffect.h"
 #include "render/FSEQFile.h"
 #include "render/HeadlessRenderContext.h"
 #include "render/SequenceElements.h"
@@ -307,7 +308,9 @@ void BuildCoverage(GenerationRun& run) {
         byTarget[e.target].events++;
     }
     for (const EffectSpec& e : run.spec.effects) {
-        byTarget[FullName(e)].written++;
+        if (!MasksWhatIsBelow(e)) {
+            byTarget[FullName(e)].written++; // a presence mask lights nothing of its own
+        }
     }
     for (const RenderMetric& m : run.renderValidation.metrics) {
         TargetCoverage& t = byTarget[m.target];
@@ -1522,11 +1525,11 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
         on = run.previous.stage.enabled;
     }
     // How far the song's ideas are developed: asked for, else the previous show's, else all of it.
-    ArtLevel art = ArtLevel::Orchestra;
+    ArtLevel art = ArtLevel::Calibrated;
     if (r.artDirection.has_value()) {
         if (!ArtLevelFromId(*r.artDirection, art)) {
-            Note(run, S, "art-direction-unknown", *r.artDirection + ": orchestra");
-            art = ArtLevel::Orchestra;
+            Note(run, S, "art-direction-unknown", *r.artDirection + ": calibrated");
+            art = ArtLevel::Calibrated;
         }
     } else if (run.hasPrevious && !run.previous.stage.art.empty()) {
         (void)ArtLevelFromId(run.previous.stage.art, art);
@@ -1583,6 +1586,12 @@ void DirectTheStage(GenerationRun& run, GenerationStage S) {
     in.edits = edits.edits.empty() ? nullptr : &edits;
     in.library = &library;
     in.art = static_cast<ArtLevel>(run.artLevel);
+    if (r.compositionPlan.has_value()) {
+        in.compositionPlan = *r.compositionPlan == "song" ? 1 : 0;
+    }
+    if (r.groupPresence.has_value()) {
+        in.groupPresence = *r.groupPresence == "mask" ? 1 : 0;
+    }
     // The quiet glow's brightness: asked for, else what the maker's corrections taught (a person
     // who quietens the background again and again), else the previous show's, else 0.4.
     double ambient = run.hasPrevious && run.previous.stage.ambient > 0 ? run.previous.stage.ambient : 0.4;
@@ -1810,6 +1819,72 @@ bool ChoreographShow(GenerationRun& run) {
     });
 }
 
+// The scenes asked for taken from `fresh`, everything else kept from `previous`; an effect that
+// crosses a scene's edge is cut there. Rows keep the order of the fresh show (groups before the
+// figures they hold), then the previous show's other rows.
+SequenceSpec SpliceScenes(const SequenceSpec& fresh, const SequenceSpec& previous, const std::vector<std::pair<int, int>>& windows) {
+    const auto inside = [&](int a, int b, std::vector<std::pair<int, int>>& parts) {
+        for (const auto& [from, to] : windows) {
+            const int x = std::max(a, from), y = std::min(b, to);
+            if (y > x) {
+                parts.push_back({ x, y });
+            }
+        }
+    };
+    SequenceSpec out = fresh;
+    out.effects.clear();
+    out.timingTracks = previous.timingTracks.empty() ? fresh.timingTracks : previous.timingTracks;
+    std::vector<EffectSpec> merged;
+    for (const EffectSpec& e : fresh.effects) {
+        std::vector<std::pair<int, int>> parts;
+        inside(e.startMS, e.endMS, parts);
+        for (const auto& [a, b] : parts) {
+            EffectSpec x = e;
+            x.startMS = a;
+            x.endMS = b;
+            merged.push_back(std::move(x));
+        }
+    }
+    for (const EffectSpec& e : previous.effects) {
+        // What lies outside every window, in pieces.
+        std::vector<std::pair<int, int>> keep = { { e.startMS, e.endMS } };
+        for (const auto& [from, to] : windows) {
+            std::vector<std::pair<int, int>> next;
+            for (const auto& [a, b] : keep) {
+                if (b <= from || a >= to) {
+                    next.push_back({ a, b });
+                    continue;
+                }
+                if (a < from) {
+                    next.push_back({ a, from });
+                }
+                if (b > to) {
+                    next.push_back({ to, b });
+                }
+            }
+            keep = std::move(next);
+        }
+        for (const auto& [a, b] : keep) {
+            if (b > a) {
+                EffectSpec x = e;
+                x.startMS = a;
+                x.endMS = b;
+                merged.push_back(std::move(x));
+            }
+        }
+    }
+    std::map<std::string, size_t> row;
+    for (const EffectSpec& e : fresh.effects) {
+        row.emplace(e.target, row.size());
+    }
+    for (const EffectSpec& e : previous.effects) {
+        row.emplace(e.target, row.size());
+    }
+    std::stable_sort(merged.begin(), merged.end(), [&](const EffectSpec& a, const EffectSpec& b) { return row[a.target] < row[b.target]; });
+    out.effects = std::move(merged);
+    return out;
+}
+
 bool BuildSequence(GenerationRun& run) {
     return RunStage(run, GenerationStage::Spec, [&]() {
         const GenerationStage S = GenerationStage::Spec;
@@ -1842,7 +1917,51 @@ bool BuildSequence(GenerationRun& run) {
         run.spec = ToSequenceSpec(run.choreography, tracks);
         if (run.staged) {
             if (const int moved = PutGroupsUnderStage(run.spec, run.choreography, run.capabilities); moved > 0) {
-                Note(run, S, "stage-rows", fmt::format("{} groups drawn before the figures with gestures they hold", moved));
+                Note(run, S, "stage-rows", fmt::format("{} groups drawn before the figures with gestures or masks they hold", moved));
+            }
+            if (const int moved = OrderSharedLights(run.spec, run.stageScore); moved > 0) {
+                Note(run, S, "stage-rows", fmt::format("{} figures that give way on shared lights drawn before the one that wins", moved));
+            }
+        }
+        // Only some scenes made again: everything outside them kept from the earlier sequence.
+        if (!run.request.keepOutside.empty() && !run.request.onlyScenes.empty()) {
+            HeadlessRenderContext earlier;
+            if (!FileExists(run.request.keepOutside) || !earlier.LoadShowFolder(run.request.showDir) || !earlier.OpenSequence(run.request.keepOutside)) {
+                Note(run, S, "local-regeneration-refused", "the earlier sequence could not be read: the whole show is made again");
+            } else {
+                SequenceSpec previous = SpecFromSequence(earlier);
+                // Opening a file, xLights adds some settings with no value that no panel shows (a
+                // lookup of the Text effect's file, for one); they mean nothing, and the writer refuses them.
+                int dropped = 0;
+                EffectManager& manager = earlier.GetEffectManager();
+                for (EffectSpec& e : previous.effects) {
+                    const RenderableEffect* renderable = manager.GetEffect(e.effect);
+                    std::erase_if(e.settings, [&](const std::pair<std::string, std::string>& kv) {
+                        const size_t end = kv.first.rfind("E_", 0) == 0 ? kv.first.find('_', 2) : std::string::npos;
+                        if (!kv.second.empty() || renderable == nullptr || end == std::string::npos) {
+                            return false;
+                        }
+                        const std::string id = kv.first.substr(end + 1);
+                        const bool unknown = id != "Faces_TimingTrack" && id != "Pictures_Filename" && id != "Video_Filename" && renderable->GetPropertyMetadata(id) == nullptr;
+                        dropped += unknown ? 1 : 0;
+                        return unknown;
+                    });
+                }
+                (void)earlier.CloseSequence();
+                const size_t before = run.spec.effects.size();
+                run.spec = SpliceScenes(run.spec, previous, run.request.onlyScenes);
+                std::string windows;
+                for (const auto& [a, b] : run.request.onlyScenes) {
+                    windows += fmt::format("{}{:.1f}-{:.1f} s", windows.empty() ? "" : ", ", a / 1000.0, b / 1000.0);
+                }
+                size_t there = 0;
+                for (const EffectSpec& e : run.spec.effects) {
+                    for (const auto& [a, b] : run.request.onlyScenes) {
+                        there += e.startMS >= a && e.endMS <= b ? 1 : 0;
+                    }
+                }
+                Note(run, S, "local-regeneration", fmt::format("only {} made again ({} effects there); everything else kept from {} ({} effects in all, {} in the new show; {} empty settings xLights added on opening it left out)",
+                                                               windows, there, fs::path(run.request.keepOutside).filename().string(), run.spec.effects.size(), before, dropped));
             }
         }
         run.spec.mediaFile = fs::absolute(fs::path(run.request.audioPath)).string();

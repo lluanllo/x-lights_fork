@@ -194,6 +194,7 @@ public:
             TestArtDirection();
             TestCorrections();
             TestPresenceCorrections();
+            TestCorrectionNatures();
             TestRender();
             TestMeasure();
         }
@@ -1404,6 +1405,93 @@ private:
         SequenceComparison back;
         std::string error;
         Check(FromJson(ToJson(c), back, error) && back.changes.size() == c.changes.size() && back.changes[0].figures == c.changes[0].figures, "the figures of each change are written and read back");
+    }
+
+    // Phase 22, also SIMULATED: what kind of correction each change is, and three new ones.
+    void TestCorrectionNatures() {
+        Title("What kind of correction each change is (simulated correction: no real one yet)");
+        GlobalStageScore stage;
+        const auto scene = [&](const char* id, int a, int b, const char* composition, std::vector<std::pair<std::string, std::string>> roles) {
+            StageScene sc;
+            sc.id = id;
+            sc.startMS = a;
+            sc.endMS = b;
+            sc.mode = StageMode::Group;
+            sc.composition = composition;
+            for (const auto& [f, r] : roles) {
+                sc.roles.push_back({ f, r, "" });
+            }
+            stage.scenes.push_back(sc);
+        };
+        scene("s1", 0, 10000, "composition:two-halves", { { "A", "protagonist" }, { "B", "accent" }, { "C", "accent" }, { "D", "accent" }, { "Mega", "rest" } });
+        scene("s2", 10000, 20000, "composition:protagonist-glow", { { "A", "protagonist" }, { "B", "rest" }, { "C", "rest" }, { "D", "rest" }, { "Mega", "rest" } });
+        scene("s3", 20000, 30000, "composition:protagonist-glow", { { "A", "protagonist" }, { "B", "accent" }, { "C", "rest" }, { "D", "rest" }, { "Mega", "rest" } });
+        const auto effect = [](const std::string& target, int a, int b, const char* palette = "C_BUTTON_Palette1=#FF0000,C_CHECKBOX_Palette1=1") {
+            EffectSpec e;
+            e.target = target;
+            e.effect = "On";
+            e.palette = palette;
+            e.startMS = a;
+            e.endMS = b;
+            return e;
+        };
+        SequenceSpec made, fixed;
+        for (const char* f : { "A", "B", "C", "D" }) {
+            made.effects.push_back(effect(f, 0, 10000));
+        }
+        int at = 0;
+        for (const char* f : { "A", "B", "C", "D" }) {
+            fixed.effects.push_back(effect(f, at, 10000)); // the same four, now one after another
+            at += 400;
+        }
+        made.effects.push_back(effect("A", 10000, 20000));
+        fixed.effects.push_back(effect("A", 10000, 20000));
+        fixed.effects.push_back(effect("Mega", 12000, 12600)); // an answer of its own
+        fixed.effects.push_back(effect("Mega", 16000, 16600));
+        made.effects.push_back(effect("A", 20000, 30000));
+        made.effects.push_back(effect("B", 20000, 22000));
+        fixed.effects.push_back(effect("A", 20000, 22000)); // B leads now
+        fixed.effects.push_back(effect("B", 20000, 30000));
+        const std::vector<SequenceChange> changes = PresenceChanges(made, fixed, stage, {});
+        const auto find = [&](const char* kind, const char* sc) -> const SequenceChange* {
+            for (const SequenceChange& c : changes) {
+                if (c.kind == kind && c.scene == sc) {
+                    return &c;
+                }
+            }
+            return nullptr;
+        };
+        for (const SequenceChange& c : changes) {
+            printf("    %s (%s) in %s: %s -> %s\n", c.kind.c_str(), c.nature.c_str(), c.scene.c_str(), c.before.c_str(), c.after.c_str());
+        }
+        const SequenceChange* comp = find("composition-changed", "s1");
+        Check(comp != nullptr && comp->before == "composition:two-halves" && comp->after == "answer" && comp->nature == "composition",
+              "the same four figures made to answer one another: 'you changed the composition to call and answer'");
+        const SequenceChange* answer = find("response-added", "s2");
+        Check(answer != nullptr && answer->figure == "Mega" && answer->suggestion == "figure.Mega.prominence" && answer->nature == "presence", "short moments of a figure added: 'you added an answer of Mega'");
+        const SequenceChange* lead = find("protagonist-changed", "s3");
+        Check(lead != nullptr && lead->before == "A" && lead->after == "B" && lead->nature == "protagonism", "another figure made to carry the scene: 'B leads now instead of A'");
+        SequenceComparison c;
+        c.ran = true;
+        c.changes = changes;
+        std::vector<ComparisonDecision> decisions;
+        for (size_t i = 0; i < c.changes.size(); ++i) {
+            decisions.push_back({ i, c.changes[i].kind == "composition-changed" || c.changes[i].kind == "protagonist-changed" ? "song" : "ignore" });
+        }
+        ArtisticPreferences prefs;
+        StageEdits songStage;
+        ChromaticEdits songColour;
+        ComparisonDecisions record;
+        const DecisionOutcome done = ApplyComparisonDecisions(prefs, songStage, songColour, record, c, decisions, "simulada.xsq");
+        bool composition = false, include = false;
+        for (const StageEdit& e : songStage.edits) {
+            composition = composition || (e.action == "composition" && e.sceneStartMS == 0 && e.value == "composition:neighbours-answer");
+            include = include || (e.action == "include" && e.sceneStartMS == 20000 && e.value == "B");
+        }
+        Check(done.songEdits == 2 && composition && include, "only this song: that scene answers when made again, and B takes part where it now leads");
+        SequenceComparison back;
+        std::string error;
+        Check(FromJson(ToJson(c), back, error) && !back.changes.empty() && back.changes[0].nature == c.changes[0].nature, "each change's kind of correction is written and read back");
     }
 
     void TestRender() {

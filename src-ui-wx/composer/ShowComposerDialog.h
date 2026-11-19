@@ -122,6 +122,8 @@ public:
     void StartAnalysis();
     void StartComposition();
     void StartGeneration();
+    // Phase 22: only one scene made again, everything else kept from the show already made.
+    bool RegenerateScene(int startMS, int endMS);
     void CancelJob();
     void ExcludeFigure(const std::string& name, bool exclude);
     void LockFigure(const std::string& name, bool lock);
@@ -450,6 +452,7 @@ private:
     void RefreshStyle();
     Purpose _purpose = Purpose::None;
     std::vector<std::pair<Purpose, std::vector<std::string>>> _queue;
+    std::string _generatingName; // the sequence the generation being run publishes
     std::vector<std::string> _queueDirs;
     std::vector<int> _queueLevels;
     std::string _jobDir;

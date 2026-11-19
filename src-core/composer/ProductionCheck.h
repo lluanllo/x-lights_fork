@@ -52,6 +52,10 @@ struct ProductionSharedLights {
     std::string drawnLast;     // the one whose row xLights draws later: it shows on the shared lights
     std::string priority;      // the one a person chose to win ("" none)
     bool complementary = false; // never lit at once: no conflict, they take turns
+    // Phase 22: what the layout says of them, light by light (StagePresence's FindSharedLights).
+    std::string kind;          // "containment", "duplicate", "partial", "misconfigured", "unknown"
+    std::string place;         // "same", "apart", "unknown"
+    bool confirmed = false;    // a person said it is meant so
 };
 
 // What a person can rely on, kept apart: the machine's checks never become an approval.
@@ -85,6 +89,10 @@ struct ProductionReport {
     std::vector<ProductionIssue> issues;
     std::vector<ProductionMedia> media;
     std::vector<ProductionSharedLights> sharedLights;
+    // Phase 22:
+    int unwired = 0;          // figures with effects and no controller
+    int presenceMasks = 0;    // effects that mask a resting or glowing figure under a group
+    int maskLeaks = 0;        // masks a group drawn after them would undo (the figure would light)
     std::map<std::string, std::string> hashes; // file -> SHA-256
     int channels = 0;        // the layout's channels
     int models = 0;

@@ -16,6 +16,14 @@ namespace composer {
 // the stage director) did with the installation, measured on the show folder's layout (a
 // copy with every controller inactive). `scorePath` may be empty. Writes stage-check.json
 // and stage-check.txt to `outDir`. Returns 0 written, 1 failed, 2 refused.
+// Phase 22: real group effects of a generated show, rendered three ways on its layout (the group
+// alone, split per figure as phase 21 did, kept whole with its resting and glowing figures masked)
+// and compared light by light. `reportDir` is the generation's report (choreography, score).
+[[nodiscard]] int RunGroupFidelity(const std::string& showDir, const std::string& reportDir, const std::string& outDir);
+// Real groups of the layout under a controlled presence (three play, one glows, one rests), and a
+// face, a video and a locked effect on them; rendered whole, split and masked, into outDir.
+[[nodiscard]] int RunGroupFidelityControlled(const std::string& showDir, const std::string& outDir);
+
 [[nodiscard]] int RunStageMeasure(const std::string& showDir, const std::string& fseqPath, const std::string& scorePath, const std::string& outDir);
 
 } // namespace composer

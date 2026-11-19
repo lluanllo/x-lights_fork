@@ -1,5 +1,7 @@
 #include "composer/StagePresence.h"
 
+#include "composer/FigureGeometry.h"
+#include "composer/FigureSemantics.h"
 #include "composer/ModelCapabilities.h"
 #include "composer/StageSpace.h"
 
@@ -83,7 +85,7 @@ struct Scene {
 
 } // namespace
 
-std::vector<SharedLights> FindSharedLights(const ModelCapabilities& caps, const std::vector<std::string>& figures) {
+std::vector<SharedLights> FindSharedLights(const ModelCapabilities& caps, const std::vector<std::string>& figures, const FigureCatalog* geometry) {
     std::vector<SharedLights> out;
     std::vector<const TargetInfo*> ts;
     for (const std::string& f : figures) {
@@ -111,6 +113,75 @@ std::vector<SharedLights> FindSharedLights(const ModelCapabilities& caps, const 
             const bool bInA = b->firstChannel >= a->firstChannel && b->lastChannel <= a->lastChannel;
             s.relation = aInB && bInA ? "same" : aInB ? "a-inside-b" : bInA ? "b-inside-a" : "partial";
             s.note = s.relation == "partial" ? COMPOSER_TEXT("part of their lights are wired to both: check the layout") : COMPOSER_TEXT("one is drawn inside the other on the same lights");
+            s.channels = fmt::format("{}-{}", lo + 1, hi + 1);
+            s.controllerA = a->controller;
+            s.controllerB = b->controller;
+            s.lightsA = a->nodes;
+            s.lightsB = b->nodes;
+            s.kind = s.relation == "same" ? "duplicate" : s.relation == "partial" ? "partial" : "containment";
+            s.place = "unknown";
+            const FigureGeometry* ga = geometry != nullptr ? geometry->Find(a->name) : nullptr;
+            const FigureGeometry* gb = geometry != nullptr ? geometry->Find(b->name) : nullptr;
+            if (ga != nullptr && gb != nullptr) {
+                // Light by light: a shared light is the one channel two figures' lights both start on.
+                std::map<int, const FigureNode*> byChannelB;
+                for (const FigureNode& n : gb->nodeMap) {
+                    if (n.channel >= 0) {
+                        byChannelB[n.channel] = &n;
+                    }
+                }
+                std::vector<int> na, nb;
+                std::vector<double> distances;
+                for (const FigureNode& n : ga->nodeMap) {
+                    if (n.channel < 0 || static_cast<uint32_t>(n.channel) < lo || static_cast<uint32_t>(n.channel) > hi) {
+                        continue;
+                    }
+                    na.push_back(n.index);
+                    const auto m = byChannelB.find(n.channel);
+                    if (m != byChannelB.end() && n.placed && m->second->placed) {
+                        distances.push_back(std::hypot(n.wx - m->second->wx, n.wy - m->second->wy));
+                    }
+                }
+                for (const FigureNode& n : gb->nodeMap) {
+                    if (n.channel >= 0 && static_cast<uint32_t>(n.channel) >= lo && static_cast<uint32_t>(n.channel) <= hi) {
+                        nb.push_back(n.index);
+                    }
+                }
+                std::sort(na.begin(), na.end());
+                std::sort(nb.begin(), nb.end());
+                s.nodesA = NodeRangesText(na);
+                s.nodesB = NodeRangesText(nb);
+                s.exclusiveA = std::max(0, static_cast<int>(ga->nodeMap.size()) - static_cast<int>(na.size()));
+                s.exclusiveB = std::max(0, static_cast<int>(gb->nodeMap.size()) - static_cast<int>(nb.size()));
+                // How far apart neighbouring lights of a figure are: the measure of "the same place".
+                const auto spacing = [](const FigureGeometry& g) {
+                    std::vector<double> d;
+                    for (size_t k = 1; k < g.nodeMap.size(); ++k) {
+                        const FigureNode& p = g.nodeMap[k - 1];
+                        const FigureNode& q = g.nodeMap[k];
+                        if (p.placed && q.placed) {
+                            d.push_back(std::hypot(p.wx - q.wx, p.wy - q.wy));
+                        }
+                    }
+                    if (d.empty()) {
+                        return 0.0;
+                    }
+                    std::nth_element(d.begin(), d.begin() + static_cast<long>(d.size() / 2), d.end());
+                    return d[d.size() / 2];
+                };
+                const double step = std::max(1e-6, std::max(spacing(*ga), spacing(*gb)));
+                if (!distances.empty()) {
+                    std::nth_element(distances.begin(), distances.begin() + static_cast<long>(distances.size() / 2), distances.end());
+                    s.apart = distances[distances.size() / 2] / step;
+                    s.place = s.apart <= 2.0 ? "same" : "apart";
+                }
+                if (s.place == "apart") {
+                    s.kind = "misconfigured"; // the same lights drawn at two places: one of the two is likely wired wrong
+                    s.note = COMPOSER_TEXT("the same channels drawn in two different places: probably a wiring or start-channel mistake");
+                } else if (s.place == "unknown" && s.kind == "partial") {
+                    s.kind = "unknown";
+                }
+            }
             out.push_back(std::move(s));
         }
     }
@@ -132,26 +203,70 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
     }
     // Figures wired to the same lights must not be told different things on them.
     score.sharedLights.clear();
+    const bool lightByLight = in.groupPresence >= 0 ? in.groupPresence == 1 : score.art >= static_cast<int>(ArtLevel::Calibrated);
     if (in.capabilities != nullptr) {
-        score.sharedLights = FindSharedLights(*in.capabilities, std::vector<std::string>(figures.begin(), figures.end()));
+        score.sharedLights = FindSharedLights(*in.capabilities, std::vector<std::string>(figures.begin(), figures.end()), lightByLight ? in.geometry : nullptr);
     }
-    std::map<std::pair<std::string, std::string>, bool> chosen; // (winner, loser) a person picked
+    std::map<std::pair<std::string, std::string>, bool> chosen;                  // (winner, loser) a person picked for the song
+    std::map<std::pair<std::string, std::string>, std::vector<int>> chosenHere; // (winner, loser) -> the scenes' starts where a person picked it
+    std::set<std::pair<std::string, std::string>> confirmed;                     // pairs a person said share lights on purpose
     if (in.edits != nullptr) {
         for (const StageEdit& e : in.edits->edits) {
             const size_t bar = e.value.find('|');
-            if (e.action == "priority" && bar != std::string::npos) {
-                chosen[{ e.value.substr(0, bar), e.value.substr(bar + 1) }] = true;
+            if (bar == std::string::npos) {
+                continue;
+            }
+            const std::pair<std::string, std::string> pair = { e.value.substr(0, bar), e.value.substr(bar + 1) };
+            if (e.action == "priority" && e.sceneStartMS < 0) {
+                chosen[pair] = true;
+                chosen.erase({ pair.second, pair.first });
+            } else if (e.action == "priority") {
+                chosenHere[pair].push_back(e.sceneStartMS);
+            } else if (e.action == "shared-ok") {
+                confirmed.insert(pair);
+                confirmed.insert({ pair.second, pair.first });
             }
         }
     }
+    // Light by light: the figure that gives way keeps its own lights and is masked only on the
+    // ones it shares (its row drawn before the other's, so the other's light shows there).
+    struct Owned {
+        std::string figure;
+        int from = 0, to = 0;
+        std::string nodes;
+    };
+    std::vector<Owned> owned;
+    const auto protectedIn = [&](const std::string& f, int a, int b) {
+        for (const ChoreographyEvent& e : c.events) {
+            if ((e.effect == "Faces" || e.effect == "Text" || e.intent == "face-sing" || e.intent == "lyric-text" || e.state == DecisionState::Locked || e.state == DecisionState::ManualEdit) &&
+                Base(e.target) == f && e.startMS < b && a < e.endMS) {
+                return true;
+            }
+        }
+        return false;
+    };
     for (SharedLights& s : score.sharedLights) {
+        s.confirmed = confirmed.contains({ s.a, s.b });
+        const bool songWide = chosen.contains({ s.a, s.b }) || chosen.contains({ s.b, s.a });
         if (chosen.contains({ s.a, s.b })) {
             s.priority = s.a;
             s.prioritySource = "person";
         } else if (chosen.contains({ s.b, s.a })) {
             s.priority = s.b;
             s.prioritySource = "person";
+        } else if (!chosenHere[{ s.a, s.b }].empty() || !chosenHere[{ s.b, s.a }].empty()) {
+            // Only some scenes chosen: the song's order follows the choice made most often.
+            s.priority = chosenHere[{ s.a, s.b }].size() >= chosenHere[{ s.b, s.a }].size() ? s.a : s.b;
+            s.prioritySource = "person";
         }
+        const auto pickedHere = [&](const std::string& w, const std::string& l, int start) {
+            for (int at : chosenHere[{ w, l }]) {
+                if (std::abs(at - start) <= 1500) {
+                    return true;
+                }
+            }
+            return false;
+        };
         for (StageScene& sc : score.scenes) {
             FigurePresence* pa = nullptr;
             FigurePresence* pb = nullptr;
@@ -165,9 +280,28 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
             ++s.scenesBothLit;
             FigurePresence* winner = nullptr;
             FigurePresence* loser = nullptr;
-            if (s.prioritySource == "person") {
+            // A choice for some scenes only acts there; elsewhere the director decides as without one.
+            if (s.prioritySource == "person" && (songWide || pickedHere(s.a, s.b, sc.startMS) || pickedHere(s.b, s.a, sc.startMS))) {
                 winner = s.priority == s.a ? pa : pb;
+                if (pickedHere(s.a, s.b, sc.startMS)) {
+                    winner = pa;
+                } else if (pickedHere(s.b, s.a, sc.startMS)) {
+                    winner = pb;
+                }
                 loser = winner == pa ? pb : pa;
+                // Light by light where the song's order allows it (the loser's row is drawn first:
+                // it is the song's loser), never over a face or words.
+                const std::string loserNodes = loser == pa ? s.nodesA : s.nodesB;
+                if (lightByLight && s.relation != "same" && !loserNodes.empty() && winner->figure == s.priority && loser->policy != "protected") {
+                    if (protectedIn(loser->figure, sc.startMS, sc.endMS)) {
+                        s.note = COMPOSER_TEXT("the priority would cover a face that sings or words: that figure keeps its lights there");
+                        continue;
+                    }
+                    owned.push_back({ loser->figure, sc.startMS, sc.endMS, loserNodes });
+                    ++s.scenesOwned;
+                    ++s.scenesResolved;
+                    continue;
+                }
             } else if (s.relation != "partial") {
                 // One inside the other: the one the scene asks less of gives way, unless it is the
                 // larger and still carries the scene (then both stay, and it is said).
@@ -206,7 +340,7 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
                 }
             }
         }
-        if (s.scenesBothLit > s.scenesResolved && s.relation == "partial") {
+        if (s.scenesBothLit > s.scenesResolved && s.relation == "partial" && s.note.find("priority") == std::string::npos && s.kind != "misconfigured") {
             s.note = COMPOSER_TEXT("part of their lights are wired to both and both play at once: the row drawn later shows on those lights");
         }
     }
@@ -224,6 +358,23 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
         }
     }
     const int glow = std::clamp(static_cast<int>(std::lround(score.ambientLevel * 100)), 5, 100);
+    // Phase 22: a group effect over figures asked different things stays whole on the group, and
+    // each figure that rests or glows is masked on its own row (xLights' "1 is Mask" and
+    // "Brightness" layer methods over what the rows before it drew, with model blending on).
+    const bool groupMask = in.groupPresence >= 0 ? in.groupPresence == 1 : score.art >= static_cast<int>(ArtLevel::Calibrated);
+    score.groupPresence = groupMask ? "mask" : "split";
+    score.groupsKept = score.groupsMasked = score.groupsSplit = 0;
+    score.groupNotes.clear();
+    // A figure that shares lights with another that plays cannot be masked: its mask would take
+    // the other's light too. A group over it is split there instead (the safe way of phase 21).
+    std::map<const Scene*, std::set<std::string>> unmaskable;
+    struct Mask {
+        std::string figure;
+        int from = 0, to = 0;
+        bool rest = true; // else a glow
+        std::string group;
+    };
+    std::vector<Mask> masks;
     int kept = 0, dimmed = 0, rested = 0, split = 0, pieces = 0, untouched = 0, protectedCount = 0;
     std::map<std::string, int> deepest; // target -> its deepest layer before
     for (const ChoreographyEvent& e : c.events) {
@@ -239,6 +390,25 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
     std::vector<ChoreographyEvent> out;
     std::vector<ChoreographyEvent> members; // pieces of group effects moved onto one figure
     out.reserve(c.events.size());
+    if (groupMask) {
+        for (const Scene& s : scenes) {
+            for (const SharedLights& x : score.sharedLights) {
+                const auto pa = s.presence.find(x.a);
+                const auto pb = s.presence.find(x.b);
+                if (pa == s.presence.end() || pb == s.presence.end()) {
+                    continue;
+                }
+                const bool aPlays = pa->second->policy != "suspended";
+                const bool bPlays = pb->second->policy != "suspended";
+                if (aPlays && pb->second->policy != "normal") {
+                    unmaskable[&s].insert(x.b);
+                }
+                if (bPlays && pa->second->policy != "normal") {
+                    unmaskable[&s].insert(x.a);
+                }
+            }
+        }
+    }
     for (ChoreographyEvent& e : c.events) {
         if (Protected(e)) {
             ++protectedCount;
@@ -310,6 +480,7 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
         }
         if (parts.size() == 1 && parts[0].sig == "normal") {
             ++kept;
+            score.groupsKept += group ? 1 : 0;
             out.push_back(std::move(e));
             continue;
         }
@@ -349,7 +520,51 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
                 out.push_back(std::move(x));
                 continue;
             }
-            // A group whose figures are asked different things: one effect per figure that plays.
+            // A group whose figures are asked different things. Kept whole, each figure that rests
+            // or glows masked on its own row, when that is safe; else one effect per figure that plays.
+            bool maskable = groupMask && p.scene != nullptr;
+            if (maskable) {
+                for (const std::string& f : reach) {
+                    const std::string pol = policyAt(p.scene, f);
+                    if (pol != "normal" && unmaskable[p.scene].contains(f)) {
+                        maskable = false;
+                    }
+                }
+            }
+            if (maskable) {
+                ChoreographyEvent x = e;
+                x.startMS = p.from;
+                x.endMS = p.to;
+                if (parts.size() > 1) {
+                    x.id += fmt::format("/p{}", n);
+                    if (p.from != e.startMS) {
+                        x.transitionIn.clear();
+                        x.fadeInMS = 0;
+                        std::erase_if(x.settings, [](const auto& kv) { return kv.first == "T_CHOICE_In_Transition_Type" || kv.first == "T_TEXTCTRL_Fadein"; });
+                    }
+                    if (p.to != e.endMS) {
+                        x.transitionOut.clear();
+                        x.fadeOutMS = 0;
+                        std::erase_if(x.settings, [](const auto& kv) { return kv.first == "T_CHOICE_Out_Transition_Type" || kv.first == "T_TEXTCTRL_Fadeout"; });
+                    }
+                }
+                x.reasons.push_back({ "stage-presence", "group-kept-masked" });
+                out.push_back(std::move(x));
+                for (const std::string& f : reach) {
+                    const std::string pol = policyAt(p.scene, f);
+                    if (pol == "suspended" || pol == "reduced") {
+                        masks.push_back({ f, p.from, p.to, pol == "suspended", e.target });
+                        pol == "suspended" ? ++rested : ++dimmed;
+                    }
+                }
+                ++score.groupsMasked;
+                ++n;
+                continue;
+            }
+            if (groupMask) {
+                score.groupNotes.push_back(fmt::format("split:{}@{}: a figure in it shares lights with another that plays", e.target, p.from));
+            }
+            ++score.groupsSplit;
             ++split;
             for (const std::string& f : reach) {
                 const std::string pol = policyAt(p.scene, f);
@@ -409,7 +624,110 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
         m.layer = layer;
         placed[m.target].push_back({ layer, { m.startMS, m.endMS } });
     }
-    const int moved = static_cast<int>(members.size());
+    // The masks: one per figure and stretch (masks of several groups over the same figure and time
+    // are one), as deep as the figure's layers go, so its faces and words stay over them.
+    {
+        std::stable_sort(masks.begin(), masks.end(), [](const Mask& a, const Mask& b) {
+            return a.figure != b.figure ? a.figure < b.figure : a.rest != b.rest ? a.rest > b.rest : a.from < b.from;
+        });
+        std::vector<Mask> merged;
+        for (const Mask& m : masks) {
+            if (!merged.empty() && merged.back().figure == m.figure && merged.back().rest == m.rest && m.from <= merged.back().to) {
+                merged.back().to = std::max(merged.back().to, m.to);
+                continue;
+            }
+            merged.push_back(m);
+        }
+        const std::string grey = fmt::format("#{:02X}{:02X}{:02X}", glow * 255 / 100, glow * 255 / 100, glow * 255 / 100);
+        for (const Mask& m : merged) {
+            if (m.to - m.from < 2 * frame) {
+                continue;
+            }
+            ChoreographyEvent x;
+            x.id = fmt::format("stage/presence-mask/{}/{}", m.figure, m.from);
+            x.target = m.figure;
+            x.type = TargetType::Model;
+            x.prominence = Prominence::Support;
+            x.intent = "presence-mask";
+            x.startMS = m.from;
+            x.endMS = m.to;
+            x.effect = "On";
+            x.settings = { { "T_CHOICE_LayerMethod", m.rest ? "1 is Mask" : "Brightness" } };
+            x.colors = { m.rest ? std::string("#FFFFFF") : grey };
+            x.continuation = "new";
+            x.confidence = 1;
+            x.provenance = "stage:presence-mask";
+            x.reasons.push_back({ "stage-presence", m.rest ? "rest-mask" : "glow-mask" });
+            // Below everything on that figure at that time.
+            int layer = deepest.contains(m.figure) ? deepest[m.figure] + 1 : 0;
+            for (const ChoreographyEvent* o : byTarget[m.figure]) {
+                if (o->startMS < x.endMS && x.startMS < o->endMS) {
+                    layer = std::max(layer, o->layer + 1);
+                }
+            }
+            for (const auto& [l, span] : placed[m.figure]) {
+                if (span.first < x.endMS && x.startMS < span.second) {
+                    layer = std::max(layer, l + 1);
+                }
+            }
+            x.layer = layer;
+            placed[m.figure].push_back({ layer, { x.startMS, x.endMS } });
+            members.push_back(std::move(x));
+        }
+    }
+    // The lights a figure gives way on: a mask of exactly those lights, over everything it does
+    // there (its other layers move one down; the score's gestures stay over it in RealizeStage).
+    for (const Owned& o : owned) {
+        const int from = near(o.from), to = near(o.to);
+        if (to - from < 2 * frame) {
+            continue;
+        }
+        for (ChoreographyEvent& e : out) {
+            if (e.target == o.figure) {
+                ++e.layer;
+            }
+        }
+        for (ChoreographyEvent& e : members) {
+            if (e.target == o.figure) {
+                ++e.layer;
+            }
+        }
+        FieldSpec f;
+        f.function = FieldFunction::Pulse;
+        f.duration = (to - from) / 1000.0;
+        f.attack = 0;
+        f.release = 0;
+        f.level = 1;
+        f.only = o.nodes;
+        if (in.space != nullptr) {
+            if (const StageFigure* sf = in.space->Find(o.figure); sf != nullptr) {
+                f.transform = sf->transform;
+            }
+        }
+        ChoreographyEvent x;
+        x.id = fmt::format("stage/shared-mask/{}/{}", o.figure, from);
+        x.target = o.figure;
+        x.type = TargetType::Model;
+        x.prominence = Prominence::Support;
+        x.intent = "shared-mask";
+        x.startMS = from;
+        x.endMS = to;
+        x.layer = 0;
+        x.effect = "Stage Field";
+        x.settings = { { "E_TEXTCTRL_StageField_Spec", ToText(f) }, { "E_SLIDER_StageField_Intensity", "100" }, { "T_CHOICE_LayerMethod", "1 is Mask" } };
+        x.colors = { "#FFFFFF" };
+        x.continuation = "new";
+        x.confidence = 1;
+        x.provenance = "stage:shared-mask";
+        x.reasons.push_back({ "stage-presence", "shared-lights" });
+        members.push_back(std::move(x));
+    }
+    int moved = 0, presenceMasks = 0, sharedMasks = 0;
+    for (const ChoreographyEvent& m : members) {
+        presenceMasks += m.provenance == "stage:presence-mask" ? 1 : 0;
+        sharedMasks += m.provenance == "stage:shared-mask" ? 1 : 0;
+        moved += m.provenance != "stage:presence-mask" && m.provenance != "stage:shared-mask" ? 1 : 0;
+    }
     for (ChoreographyEvent& m : members) {
         out.push_back(std::move(m));
     }
@@ -433,8 +751,9 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
         resolved += s.scenesResolved;
         both += s.scenesBothLit;
     }
-    notes.push_back(fmt::format("presence: {} effects kept whole, {} pieces kept, {} pieces dimmed to {}%, {} pieces rested, {} group effects split into {} figure effects; {} protected, {} on no figure",
-                                kept, pieces, dimmed, glow, rested, split, moved, protectedCount, untouched));
+    notes.push_back(fmt::format("presence: {} effects kept whole, {} pieces kept, {} pieces dimmed to {}%, {} pieces rested, {} group effects split into {} figure effects, {} kept whole over {} "
+                                "masks on the figures that rest or glow; {} masks on shared lights; {} protected, {} on no figure",
+                                kept, pieces, dimmed, glow, rested, split, moved, score.groupsMasked, presenceMasks, sharedMasks, protectedCount, untouched));
     notes.push_back(fmt::format("shared lights: {} pairs, both lit in {} scenes, one gave way in {}", score.sharedLights.size(), both, resolved));
     score.presenceNotes = notes;
     return notes;
@@ -644,6 +963,44 @@ std::vector<std::string> LinkCompositions(GlobalStageScore& score, const StageDi
     notes.push_back(fmt::format("transitions: {} joins ({}), {} effects softened, {} overlapping on one layer", score.transitions.size(), kindText, softenedAll, overlaps));
     score.presenceNotes.push_back(notes.back());
     return notes;
+}
+
+int OrderSharedLights(SequenceSpec& spec, const GlobalStageScore& score) {
+    int moved = 0;
+    for (const SharedLights& s : score.sharedLights) {
+        if (s.scenesOwned == 0 || s.priority.empty()) {
+            continue;
+        }
+        const std::string& winner = s.priority;
+        const std::string loser = winner == s.a ? s.b : s.a;
+        size_t w = spec.effects.size(), l = spec.effects.size();
+        for (size_t i = 0; i < spec.effects.size(); ++i) {
+            const std::string& t = spec.effects[i].target;
+            if (t == winner && w == spec.effects.size()) {
+                w = i;
+            }
+            if (t == loser && l == spec.effects.size()) {
+                l = i;
+            }
+        }
+        if (w == spec.effects.size() || l == spec.effects.size() || l < w) {
+            continue;
+        }
+        // Only the loser's first effect moves: that alone sets its row; effects keep their times.
+        EffectSpec first = spec.effects[l];
+        spec.effects.erase(spec.effects.begin() + static_cast<long>(l));
+        spec.effects.insert(spec.effects.begin() + static_cast<long>(w), std::move(first));
+        ++moved;
+    }
+    return moved;
+}
+
+std::string SharedKindPhrase(const std::string& k) {
+    if (k == "containment") return COMPOSER_TEXT("one is drawn inside the other on purpose");
+    if (k == "duplicate") return COMPOSER_TEXT("the same lights described twice");
+    if (k == "partial") return COMPOSER_TEXT("part of their lights in common, in the same place");
+    if (k == "misconfigured") return COMPOSER_TEXT("the same channels drawn in two different places: probably a wiring or start-channel mistake");
+    return COMPOSER_TEXT("not known: the layout does not say where their lights are");
 }
 
 std::string PresenceStatePhrase(const std::string& s) {

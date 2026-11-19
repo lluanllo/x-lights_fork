@@ -724,3 +724,47 @@ Un `.xsq` generado **no contiene referencias rotas**, porque un recurso solo se 
   - la raíz gana `channels`, `readyForInstallation` (solo es verdadero con una aprobación de una persona) y `sharedLights` (`a`, `b`, `lights`, `relation`, `bothLitMS`, `drawnLast`, `priority`, `complementary`).
 - `paquete.json` gana `layout` (`fingerprint`, `models`, `channels`, `controllers`, `controllersActive`, `sharedLights`) y `fseq` (`file`, `checkedAgainstSequence`); su `status` gana `generated`, `fseqFinal`, `packaged`, `review` y `readyForInstallation`.
 - Sidecar (sigue en la versión 5): `stage.ambient`, el brillo del ambiente. Si falta, se usa lo aprendido o 0,4.
+
+### Cambios de la Fase 22
+
+- `stage-score.json` (esquema 1; director 4.0.0 en el nivel `calibrated`). Se lee igual uno anterior: los campos nuevos toman su valor por defecto.
+  - `art` gana `calibrated`, el nuevo valor por defecto.
+  - En la raíz:
+    - `compositionPlan`: `song` (el plan para toda la canción) o `local` (escena a escena, como en la Fase 21);
+    - `groupPresence`: `mask` (efectos de grupo enteros con máscaras) o `split` (divididos por figura);
+    - `groups`: `kept`, `masked`, `split` y `notes`.
+  - Por escena, cuando hay plan, `plan`:
+    - `kind`: `recall`, `only`, `best`, `song`, `person` o `none`;
+    - `reasons`;
+    - `localBest` y `localBestScore`: la mejor por sí sola y sus puntos;
+    - `local` y `song`: los puntos de la elegida aquí, y lo que sumó o restó la canción;
+    - `alternatives`: `id` y `score`, los puntos en la canción.
+  - `sharedLights` gana estos campos:
+    - `channels`, `controllerA` y `controllerB`;
+    - `lightsA` y `lightsB`;
+    - `nodesA` y `nodesB`: los nodos compartidos de cada figura;
+    - `exclusiveA` y `exclusiveB`: las luces propias de cada figura;
+    - `place`: `same`, `apart` o `unknown`;
+    - `apart`: la distancia mediana entre los nodos emparejados, en separaciones entre nodos;
+    - `kind`: `containment`, `duplicate`, `partial`, `misconfigured` o `unknown`;
+    - `confirmed`;
+    - `scenesOwned`: los inicios de las escenas con prioridad propia.
+- `ShowComposer/stage/<audio>.edits.json`:
+  - `priority` acepta `sceneStartMS`: la prioridad vale solo en esa escena, y la de toda la canción usa -1;
+  - acción nueva `shared-ok`, con el valor `<figura>|<otra>`: la persona confirma que comparten luces a propósito.
+- `choreography.json` lleva dos máscaras nuevas, que son efectos del propio xLights:
+  - `presence-mask` (procedencia `stage:presence-mask`): un `On` en la fila de una figura que descansa (blanco, «1 is Mask») o que queda en ambiente (gris al nivel del ambiente, «Brightness»), bajo un efecto de grupo conservado entero;
+  - `shared-mask` (procedencia `stage:shared-mask`): un Stage Field con «1 is Mask» limitado a los nodos que una figura cede, en su capa 0.
+- `sequence-comparison.json`:
+  - cada cambio gana `nature`: `technical`, `musical`, `chromatic`, `recipe`, `protagonism`, `presence` o `composition`;
+  - hay tres tipos nuevos: `protagonist-changed`, `response-added` y `composition-changed`.
+- `production-check.json`:
+  - la raíz gana `unwired` (figuras con efectos sin controlador), `presenceMasks` y `maskLeaks`;
+  - `sharedLights` gana `kind`, `place` y `confirmed`;
+  - avisos nuevos: `figures-unwired`, `group-mask-order`, `shared-lights-confirmed` y `shared-lights-misconfigured`.
+- `generation-report.txt`: `local-regeneration` (escenas rehechas y efectos conservados) o `local-regeneration-refused`.
+- Línea de órdenes:
+  - `--composition-plan song|local` y `--group-presence mask|split`;
+  - `--keep-outside <secuencia anterior>` junto con `--only-scene <desdeMS>-<hastaMS>`;
+  - `--composer-group-fidelity -s <show> --report <carpeta> --out <carpeta>`, que escribe `group-fidelity.json`;
+  - `--composer-group-fidelity --controlled -s <show> --out <carpeta>`, sobre grupos reales del layout con una presencia controlada, que escribe `group-fidelity-controlled.json`.

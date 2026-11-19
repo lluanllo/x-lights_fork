@@ -141,8 +141,19 @@ struct GenerationRequest {
     std::optional<bool> stageDirector;
     // How far the stage director develops the song's ideas (ArtLevel, StageDirector.h): "f19"
     // as in phase 19, "direction", "motifs", "full" (phase 20), "compositions", "presence" or
-    // "orchestra" (phase 21). Default: orchestra, or the previous show's.
+    // "orchestra" (phase 21) or "calibrated" (phase 22). Default: calibrated, or the previous show's.
     std::optional<std::string> artDirection;
+    // Phase 22, to compare one at a time: "song" (the compositions planned for the whole song) or
+    // "local" (scene by scene); "mask" (group effects kept whole, members masked) or "split".
+    // Default: as the level says.
+    std::optional<std::string> compositionPlan;
+    std::optional<std::string> groupPresence;
+    // Phase 22, regenerating only some scenes: the show is generated whole as always, then only
+    // what falls inside `onlyScenes` ([from, to) ms) is taken from it; everything outside comes
+    // from `keepOutside` (an earlier sequence of the same song) exactly as it was. The result is
+    // validated and rendered like any show, and published under its own name.
+    std::string keepOutside;
+    std::vector<std::pair<int, int>> onlyScenes;
     // How bright the figures the scene keeps as a quiet glow are (0.05-1; ArtLevel presence and
     // above). Default: the previous show's, else 0.4.
     std::optional<double> ambientLevel;

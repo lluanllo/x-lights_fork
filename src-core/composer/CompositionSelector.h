@@ -45,6 +45,12 @@ struct SelectorScene {
     bool peakBegins = false; // the peak starts here
     bool lastScene = false;
     int target = 0;          // the figures the director would use (0: by the budget)
+    // Phase 22: the composition the plan for the whole song gives this scene ("" none planned).
+    std::string planned;
+    std::vector<std::string> plannedReasons; // why, for the whole song
+    // Phase 22's calibration of where the built-in compositions suit (0 before it): "neighbours
+    // answer" suits a solo voice too (the singer starts, the neighbours answer).
+    int calibration = 0;
 };
 
 struct CompositionChoice {
@@ -57,6 +63,43 @@ struct CompositionChoice {
 };
 
 [[nodiscard]] CompositionChoice SelectComposition(const StageLibrary& library, const SelectorScene& scene);
+
+// The compositions of the whole song, planned together (phase 22). A composition that suits a
+// scene best on its own is not always the best for the song: the plan weighs each scene's own
+// score (from SelectComposition, without what the scenes around it chose) with the song as a
+// whole: an idea brought back with the composition it was born with is continuity and costs
+// nothing; the same composition, or one of an equivalent structure (the same gesture), in the
+// scene before, or used again and again without bringing an idea back, costs points. A bounded
+// search keeps the best plans scene by scene; ties go to the plan whose earlier choices come
+// first in the library: the same song always gets the same plan.
+struct PlanScene {
+    std::string scene;         // the scene's id
+    SelectorScene facts;       // what the selector knows of it (previous and used are ignored)
+    std::string motif;         // the visual idea it carries ("" none)
+    int origin = -1;           // the index of the scene that presented that idea (-1 none, or itself)
+};
+
+struct PlannedComposition {
+    std::string scene;
+    std::string id;          // "" the director's own way
+    double local = 0;        // its score in the scene on its own
+    double song = 0;         // what the song adds or takes (continuity, variety)
+    std::string kind;        // why it is here: "recall" (the idea comes back with it), "only" (nothing else fits),
+                             // "best" (also the best on its own), "song" (another scored more here but the song needed variety),
+                             // "person" (a person chose it), "none"
+    std::string localBest;   // the best on its own in this scene
+    double localBestScore = 0;
+    std::vector<std::string> reasons;      // plain-words keys, for the whole song
+    std::vector<std::pair<std::string, double>> alternatives; // other compositions possible, with their score in the song here
+};
+
+struct CompositionPlanResult {
+    std::vector<PlannedComposition> scenes;
+    double total = 0;
+    int explored = 0; // plans weighed
+};
+
+[[nodiscard]] CompositionPlanResult PlanCompositions(const StageLibrary& library, const std::vector<PlanScene>& scenes);
 
 // The time a composition needs to be seen whole in a scene.
 [[nodiscard]] int CompositionNeedsMS(const StageLibraryEntry& entry, double beat, int figures);

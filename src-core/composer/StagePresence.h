@@ -26,8 +26,16 @@ std::vector<std::string> ApplyStagePresence(GlobalStageScore& score, const Stage
 // to the next. Records each join and what it was checked for. Returns notes.
 std::vector<std::string> LinkCompositions(GlobalStageScore& score, const StageDirectorInput& input, Choreography& choreography);
 
-// The pairs of stage figures wired to the same lights, from the layout's channels.
-[[nodiscard]] std::vector<SharedLights> FindSharedLights(const ModelCapabilities& capabilities, const std::vector<std::string>& figures);
+// The pairs of stage figures wired to the same lights, from the layout's channels; with the
+// figures' lights (phase 22), light by light: which lights each one shares, where they sit,
+// and what kind of relation it looks like.
+[[nodiscard]] std::vector<SharedLights> FindSharedLights(const ModelCapabilities& capabilities, const std::vector<std::string>& figures, const FigureCatalog* geometry = nullptr);
+[[nodiscard]] std::string SharedKindPhrase(const std::string& kind); // plain words (to translate)
+
+// Phase 22: where a figure gives way light by light, its row is drawn before the winner's, so
+// on the lights they share the winner's light shows (xLights draws rows in order). Returns how
+// many rows moved.
+int OrderSharedLights(SequenceSpec& spec, const GlobalStageScore& score);
 
 [[nodiscard]] std::string PresenceStatePhrase(const std::string& state);   // plain words (to translate)
 [[nodiscard]] std::string TransitionKindPhrase(const std::string& kind);   // plain words (to translate)

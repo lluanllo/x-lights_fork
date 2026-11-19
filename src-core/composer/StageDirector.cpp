@@ -96,7 +96,8 @@ public:
             Arc();
         }
         if (Art(ArtLevel::Compositions)) {
-            score.version = STAGE_DIRECTOR_ORCHESTRA_VERSION;
+            score.version = Art(ArtLevel::Calibrated) ? STAGE_DIRECTOR_CALIBRATED_VERSION : STAGE_DIRECTOR_ORCHESTRA_VERSION;
+            score.compositionPlan = _plan != nullptr ? "song" : "local";
         }
         for (const PlanSegment& s : _in.plan->segments) {
             score.scenes.push_back(Scene(s, score));
@@ -1019,6 +1020,30 @@ private:
         s.previous = _lastComposition;
         s.previousRun = _compRun;
         s.used = _compUsed;
+        // The plan for the whole song weighs variety itself: the scene before and the uses so far
+        // are its own terms, not the scene's.
+        const PlannedComposition* planned = nullptr;
+        if (_plan != nullptr) {
+            for (const PlannedComposition& p : _plan->scenes) {
+                if (p.scene == sc.id) {
+                    planned = &p;
+                }
+            }
+            s.previous.clear();
+            s.previousRun = 0;
+            s.used.clear();
+            if (planned != nullptr) {
+                s.planned = planned->id;
+                s.plannedReasons = planned->reasons;
+                sc.planKind = planned->kind;
+                sc.planReasons = planned->reasons;
+                sc.planLocalBest = planned->localBest;
+                sc.planLocal = planned->local;
+                sc.planLocalBestScore = planned->localBestScore;
+                sc.planSong = planned->song;
+                sc.planAlternatives = planned->alternatives;
+            }
+        }
         s.priority = seg.priority;
         s.durationMS = sc.endMS - sc.startMS;
         s.beat = Beat(sc.startMS);
@@ -1043,6 +1068,16 @@ private:
         s.peakBegins = peak && (_sceneIndex == 0 || (_narrative[_sceneIndex - 1] != "climax" && _narrative[_sceneIndex - 1] != "intensification"));
         s.lastScene = sc.narrative == "resolution";
         s.target = _target;
+        s.calibration = _calibration;
+        {
+            PlanScene f;
+            f.scene = sc.id;
+            f.facts = s;
+            f.facts.planned.clear();
+            f.facts.plannedReasons.clear();
+            f.motif = sc.visualMotif;
+            _facts.push_back(std::move(f));
+        }
         const CompositionChoice choice = SelectComposition(*_in.library, s);
         sc.candidates = choice.candidates;
         if (choice.entry == nullptr) {
@@ -2254,6 +2289,17 @@ private:
     bool _composing = false;                  // the gesture being made is the composition's own
     std::string _lastComposition;
     int _compRun = 0;
+    std::vector<PlanScene> _facts;               // what the selector knew of each scene (for the plan)
+    const CompositionPlanResult* _plan = nullptr; // the plan for the whole song (second pass)
+
+    int _calibration = 0; // phase 22's calibration of the selector (with the plan for the whole song)
+
+public:
+    void UsePlan(const CompositionPlanResult* plan) { _plan = plan; }
+    void Calibrate(int level) { _calibration = level; }
+    [[nodiscard]] const std::vector<PlanScene>& Facts() const { return _facts; }
+
+private:
     std::map<std::string, int> _compUsed;
 };
 
@@ -2330,6 +2376,35 @@ const StageLibraryEntry* StageLibrary::Find(const std::string& id) const {
 }
 
 GlobalStageScore DirectStage(const StageDirectorInput& input) {
+    // From ArtLevel Calibrated (or when asked) the compositions are planned for the whole song:
+    // a first pass learns what each scene is, the plan weighs them together, and the second pass
+    // directs with it.
+    const bool songPlan = input.compositionPlan >= 0 ? input.compositionPlan == 1 : input.art >= ArtLevel::Calibrated;
+    if (songPlan && input.art >= ArtLevel::Compositions && input.library != nullptr) {
+        Director first(input);
+        first.Calibrate(1);
+        (void)first.Run();
+        std::vector<PlanScene> facts = first.Facts();
+        // Each idea's origin: the scene that presented it.
+        for (size_t i = 0; i < facts.size(); ++i) {
+            if (facts[i].motif.empty()) {
+                continue;
+            }
+            for (size_t j = 0; j <= i; ++j) {
+                if (facts[j].motif == facts[i].motif && facts[j].facts.motifOperation == "present") {
+                    facts[i].origin = static_cast<int>(j);
+                    break;
+                }
+            }
+        }
+        const CompositionPlanResult plan = PlanCompositions(*input.library, facts);
+        Director second(input);
+        second.UsePlan(&plan);
+        second.Calibrate(1);
+        GlobalStageScore score = second.Run();
+        score.compositionPlan = "song";
+        return score;
+    }
     Director d(input);
     return d.Run();
 }
@@ -2564,9 +2639,11 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
     }
     // The layers of each figure the score touches, top to bottom: its gestures, then its
     // own effects as they were (in their order), then its identity. Nothing shares a layer.
-    std::map<std::string, std::vector<ChoreographyEvent*>> gestures, identity, own;
+    std::map<std::string, std::vector<ChoreographyEvent*>> gestures, identity, own, owned;
     for (ChoreographyEvent& e : c.events) {
-        if (e.intent == "stage-gesture") {
+        if (e.intent == "shared-mask") {
+            owned[e.target].push_back(&e); // the lights it gives way on: over everything, gestures too
+        } else if (e.intent == "stage-gesture") {
             gestures[e.target].push_back(&e);
         } else if (e.intent == "stage-identity") {
             identity[e.target].push_back(&e);
@@ -2585,7 +2662,8 @@ std::vector<std::string> RealizeStage(const GlobalStageScore& score, const Stage
         if (locked.contains(t)) {
             continue; // its layers are a person's: none moves
         }
-        const int top = gestures.contains(t) ? Stack(gestures[t], 0) : 0;
+        const int masks = owned.contains(t) ? Stack(owned[t], 0) : 0;
+        const int top = masks + (gestures.contains(t) ? Stack(gestures[t], masks) : 0);
         int deepest = top - 1;
         if (own.contains(t)) {
             for (ChoreographyEvent* e : own[t]) {
@@ -2740,12 +2818,13 @@ const char* ArtLevelId(ArtLevel a) {
     case ArtLevel::Compositions: return "compositions";
     case ArtLevel::Presence: return "presence";
     case ArtLevel::Orchestra: return "orchestra";
+    case ArtLevel::Calibrated: return "calibrated";
     }
     return "orchestra";
 }
 
 bool ArtLevelFromId(const std::string& id, ArtLevel& a) {
-    for (ArtLevel l : { ArtLevel::F19, ArtLevel::Direction, ArtLevel::Motifs, ArtLevel::Full, ArtLevel::Compositions, ArtLevel::Presence, ArtLevel::Orchestra }) {
+    for (ArtLevel l : { ArtLevel::F19, ArtLevel::Direction, ArtLevel::Motifs, ArtLevel::Full, ArtLevel::Compositions, ArtLevel::Presence, ArtLevel::Orchestra, ArtLevel::Calibrated }) {
         if (id == ArtLevelId(l)) {
             a = l;
             return true;
@@ -3006,6 +3085,14 @@ std::string ToJson(const GlobalStageScore& s) {
             }
             j["candidates"] = std::move(cands);
         }
+        if (!sc.planKind.empty()) {
+            json alts = json::array();
+            for (const auto& [id, score] : sc.planAlternatives) {
+                alts.push_back({ { "id", id }, { "score", score } });
+            }
+            j["plan"] = { { "kind", sc.planKind }, { "reasons", sc.planReasons }, { "localBest", sc.planLocalBest }, { "local", sc.planLocal }, { "localBestScore", sc.planLocalBestScore }, { "song", sc.planSong },
+                          { "alternatives", alts } };
+        }
         if (!sc.presence.empty()) {
             j["ambience"] = sc.ambience;
             json ps = json::array();
@@ -3045,9 +3132,33 @@ std::string ToJson(const GlobalStageScore& s) {
         for (const SharedLights& x : s.sharedLights) {
             sl.push_back({ { "a", x.a }, { "b", x.b }, { "lights", x.lights }, { "relation", x.relation }, { "priority", x.priority }, { "prioritySource", x.prioritySource },
                            { "scenesBothLit", x.scenesBothLit }, { "scenesResolved", x.scenesResolved }, { "note", x.note } });
+            if (!x.kind.empty() && !x.channels.empty()) {
+                json& y = sl.back();
+                y["channels"] = x.channels;
+                y["controllerA"] = x.controllerA;
+                y["controllerB"] = x.controllerB;
+                y["lightsA"] = x.lightsA;
+                y["lightsB"] = x.lightsB;
+                y["nodesA"] = x.nodesA;
+                y["nodesB"] = x.nodesB;
+                y["exclusiveA"] = x.exclusiveA;
+                y["exclusiveB"] = x.exclusiveB;
+                y["place"] = x.place;
+                y["apart"] = x.apart;
+                y["kind"] = x.kind;
+                y["confirmed"] = x.confirmed;
+                y["scenesOwned"] = x.scenesOwned;
+            }
         }
         root["sharedLights"] = std::move(sl);
         root["presenceNotes"] = s.presenceNotes;
+    }
+    if (!s.compositionPlan.empty()) {
+        root["compositionPlan"] = s.compositionPlan;
+    }
+    if (!s.groupPresence.empty()) {
+        root["groupPresence"] = s.groupPresence;
+        root["groups"] = { { "kept", s.groupsKept }, { "masked", s.groupsMasked }, { "split", s.groupsSplit }, { "notes", s.groupNotes } };
     }
     return root.dump(1);
 }
@@ -3097,6 +3208,18 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
                                           c.value("figures", 0) });
             }
             sc.ambience = j.value("ambience", 0.0);
+            if (j.contains("plan") && j["plan"].is_object()) {
+                const json& p = j["plan"];
+                sc.planKind = p.value("kind", std::string());
+                sc.planReasons = p.value("reasons", std::vector<std::string>());
+                sc.planLocalBest = p.value("localBest", std::string());
+                sc.planLocal = p.value("local", 0.0);
+                sc.planLocalBestScore = p.value("localBestScore", 0.0);
+                sc.planSong = p.value("song", 0.0);
+                for (const json& a : p.value("alternatives", json::array())) {
+                    sc.planAlternatives.push_back({ a.value("id", std::string()), a.value("score", 0.0) });
+                }
+            }
             for (const json& p : j.value("presence", json::array())) {
                 sc.presence.push_back({ p.value("figure", std::string()), p.value("state", std::string()), p.value("policy", std::string()), p.value("why", std::string()) });
             }
@@ -3219,9 +3342,31 @@ bool FromJson(const std::string& text, GlobalStageScore& out, std::string& error
             x.scenesBothLit = t.value("scenesBothLit", 0);
             x.scenesResolved = t.value("scenesResolved", 0);
             x.note = t.value("note", std::string());
+            x.channels = t.value("channels", std::string());
+            x.controllerA = t.value("controllerA", std::string());
+            x.controllerB = t.value("controllerB", std::string());
+            x.lightsA = t.value("lightsA", 0);
+            x.lightsB = t.value("lightsB", 0);
+            x.nodesA = t.value("nodesA", std::string());
+            x.nodesB = t.value("nodesB", std::string());
+            x.exclusiveA = t.value("exclusiveA", 0);
+            x.exclusiveB = t.value("exclusiveB", 0);
+            x.place = t.value("place", std::string());
+            x.apart = t.value("apart", -1.0);
+            x.kind = t.value("kind", std::string());
+            x.confirmed = t.value("confirmed", false);
+            x.scenesOwned = t.value("scenesOwned", 0);
             s.sharedLights.push_back(std::move(x));
         }
         s.presenceNotes = root.value("presenceNotes", std::vector<std::string>());
+        s.compositionPlan = root.value("compositionPlan", std::string());
+        s.groupPresence = root.value("groupPresence", std::string());
+        if (root.contains("groups") && root["groups"].is_object()) {
+            s.groupsKept = root["groups"].value("kept", 0);
+            s.groupsMasked = root["groups"].value("masked", 0);
+            s.groupsSplit = root["groups"].value("split", 0);
+            s.groupNotes = root["groups"].value("notes", std::vector<std::string>());
+        }
         out = std::move(s);
     } catch (const json::exception& e) {
         error = std::string("stage score: ") + e.what();

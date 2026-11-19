@@ -1216,7 +1216,9 @@ wxString ChangeWords(const std::string& kind) {
                                                        { "figure-added", _("Figure brought in") }, { "figure-removed", _("Figure left dark") },
                                                        { "presence-reduced", _("Less activity") }, { "presence-grown", _("More figures play") },
                                                        { "composition-grown", _("From one figure to a group") }, { "responders", _("Figures that answer") },
-                                                       { "composition-recalled", _("An earlier composition brought back") } };
+                                                       { "composition-recalled", _("An earlier composition brought back") },
+                                                       { "composition-changed", _("Composition changed") }, { "response-added", _("An answer added") },
+                                                       { "protagonist-changed", _("Another protagonist") } };
     const auto it = W.find(kind);
     return it != W.end() ? it->second : U(kind);
 }
@@ -1272,6 +1274,15 @@ wxString ChangeReasonWords(const SequenceChange& c) {
     if (c.kind == "composition-recalled") {
         return _("you brought back the figures of an earlier scene");
     }
+    if (c.kind == "composition-changed") {
+        return c.after == "answer" ? wxString::Format(_("you made %d figures answer one another"), n) : wxString::Format(_("you made %d figures play together"), n);
+    }
+    if (c.kind == "response-added") {
+        return wxString::Format(_("you added an answer of %s"), U(c.figure));
+    }
+    if (c.kind == "protagonist-changed") {
+        return wxString::Format(_("%s leads this scene now, instead of %s"), U(c.after), U(c.before));
+    }
     return U(c.why);
 }
 
@@ -1286,6 +1297,17 @@ wxString ObservationWords(const std::string& kind) {
 }
 
 namespace {
+
+wxString NatureWords(const std::string& n) {
+    if (n == "technical") return _("technical");
+    if (n == "musical") return _("musical timing");
+    if (n == "chromatic") return _("colour");
+    if (n == "composition") return _("composition");
+    if (n == "presence") return _("who plays");
+    if (n == "protagonism") return _("protagonist");
+    if (n == "recipe") return _("effect");
+    return wxString();
+}
 
 wxString CategoryWords(const std::string& c) {
     if (c == "technical") return _("a nudge in time");
@@ -1326,7 +1348,7 @@ CorrectionsDialog::CorrectionsDialog(wxWindow* parent, const SequenceComparison&
         const long row = _list->InsertItem(_list->GetItemCount(), ClockText(c.startMS));
         _list->SetItem(row, 1, c.figure.empty() && !c.figures.empty() ? wxString::Format(_("%d figures"), static_cast<int>(c.figures.size())) : U(c.figure));
         _list->SetItem(row, 2, wxString::Format("%s: %s%s", ChangeWords(c.kind), ChangeReasonWords(c), c.suggestion.empty() ? wxString(" ") + _("(nothing to learn for other songs)") : wxString()));
-        _list->SetItem(row, 3, CategoryWords(c.category));
+        _list->SetItem(row, 3, c.nature.empty() ? CategoryWords(c.category) : NatureWords(c.nature) + " - " + CategoryWords(c.category));
         _rows.push_back(i);
         _choices.push_back("ignore");
         ShowDecision(_rows.size() - 1);

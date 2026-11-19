@@ -660,8 +660,11 @@ private:
                               _dialog->SetColorStyle(100);
                               Check(has(_dialog->GenerateArguments(), "--color-style", "1.00"), "and can go expressive");
                               _dialog->SetColorStyle(40);
+                              Check(has(_dialog->GenerateArguments(), "--art-direction", "calibrated") && has(_dialog->GenerateArguments(), "--ambient-level", "0.40"),
+                                    "by default the compositions are planned for the whole song and groups kept whole, the figures not taking part kept as a quiet glow at 40%");
+                              _dialog->SetArtDirection("orchestra");
                               Check(has(_dialog->GenerateArguments(), "--art-direction", "orchestra") && has(_dialog->GenerateArguments(), "--ambient-level", "0.40"),
-                                    "by default the director commands the whole house, the figures not taking part kept as a quiet glow at 40%");
+                                    "or the whole house directed as in phase 21, to compare");
                               _dialog->SetAmbientLevel(0.7);
                               Check(has(_dialog->GenerateArguments(), "--ambient-level", "0.70"), "the quiet glow can be made brighter");
                               _dialog->SetAmbientLevel(0.4);
@@ -670,7 +673,7 @@ private:
                                     "or the ideas developed as in phase 20, with no glow to set");
                               _dialog->SetArtDirection("f19");
                               Check(has(_dialog->GenerateArguments(), "--art-direction", "f19") && _dialog->ArtDirectionId() == "f19", "or directed as in phase 19, to compare");
-                              _dialog->SetArtDirection("orchestra");
+                              _dialog->SetArtDirection("calibrated");
                               _dialog->ColorPanel()->SetDirectorOn(false);
                               Check(has(_dialog->GenerateArguments(), "--color-director", "off"), "or the colours as before, to compare");
                               _dialog->ColorPanel()->SetDirectorOn(true);
@@ -825,7 +828,7 @@ private:
                               Check(figure.empty() || layers->Rows() > 0, fmt::format("a figure's layers are listed, top to bottom ({}: {} rows)", figure, layers->Rows()));
                               Capture(layers, "capas-de-esta-figura");
                               layers->Destroy();
-                              auto* library = new StageLibraryDialog(_dialog, _dialog->ShowFolder());
+                              auto* library = new StageLibraryDialog(_dialog, _dialog->ShowFolder(), &score);
                               library->Show();
                               Check(library->Toggle("cascade", false, true) && library->Library().Find("cascade")->excluded, "a gesture can be left out of what the director chooses");
                               Check(library->AddOwn("Mi brillo", "pulse") && library->Library().Find("own:Mi brillo") != nullptr, "and a composition of one's own added");
@@ -841,10 +844,25 @@ private:
                                     fmt::format("{} whole compositions, of one figure, a group and the whole house, each saying where it suits and who takes part", compositions));
                               Check(library->SetValues("composition:wave-house", 0.6, 8) && std::abs(library->Library().Find("composition:wave-house")->level0 - 0.6) < 1e-9,
                                     "a composition's own values can be changed");
+                              {
+                                  // Phase 22: what each composition did in this song, and what it is made with.
+                                  std::string used;
+                                  for (const StageScene& sc : score.scenes) {
+                                      if (!sc.composition.empty()) {
+                                          used = sc.composition;
+                                          break;
+                                      }
+                                  }
+                                  const StageLibraryEntry* e = used.empty() ? nullptr : library->Library().Find(used);
+                                  const wxString about = e == nullptr ? wxString() : library->About(*e);
+                                  Check(e != nullptr && about.Contains(wxGetTranslation("In this song it carries the scenes at %s.").BeforeFirst('%')) &&
+                                            about.Contains(wxGetTranslation("It was possible in %d other scenes and did not fit %d.").BeforeFirst('%')),
+                                        "a composition says where it carries this song, where else it was possible and where it did not fit");
+                              }
                               Capture(library, "composiciones-y-gestos");
                               library->Destroy();
                               const StageScene& shown = score.scenes[static_cast<size_t>(pick)];
-                              Check(score.art == 6 && !shown.narrative.empty() && !shown.attention.empty() && !shown.changes.empty(),
+                              Check(score.art == 7 && !shown.narrative.empty() && !shown.attention.empty() && !shown.changes.empty(),
                                     "each scene says what it does in the song, how many carry it and what changes");
                               // Phase 21: the orchestration of the installation.
                               int composedScenes = 0, withPresence = 0;
@@ -863,6 +881,9 @@ private:
                                   const StageLibraryEntry* used = builtIn.Find(score.scenes[static_cast<size_t>(composedAt)].composition);
                                   Check(used != nullptr && panel->Detail().Contains(wxGetTranslation(wxString::FromUTF8(used->title))) && !score.scenes[static_cast<size_t>(composedAt)].compositionReasons.empty(),
                                         "a scene says which composition it is built on, why, and what else was possible");
+                                  const StageScene& planned = score.scenes[static_cast<size_t>(composedAt)];
+                                  Check(!planned.planKind.empty() && planned.planKind != "none" && panel->Detail().Contains(wxGetTranslation("Plan for the whole song: \"%s\" is also the best for this scene on its own (%.0f points).").BeforeFirst(':')),
+                                        fmt::format("and why the plan for the whole song chose it there ({})", planned.planKind));
                                   Capture(_dialog, "orquestacion");
                                   const int pending = panel->PendingEdits();
                                   const int at = score.scenes[static_cast<size_t>(composedAt)].startMS;
@@ -879,8 +900,16 @@ private:
                                   Check(panel->Edit({ "priority", -1, -1, x.a + "|" + x.b, "" }).empty() && panel->Edit({ "priority", -1, -1, x.b + "|" + x.a, "" }).empty() &&
                                             panel->PendingEdits() == pending + 1,
                                         "which of two figures sharing lights wins can be chosen (the last choice for the pair stays)");
-                                  (void)panel->Undo();
-                                  (void)panel->Undo();
+                                  const int at = score.scenes.front().startMS;
+                                  Check(panel->Edit({ "priority", at, -1, x.a + "|" + x.b, "" }).empty() && panel->PendingEdits() == pending + 2,
+                                        "or only for one scene, beside the choice for the whole song");
+                                  Check(panel->Edit({ "shared-ok", -1, -1, x.a + "|" + x.b, "" }).empty() && panel->Edit({ "shared-ok", -1, -1, x.a + "|" + x.b, "" }).empty() &&
+                                            panel->PendingEdits() == pending + 3,
+                                        "or the sharing confirmed as intended by the person (said once)");
+                                  for (int k = 0; k < 5; ++k) {
+                                      (void)panel->Undo();
+                                  }
+                                  Check(panel->PendingEdits() == pending, "and all of it undone");
                               } else {
                                   Check(true, "no two figures of this show share their lights: nothing to choose");
                               }
@@ -1379,6 +1408,47 @@ private:
                               return true;
                           },
                            900 });
+        _steps.push_back({ "only one scene made again", [this]() {
+                              if (!_started) {
+                                  GlobalStageScore score;
+                                  std::string error;
+                                  (void)FromJson(_dialog->ResultReport().stageScore, score, error);
+                                  const StageScene* scene = nullptr;
+                                  for (const StageScene& sc : score.scenes) {
+                                      if (sc.startMS > 0 && !sc.composition.empty()) {
+                                          scene = &sc;
+                                          break;
+                                      }
+                                  }
+                                  if (scene == nullptr) {
+                                      Check(false, "a scene built on a composition to make again");
+                                      return true;
+                                  }
+                                  _earlier = _dialog->ResultSequence();
+                                  _earlierHash = Sha256OfFile(_earlier);
+                                  _sceneFrom = scene->startMS;
+                                  _sceneTo = scene->endMS;
+                                  _started = true;
+                                  Check(_dialog->RegenerateScene(_sceneFrom, _sceneTo), "one scene can be made again from step 4");
+                                  return false;
+                              }
+                              if (!JobDone() || !Waited(1.0)) {
+                                  return false;
+                              }
+                              _started = false;
+                              std::string report;
+                              {
+                                  std::ifstream in(fs::path(_dialog->ResultReportDir()) / "generation-report.txt");
+                                  report.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+                              }
+                              Check(_dialog->LastExitCode() == 0 && FileExists(_dialog->ResultSequence()) && _dialog->ResultSequence() != _earlier && report.find("local-regeneration:") != std::string::npos,
+                                    fmt::format("the scene at {:.1f}-{:.1f} s made again into a new sequence ({}), everything else kept", _sceneFrom / 1000.0, _sceneTo / 1000.0,
+                                                fs::path(_dialog->ResultSequence()).filename().string()));
+                              Check(Sha256OfFile(_earlier) == _earlierHash, "the show made before is not changed");
+                              Capture(_dialog, "escena-rehecha");
+                              return true;
+                          },
+                           1800 });
         _steps.push_back({ "observations with their place", [this]() {
                               ColorDirectorPanel* panel = _dialog->ColorPanel();
                               if (panel == nullptr || panel->Score().scenes.empty()) {
@@ -1580,6 +1650,8 @@ private:
     std::chrono::steady_clock::time_point _stepStart;
     std::chrono::steady_clock::time_point _last;
     long long _maxGapMS = 0;
+    std::string _earlier, _earlierHash; // the show before one scene was made again
+    int _sceneFrom = 0, _sceneTo = 0;
     bool _busy = false;
     ShowComposerDialog* _dialog = nullptr;
     int _closed = 0;

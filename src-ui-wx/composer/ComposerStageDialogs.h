@@ -137,7 +137,8 @@ private:
 // use, a person's favourites and exclusions, and compositions of their own.
 class StageLibraryDialog : public wxDialog {
 public:
-    StageLibraryDialog(wxWindow* parent, const std::string& showDir);
+    // With the song's score (phase 22), each composition says where this song chose it and where it was possible.
+    StageLibraryDialog(wxWindow* parent, const std::string& showDir, const composer::GlobalStageScore* score = nullptr);
 
     bool Toggle(const std::string& id, bool favourite, bool value);
     bool AddOwn(const std::string& title, const std::string& function);
@@ -152,6 +153,7 @@ private:
     [[nodiscard]] std::string Selected() const;
 
     std::string _showDir;
+    const composer::GlobalStageScore* _score = nullptr;
     composer::StageLibrary _library;
     wxListCtrl* _list = nullptr;
     wxTextCtrl* _about = nullptr;
@@ -181,6 +183,7 @@ public:
     void OpenLibraryDialog() { OpenLibrary(); }
 
     std::function<void()> onRecompose;
+    std::function<void(int startMS, int endMS)> onRegenerateScene; // phase 22: only this scene made again
     std::function<void()> onDirectorChanged;
 
 private:

@@ -66,6 +66,54 @@ wxString Words(const std::string& coreText) {
 }
 
 // A composition by its title, in the person's language; one of their own by its name.
+wxString CompositionWords(const std::string& id, const wxString& none);
+
+// Why the plan for the whole song gave this scene its composition, and what else it weighed.
+// Who wins on a pair of figures sharing lights, and whose decision it is.
+wxString SharedDecisionWords(const SharedLights& x) {
+    if (x.confirmed) {
+        return _("meant so, as you confirmed");
+    }
+    if (!x.priority.empty() && x.prioritySource == "person") {
+        return x.scenesOwned > 0 ? wxString::Format(_("%s wins, as you chose (in %d scenes where both play)"), U(x.priority), x.scenesOwned)
+                                 : wxString::Format(_("%s wins, as you chose"), U(x.priority));
+    }
+    if (!x.priority.empty()) {
+        return wxString::Format(_("not decided by you: the director lets %s win where the scene asks more of it"), U(x.priority));
+    }
+    return _("not decided: where both play, the figure drawn later shows on those lights");
+}
+
+wxString PlanWords(const StageScene& s) {
+    wxString out;
+    const wxString chosen = CompositionWords(s.composition, _("the director's own way"));
+    if (s.planKind == "recall") {
+        out = wxString::Format(_("Plan for the whole song: \"%s\" brings the scene's idea back with the composition it was born with."), chosen);
+    } else if (s.planKind == "only") {
+        out = wxString::Format(_("Plan for the whole song: \"%s\" is the only composition that suits this scene."), chosen);
+    } else if (s.planKind == "best") {
+        out = wxString::Format(_("Plan for the whole song: \"%s\" is also the best for this scene on its own (%.0f points)."), chosen, s.planLocal);
+    } else if (s.planKind == "song") {
+        out = wxString::Format(_("Plan for the whole song: \"%s\" (%.0f points here); \"%s\" scored more in this scene alone (%.0f), but the song as a whole is better with variety."), chosen, s.planLocal,
+                               CompositionWords(s.planLocalBest, wxString()), s.planLocalBestScore);
+    } else if (s.planKind == "person") {
+        out = wxString::Format(_("Plan for the whole song: \"%s\", chosen by you."), chosen);
+    } else {
+        return out;
+    }
+    for (const std::string& r : s.planReasons) {
+        out += "\n  - " + Words(r);
+    }
+    wxString alts;
+    for (size_t k = 0; k < s.planAlternatives.size() && k < 3; ++k) {
+        alts += (k == 0 ? "" : ", ") + wxString::Format("%s (%.1f)", CompositionWords(s.planAlternatives[k].first, wxString()), s.planAlternatives[k].second);
+    }
+    if (!alts.empty()) {
+        out += "\n" + wxString::Format(_("Also weighed, with their points in the song here: %s."), alts);
+    }
+    return out;
+}
+
 wxString CompositionWords(const std::string& id, const wxString& none) {
     if (id.empty()) {
         return none;
@@ -543,8 +591,8 @@ int FigureLayersDialog::Rows() const {
 
 // ------------------------------------------------------------------ compositions and gestures
 
-StageLibraryDialog::StageLibraryDialog(wxWindow* parent, const std::string& showDir) :
-    wxDialog(parent, wxID_ANY, _("Compositions and Gestures"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER), _showDir(showDir) {
+StageLibraryDialog::StageLibraryDialog(wxWindow* parent, const std::string& showDir, const GlobalStageScore* score) :
+    wxDialog(parent, wxID_ANY, _("Compositions and Gestures"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER), _showDir(showDir), _score(score) {
     StageLibrary personal;
     std::string text, error;
     if (ReadTextFile(StageLibraryPath(showDir), text)) {
@@ -688,6 +736,24 @@ wxString StageLibraryDialog::About(const StageLibraryEntry& e) const {
     }
     out += "\n" + wxString::Format(_("Brightness %d%%. Where it comes from: %s."), static_cast<int>(e.level0 * 100 + 0.5),
                                     e.source == "built-in" ? _("the program") : e.source.rfind("learned:", 0) == 0 ? wxString::Format(_("your corrected version %s"), U(e.source.substr(8))) : _("you"));
+    out += "\n" + _("It is made with xLights' own effects: the Stage Field gesture over the figures that take part; on a group of xLights the group's own effect stays whole, and the figures that rest are masked on their own row.");
+    if (_score != nullptr && !_score->scenes.empty()) {
+        wxString chosen;
+        int possible = 0, ruledOut = 0;
+        for (const StageScene& sc : _score->scenes) {
+            if (sc.composition == e.id) {
+                chosen += (chosen.empty() ? "" : ", ") + ClockText(sc.startMS);
+            }
+            for (const CompositionCandidate& c : sc.candidates) {
+                if (c.id == e.id) {
+                    possible += c.verdict == "possible" ? 1 : 0;
+                    ruledOut += c.verdict == "rejected" ? 1 : 0;
+                }
+            }
+        }
+        out += "\n\n" + (chosen.empty() ? _("In this song it was not chosen.") : wxString::Format(_("In this song it carries the scenes at %s."), chosen));
+        out += "\n" + wxString::Format(_("It was possible in %d other scenes and did not fit %d."), possible, ruledOut);
+    }
     return out;
 }
 
@@ -780,6 +846,18 @@ StageDirectorPanel::StageDirectorPanel(wxWindow* parent) : wxPanel(parent) {
     button(tools, _("Layers of This Figure..."), [this]() { OpenLayers(); });
     button(tools, _("Compositions and Gestures..."), [this]() { OpenLibrary(); });
     button(tools, _("Figures Sharing Lights..."), [this]() { AskPriority(); });
+    button(tools, _("Make Only This Scene Again"), [this]() {
+        const StageScene* s = Scene();
+        if (s == nullptr) {
+            wxMessageBox(_("Choose a scene first."), _("Stage Director"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        if (wxMessageBox(_("Only this scene is made again with your changes; everything else stays exactly as in the show already made. A new sequence is saved beside it, checked and rendered like any other. Continue?"),
+                         _("Stage Director"), wxYES_NO | wxICON_QUESTION, this) == wxYES &&
+            onRegenerateScene) {
+            onRegenerateScene(s->startMS, s->endMS);
+        }
+    });
     sizer->Add(tools, 0);
     SetSizer(sizer);
     _list->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& e) {
@@ -941,7 +1019,10 @@ void StageDirectorPanel::ShowScene() {
     } else if (!s->compositionFallback.empty()) {
         out += "\n" + wxString::Format(_("No composition of the library: %s. The director's own way is used."), Words(s->compositionFallback)) + "\n";
     }
-    if (!s->candidates.empty()) {
+    if (!s->planKind.empty()) {
+        out += PlanWords(*s) + "\n";
+    }
+    if (!s->candidates.empty() && s->planKind.empty()) {
         wxString others;
         int rejected = 0;
         for (const CompositionCandidate& c : s->candidates) {
@@ -989,6 +1070,11 @@ void StageDirectorPanel::ShowScene() {
                 }
                 out += "\n";
             }
+        }
+        if (!_score.groupPresence.empty()) {
+            out += _score.groupPresence == "mask" ? wxString::Format(_("Groups of xLights in this show: %d effects kept whole with their resting figures masked, %d divided by figure."), _score.groupsMasked, _score.groupsSplit)
+                                                  : wxString::Format(_("Groups of xLights in this show: %d effects divided by figure (as in phase 21)."), _score.groupsSplit);
+            out += "\n";
         }
         for (const SharedLights& x : _score.sharedLights) {
             const FigurePresence* a = s->PresenceOf(x.a);
@@ -1055,7 +1141,10 @@ std::string StageDirectorPanel::Edit(const StageEdit& edit) {
     _undo.push_back(ToJson(_edits));
     // A new choice of the same kind for the same scene replaces the earlier one.
     std::erase_if(_edits.edits, [&](const StageEdit& e) {
-        if (edit.action == "priority" && e.action == "priority") {
+        if (edit.action == "shared-ok" && e.action == "shared-ok") {
+            return e.value == edit.value;
+        }
+        if (edit.action == "priority" && e.action == "priority" && e.sceneStartMS == edit.sceneStartMS) {
             // The same two figures, whichever way round: the last choice wins.
             const size_t a = edit.value.find('|'), b = e.value.find('|');
             return a != std::string::npos && b != std::string::npos && edit.value.substr(a + 1) + "|" + edit.value.substr(0, a) == e.value || e.value == edit.value;
@@ -1187,19 +1276,46 @@ void StageDirectorPanel::AskPriority() {
     }
     wxArrayString pairs;
     for (const SharedLights& x : _score.sharedLights) {
-        pairs.Add(wxString::Format(_("%s and %s (%d lights in common)"), U(x.a), U(x.b), x.lights) + (x.priority.empty() ? wxString() : " - " + wxString::Format(_("%s wins"), U(x.priority))));
+        wxString line = wxString::Format(_("%s and %s (%d lights in common)"), U(x.a), U(x.b), x.lights);
+        if (!x.kind.empty()) {
+            line += ": " + Words(SharedKindPhrase(x.kind));
+        }
+        line += " - " + SharedDecisionWords(x);
+        pairs.Add(line);
     }
     const int pick = wxGetSingleChoiceIndex(_("These figures are wired to the same lights: what one shows, the other shows too. Which pair?"), _("Stage Director"), pairs, this);
     if (pick < 0) {
         return;
     }
     const SharedLights& x = _score.sharedLights[static_cast<size_t>(pick)];
-    wxArrayString who;
-    who.Add(U(x.a));
-    who.Add(U(x.b));
-    const int winner = wxGetSingleChoiceIndex(_("When both would play, which one should the shared lights follow? The other one rests in those scenes."), _("Stage Director"), who, this);
-    if (winner >= 0) {
-        (void)Edit({ "priority", -1, -1, winner == 0 ? x.a + "|" + x.b : x.b + "|" + x.a, "" });
+    wxString about = wxString::Format(_("%s and %s share channels %s: %d lights (%s of %s, %s of %s). %s has %d lights of its own, %s %d."), U(x.a), U(x.b), U(x.channels), x.lights,
+                                      U(x.nodesA), U(x.a), U(x.nodesB), U(x.b), U(x.a), x.exclusiveA, U(x.b), x.exclusiveB);
+    if (!x.kind.empty()) {
+        about += "\n" + Words(SharedKindPhrase(x.kind)) + ".";
+    }
+    about += "\n" + _("Now:") + " " + SharedDecisionWords(x) + ".";
+    if (x.kind != "containment" && x.kind != "duplicate") {
+        about += "\n" + _("A priority only decides what is generated: it does not fix the wiring or the channels. Until the lights are checked in the installation, this pair stays a risk for the real show.");
+    }
+    about += "\n" + _("While generating: where both would play, the one that gives way keeps its own lights and is darkened only on the shared ones, drawn before the other; in the render, the shared lights show the one that wins.");
+    wxArrayString what;
+    what.Add(wxString::Format(_("%s wins, in the whole song"), U(x.a)));
+    what.Add(wxString::Format(_("%s wins, in the whole song"), U(x.b)));
+    what.Add(wxString::Format(_("%s wins, only in the chosen scene"), U(x.a)));
+    what.Add(wxString::Format(_("%s wins, only in the chosen scene"), U(x.b)));
+    what.Add(_("They share these lights on purpose (nothing to fix)"));
+    const int choice = wxGetSingleChoiceIndex(about + "\n\n" + _("What should happen?"), _("Figures Sharing Lights"), what, this);
+    const StageScene* here = Scene();
+    if (choice == 0 || choice == 1) {
+        (void)Edit({ "priority", -1, -1, choice == 0 ? x.a + "|" + x.b : x.b + "|" + x.a, "" });
+    } else if (choice == 2 || choice == 3) {
+        if (here == nullptr) {
+            wxMessageBox(_("Choose a scene first."), _("Stage Director"), wxOK | wxICON_INFORMATION, this);
+            return;
+        }
+        (void)Edit({ "priority", here->startMS, -1, choice == 2 ? x.a + "|" + x.b : x.b + "|" + x.a, "" });
+    } else if (choice == 4) {
+        (void)Edit({ "shared-ok", -1, -1, x.a + "|" + x.b, "" });
     }
 }
 
@@ -1254,6 +1370,6 @@ void StageDirectorPanel::OpenLibrary() {
     if (_showDir.empty()) {
         return;
     }
-    StageLibraryDialog dialog(this, _showDir);
+    StageLibraryDialog dialog(this, _showDir, _score.scenes.empty() ? nullptr : &_score);
     dialog.ShowModal();
 }
