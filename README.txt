@@ -12,6 +12,17 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: the compositions are planned for the whole song, so one shape no
+                                 longer carries most scenes; each scene says why it got its composition and what
+                                 else was weighed
+    -enh (lluanllo)              Show Composer: an effect on a group of xLights keeps its whole drawing; the figures
+                                 of the group that rest are masked on their own row instead of the effect being cut
+                                 into pieces
+    -enh (lluanllo)              Show Composer: figures sharing lights are described light by light and classed
+                                 (one inside the other, the same lights twice, likely wiring mistake); choose who
+                                 wins in the song or one scene, or confirm it is meant so
+    -enh (lluanllo)              Show Composer: make only one scene again, everything else kept exactly, into a new
+                                 sequence; a corrected version's changes say what kind of change each one is
     -enh (lluanllo)              Show Composer: the stage director now commands the whole house: each scene is built
                                  on a composition of the library chosen for the music, and every figure's effects
                                  follow what its scene asks (lead, accompany, answer, a quiet glow or rest), groups
