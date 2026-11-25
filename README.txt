@@ -12,6 +12,12 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -bug (lluanllo)              A sequence's length read back from its file could lose its last frame, so effects
+                                 ending at the very end of the song fell outside it when saved again
+    -bug (lluanllo)              Show Composer: the final render and the production check decode videos the way the
+                                 desktop does, so the final render matches what xLights shows; a show no longer
+                                 fails when a group's effect falls only on figures asked to rest, or when an effect
+                                 is cut to a single frame at a scene's edge
     -enh (lluanllo)              Show Composer: the compositions are planned for the whole song, so one shape no
                                  longer carries most scenes; each scene says why it got its composition and what
                                  else was weighed

@@ -2444,6 +2444,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-group-fidelity");
         if (controlled) {
             std::exit(composer::RunGroupFidelityControlled(showDir.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
         }
@@ -2502,6 +2503,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-production");
         std::exit(composer::RunProductionCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8), package.ToStdString(wxConvUTF8),
                                                  !parser.Found("no-render")));
     }
@@ -2515,6 +2517,7 @@ bool xLightsApp::OnInit()
         wxInitAllImageHandlers();
         wxFontMapperBase::Set(new HeadlessNonInteractiveFontMapper());
         RegisterPlatformTextDrawingContext();
+        MirrorDesktopRenderPreferences("--composer-final-render");
         std::exit(composer::RunFinalRenderCommand(showDir.ToStdString(wxConvUTF8), sequence.ToStdString(wxConvUTF8), out.ToStdString(wxConvUTF8)));
     }
 

@@ -46,6 +46,25 @@ documentan y se rodean con las palancas de arriba, como haría una persona:
    - Arreglo de código pendiente: tratar una figura con texto de letra como las caras que cantan, que nunca
      reciben un gesto encima.
 
+## Después de la congelación: correcciones al producir espectáculos reales
+
+Al producir los primeros espectáculos de baile con un layout nuevo aparecieron cuatro defectos que impedían
+publicar o hacían que el render definitivo no coincidiera con lo que dibuja xLights. Se corrigieron sin cambiar
+el resultado de lo ya producido: las mismas entradas siguen dando el mismo `specHash`.
+
+1. **Duración de la secuencia.** `SequenceFile::GetSequenceDurationMS` truncaba: «257.900» daba 257 899 ms y
+   se perdía el último fotograma, así que los efectos que llegaban al final de la canción quedaban fuera al
+   guardar de nuevo. Ahora redondea. Es núcleo compartido: vale igual para el escritorio y el iPad.
+2. **Efectos de grupo apagados bajo máscaras de reposo.** Si un efecto de grupo conservado entero solo dibujaba
+   sobre figuras en reposo, su máscara lo apagaba (es lo correcto) y el validador no publicaba. Ahora es un
+   aviso explicado; sin máscara de reposo sigue siendo error.
+3. **Efectos de un solo fotograma.** Un efecto recortado a menos de dos fotogramas en el borde de una escena no
+   enciende nada. Se retira antes de escribir y se anota. Caras, letra y máscaras no se tocan.
+4. **Vídeo en el render definitivo.** `--composer-final-render`, `--composer-production` y
+   `--composer-group-fidelity` no copiaban las preferencias de vídeo del escritorio, así que los vídeos se
+   descodificaban de otra manera y el render definitivo difería de lo que muestra xLights. Ahora las copian,
+   igual que `--composer-generate` y `--headless`.
+
 ## Lo que queda en manos de una persona
 
 - **La revisión visual:** nada está aprobado hasta que una persona lo vea entero y lo diga.

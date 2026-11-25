@@ -314,6 +314,10 @@ void BuildCoverage(GenerationRun& run) {
     }
     for (const RenderMetric& m : run.renderValidation.metrics) {
         TargetCoverage& t = byTarget[m.target];
+        if (m.darkUnderRestMasks) {
+            --t.written; // dark on purpose: what it drew rests under masks
+            continue;
+        }
         t.effectsLit += m.framesWithLight > 0 ? 1 : 0;
         t.framesLit += m.framesWithLight;
     }
@@ -1962,6 +1966,18 @@ bool BuildSequence(GenerationRun& run) {
                 }
                 Note(run, S, "local-regeneration", fmt::format("only {} made again ({} effects there); everything else kept from {} ({} effects in all, {} in the new show; {} empty settings xLights added on opening it left out)",
                                                                windows, there, fs::path(run.request.keepOutside).filename().string(), run.spec.effects.size(), before, dropped));
+            }
+        }
+        // An effect cut down to less than two frames at a scene's edge shows nothing (a hit's ring
+        // has no size yet in its first frame): left out, and said. Faces, words and masks stay.
+        {
+            const int least = 2 * std::max(1, run.spec.frameMS);
+            const size_t before = run.spec.effects.size();
+            std::erase_if(run.spec.effects, [&](const EffectSpec& e) {
+                return e.endMS - e.startMS < least && e.effect != "Faces" && e.effect != "Text" && !MasksWhatIsBelow(e);
+            });
+            if (run.spec.effects.size() != before) {
+                Note(run, S, "tiny-effects-dropped", fmt::format("{} effects shorter than {} ms left out: too short to show anything", before - run.spec.effects.size(), least));
             }
         }
         run.spec.mediaFile = fs::absolute(fs::path(run.request.audioPath)).string();

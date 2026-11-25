@@ -101,6 +101,9 @@ struct RenderMetric {
     int distinctFrames = 0;
     int maxChannelsLit = 0;
     int channels = 0;
+    // A group's effect that stayed dark while a figure of the group was masked to rest: its
+    // light may have fallen only on figures asked to rest, which is what the score wanted.
+    bool darkUnderRestMasks = false;
 };
 
 struct ValidationReport {
