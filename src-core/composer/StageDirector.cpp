@@ -1379,6 +1379,12 @@ private:
         for (const std::string& f : faces) {
             give(f, "protagonist", "its voice is heard here");
         }
+        // A figure a person put in the plan takes part: resting it would take away what they asked for.
+        for (const PlanAssignment& a : seg.assignments) {
+            if ((a.state == DecisionState::ManualEdit || a.state == DecisionState::Locked) && a.prominence != Prominence::Rest && Find(a.target) != nullptr && !_locked.contains(a.target)) {
+                give(a.target, a.prominence == Prominence::Lead ? "protagonist" : "complement", "a person asked for it in the plan");
+            }
+        }
         // A returning idea keeps its protagonist when no voice takes the lead.
         if (faces.empty() && !_prefer.empty() && Find(_prefer.front()) != nullptr && !_locked.contains(_prefer.front())) {
             give(_prefer.front(), "protagonist", "it carries the idea it presented");

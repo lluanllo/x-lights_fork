@@ -742,6 +742,21 @@ private:
         }
         Check(rest->mode == StageMode::Rest && rest->gestures.empty(), "where the music rests, the house rests: no gesture");
         Check(narration->mode == StageMode::Protagonist && narration->RoleOf("Arbol Cara") == "protagonist", "a narration: the speaking figure alone has the attention");
+        {
+            // A face that does not sing in the narration, put in the plan by a person, takes part there.
+            Song asked = MakeSong();
+            PlanAssignment a;
+            a.target = "Carita";
+            a.intent = "accompany";
+            a.prominence = Prominence::Support;
+            a.state = DecisionState::ManualEdit;
+            asked.plan.segments[3].assignments.push_back(a);
+            const StageScene* before = narration;
+            const GlobalStageScore withAsked = DirectStage(Input(asked));
+            const StageScene* after = SceneOf(withAsked, "s3.0");
+            Check(before->RoleOf("Carita") == "rest" && after != nullptr && after->RoleOf("Carita") == "complement" && after->RoleOf("Arbol Cara") == "protagonist",
+                  "a figure a person put in the plan takes part where the director would have rested it");
+        }
         Check(choir->mode == StageMode::CallResponse, "a voice and a choir answering it: call and answer");
         Check(climax->mode == StageMode::FullEnsemble, "the peak of the song: the whole house");
         Check(strong->mode == StageMode::Propagation, "strong instruments with no voice: a gesture that travels");
