@@ -12,6 +12,8 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -enh (lluanllo)              Show Composer: the lyrics transcription takes the language sung (--language en,
+                                 or auto), so songs in English are transcribed and the faces sing them
     -bug (lluanllo)              A sequence's length read back from its file could lose its last frame, so effects
                                  ending at the very end of the song fell outside it when saved again
     -bug (lluanllo)              Show Composer: the final render and the production check decode videos the way the

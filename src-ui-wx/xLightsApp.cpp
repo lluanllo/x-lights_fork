@@ -1391,6 +1391,7 @@ bool xLightsApp::OnInit()
         { wxCMD_LINE_OPTION, "", "brief-model", "with --composer-assist brief or artistic-check: a Groq chat model to prefer, if the key offers it" },
         { wxCMD_LINE_SWITCH, "", "refresh", "with --composer-assist artistic-check: ask Groq even when an answer is kept (needs --allow-upload)" },
         { wxCMD_LINE_SWITCH, "", "allow-upload", "with --composer-assist: the person agreed in the window to send this song to the service" },
+        { wxCMD_LINE_OPTION, "", "language", "with --composer-assist transcribe: the language sung (es by default, en, ...; auto: the service tells)" },
         { wxCMD_LINE_OPTION, "", "query", "with --composer-assist lrclib: \"Artist - Title\"" },
         { wxCMD_LINE_OPTION, "", "duration", "with --composer-assist lrclib: the song's length in seconds" },
         { wxCMD_LINE_SWITCH, "", "composer-reference-profile", "internal tool: write a style profile measured from --studies (study folders separated by ';') to --out, named --study-id, and exit" },
@@ -2403,6 +2404,10 @@ bool xLightsApp::OnInit()
         options.refresh = parser.Found("refresh");
         options.showDir = showDir.ToStdString(wxConvUTF8);
         options.allowUpload = parser.Found("allow-upload");
+        if (parser.Found("language", &value)) {
+            const std::string language = value.ToStdString(wxConvUTF8);
+            options.language = language == "auto" ? std::string() : language;
+        }
         WxServiceSettingsStore keys;
         std::unique_ptr<composer::IHttpClient> client = composer::MakeCurlHttpClient();
         std::exit(composer::RunAssistCommand(options, *client, &keys));
