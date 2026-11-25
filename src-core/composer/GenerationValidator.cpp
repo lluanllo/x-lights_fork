@@ -1895,12 +1895,34 @@ ValidationReport ValidateRender(xLightsShowContext& ctx, const std::string& fseq
         }
     }
 
+    // A member of a group masked to rest ("1 is Mask" on its own row) while the group's effect plays.
+    const auto restMasked = [&](const EffectSpec& effect, const TargetChannels& target) {
+        for (const auto& [member, channels] : target.members) {
+            for (const EffectSpec& m : spec.effects) {
+                if (m.target == member && m.subModel.empty() && m.startMS < effect.endMS && effect.startMS < m.endMS && MasksWhatIsBelow(m)) {
+                    for (const auto& [k, v] : m.settings) {
+                        if (k == "T_CHOICE_LayerMethod" && v == "1 is Mask") {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    };
     for (const EffectProbe& probe : probes) {
         const EffectSpec& effect = *probe.effect;
         report.metrics.push_back({ FullTarget(effect), effect.effect, effect.startMS, effect.endMS, probe.framesWithLight, static_cast<int>(probe.distinct.size()), probe.maxLit, static_cast<int>(probe.target.channels.size()) });
         if (probe.framesWithLight == 0) {
             if (!MasksWhatIsBelow(effect)) {
-                RaiseFor(report, effect, issue::RenderTargetSilent, strict, IssueCategory::Render, { { "channels", std::to_string(probe.target.channels.size()) } });
+                if (!probe.target.members.empty() && restMasked(effect, probe.target)) {
+                    // Kept whole over masks: dark because its light fell on figures resting here.
+                    report.metrics.back().darkUnderRestMasks = true;
+                    RaiseFor(report, effect, issue::RenderTargetSilent, IssueSeverity::Warning, IssueCategory::Render,
+                             { { "channels", std::to_string(probe.target.channels.size()) }, { "why", "its light fell only on figures masked to rest" } });
+                } else {
+                    RaiseFor(report, effect, issue::RenderTargetSilent, strict, IssueCategory::Render, { { "channels", std::to_string(probe.target.channels.size()) } });
+                }
             }
             continue;
         }

@@ -15,6 +15,7 @@
 #include "pugixml.hpp"
 
 #include <array>
+#include <cmath>
 #include <optional>
 #include <string>
 #include <vector>
@@ -102,7 +103,8 @@ public:
 
     const std::string& GetVersion() const { return version_string; }
 
-    int GetSequenceDurationMS() const { return int(seq_duration * 1000); }
+    // Rounded, not truncated: "257.900" parses as 257.8999..., and truncating lost the last frame.
+    int GetSequenceDurationMS() const { return int(std::lround(seq_duration * 1000)); }
     double GetSequenceDurationDouble() const { return seq_duration; }
     std::string GetSequenceDurationString() const;
 
