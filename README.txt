@@ -12,6 +12,9 @@ XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
 2026.20  October ??, 2026
 
+    -bug (lluanllo)              Show Composer: a figure a person puts in the plan takes part in its scene instead of
+                                 being sent to rest by the stage director (for example, singing faces that light up
+                                 as figures when their voice is not singing)
     -enh (lluanllo)              Show Composer: the lyrics transcription takes the language sung (--language en,
                                  or auto), so songs in English are transcribed and the faces sing them
     -bug (lluanllo)              A sequence's length read back from its file could lose its last frame, so effects

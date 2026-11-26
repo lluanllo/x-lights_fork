@@ -64,6 +64,10 @@ el resultado de lo ya producido: las mismas entradas siguen dando el mismo `spec
    `--composer-group-fidelity` no copiaban las preferencias de vídeo del escritorio, así que los vídeos se
    descodificaban de otra manera y el render definitivo difería de lo que muestra xLights. Ahora las copian,
    igual que `--composer-generate` y `--headless`.
+5. **Lo que una persona pone en el plan.** Una figura que una persona incluye en el plan (`include` o
+   `set-prominence` en las correcciones) recibía su efecto, pero el director de escena la mandaba a reposo y la
+   presencia se lo quitaba. Ahora el director le da papel en la escena: protagonista si la persona la pidió
+   como principal y acompañante si no. Sin correcciones de plan, todo sale igual que antes.
 
 ## Lo que queda en manos de una persona
 
